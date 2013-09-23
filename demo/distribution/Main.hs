@@ -18,7 +18,7 @@ import Control.Applicative (liftA2)
 import qualified EFA.Signal.Plot as Plot
 
 
-import qualified Data.List as L
+import qualified Data.List as List
 import qualified Data.Map as Map
 
 -- | Without Typed Container First
@@ -61,7 +61,7 @@ generateDistribution :: (V.Storage v ([Class a],[Int]),
 generateDistribution classSig = S.fromList (map f classes)
   where list = S.toList classSig
         classes = map fst $ Map.toList $ Map.fromList $ zip list list
-        f clss = ([clss], L.findIndices (\x -> clss == x) list)
+        f clss = ([clss], List.findIndices (\x -> clss == x) list)
 
 
 d1 = generateDistribution ks1
@@ -77,7 +77,7 @@ combineDistributions [] =  error("Error - empty list in combineDistributions")
 combineDistributions [d] = d
 combineDistributions (d:ds) = foldl f d ds
   where f acc d = S.filter (not.null.snd) $ combineWith g acc d
-        g (classes1,indices1) (classes2,indices2) = (classes1++classes2,L.intersect indices1 indices2)
+        g (classes1,indices1) (classes2,indices2) = (classes1++classes2,List.intersect indices1 indices2)
         -- vorher Kombination aller Klassen
 
 

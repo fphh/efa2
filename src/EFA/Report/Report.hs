@@ -4,7 +4,7 @@ import EFA.Signal.Base (Val)
 
 import qualified Text.PrettyPrint as PP
 
-import qualified Data.List as L
+import qualified Data.List as List
 import qualified Data.NonEmpty as NonEmpty
 
 
@@ -14,7 +14,7 @@ type ROpts = [ROpt]
 
 {- geht nicht
 checkOpt :: ROpts -> ROpt ->
-checkOpt os o = L.find g os
+checkOpt os o = List.find g os
   where
     g o =
 -}
@@ -92,7 +92,7 @@ thapp y1 y2 = if check then Table {tableTitle = tableTitle y1 ++ " ++  " ++ tabl
                                    tableSubTitle = tableSubTitle y1 ++ " ++  " ++ tableSubTitle y2} else error m
               where g :: TableData -> TableData -> TableData
                     g x1 x2 = TableData {titleRow = titleRow x1++titleRow x2,
-                                        tableBody = L.zipWith (++) (tableBody x1) (tableBody x2),
+                                        tableBody = List.zipWith (++) (tableBody x1) (tableBody x2),
                                         titleCols = titleCols x1,
                                         endCols = endCols x1}
 
@@ -112,7 +112,7 @@ getMaxColWidth cf = maximum $ map fst cf
 
 -- | Generate report from Table List
 makeReport :: ROpts -> [Table] -> PP.Doc
-makeReport os ts = PP.vcat$ L.intersperse PP.empty $ map (makeTable os) ts
+makeReport os ts = PP.vcat$ List.intersperse PP.empty $ map (makeTable os) ts
 
 
 -- | Generate doc from Table
@@ -123,8 +123,8 @@ makeTable  os t = PP.text (tableTitle t) PP.$$ (makeCol os rf $ map (makeRow os 
     cf = colFormat $ tableFormat t
     cft = if transpose then maxColWidth cf (repeat (getMaxColWidth cf,HLeft)) else cf
     x = buildDocTable $ tableData t
-    transpose = L.elem RVertical os
-    xt = if transpose then L.transpose x else x
+    transpose = List.elem RVertical os
+    xt = if transpose then List.transpose x else x
 
 -- | Generate doc table including title rows and colums
 buildDocTable :: TableData -> [[Cell]]
@@ -183,7 +183,7 @@ autoFormat td = TableFormat {colFormat = zip cf (repeat HLeft),
                              rowFormat = replicate (length x) 0}
   where
     x = buildDocTable td
-    cf = map f $ L.transpose x where f col = (maximum $ map cellWidth col)+2
+    cf = map f $ List.transpose x where f col = (maximum $ map cellWidth col)+2
 
 
 -- | OutPut Functions  --------------------------------------------

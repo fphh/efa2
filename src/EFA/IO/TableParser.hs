@@ -7,7 +7,7 @@ import EFA.IO.Parser (number, eol)
 
 import qualified System.IO as IO
 
-import qualified Data.List as L
+import qualified Data.List as List
 import qualified Data.Map as Map
 
 import Text.ParserCombinators.Parsec
@@ -77,8 +77,8 @@ neol = void $ noneOf "\n\r"
 writeTable :: IO.Handle -> (String, T Double) -> IO ()
 writeTable hdl (name, T xy ds) = do
   let hd = "#1\ndouble " ++ name ++ show xy
-      body = L.intercalate "\n" $
-               map (L.intercalate " " . map show) ds
+      body = List.intercalate "\n" $
+               map (List.intercalate " " . map show) ds
   IO.hPutStr hdl ("\n" ++ hd ++ "\n" ++ body ++ "\n")
 
 write :: FilePath -> Map Double -> IO ()

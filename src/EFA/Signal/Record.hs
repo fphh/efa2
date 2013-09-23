@@ -53,7 +53,7 @@ import System.Random (Random)
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.List as L
+import qualified Data.List as List
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as ListHT
 import qualified Data.List.Key as Key
@@ -320,7 +320,7 @@ unionWithNewTime rs = Record newTime $
   Map.unionsWith (error "unionWithNewTime: duplicate signal ids") $
     map ((\(Record _ m) -> m) . flip (newTimeBase "unionWithNewTime") newTime) rs
   where (starts, ends) = unzip $ map getTimeWindow rs
-        newTime = S.sort $ L.foldl1' S.append ts
+        newTime = S.sort $ List.foldl1' S.append ts
         ts = map (filt . getTime) rs
         filt = S.filter (>= S.fromScalar (maximum starts))
                . S.filter (<= S.fromScalar (minimum ends))
@@ -345,7 +345,7 @@ modifySignals ::
    Record s1 s2 t1 t2 id v d1 d2
 modifySignals idList f (Record time ma) =
   Record time $
-  L.foldl' (flip $ Map.adjust f) ma $
+  List.foldl' (flip $ Map.adjust f) ma $
   case idList of
        ModifyAll -> Map.keys ma
        ToModify x -> x

@@ -52,7 +52,7 @@ import System.FilePath ((</>))
 
 -- import qualified Data.Map as Map
 import qualified Data.List.HT as ListHT
-import qualified Data.List as L
+import qualified Data.List as List
 import Data.Tuple.HT (mapSnd)
 
 
@@ -262,8 +262,8 @@ main = do
         map (Analysis.pre System.topology zeroNoiseToleranz sectionFilterTime sectionFilterEnergy) rawSignalsX
 
   let (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) =
-        L.unzip5 preProcessedDataX
---  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
+        List.unzip5 preProcessedDataX
+--  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = List.unzip5 preProcessedDataX
 
   let allSignalsX = zipWith (Record.combinePowerAndSignalWithFunction System.convertPowerId) powerSignalsX signalsX
 
@@ -381,14 +381,14 @@ main = do
 -- * Draw Diagrams
 
     -- Section flow
-    ++ L.zipWith4 drawAbs
+    ++ List.zipWith4 drawAbs
          datasetsX
          sequenceFlowTopologyX --sectionToposX
          externalEnvX
          colours
 
     -- Delta Section Flow
-    ++ L.zipWith4 drawDelta
+    ++ List.zipWith4 drawDelta
          deltasetsX
          sectionToposX
          externalDeltaEnvX

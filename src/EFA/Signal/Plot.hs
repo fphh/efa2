@@ -75,7 +75,7 @@ import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
 import qualified Data.Map as Map
-import qualified Data.List as L
+import qualified Data.List as List
 import qualified Data.Foldable as Fold
 import qualified Data.List.Key as Key
 import Data.Map (Map)
@@ -519,7 +519,7 @@ surfaceBasic ::
    Plot3D.T x y z
 surfaceBasic opts x y z =
    fmap (Graph3D.lineSpec $ opts surfaceLineSpec) $
-   Plot3D.mesh $ L.zipWith3 zip3 (getData x) (getData y) (getData z)
+   Plot3D.mesh $ List.zipWith3 zip3 (getData x) (getData y) (getData z)
 
 class
    (AxisLabel tcX, AxisLabel tcY, AxisLabel tcZ) =>

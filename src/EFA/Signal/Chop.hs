@@ -41,7 +41,7 @@ import qualified Data.NonEmpty.Mixed as NonEmptyM
 import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as ListHT
-import qualified Data.List as L
+import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.IntSet as IntSet
 import Data.IntSet (IntSet)
@@ -272,7 +272,7 @@ getZeroCrossings rs1@(t1,ps1) rs2 = ((S.singleton t1) .++ zeroCrossingTimes,(S.s
 calcZeroPowers :: Record.Samp1 -> Record.Samp1 -> TSigL -> TZeroSamp1L -> PSamp2LL
 calcZeroPowers (t1,(TC (Data ps1))) (t2,(TC (Data ps2))) zeroCrossingTimes (TC (Data tz)) = S.transpose2 $ fromSigList sigList
                where g p1 p2 tz2 = f (toSample p1) (toSample p2) (toSample tz2)
-                     sigList = L.zipWith3 g ps1 ps2 tz :: [PSigL]
+                     sigList = List.zipWith3 g ps1 ps2 tz :: [PSigL]
 
                      f :: PSamp -> PSamp -> TZeroSamp -> PSigL
                      f p1 p2 zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
@@ -467,7 +467,7 @@ chopAtZeroCrossingsPowerRecord ::
    PowerRecord node [] a -> Sequ.List (PowerRecord node v a)
 chopAtZeroCrossingsPowerRecord rSig =
    Sequ.fromLengthList $
-   map (\r -> (L.length $ S.unconsData $ fst r, rsig2SecRecord rSig r)) $
+   map (\r -> (List.length $ S.unconsData $ fst r, rsig2SecRecord rSig r)) $
    chopAtZeroCrossingsRSig $
    record2RSig rSig
 
@@ -561,7 +561,7 @@ intPattern ::
    v a -> IntPattern a
 intPattern =
    IntPattern . snd .
-   L.mapAccumL (\k0 (k1,t) -> (k1, (k1-k0, NonEmptySet.singleton t))) (-1) .
+   List.mapAccumL (\k0 (k1,t) -> (k1, (k1-k0, NonEmptySet.singleton t))) (-1) .
    catMaybes . zipWith (\k -> fmap ((,) k)) [0..] .
    ListHT.mapAdjacent checkZeroCrossing . V.toList
 
@@ -612,7 +612,7 @@ chopVector ::
    [NonEmpty.T v ()] -> v a -> NonEmpty.T [] (NonEmpty.T v a)
 chopVector ks v0 =
    (\(y,ys) -> NonEmpty.snoc ys $ checkedFetch y) $
-   L.mapAccumL (\v k -> swap $ V.splitAtMatch k $ checkedFetch v) v0 ks
+   List.mapAccumL (\v k -> swap $ V.splitAtMatch k $ checkedFetch v) v0 ks
 
 {- |
 partial function

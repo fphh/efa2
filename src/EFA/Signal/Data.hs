@@ -24,7 +24,7 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 
-import qualified Data.List as L
+import qualified Data.List as List
 import Data.Tuple.HT (mapPair)
 
 import Data.Eq (Eq((==), (/=)))
@@ -481,7 +481,7 @@ instance
       Monoid (Data (v2 :> v1) d) where
    mempty = Data SV.empty
    mappend (Data x) (Data y) = Data $ SV.append x y
-   mconcat = Data . SV.concat . L.map getData
+   mconcat = Data . SV.concat . List.map getData
 
 
 class Append c1 c2  where
@@ -610,10 +610,10 @@ instance FromList Nil where
 instance (SV.FromList v2, FromList v1) => FromList (v2 :> v1) where
    type NestedList (v2 :> v1) d = [NestedList v1 d]
    fromList x =
-      let y = nestedData $ SV.fromList $ L.map (getSubData y . fromList) x
+      let y = nestedData $ SV.fromList $ List.map (getSubData y . fromList) x
       in  y
    toList xd =
-      withNestedData (L.map (toList . subData xd) . SV.toList) xd
+      withNestedData (List.map (toList . subData xd) . SV.toList) xd
 
 
 ----------------------------------------------------------
@@ -800,7 +800,7 @@ instance
    (SV.FromList w1, SV.FromList w2, Convert1 v1 c1 v2 c2) =>
       Convert1 w1 (v1 :> c1) w2 (v2 :> c2) where
    convert1 xd =
-      let yd = nestedData (withNestedData (SV.fromList . L.map (getSubData yd . convert1 . subData xd) . SV.toList) xd)
+      let yd = nestedData (withNestedData (SV.fromList . List.map (getSubData yd . convert1 . subData xd) . SV.toList) xd)
       in  yd
 
 

@@ -44,7 +44,7 @@ import Control.Applicative (liftA2)
 
 import Text.Printf (PrintfArg, printf)
 
-import qualified Data.List as L
+import qualified Data.List as List
 import Data.Function (id, (.), ($))
 import Prelude
           (Show, Read, Eq, Ord, Maybe, Bool, error, fmap,
@@ -533,7 +533,7 @@ toList2 ::
 toList2 (TC x) = D.toList x
 
 fromVal :: (SV.FromList c, SV.Storage c d) => Int -> d -> TC s t (Data (c :> Nil) d)
-fromVal n x = fromList (L.replicate n x)
+fromVal n x = fromList (List.replicate n x)
 
 fromScalar :: TC Scalar typ (Data Nil d) -> d
 fromScalar (TC (Data x)) = x
@@ -759,7 +759,7 @@ instance TransposeType TestRow TestRow
 instance Monoid c => Monoid (TC s typ c) where
    mempty = TC $ mempty
    mappend (TC x) (TC y) = TC $ mappend x y
-   mconcat = TC . mconcat . L.map unpack
+   mconcat = TC . mconcat . List.map unpack
 
 
 append ::
@@ -958,7 +958,7 @@ fromSigList ::
    (SV.Storage v2 (Apply v1 d), SV.FromList v2) =>
    [TC s typ (Data v1 d)] -> TC s typ (Data (v2 :> v1) d)
 fromSigList xs =
-   TC $ Data $ SV.fromList $ L.map (\(TC (Data x)) -> x) xs
+   TC $ Data $ SV.fromList $ List.map (\(TC (Data x)) -> x) xs
 
 -- | data Conversion function
 toSigList ::
@@ -972,12 +972,12 @@ fromCells ::
    (SV.FromList v1, SV.FromList v2, SV.Storage v2 (v1 d), SV.Storage v1 d) =>
    [[TC s typ (Data Nil d)]] -> TC s typ (Data (v2 :> v1 :> Nil) d)
 fromCells xss =
-   fromList2 $ L.map (L.map (\(TC (Data x)) -> x)) xss
+   fromList2 $ List.map (List.map (\(TC (Data x)) -> x)) xss
 
 toCells ::
    (SV.FromList v1, SV.FromList v2, SV.Storage v2 (v1 d), SV.Storage v1 d) =>
    TC s typ (Data (v2 :> v1 :> Nil) d) -> [[TC s typ (Data Nil d)]]
-toCells xss = L.map (L.map (TC . Data)) $ toList2 xss
+toCells xss = List.map (List.map (TC . Data)) $ toList2 xss
 
 filter ::
    (SV.Filter v, SV.Storage v d) =>
@@ -1210,7 +1210,7 @@ instance
                 }
 
            f y =
-              if L.elem RAll os
+              if List.elem RAll os
                 then readNested srdisp y
                 else [vdisp (minimum x) ++ " - " ++ vdisp (maximum y)]
 
@@ -1592,8 +1592,8 @@ genDistributionND ::
    (d -> Class d) -> [UTFSignal v d] -> Map [Class d] (Set SignalIdx)
 genDistributionND classify =
    Map.fromListWith Set.union .
-   P.flip L.zip (fmap Set.singleton [SignalIdx 0 ..]) .
-   L.transpose . fmap (toList . map classify)
+   P.flip List.zip (fmap Set.singleton [SignalIdx 0 ..]) .
+   List.transpose . fmap (toList . map classify)
 
 
 
@@ -1604,7 +1604,7 @@ combineDistributions :: (SV.Storage v ([Class d], [SignalIdx]),
 combineDistributions [] =  error("Error - empty list in combineDistributions")
 combineDistributions (d:ds) = P.foldl f d ds
   where f acc e = filter (P.not . P.null . P.snd) $ combineWith g acc e
-        g (classes1,indices1) (classes2,indices2) = (classes1++classes2,L.intersect indices1 indices2)
+        g (classes1,indices1) (classes2,indices2) = (classes1++classes2,List.intersect indices1 indices2)
 
 
 combineWith :: (SV.Storage v d3,
@@ -1708,12 +1708,12 @@ argMaximum ::
    TC (Arith s s) typ1 (Data (v :> Nil) Int)
 argMaximum =
    consData . SV.fromList .
-   L.map (P.fst . listArgMaximum) . L.transpose .
-   L.map (SV.toList . unconsData)
+   List.map (P.fst . listArgMaximum) . List.transpose .
+   List.map (SV.toList . unconsData)
 
 listArgMaximumKey :: Ord b => (a -> b) -> [a] -> (Int, a)
 listArgMaximumKey f =
-   L.maximumBy (comparing (f . P.snd)) . L.zip [0..]
+   List.maximumBy (comparing (f . P.snd)) . List.zip [0..]
 
 listArgMaximum :: Ord a => [a] -> (Int, a)
 listArgMaximum = listArgMaximumKey id
@@ -1722,7 +1722,7 @@ listArgMaximum2 :: Ord a => [[a]] -> ((Int, Int), a)
 listArgMaximum2 =
    (\(n,(m,a)) -> ((n,m), a)) .
    listArgMaximumKey P.snd .
-   L.map listArgMaximum
+   List.map listArgMaximum
 
 
 variation2D :: (SV.Storage v2 (v1 d),
@@ -1733,6 +1733,6 @@ variation2D :: (SV.Storage v2 (v1 d),
                TC s typ (Data (v1 :> Nil) d) ->
                (TC s typ (Data (v2 :> v1 :> Nil) d),
                 TC s typ (Data (v2 :> v1 :> Nil) d))
-variation2D xs ys = (fromList2 $ Match.replicate (toList ys) (toList xs), fromList2 $ L.map (Match.replicate (toList xs)) (toList ys))
-{-variation2D xs ys = (Match.replicate ys xs, L.map (Match.replicate xs) ys)
+variation2D xs ys = (fromList2 $ Match.replicate (toList ys) (toList xs), fromList2 $ List.map (Match.replicate (toList xs)) (toList ys))
+{-variation2D xs ys = (Match.replicate ys xs, List.map (Match.replicate xs) ys)
     --where toList = id-}

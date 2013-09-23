@@ -239,10 +239,10 @@ indexLoeDischargePlot::    Sig.UTTestRow [] Double
 indexLoeDischargePlot =  Sig.map fromIntegral indexLoeDischarge
 
 powerLoeCharge::    Sig.PTestRow [] Double
-powerLoeCharge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeCharge
+powerLoeCharge =  Sig.setType $ Sig.map (\x -> gasPower List.!! x) $ indexLoeCharge
 
 powerLoeDischarge::    Sig.PTestRow [] Double
-powerLoeDischarge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeDischarge
+powerLoeDischarge =  Sig.setType $ Sig.map (\x -> gasPower List.!! x) $ indexLoeDischarge
 -}
 
 

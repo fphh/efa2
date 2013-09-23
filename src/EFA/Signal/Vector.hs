@@ -10,7 +10,7 @@ module EFA.Signal.Vector where
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 
-import qualified Data.List as L
+import qualified Data.List as List
 import qualified Data.List.HT as ListHT
 import qualified Data.List.Match as Match
 
@@ -173,22 +173,22 @@ instance Singleton UV.Vector where
    any f = readUnbox (UV.any f)
 
 instance Singleton [] where
-   maximum x = L.maximum x
-   minimum x = L.minimum x
-   minmax (x:xs) = L.foldl' minmaxStrict (x, x) xs
+   maximum x = List.maximum x
+   minimum x = List.minimum x
+   minmax (x:xs) = List.foldl' minmaxStrict (x, x) xs
    minmax [] = error "Signal.Vector.minmax: empty list"
    singleton x = [x]
    empty = []
    append = (++)
-   concat = L.concat
-   -- head = L.head
-   -- tail = L.tail
-   -- last = L.last
-   -- init = L.init
+   concat = List.concat
+   -- head = List.head
+   -- tail = List.tail
+   -- last = List.last
+   -- init = List.init
    viewL = ListHT.viewL
    viewR = ListHT.viewR
-   all = L.all
-   any = L.any
+   all = List.all
+   any = List.any
 
 
 ------------------------------------------------------------
@@ -205,9 +205,9 @@ class Walker vec where
    equalBy :: (Storage vec a, Storage vec b) => (a -> b -> Bool) -> vec a -> vec b -> Bool
 
 instance Walker [] where
-   map = L.map
-   foldr = L.foldr
-   foldl = L.foldl'
+   map = List.map
+   foldr = List.foldr
+   foldl = List.foldl'
    equalBy f =
       let go (x:xs) (y:ys) = f x y && go xs ys
           go [] [] = True
@@ -246,7 +246,7 @@ zip = zipWith (,)
 
 
 instance Zipper [] where
-   zipWith f x y = L.zipWith f x y -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
+   zipWith f x y = List.zipWith f x y -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
 
 instance Zipper V.Vector where
    zipWith f x y = V.zipWith f x y -- if V.lenCheck x y then V.zipWith f x y else error "Error in V.lenCheck V -- unequal Length"
@@ -271,7 +271,7 @@ class Zipper4 vec where
       (a -> b -> c -> d -> e) -> vec a -> vec b -> vec c -> vec d -> vec e
 
 instance Zipper4 [] where
-   zipWith4 f w x y z = L.zipWith4 f w x y z -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
+   zipWith4 f w x y z = List.zipWith4 f w x y z -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
 
 instance Zipper4 V.Vector where
    zipWith4 f w x y z = V.zipWith4 f w x y z -- if V.lenCheck x y then V.zipWith f x y else error "Error in V.lenCheck V -- unequal Length"
@@ -328,7 +328,7 @@ class Len s where
    len :: s -> Int
 
 instance Len [d] where
-   len = L.length
+   len = List.length
 
 instance Len (V.Vector d) where
    len = V.length
@@ -350,7 +350,7 @@ instance Length v => Length (NonEmpty.T v) where
    length = readNonEmpty $ succ . length . NonEmpty.tail
 
 instance Length [] where
-   length = L.length
+   length = List.length
 
 instance Length V.Vector where
    length = V.length
@@ -389,7 +389,7 @@ class Transpose v1 v2 where
    transpose :: (Storage v1 d) => v2 (v1 d) -> v2 (v1 d)
 
 instance Transpose [] [] where
-   transpose x = if L.all (== L.head lens) lens then L.transpose x else error "Error in V.Transpose -- unequal length"
+   transpose x = if List.all (== List.head lens) lens then List.transpose x else error "Error in V.Transpose -- unequal length"
                          where lens = map len x
 
 instance Transpose V.Vector V.Vector where
@@ -433,33 +433,33 @@ class Sort vec where
    sort :: (Ord d, Storage vec d) => vec d -> vec d
 
 instance Sort [] where
-   sort = L.sort
+   sort = List.sort
 
 instance Sort V.Vector where
-   sort = V.fromList . L.sort . V.toList
+   sort = V.fromList . List.sort . V.toList
 
 instance Sort UV.Vector where
-   sort = readUnbox (UV.fromList . L.sort . UV.toList)
+   sort = readUnbox (UV.fromList . List.sort . UV.toList)
 
 
 class SortBy vec where
    sortBy :: (Storage vec d) => (d -> d -> Ordering) -> vec d -> vec d
 
 instance SortBy [] where
-   sortBy f = L.sortBy f
+   sortBy f = List.sortBy f
 
 instance SortBy V.Vector where
-   sortBy f = V.fromList . (L.sortBy f) . V.toList
+   sortBy f = V.fromList . (List.sortBy f) . V.toList
 
 instance SortBy UV.Vector where
-   sortBy f = readUnbox (UV.fromList . (L.sortBy f) . UV.toList)
+   sortBy f = readUnbox (UV.fromList . (List.sortBy f) . UV.toList)
 
 
 class Filter vec where
    filter :: Storage vec d => (d -> Bool) -> vec d -> vec d
 
 instance Filter [] where
-   filter = L.filter
+   filter = List.filter
 
 instance Filter V.Vector where
    filter = V.filter
@@ -510,7 +510,7 @@ class Reverse v where
    reverse :: (Storage v d) => v d -> v d
 
 instance Reverse [] where
-   reverse = L.reverse
+   reverse = List.reverse
 
 instance Reverse V.Vector where
    reverse = V.reverse
@@ -524,8 +524,8 @@ class Find v where
   findIndices :: (Storage v d) => (d -> Bool) -> v d -> v Int
 
 instance Find [] where
-  findIndex x = L.findIndex x
-  findIndices x = L.findIndices x
+  findIndex x = List.findIndex x
+  findIndices x = List.findIndices x
 
 instance Find V.Vector where
   findIndex x = V.findIndex x
@@ -540,7 +540,7 @@ class Slice v where
   slice :: (Storage v d) => Int -> Int -> v d -> v d
 
 instance Slice [] where
-  slice start num = L.take num . L.drop start
+  slice start num = List.take num . List.drop start
 
 instance Slice V.Vector where
   slice = V.slice
@@ -554,9 +554,9 @@ class Split v where
   splitAt :: (Storage v d) => Int -> v d -> (v d, v d)
 
 instance Split [] where
-  drop = L.drop
-  take = L.take
-  splitAt = L.splitAt
+  drop = List.drop
+  take = List.take
+  splitAt = List.splitAt
 
 instance Split V.Vector where
   drop = V.drop
