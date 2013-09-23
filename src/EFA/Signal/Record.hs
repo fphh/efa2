@@ -69,6 +69,9 @@ import Data.Map (Map)
 import EFA.Utility.Map (checkedLookup)
 import EFA.Utility (myShowList)
 
+import Prelude hiding (map)
+
+
 newtype SigId = SigId String deriving (Eq, Ord, Show, Read)
 
 {-
@@ -115,24 +118,24 @@ newtype DeltaName = DeltaName String
 deltaName :: Name -> Name -> DeltaName
 deltaName (Name x) (Name y) =  (DeltaName $ y ++ "_vs_" ++ x)
 
-rmap ::
+map ::
    (TC s1 t1 (Data (v :> Nil) d2) -> TC s2 t2 (Data (v :> Nil) d2)) ->
    Record s s1 t t1 id v d1 d2 -> Record s s2 t t2 id v d1 d2
-rmap f (Record t ma) = Record t (Map.map f ma)
+map f (Record t ma) = Record t (Map.map f ma)
 
-rmapKeys ::
+mapKeys ::
    (Ord id2) =>
    (id1 -> id2) ->
    Record s1 s2 t1 t2 id1 v d1 d2 -> Record s1 s2 t1 t2 id2 v d1 d2
-rmapKeys f (Record t ma) = Record t (Map.mapKeys f ma)
+mapKeys f (Record t ma) = Record t (Map.mapKeys f ma)
 
-rmapWithKey ::
+mapWithKey ::
    (id ->
     TC s0 t0 (Data (v :> Nil) d2) ->
     TC s1 t1 (Data (v :> Nil) d2)) ->
    Record s s0 t t0 id v d1 d2 ->
    Record s s1 t t1 id v d1 d2
-rmapWithKey f (Record t ma) = Record t (Map.mapWithKey f ma)
+mapWithKey f (Record t ma) = Record t (Map.mapWithKey f ma)
 -----------------------------------------------------------------------------------
 -- | Indice Record Number
 
@@ -191,7 +194,7 @@ dTimePowerRecord ::
    PowerRecord n v d ->
    DTimePowerRecord n v d
 dTimePowerRecord (Record time signals) =
-  rmap (S.deltaMap (\x y -> (x+y)/2)) $
+  map (S.deltaMap (\x y -> (x+y)/2)) $
     Record (S.delta time) signals
 
 
@@ -213,7 +216,7 @@ hardShrinkage threshold x =
 extract ::
    (Ord id, Show id) =>
    [id] -> Record s1 s2 t1 t2 id v d1 d2 -> Record s1 s2 t1 t2 id v d1 d2
-extract xs rec = extractLogSignals rec $ map (flip (,) id) xs
+extract xs rec = extractLogSignals rec $ List.map (flip (,) id) xs
 {-
 extract ::
    (Show (v a), Ord id, Show id) =>
@@ -226,7 +229,8 @@ split ::
    (Ord id) =>
    Int -> Record s1 s2 t1 t2 id v d1 d2 -> [Record s1 s2 t1 t2 id v d1 d2]
 split n (Record time pMap) =
-   map (Record time . Map.fromList) $ ListHT.sliceVertical n $ Map.toList pMap
+   List.map (Record time . Map.fromList) $
+   ListHT.sliceVertical n $ Map.toList pMap
 
 
 sortSigList ::
@@ -318,12 +322,12 @@ unionWithNewTime ::
   Record S.Signal S.Signal (Typ A T Tt) t2 id v d d
 unionWithNewTime rs = Record newTime $
   Map.unionsWith (error "unionWithNewTime: duplicate signal ids") $
-    map ((\(Record _ m) -> m) . flip (newTimeBase "unionWithNewTime") newTime) rs
-  where (starts, ends) = unzip $ map getTimeWindow rs
-        newTime = S.sort $ List.foldl1' S.append ts
-        ts = map (filt . getTime) rs
-        filt = S.filter (>= S.fromScalar (maximum starts))
-               . S.filter (<= S.fromScalar (minimum ends))
+    List.map ((\(Record _ m) -> m) . flip (newTimeBase "unionWithNewTime") newTime) rs
+  where (starts, ends) = unzip $ List.map getTimeWindow rs
+        newTime = S.sort $ List.foldl1' S.append $ List.map (filt . getTime) rs
+        filt =
+           S.filter (>= S.fromScalar (maximum starts)) .
+           S.filter (<= S.fromScalar (minimum ends))
 
 
 -- | Modify the SigId
@@ -331,8 +335,7 @@ modifySigId ::
   (String -> String) ->
   Record s1 s2 t1 t2 SigId v d1 d2 ->
   Record s1 s2 t1 t2 SigId v d1 d2
-modifySigId f = rmapKeys g
-  where g (SigId str) = SigId (f str)
+modifySigId f = mapKeys (\(SigId str) -> SigId (f str))
 
 
 -- | Modify specified signals with function
@@ -359,11 +362,12 @@ maxRange ::
   (TC Scalar t2 (Data Nil d2), TC Scalar t2 (Data Nil d2))
 maxRange list (Record _ m) =
   (S.toScalar $ minimum lmin, S.toScalar $ maximum lmax)
-  where (lmin, lmax) = unzip $
-          map (S.fromScalar . S.minmax . checkedLookup "Signal.maxRange" m)
-              $ case list of
-                     RangeFromAll -> Map.keys m
-                     RangeFrom w -> w
+  where (lmin, lmax) =
+           unzip $
+           List.map (S.fromScalar . S.minmax . checkedLookup "Signal.maxRange" m) $
+           case list of
+              RangeFromAll -> Map.keys m
+              RangeFrom w -> w
 
 
 -- | Get maximum signal range for all signals specified
@@ -384,7 +388,7 @@ normSignals2Range :: (Show id,
                      Record s1 s2 t1 t2 id v d1 d2
 normSignals2Range (listM,listN) record = modifySignals listN f record
   where (TC (Data minx),TC (Data maxx)) = maxRange listM record
-        f x = S.map (\y -> y * (maxx - minx) + minx) $ S.norm x
+        f = S.map (\y -> y * (maxx - minx) + minx) . S.norm
 
 normSignals2Max75 :: (Show id,
                       Ord id,
@@ -400,7 +404,7 @@ normSignals2Max75 :: (Show id,
                      Record s1 s2 t1 t2 id v d1 d2
 normSignals2Max75 (listM,listN) record = modifySignals listN f record
   where ( _ ,TC (Data maxx)) = maxRange listM record
-        f x = S.map (\y -> y * 0.75 * maxx) $ S.norm x
+        f = S.map (\y -> y * 0.75 * maxx) . S.norm
 
 -- | Norm all signals to one
 norm :: (Fractional d2,
@@ -409,7 +413,7 @@ norm :: (Fractional d2,
          V.Storage v d2,
          V.Singleton v) =>
         Record s1 s2 t1 t2 id v d1 d2 -> Record s1 s2 t1 t2 id v d1 d2
-norm rec = rmap S.norm rec
+norm rec = map S.norm rec
 
 
 -- | Add interpolated data points in an existing record
@@ -504,7 +508,7 @@ instance
              ListHT.sliceVertical n xs
       return $
          Record (S.fromList $ Match.take vectorSamples $ iterate (1+) 0) $
-         Map.fromList $ zip pos $ map S.fromList $ transpose vectorSamples
+         Map.fromList $ zip pos $ List.map S.fromList $ transpose vectorSamples
 
 {-
 we need this class,
@@ -614,8 +618,10 @@ powerToSignal (Record time m) = (Record time $
                                    Map.map S.untype m)
 
 -- | Plot Records with readible keys
-powerToSignalWithFunct :: (Ord node, Show node,Show (v d)) =>  (Idx.PPos node -> SigId) -> PowerRecord node v d -> SignalRecord v d
-powerToSignalWithFunct funct rec = rmap S.untype $ rmapKeys funct rec
+powerToSignalWithFunct ::
+   (Ord node, Show node,Show (v d)) =>
+   (Idx.PPos node -> SigId) -> PowerRecord node v d -> SignalRecord v d
+powerToSignalWithFunct funct rec = map S.untype $ mapKeys funct rec
 
 -- | Combine a power and a signal record together in a signal record (plotting)
 combinePowerAndSignal :: (Eq (v d),Show id) => PowerRecord id v d -> SignalRecord v d -> SignalRecord v d
@@ -641,7 +647,7 @@ partIntegrate :: (Num d,
                   V.Singleton v,
                   BSum d,
                   BProd d d) => PowerRecord node v d -> FlowRecord node v d
-partIntegrate rec@(Record time _) = rmap (S.partIntegrate time) rec
+partIntegrate rec@(Record time _) = map (S.partIntegrate time) rec
 
 -- | Classify a flow record to get a distribution record
 distribution :: (V.FromList v,
@@ -661,11 +667,14 @@ distribution :: (V.FromList v,
                  Show n,
                  Show (v d)) => FlowRecord n v d -> [Idx.PPos n] -> d -> d -> DistRecord n v d
 distribution rec@(Record _ pMap) xs interval offset = Record classification energyDistribution
-  where classification = S.combineDistributions $
-                         map ((S.genDistribution1D $ S.classifyEven interval offset) .
-                              S.changeSignalType . S.untype .
-                              getSig rec) xs
-        energyDistribution =  Map.map (S.calcDistributionValues classification) pMap
+  where classification =
+           S.combineDistributions $
+           List.map
+              ((S.genDistribution1D $ S.classifyEven interval offset) .
+               S.changeSignalType . S.untype . getSig rec)
+              xs
+        energyDistribution =
+           Map.map (S.calcDistributionValues classification) pMap
 
 -- | Careful quick hack
 

@@ -16,9 +16,9 @@ import EFA.Graph (DirEdge(DirEdge), labNodes)
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Sequence as Sequ
+import qualified EFA.Signal.Record as Record
 import EFA.Signal.Record
-          (Record(Record), FlowState(FlowState), FlowRecord,
-           getSig, rmapWithKey)
+          (Record(Record), FlowState(FlowState), FlowRecord, getSig)
 import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(TC))
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
@@ -92,7 +92,7 @@ adjustSignsNew :: (SV.Walker v,
                   EdgeStates node ->
                   FlowRecord node v a ->
                   FlowRecord node v a
-adjustSignsNew (EdgeStates m) = rmapWithKey f
+adjustSignsNew (EdgeStates m) = Record.mapWithKey f
   where f (Idx.PPos (Idx.StructureEdge n1 n2)) x =
            case checkedLookup "Flow.adjustSignsNew" m $ DirEdge n1 n2 of
               (Neg, _) -> neg x

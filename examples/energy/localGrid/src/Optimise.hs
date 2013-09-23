@@ -638,7 +638,7 @@ main = do
      flipwater (Idx.PPos (Idx.StructureEdge Network Water)) x = Sig.neg x
      flipwater (Idx.PPos (Idx.StructureEdge Water Network)) x = Sig.neg x
      flipwater _ x = x
-     powerRecSimCorr = Record.rmapWithKey flipwater powerRecSim
+     powerRecSimCorr = Record.mapWithKey flipwater powerRecSim
 
      -- | make efa on simulation results
      rec0 = addZeroCrossings powerRecSimCorr
