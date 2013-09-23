@@ -26,12 +26,11 @@ nocondition :: StateEnv.Complete node b (Result v) -> Bool
 nocondition _ = True
 
 
--- type OptimalPower node = Map Idx.State [XIdxState.Power node]
-type OptimalPower node = Map Idx.State [(node, node)]
+type OptimalPower node = Map Idx.State [(Idx.PPos node)]
 
 
 
-optimalPower :: [(Idx.State, [(node, node)])] -> OptimalPower node
+optimalPower :: [(Idx.State, [(Idx.PPos node)])] -> OptimalPower node
 optimalPower = Map.fromList
 {-
   List.foldr f Map.empty 
@@ -39,7 +38,7 @@ optimalPower = Map.fromList
           Map.insertWith' (++) s (map (uncurry (XIdxState.power s)) lst)
 -}
 
-type OptimalEtaWithEnv node f v = Map Idx.State (Map (node, node) (Map (f v) (v, v)))
+type OptimalEtaWithEnv node f v = Map Idx.State (Map (Idx.PPos node) (Map (f v) (v, v)))
 
 data OptimalEnvParams node f g v = OptimalEnvParams {
   etaMap :: Map String (v -> v),

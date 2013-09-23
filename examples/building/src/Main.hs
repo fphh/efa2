@@ -133,7 +133,9 @@ sweepPts = Sweep.Pair (local !: rest !: Empty.Cons) (water !: gas !: Empty.Cons)
 optimalPower :: One.OptimalPower Node
 optimalPower =
   One.optimalPower [(Optimisation.state0, lst), (Optimisation.state1, lst)]
-  where lst = [(System.Network, System.Water), (System.LocalNetwork, System.Gas)]
+  where lst =
+           [SeqIdx.ppos System.Network System.Water,
+            SeqIdx.ppos System.LocalNetwork System.Gas]
 
 force :: One.SocDrive Double
 force = One.ChargeDrive 0
@@ -162,7 +164,7 @@ optimalEtasWithPowers params forceFactor env =
         forcing = One.noforcing forceFactor
         stateFlowGraph = One.stateFlowGraph params
         etaMap = One.etaMap params
-        f state ps = Map.fromList res
+        f state = Map.fromList . map g
           where
                 solveFunc =
                   Optimisation.solve
@@ -183,10 +185,12 @@ optimalEtasWithPowers params forceFactor env =
                     forcing
                     stateFlowGraph
 
-                res = map g ps
-                g p = (p, h p optEtaEnv)
-                h (n0, n1) = Map.mapMaybe (fmap (fmap (AppUt.lookupDetPowerState q)))
-                  where q = StateIdx.power state n0 n1
+                g ppos =
+                   (ppos,
+                    Map.mapMaybe (fmap (fmap
+                      (AppUt.lookupDetPowerState
+                          (StateIdx.powerFromPPos state ppos))))
+                      optEtaEnv)
 
 ------------------------------------------------------------------------
 
@@ -248,10 +252,10 @@ to2DMatrix =
   Map.mapKeysWith (++) (\(NonEmpty.Cons line _) -> line) . fmap (:[])
 
 optimalMaps :: (Num a, Ord a, Ord (f a), Ord node) =>
-  Map Idx.State (Map (node, node) (Map (NonEmpty.T f a) (a, a))) ->
+  Map Idx.State (Map (Idx.PPos node) (Map (NonEmpty.T f a) (a, a))) ->
   ( Sig.NSignal2 V.Vector V.Vector a,
     Sig.UTSignal2 V.Vector V.Vector a,
-    Map (node, node) (Sig.PSignal2 V.Vector V.Vector a) )
+    Map (Idx.PPos node) (Sig.PSignal2 V.Vector V.Vector a) )
 optimalMaps =
   (\(eta, st, power) -> (head $ Map.elems eta, head $ Map.elems st, power))
   . unzip3Map
@@ -269,11 +273,10 @@ optimalMaps =
 givenSignals ::
   Ord node =>
   Sig.TSignal [] Double ->
-  Map (node, node) (Sig.PSignal [] Double) ->
+  Map (Idx.PPos node) (Sig.PSignal [] Double) ->
   Record.PowerRecord node [] Double
 givenSignals time =
-  Chop.addZeroCrossings . Record.Record time .
-  Map.mapKeys (\(n0,n1) -> Idx.PPos $ Idx.StructureEdge n0 n1)
+  Chop.addZeroCrossings . Record.Record time
 
 solveAndCalibrateAvgEffWithGraph ::
   Sig.TSignal [] Double ->
@@ -299,16 +302,20 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
           stateFlowGraph
 
       optEtaWithPowers ::
-        Map Idx.State (Map (Node, Node) (Map (Param2 Double) (Double, Double)))
+        Map Idx.State
+          (Map (Idx.PPos Node)
+            (Map (Param2 Double) (Double, Double)))
       optEtaWithPowers = optimalEtasWithPowers optParams force env
       (_optEta, _optState, optPower) = optimalMaps optEtaWithPowers
 
       optPowerInterp ::
-        Map (Node, Node) (Sig.PSignal [] Double)
-      optPowerInterp = for optPower $ \powerStateOpt ->
-        let f = Sig.interp2WingProfile "solveAndCalibrateAvgEffWithGraph"
-                                       restSig varLocalPower
-        in  Sig.tzipWith (f powerStateOpt) prest plocal
+        Map (Idx.PPos Node) (Sig.PSignal [] Double)
+      optPowerInterp =
+        for optPower $ \powerStateOpt ->
+          Sig.tzipWith
+            (Sig.interp2WingProfile "solveAndCalibrateAvgEffWithGraph"
+              restSig varLocalPower powerStateOpt)
+            prest plocal
 
 
       givenSigs :: Record.PowerRecord Node [] Double
@@ -316,8 +323,8 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
         givenSignals time $
         Map.union optPowerInterp $
         Map.fromList $
-          ((System.LocalRest, System.LocalNetwork), plocal) :
-          ((System.Rest, System.Network), prest) :
+          (SeqIdx.ppos System.LocalRest System.LocalNetwork, plocal) :
+          (SeqIdx.ppos System.Rest System.Network, prest) :
           []
 
       envSims =
