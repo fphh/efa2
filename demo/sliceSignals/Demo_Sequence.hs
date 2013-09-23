@@ -41,18 +41,15 @@ s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
 n :: Int
 n = 2
 
-pPosIdx :: Int -> Int -> XIdx.PPos Int
-pPosIdx x y = XIdx.ppos x y
-
 pMap :: Map (XIdx.PPos Int) PSigL
 pMap =
    Map.fromListWith (error "duplicate keys") $
-      (pPosIdx 0 1, mkSigEnd n s01) :
-      (pPosIdx 1 0, mkSigEnd n s10) :
-      (pPosIdx 1 2, mkSigEnd n s12) :
-      (pPosIdx 2 1, mkSigEnd n s21) :
-      (pPosIdx 1 3, mkSigEnd n s13) :
-      (pPosIdx 3 1, mkSigEnd n s31) :
+      (XIdx.ppos 0 1, mkSigEnd n s01) :
+      (XIdx.ppos 1 0, mkSigEnd n s10) :
+      (XIdx.ppos 1 2, mkSigEnd n s12) :
+      (XIdx.ppos 2 1, mkSigEnd n s21) :
+      (XIdx.ppos 1 3, mkSigEnd n s13) :
+      (XIdx.ppos 3 1, mkSigEnd n s31) :
       []
 
 

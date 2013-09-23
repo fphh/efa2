@@ -594,11 +594,12 @@ main = do
            -- Record.diffTime $
            -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $
            Record.Record time' $
-           Map.fromList [(Idx.PPos (Idx.StructureEdge Rest Network), powerSignalRest),
-                       (Idx.PPos (Idx.StructureEdge LocalRest LocalNetwork), powerSignalLocal),
-                       (Idx.PPos (Idx.StructureEdge Network Water), powerSignalWater),
-                       (Idx.PPos (Idx.StructureEdge LocalNetwork Gas), powerSignalGas)
-                      ]
+           Map.fromList [
+              (XIdx.ppos Rest Network, powerSignalRest),
+              (XIdx.ppos LocalRest LocalNetwork, powerSignalLocal),
+              (XIdx.ppos Network Water, powerSignalWater),
+              (XIdx.ppos LocalNetwork Gas, powerSignalGas)
+             ]
 
 
      recConsumers :: Record.PowerRecord Node [] Double
@@ -606,9 +607,10 @@ main = do
            -- Record.diffTime $
            -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $
            Record.Record time' $
-           Map.fromList [(Idx.PPos (Idx.StructureEdge Rest Network), powerSignalRest),
-                       (Idx.PPos (Idx.StructureEdge LocalRest LocalNetwork), powerSignalLocal)
-                      ]
+           Map.fromList [
+              (XIdx.ppos Rest Network, powerSignalRest),
+              (XIdx.ppos LocalRest LocalNetwork, powerSignalLocal)
+             ]
 
 {-
    PlotIO.recordList "after zero" DefaultTerm.cons show id
