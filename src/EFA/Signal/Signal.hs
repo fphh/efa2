@@ -117,6 +117,10 @@ unSignalIdx :: SignalIdx -> Int
 unSignalIdx (SignalIdx x) = x
 
 
+data Range = Range SignalIdx SignalIdx
+   deriving (Eq, Show)
+
+
 typ :: TC s t d -> t
 typ _ = error "Signal.typ: got phantom type"
 

@@ -10,6 +10,7 @@ import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Base as SB
 import EFA.Signal.Signal
           (TC(TC),
+           Range(Range),
            Scalar,
            Signal,
            FSignal,
@@ -432,8 +433,11 @@ newTimeBase caller (Record time m) newTime = Record newTime (Map.map f m)
 -- | Create a new Record by slicing time and all signals on given Indices
 slice ::
    (V.Slice v, V.Storage v d) =>
-   Record s1 s2 t1 t2 id v d d -> (S.SignalIdx, S.SignalIdx) {- Range -} -> Record s1 s2 t1 t2 id v d d
-slice (Record t m) (sidx1@(S.SignalIdx idx1),S.SignalIdx idx2) = Record (f t) (Map.map f m)
+   Record s1 s2 t1 t2 id v d d ->
+   Range ->
+   Record s1 s2 t1 t2 id v d d
+slice (Record t m) (Range sidx1@(S.SignalIdx idx1) (S.SignalIdx idx2)) =
+    Record (f t) (Map.map f m)
   where f ::
            (V.Slice v, V.Storage v d) =>
            TC s t (Data (v :> Nil) d) -> TC s t (Data (v :> Nil) d)

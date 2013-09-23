@@ -8,6 +8,7 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
+import EFA.Signal.Signal (SignalIdx, Range(Range))
 
 import qualified EFA.Report.Report as Report
 import EFA.Report.Report (Table, toDoc, autoFormat)
@@ -15,8 +16,6 @@ import EFA.Report.Typ (TDisp)
 import EFA.Report.Base (DispStorage1)
 
 import Text.Printf (PrintfArg)
-
-import EFA.Signal.Signal(SignalIdx)
 
 import qualified Data.List.HT as ListHT
 import qualified Data.List as List
@@ -41,9 +40,6 @@ It could also be a Map, but we need the laziness of the list type.
 newtype List a = List [Section a] deriving (Show, Eq)
 
 data Section a = Section Idx.Section Range a
-   deriving (Eq, Show)
-
-data Range = Range SignalIdx SignalIdx
    deriving (Eq, Show)
 
 rangeSingleton :: SignalIdx -> Range

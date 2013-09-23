@@ -16,18 +16,15 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
 
-import EFA.Signal.Sequence (Range)
-
-
-
 import EFA.Signal.Record (Record(Record), PowerRecord, FlowRecord)
 
 import EFA.Signal.Base
           (Val, Sign(PSign, NSign, ZSign),
            ZeroCrossing(NoCrossing, ZeroCrossing))
 import EFA.Signal.Signal
-          (TC(TC),  TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
+          (TC(TC), TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
            DTSamp, PSamp2LL, Samp, Samp1L,
+           Range(Range),
            (.+), (.-), (.*), (./), (.++),
            sampleAverage, changeType, toSample, toSigList, fromSigList)
 
@@ -172,7 +169,7 @@ genSequ pRec =
            ((Range, [Range]), (Record.Sig, [Record.Sig]))
 
         -- Incoming rSig is at least two samples long -- detect changes
-        recyc rsig x1 (((Sequ.Range lastIdx idx),sq),(secRSig, sqRSig)) |
+        recyc rsig x1 (((Range lastIdx idx),sq),(secRSig, sqRSig)) |
           (Record.len rsig) >=2 = recyc rTail x2 (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
             (x2, rTail) = maybe err id $ Record.viewL rsig
@@ -188,14 +185,14 @@ genSequ pRec =
 
             g :: EventType -> (Range, [Range])
 
-            g LeftEvent = (Sequ.Range idx (inc idx), sq ++ [Sequ.Range lastIdx idx])
-            g RightEvent = (Sequ.Range (inc idx) (inc idx), sq ++ [Sequ.Range lastIdx (inc idx)])
-            g MixedEvent = (Sequ.Range (inc idx) (inc idx), sq ++ [Sequ.Range lastIdx idx] ++ [Sequ.Range idx (inc idx)])
-            g NoEvent = (Sequ.Range lastIdx (inc idx), sq)
+            g LeftEvent = (Range idx (inc idx), sq ++ [Range lastIdx idx])
+            g RightEvent = (Range (inc idx) (inc idx), sq ++ [Range lastIdx (inc idx)])
+            g MixedEvent = (Range (inc idx) (inc idx), sq ++ [Range lastIdx idx] ++ [Range idx (inc idx)])
+            g NoEvent = (Range lastIdx (inc idx), sq)
 
         -- Incoming rList is only one Point long -- append last sample to last section
-        recyc rsig _ ((Sequ.Range lastIdx idx, sq), (secRSig, sqRSig)) | (Record.len rsig) >=1 =
-               ((Sequ.Range lastIdx (inc idx), sq), (secRSig .++ rsig, sqRSig))
+        recyc rsig _ ((Range lastIdx idx, sq), (secRSig, sqRSig)) | (Record.len rsig) >=1 =
+               ((Range lastIdx (inc idx), sq), (secRSig .++ rsig, sqRSig))
 
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc

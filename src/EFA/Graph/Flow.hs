@@ -234,7 +234,7 @@ getStorageSequences =
          fmap (Map.singleton s) $
          Map.mapMaybe Topo.maybeStorage $ Graph.nodeLabels g)
 
-type RangeGraph node = (Map Idx.Section Sequ.Range, SequFlowGraph node)
+type RangeGraph node = (Map Idx.Section S.Range, SequFlowGraph node)
 
 type FlowEdge = Topo.FlowEdge Graph.EitherEdge
 type AugNode sec = Idx.PartNode (Idx.Augmented sec)
