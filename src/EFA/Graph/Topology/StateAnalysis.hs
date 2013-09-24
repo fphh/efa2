@@ -138,7 +138,7 @@ edgeOrients (Graph.DirEdge x y) =
 
 admissibleEdges ::
    (Ord node) =>
-   LNEdge node -> CountTopology node ->
+   Graph.DirEdge node -> CountTopology node ->
    [(Graph.EitherEdge node, CountTopology node)]
 admissibleEdges e0 g0 = do
    e1 <- edgeOrients e0
@@ -148,7 +148,7 @@ admissibleEdges e0 g0 = do
 
 expand ::
    (Ord node) =>
-   LNEdge node -> CountTopology node -> [CountTopology node]
+   Graph.DirEdge node -> CountTopology node -> [CountTopology node]
 expand e g = map snd $ admissibleEdges e g
 
 splitNodesEdges ::
@@ -169,15 +169,15 @@ instance Eq  (Alternatives a) where (==)     =  equating  (void . getAlternative
 instance Ord (Alternatives a) where compare  =  comparing (void . getAlternatives)
 
 alternatives ::
-   (Ord node) => LNEdge node -> CountTopology node -> Alternatives node
+   (Ord node) => Graph.DirEdge node -> CountTopology node -> Alternatives node
 alternatives e g =
    Alternatives $ map fst $ admissibleEdges e g
 
 recoursePrioEdge ::
    (Ord node) =>
    Topology node ->
-   (CountTopology node, PSQ (LNEdge node) (Alternatives node)) ->
-   [(CountTopology node, PSQ (LNEdge node) (Alternatives node))]
+   (CountTopology node, PSQ (Graph.DirEdge node) (Alternatives node)) ->
+   [(CountTopology node, PSQ (Graph.DirEdge node) (Alternatives node))]
 recoursePrioEdge origTopo =
    let recourse tq@(topo, queue) =
           case PSQ.minView queue of
@@ -365,8 +365,6 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
                    in  smallestCluster cm (cm!:cs)) $
              NonEmpty.removeEach partition1
 
-
-type LNEdge node = Graph.DirEdge node
 
 
 -- * set covering
