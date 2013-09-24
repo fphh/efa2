@@ -604,8 +604,9 @@ Executable demo-state-analysis
   If flag(buildDemos)
      Build-Depends:
        efa,
-       base,
-       containers
+       utility-ht,
+       containers,
+       base
   Else
     Buildable: False
 

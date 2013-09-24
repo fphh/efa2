@@ -5,6 +5,9 @@ module EFA.Graph.Topology.StateAnalysis (
    prioritized,
    clustering, clusteringGreedy, clusteringMinimizing,
    setCover,
+
+   complement,
+   minimalGiven,
    ) where
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -21,6 +24,7 @@ import qualified Data.Set as Set; import Data.Set (Set)
 import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.List.HT as ListHT
 import qualified Data.FingerTree.PSQueue as PSQ
 import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
@@ -129,16 +133,20 @@ replaceEdges topo edges =
    graphFromMap (Graph.nodeLabels topo) $ Set.fromList edges
 
 
-edgeOrients :: Ord node => Graph.DirEdge node -> [Graph.EitherEdge node]
-edgeOrients (Graph.DirEdge x y) =
-   (Graph.EDirEdge $ Graph.DirEdge x y) :
-   (Graph.EDirEdge $ Graph.DirEdge y x) : -- x and y swapped!
-   (Graph.EUnDirEdge $ Graph.unDirEdge x y) :
-   []
+edgeOrients ::
+   (Ord node, Graph.Edge edge) =>
+   edge node -> [Graph.EitherEdge node]
+edgeOrients e =
+   let x = Graph.from e
+       y = Graph.to e
+   in  (Graph.EDirEdge $ Graph.DirEdge x y) :
+       (Graph.EDirEdge $ Graph.DirEdge y x) : -- x and y swapped!
+       (Graph.EUnDirEdge $ Graph.unDirEdge x y) :
+       []
 
 admissibleEdges ::
-   (Ord node) =>
-   Graph.DirEdge node -> CountTopology node ->
+   (Ord node, Graph.Edge edge) =>
+   edge node -> CountTopology node ->
    [(Graph.EitherEdge node, CountTopology node)]
 admissibleEdges e0 g0 = do
    e1 <- edgeOrients e0
@@ -147,13 +155,14 @@ admissibleEdges e0 g0 = do
    return (e1, g1)
 
 expand ::
-   (Ord node) =>
-   Graph.DirEdge node -> CountTopology node -> [CountTopology node]
+   (Ord node, Graph.Edge edge) =>
+   edge node -> CountTopology node -> [CountTopology node]
 expand e g = map snd $ admissibleEdges e g
 
 splitNodesEdges ::
-   (Ord node) =>
-   Topology node -> (CountTopology node, [Graph.DirEdge node])
+   (Ord node, Ord (edge node), Graph.Edge edge) =>
+   Graph node edge (Node.Type ()) () ->
+   (CountTopology node, [edge node])
 splitNodesEdges topo =
    (Graph.fromMap
        (Map.map (\(pre,l,suc) -> (l, Set.size pre + Set.size suc)) $ Graph.nodes topo)
@@ -432,6 +441,73 @@ setCoverDirEdges topo =
          ) $
    Graph.graphMap topo
 
+
+-- * state completion
+
+{-
+This algorithm is not optimized.
+It is inspired by 'branchAndBound'.
+It could be more efficient if implemented analogously to 'prioritized'.
+-}
+{- |
+@complement topo givenEdges@ starts with a flow topology
+where the edges of @topo@ are all removed and replaced by @givenEdges@.
+Then it computes all ways to fill the missing edges of @topo@
+in an admissible way.
+
+It is an checked error if one of the given edges
+is not contained in the topology.
+-}
+complement ::
+   (Ord node, Ord (edge node), Graph.Edge edge) =>
+   Graph node edge (Node.Type ()) () ->
+   [Graph.EitherEdge node] -> [FlowTopology node]
+complement topo givenEdges =
+   let (cleanTopo, edges) = splitNodesEdges topo
+       unDirEdge ::
+          (Ord node, Graph.Edge edge) =>
+          edge node -> Graph.UnDirEdge node
+       unDirEdge edge = Graph.unDirEdge (Graph.from edge) (Graph.to edge)
+       givenEdgeSet = Set.fromList (map unDirEdge givenEdges)
+   in  if Set.isSubsetOf givenEdgeSet
+             (Set.fromList $ map unDirEdge edges)
+         then
+            map (Graph.mapNode fst) $
+            foldM (flip expand)
+               (insEdgeSet (Set.fromList givenEdges) cleanTopo) $
+            filter (\edge -> not $ Set.member (unDirEdge edge) givenEdgeSet) edges
+         else error "StateAnalysis.complete: given edge is not contained in topology"
+
+{- |
+Find all minimal edge sets.
+For every minimal edge set @es@ it holds
+
+1. @complement topo es@ is a singleton.
+
+2. @es@ is empty or removing one edge from @es@
+   makes @complement topo es@ returning more than one possible topology.
+-}
+{-
+This algorithm is not optimized.
+If it is necessary there are certainly many ways to make it more efficient.
+-}
+minimalGiven ::
+   (Ord node) =>
+   FlowTopology node -> [[Graph.EitherEdge node]]
+minimalGiven topo =
+   let isSingleton xs =
+          case xs of
+             [] -> error "StateAnalysis.minimalGiven: topology can't be reproduced"
+             [_] -> True
+             _ -> False
+       go edges =
+          let reduced =
+                 filter (isSingleton . complement topo) $
+                 map snd $ ListHT.removeEach edges
+          in  if null reduced
+                then [edges]
+                else concatMap go reduced
+   in  go $ Graph.edges topo
 
 
 -- * various algorithms
