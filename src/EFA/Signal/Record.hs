@@ -66,6 +66,7 @@ import Data.Ratio (Ratio, (%))
 import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
+import Data.Ord.HT (inRange)
 import Data.Map (Map)
 import EFA.Utility.Map (checkedLookup)
 import EFA.Utility (myShowList)
@@ -325,11 +326,12 @@ unionWithNewTime rs = Record newTime $
   Map.unionsWith (error "unionWithNewTime: duplicate signal ids") $
     List.map ((\(Record _ m) -> m) . flip (newTimeBase "unionWithNewTime") newTime) rs
   where (starts, ends) = unzip $ List.map getTimeWindow rs
-        newTime = S.sort $ List.foldl1' S.append $ List.map (filt . getTime) rs
+        newTime = S.sort $ List.foldr1 S.append $ List.map (filt . getTime) rs
         filt =
-           S.filter (>= S.fromScalar (maximum starts)) .
-           S.filter (<= S.fromScalar (minimum ends))
-
+           S.filter $
+              inRange
+                 (S.fromScalar (maximum starts),
+                  S.fromScalar (minimum ends))
 
 -- | Modify the SigId
 modifySigId ::
