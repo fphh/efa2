@@ -174,6 +174,9 @@ splitNodesEdges topo =
    (Graph.fromMap (nodeDegrees topo) Map.empty,
     Graph.edges topo)
 
+removeCounts :: CountTopology node -> FlowTopology node
+removeCounts = Graph.mapNode fst
+
 
 newtype
    Alternatives node =
@@ -280,7 +283,7 @@ mergeSmallestClusters topo queue0 =
          case PQ.minView queue1 of
             Nothing ->
                Left $
-               map (\es -> Graph.mapNode fst $ insEdgeSet es topo) $
+               map (\es -> removeCounts $ insEdgeSet es topo) $
                clusterEdges c0
             Just (c1, queue2) -> Right $
                let c2 = mergeCluster topo c0 c1
@@ -334,7 +337,7 @@ mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Graph.mapNode fst $ insEdgeSet es topo) $
+         map (\es -> removeCounts $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          Right $
@@ -363,7 +366,7 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Graph.mapNode fst $ insEdgeSet es topo) $
+         map (\es -> removeCounts $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          let (c0,partition1) =
@@ -462,7 +465,7 @@ complement ::
    [edge node] ->
    [FlowTopology node]
 complement topo freeEdges =
-   map (Graph.mapNode fst) $
+   map removeCounts $
    foldM (flip expand) topo freeEdges
 
 {- |
@@ -539,7 +542,7 @@ in Pearls of Functional Algorithm Design.
 -}
 branchAndBound :: (Ord node) => Topology node -> [FlowTopology node]
 branchAndBound topo =
-   map (Graph.mapNode fst) $
+   map removeCounts $
    uncurry (foldM (flip expand)) $
    splitNodesEdges topo
 
@@ -548,7 +551,7 @@ prioritized topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  guard (admissibleCountTopology cleanTopo)
        >>
-       (map (Graph.mapNode fst . fst) $
+       (map (removeCounts . fst) $
         recoursePrioEdge topo $
         (cleanTopo,
          PSQ.fromList $ map (\e -> e PSQ.:-> alternatives e cleanTopo) es))
