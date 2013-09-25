@@ -120,6 +120,12 @@ unSignalIdx (SignalIdx x) = x
 data Range = Range SignalIdx SignalIdx
    deriving (Eq, Show)
 
+rangeSingleton :: SignalIdx -> Range
+rangeSingleton n = Range n n
+
+rangeIsSingleton :: Range -> Bool
+rangeIsSingleton (Range from to) = from P.== to
+
 
 typ :: TC s t d -> t
 typ _ = error "Signal.typ: got phantom type"

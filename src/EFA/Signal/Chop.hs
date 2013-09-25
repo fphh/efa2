@@ -157,7 +157,7 @@ genSequ pRec =
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) =
            recyc rTail rHead
-              ((Sequ.rangeSingleton (S.SignalIdx 0), []),
+              ((S.rangeSingleton (S.SignalIdx 0), []),
                (Record.singleton $ rHead, []))
           where
             (rHead, rTail) = maybe err id $ Record.viewL rSig
@@ -203,7 +203,7 @@ removeNilSections ::
    Sequ.List (PowerRecord node v a) ->
    Sequ.List (PowerRecord node v a)
 removeNilSections =
-   Sequ.filterRange (not . Sequ.rangeIsSingleton)
+   Sequ.filterRange (not . S.rangeIsSingleton)
 
 
 -- | Function to detect and classify a step over several signals
