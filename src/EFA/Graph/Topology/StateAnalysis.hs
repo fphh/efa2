@@ -6,6 +6,7 @@ module EFA.Graph.Topology.StateAnalysis (
    clustering, clusteringGreedy, clusteringMinimizing,
    setCover,
 
+   admissibleTopology,
    identify,
    minimalGiven,
    ) where
@@ -99,6 +100,10 @@ checkCountNode topo x =
 
 anyActive :: Map (Graph.EitherEdge node) () -> Bool
 anyActive = Fold.any Topo.isActive . Map.keysSet
+
+admissibleTopology :: (Ord node) => FlowTopology node -> Bool
+admissibleTopology =
+   Fold.all checkInOut . Graph.graphMap
 
 admissibleCountTopology :: (Ord node) => CountTopology node -> Bool
 admissibleCountTopology topo =
@@ -532,7 +537,7 @@ minimalGiven topo =
 
 bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
-   filter (Fold.all checkInOut . Graph.graphMap) .
+   filter admissibleTopology .
    map (replaceEdges topo) $
    mapM edgeOrients $ Graph.edges topo
 

@@ -27,4 +27,4 @@ instance Node.C Node where
 
 
 topology :: Topo.Topology Node
-topology = topologyFromEdges [(node0, node1), (node1, node2)]
+topology = topologyFromEdges [(Source, Crossing), (Crossing, Sink)]

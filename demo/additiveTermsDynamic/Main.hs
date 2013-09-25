@@ -7,7 +7,7 @@ import EFA.Example.Topology.LinearTwo (Node, node0, node1, node2)
 import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Symbolic as Symbolic
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility (seqFlowGraphFromStates)
+import EFA.Application.Utility (seqFlowGraphFromTopology)
 
 import qualified EFA.Flow.Sequence.AssignMap as SeqFlowAssignMap
 import qualified EFA.Flow.Sequence.Absolute as EqSys
@@ -91,7 +91,7 @@ mainSymbolic = do
 
    let solved =
           EqSys.solve
-             (seqFlowGraphFromStates LinearTwo.topology [0])
+             (seqFlowGraphFromTopology LinearTwo.topology)
              givenSymbolic
 
    putStrLn $ Format.unUnicode $ Format.lines $
@@ -133,7 +133,7 @@ mainNumeric :: IO ()
 mainNumeric = do
 
    let solved =
-          EqSys.solve (seqFlowGraphFromStates LinearTwo.topology [0]) givenNumeric
+          EqSys.solve (seqFlowGraphFromTopology LinearTwo.topology) givenNumeric
 
    case SeqFlow.lookupEnergy eout solved of
       Nothing -> error "undefined E_2_1"

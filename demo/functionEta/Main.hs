@@ -3,7 +3,7 @@ module Main where
 
 import qualified EFA.Example.Topology.LinearOne as LinearOne
 import EFA.Example.Topology.LinearOne (Node(Sink, Source))
-import EFA.Application.Utility (seqFlowGraphFromStates)
+import EFA.Application.Utility (seqFlowGraphFromTopology)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -29,7 +29,7 @@ sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
 flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = seqFlowGraphFromStates LinearOne.topology [0]
+flowGraph = seqFlowGraphFromTopology LinearOne.topology
 
 enRange :: [Double]
 enRange = 0.01:[0.5, 1 .. 9]

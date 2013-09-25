@@ -1,12 +1,12 @@
 {-# LANGUAGE Rank2Types #-}
 module Main where
 
-import qualified EFA.Example.Topology.LinearOne as Linear
+import qualified EFA.Example.Topology.LinearOne as LinearOne
 import EFA.Example.Topology.LinearOne (Node(Source, Sink))
 
 import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.Symbolic ((=<>))
-import EFA.Application.Utility (seqFlowGraphFromStates)
+import EFA.Application.Utility (seqFlowGraphFromTopology)
 
 import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys
@@ -64,7 +64,7 @@ run ::
 run x =
    putStrLn $ Format.unUnicode $ Format.lines $
    AssignMap.format $ SeqFlow.toAssignMap $
-   EqSys.solve (seqFlowGraphFromStates Linear.topology [0]) x
+   EqSys.solve (seqFlowGraphFromTopology LinearOne.topology) x
 
 
 main :: IO ()

@@ -4,7 +4,7 @@
 module Main where
 
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility ( topologyFromEdges, seqFlowGraphFromStates )
+import EFA.Application.Utility ( topologyFromEdges, seqFlowGraphFromTopology )
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Rec
@@ -44,8 +44,8 @@ node2 = Node.intNoRestriction 1
 node3 = Node.intNoRestriction 2
 
 
-topoDreibein :: Topo.Topology Node.Int
-topoDreibein =
+topoTripod :: Topo.Topology Node.Int
+topoTripod =
    topologyFromEdges [(node0, node1), (node1, node2), (node1, node3)]
 
 
@@ -109,7 +109,7 @@ given =
 
 main :: IO ()
 main =
-   case seqFlowGraphFromStates topoDreibein [0] of
+   case seqFlowGraphFromTopology topoTripod of
       flowGraph -> do
 
          let rec :: Rec.PowerRecord Node.Int [] Double

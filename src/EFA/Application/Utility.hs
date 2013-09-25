@@ -72,6 +72,24 @@ makePPosLabelMap edgeList = Map.fromList $ concatMap f edgeList
   where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, l1),
                              (SeqIdx.ppos n2 n1, l2)]
 
+
+{- |
+Construct sequence flow graph with a single section
+containing the topology with default directions.
+-}
+seqFlowGraphFromTopology ::
+   (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
+   Topo.Topology node ->
+   SeqFlowQuant.Graph node a v
+seqFlowGraphFromTopology topo =
+   SeqFlowQuant.graphFromPlain $
+   SeqFlow.sequenceGraph $
+   Sequ.fromList $ (:[]) $
+   let flowTopo = Graph.mapEdgesMaybe (Just . Graph.EDirEdge) topo
+   in  if StateAnalysis.admissibleTopology flowTopo
+         then flowTopo
+         else error "seqFlowGraphFromTopology: topology has forbidden default edges"
+
 seqFlowGraphFromStates ::
    (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
    Topo.Topology node -> [Int] ->
