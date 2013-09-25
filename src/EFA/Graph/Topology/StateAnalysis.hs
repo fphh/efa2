@@ -24,7 +24,6 @@ import qualified Data.Set as Set; import Data.Set (Set)
 import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
-import qualified Data.List.HT as ListHT
 import qualified Data.FingerTree.PSQueue as PSQ
 import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
@@ -32,7 +31,6 @@ import Data.PriorityQueue.FingerTree (PQueue)
 import Data.NonEmpty ((!:))
 import Control.Monad (foldM, guard)
 import Control.Functor.HT (void)
-import Data.Tuple.HT (mapFst)
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
 
@@ -460,16 +458,12 @@ The full enumeration could be obtained by completing an empty topology.
 -}
 complement ::
    (Ord node, Graph.Edge edge) =>
-   Map node (Node.Type (), NumberOfAdj) ->
-   [Graph.EitherEdge node] ->
+   CountTopology node ->
    [edge node] ->
    [FlowTopology node]
-complement nodeDegs givenEdges freeEdges =
+complement topo freeEdges =
    map (Graph.mapNode fst) $
-   foldM (flip expand)
-      (Graph.fromMap nodeDegs
-         (Map.fromList $ map (flip (,) ()) givenEdges)) $
-   freeEdges
+   foldM (flip expand) topo freeEdges
 
 {- |
 @identify topo givenEdges@ starts with a flow topology
@@ -490,7 +484,9 @@ identify topo givenEdges =
    in  if Set.isSubsetOf givenEdgeSet
              (Set.fromList $ map unDirEdge edges)
          then
-            complement (nodeDegrees topo) givenEdges $
+            complement
+               (Graph.fromMap (nodeDegrees topo)
+                  (Map.fromList $ map (flip (,) ()) givenEdges)) $
             filter (\edge -> not $ Set.member (unDirEdge edge) givenEdgeSet) $
             edges
          else error "StateAnalysis.identify: given edge is not contained in topology"
@@ -518,14 +514,15 @@ minimalGiven topo =
              [] -> error "StateAnalysis.minimalGiven: topology can't be reproduced"
              [_] -> True
              _ -> False
-       go freeEdges givenEdges =
+       go reducedTopo freeEdges =
           let reduced =
-                 filter (isSingleton . uncurry (flip (complement nodeDegs))) $
-                 map (mapFst (:freeEdges)) $ ListHT.removeEach givenEdges
+                 filter (isSingleton . uncurry complement) $
+                 map (\e -> (Graph.delEdge e reducedTopo, e:freeEdges)) $
+                 Graph.edges reducedTopo
           in  if null reduced
-                then [givenEdges]
+                then [Graph.edges reducedTopo]
                 else concatMap (uncurry go) reduced
-   in  go [] $ Graph.edges topo
+   in  go (Graph.fromMap nodeDegs $ Graph.edgeLabels topo) []
 
 
 -- * various algorithms
