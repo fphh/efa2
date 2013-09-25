@@ -153,6 +153,7 @@ Library
     EFA.Example.Topology.LinearOne
     EFA.Example.Topology.LinearTwo
     EFA.Example.Topology.TripodA
+    EFA.Example.Topology.TripodA.Given
     EFA.Example.Topology.TripodB
   Other-Modules:
     EFA.Equation.SystemRecord
