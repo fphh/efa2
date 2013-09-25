@@ -694,9 +694,9 @@ seqFlowGraph opts gr =
                         in  (content before,
                              content $ Idx.afterSection sec))
                        (fmap SeqFlowQuant.carrySum $
-                        SeqFlowQuant.sumOut sums)
+                        SeqFlowQuant.sumIn sums)
                        (fmap SeqFlowQuant.carrySum $
-                        SeqFlowQuant.sumIn sums)) $
+                        SeqFlowQuant.sumOut sums)) $
               Graph.mapEdgeWithKey
                  (\edge ->
                     if optEtaNode opts
