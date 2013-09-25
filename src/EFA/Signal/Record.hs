@@ -59,9 +59,9 @@ import qualified Data.Foldable as Fold
 import qualified Data.List.HT as ListHT
 import qualified Data.List.Key as Key
 import qualified Data.List.Match as Match
+import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
 
 import Control.Monad (liftM2)
-import Data.NonEmpty ((!:))
 import Data.Ratio (Ratio, (%))
 import Data.Foldable (foldMap)
 import Data.List (transpose)
@@ -71,7 +71,9 @@ import Data.Map (Map)
 import EFA.Utility.Map (checkedLookup)
 import EFA.Utility (myShowList)
 
-import Prelude hiding (map)
+import qualified Prelude as P; import Prelude hiding (map)
+
+import Debug.Trace
 
 
 newtype SigId = SigId String deriving (Eq, Ord, Show, Read)
@@ -87,8 +89,9 @@ type instance D.Value (Record s1 s2 t1 t2 id v d1 d2) = d2
 
 
 data Record s1 s2 t1 t2 id v d1 d2 =
-     Record (TC s1 t1 (Data (v :> Nil) d1))
-            (Map id (TC s2 t2 (Data (v :> Nil) d2))) deriving (Show, Read, Eq)
+     Record { recordTime :: TC s1 t1 (Data (v :> Nil) d1),
+              recordSignalMap :: Map id (TC s2 t2 (Data (v :> Nil) d2)) } 
+              deriving (Show, Read, Eq)
 
 
 type SignalRecord v d = Record Signal Signal (Typ A T Tt) (Typ UT UT UT) SigId v d d
@@ -306,6 +309,7 @@ union (Record timeA mA) (Record timeB mB) =
                 (error "EFA.Signal.Record.union: duplicate signal ids") mA mB)
       else error "EFA.Signal.Record.union: time vectors differ"
 
+{-
 -- Wegen newTimeBase ist der Typ nicht so algemein wie bei "union" oben. Schade.
 unionWithNewTime ::
   ( Eq (v d), Show d,Show (v d),
@@ -330,6 +334,32 @@ unionWithNewTime rs = Record newTime $
         filt = S.filter $ inRange $ (,)
                  (S.fromScalar (maximum starts))
                  (S.fromScalar (minimum ends))
+-}
+
+nonEmptyUnzip :: NonEmpty.T [] (a, b) -> (NonEmpty.T [] a, NonEmpty.T [] b)
+nonEmptyUnzip (NonEmpty.Cons (x, y) rest) =
+  let (xs, ys) = unzip rest in (x !: xs, y !: ys)
+
+
+unionWithNewTime ::
+  ( Eq (v d), Show d,Show (v d),
+    Ord id, Show id,Fractional d, Ord d,
+    V.Filter v, V.FromList v, V.Storage v d, V.Walker v,
+    V.Singleton v, V.Lookup v, V.Find v, V.Sort v) =>
+  NonEmpty.T [] (Record S.Signal S.Signal (Typ A T Tt) t2 id v d d) ->
+  Record S.Signal S.Signal (Typ A T Tt) t2 id v d d
+unionWithNewTime rs = trace "hallo, unionWithNewTime" Record newTime $
+  Map.unionsWith (error "unionWithNewTime: duplicate signal ids") $
+  NonEmpty.toList $ fmap g rs
+  where g x = recordSignalMap $ newTimeBase "unionWithNewTime" x newTime
+        (starts, ends) = nonEmptyUnzip $ fmap getTimeWindow rs
+        newTime = NonEmpty.foldBalanced (S.mergeBy (<=)) $ fmap (filt . getTime) rs
+        filt = S.filter $ inRange $ (,)
+                 (S.fromScalar (NonEmpty.maximum starts))
+                 (S.fromScalar (NonEmpty.minimum ends))
+
+
+
 
 -- | Modify the SigId
 modifySigId ::

@@ -36,6 +36,7 @@ import qualified Data.Set as Set
 import Data.Map (Map)
 import Data.Set (Set)
 import qualified Data.List.Match as Match
+import qualified Data.List.HT as ListHT
 
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
@@ -1740,3 +1741,14 @@ variation2D :: (SV.Storage v2 (v1 d),
 variation2D xs ys = (fromList2 $ Match.replicate (toList ys) (toList xs), fromList2 $ List.map (Match.replicate (toList xs)) (toList ys))
 {-variation2D xs ys = (Match.replicate ys xs, List.map (Match.replicate xs) ys)
     --where toList = id-}
+
+
+mergeBy ::
+  (SV.FromList v, SV.Storage v d) =>
+  (d -> d -> Bool) ->
+  TC s typ (Data (v :> Nil) d) ->
+  TC s typ (Data (v :> Nil) d) ->
+  TC s typ (Data (v :> Nil) d)
+mergeBy p (TC x) (TC y) = TC $ D.fromList $ ListHT.mergeBy p xs ys
+  where xs = D.toList x
+        ys = D.toList y
