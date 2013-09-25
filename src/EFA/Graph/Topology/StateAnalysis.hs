@@ -6,7 +6,7 @@ module EFA.Graph.Topology.StateAnalysis (
    clustering, clusteringGreedy, clusteringMinimizing,
    setCover,
 
-   complement,
+   identify,
    minimalGiven,
    ) where
 
@@ -32,6 +32,7 @@ import Data.PriorityQueue.FingerTree (PQueue)
 import Data.NonEmpty ((!:))
 import Control.Monad (foldM, guard)
 import Control.Functor.HT (void)
+import Data.Tuple.HT (mapFst)
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
 
@@ -159,14 +160,20 @@ expand ::
    edge node -> CountTopology node -> [CountTopology node]
 expand e g = map snd $ admissibleEdges e g
 
+nodeDegrees ::
+   (Ord node, Ord (edge node), Graph.Edge edge) =>
+   Graph node edge (Node.Type ()) () ->
+   Map node (Node.Type (), NumberOfAdj)
+nodeDegrees =
+   Map.map (\(pre,l,suc) -> (l, Map.size pre + Map.size suc)) .
+   Graph.graphMap
+
 splitNodesEdges ::
    (Ord node, Ord (edge node), Graph.Edge edge) =>
    Graph node edge (Node.Type ()) () ->
    (CountTopology node, [edge node])
 splitNodesEdges topo =
-   (Graph.fromMap
-       (Map.map (\(pre,l,suc) -> (l, Set.size pre + Set.size suc)) $ Graph.nodes topo)
-       Map.empty,
+   (Graph.fromMap (nodeDegrees topo) Map.empty,
     Graph.edges topo)
 
 
@@ -447,10 +454,25 @@ setCoverDirEdges topo =
 {-
 This algorithm is not optimized.
 It is inspired by 'branchAndBound'.
-It could be more efficient if implemented analogously to 'prioritized'.
+Actually each of our flow state enumeration algorithms
+could be turned into a completion algorithm.
+The full enumeration could be obtained by completing an empty topology.
 -}
+complement ::
+   (Ord node, Graph.Edge edge) =>
+   Map node (Node.Type (), NumberOfAdj) ->
+   [Graph.EitherEdge node] ->
+   [edge node] ->
+   [FlowTopology node]
+complement nodeDegs givenEdges freeEdges =
+   map (Graph.mapNode fst) $
+   foldM (flip expand)
+      (Graph.fromMap nodeDegs
+         (Map.fromList $ map (flip (,) ()) givenEdges)) $
+   freeEdges
+
 {- |
-@complement topo givenEdges@ starts with a flow topology
+@identify topo givenEdges@ starts with a flow topology
 where the edges of @topo@ are all removed and replaced by @givenEdges@.
 Then it computes all ways to fill the missing edges of @topo@
 in an admissible way.
@@ -458,34 +480,29 @@ in an admissible way.
 It is an checked error if one of the given edges
 is not contained in the topology.
 -}
-complement ::
+identify ::
    (Ord node, Ord (edge node), Graph.Edge edge) =>
-   Graph node edge (Node.Type ()) () ->
-   [Graph.EitherEdge node] -> [FlowTopology node]
-complement topo givenEdges =
-   let (cleanTopo, edges) = splitNodesEdges topo
-       unDirEdge ::
-          (Ord node, Graph.Edge edge) =>
-          edge node -> Graph.UnDirEdge node
+   Topology node -> [Graph.EitherEdge node] -> [FlowTopology node]
+identify topo givenEdges =
+   let edges = Graph.edges topo
        unDirEdge edge = Graph.unDirEdge (Graph.from edge) (Graph.to edge)
-       givenEdgeSet = Set.fromList (map unDirEdge givenEdges)
+       givenEdgeSet = Set.fromList $ map unDirEdge givenEdges
    in  if Set.isSubsetOf givenEdgeSet
              (Set.fromList $ map unDirEdge edges)
          then
-            map (Graph.mapNode fst) $
-            foldM (flip expand)
-               (insEdgeSet (Set.fromList givenEdges) cleanTopo) $
-            filter (\edge -> not $ Set.member (unDirEdge edge) givenEdgeSet) edges
-         else error "StateAnalysis.complete: given edge is not contained in topology"
+            complement (nodeDegrees topo) givenEdges $
+            filter (\edge -> not $ Set.member (unDirEdge edge) givenEdgeSet) $
+            edges
+         else error "StateAnalysis.identify: given edge is not contained in topology"
 
 {- |
-Find all minimal edge sets.
+Find all minimal sets of state identifying edges.
 For every minimal edge set @es@ it holds
 
-1. @complement topo es@ is a singleton.
+1. @identify topo es@ is a singleton.
 
 2. @es@ is empty or removing one edge from @es@
-   makes @complement topo es@ returning more than one possible topology.
+   makes @identify topo es@ returning more than one possible topology.
 -}
 {-
 This algorithm is not optimized.
@@ -495,19 +512,20 @@ minimalGiven ::
    (Ord node) =>
    FlowTopology node -> [[Graph.EitherEdge node]]
 minimalGiven topo =
-   let isSingleton xs =
+   let nodeDegs = nodeDegrees topo
+       isSingleton xs =
           case xs of
              [] -> error "StateAnalysis.minimalGiven: topology can't be reproduced"
              [_] -> True
              _ -> False
-       go edges =
+       go freeEdges givenEdges =
           let reduced =
-                 filter (isSingleton . complement topo) $
-                 map snd $ ListHT.removeEach edges
+                 filter (isSingleton . uncurry (flip (complement nodeDegs))) $
+                 map (mapFst (:freeEdges)) $ ListHT.removeEach givenEdges
           in  if null reduced
-                then [edges]
-                else concatMap go reduced
-   in  go $ Graph.edges topo
+                then [givenEdges]
+                else concatMap (uncurry go) reduced
+   in  go [] $ Graph.edges topo
 
 
 -- * various algorithms
