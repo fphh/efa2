@@ -310,8 +310,8 @@ makePics eqs tabEta socDrive = t
 
 -- Alternative Approch to get StateFlowGraph Data
 
-stateFlow2SequFlow :: (Ord node) => Topo.StateFlowGraph node -> Topo.SequFlowGraph node
-stateFlow2SequFlow = Graph.ixmap f g
+stateFlow2SeqFlow :: (Ord node) => Topo.StateFlowGraph node -> Topo.SeqFlowGraph node
+stateFlow2SeqFlow = Graph.ixmap f g
   where f :: Idx.AugNode Idx.State node -> Idx.AugNode Idx.Section node
         f (Idx.PartNode Idx.Exit x) = Idx.PartNode Idx.Exit x
         f (Idx.PartNode (Idx.NoExit Idx.Init) x) =
@@ -666,7 +666,7 @@ main = do
            in  (flowState, Flow.adjustSigns System.topologyOpt flowState state))
          sequenceFlowsFilt
 
-     flowTopos = Flow.genSequFlowTops System.topologyOpt flowStates
+     flowTopos = Flow.genSeqFlowTops System.topologyOpt flowStates
      sequenceFlowTopologySim = makeSeqFlowTopology flowTopos
      envSimAnalysis = Analysis.external2 sequenceFlowTopologySim adjustedFlows
      envSimAnalysisCumulated = Analysis.external2 sequenceFlowTopologySim
@@ -674,11 +674,11 @@ main = do
 
  {-
    concurrentlyMany_ [
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv System.seqTopoOpt
                   (fromJust (Sig.getSample2D envsChargeOpt (Sig.SignalIdx 0, Sig.SignalIdx 0))),
 
 
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv System.seqTopoOpt
                   (Sig.getSample2D (Sig.getSample2D envsDischarge (Sig.SignalIdx 1, Sig.SignalIdx 1)) (Sig.SignalIdx 1, Sig.SignalIdx 1)) ]
 
 -}
@@ -696,7 +696,7 @@ main = do
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
 -}
-     Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt,
+     Draw.xterm $ Draw.seqFlowGraph System.seqTopoOpt,
 
      PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts varRestPower varLocalPower etaSysMax,
 
@@ -755,10 +755,10 @@ main = do
                                                powerSignalGasOptCharge,
                                                powerSignalGasOptDischarge],
 -}
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  seqTopoSim envSim,
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv  seqTopoSim envSim,
 
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv sequenceFlowTopologySim envSimAnalysisCumulated,
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv sequenceFlowTopologySim envSimAnalysisCumulated,
 
        return ()
      ]

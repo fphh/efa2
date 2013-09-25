@@ -13,7 +13,7 @@ main =
   Draw.xterm $
     Draw.bgcolour Colors.Burlywood1 $
     Draw.title "Dies ist der Titel!" $
-    Draw.sequFlowGraph
+    Draw.seqFlowGraph
        (Draw.hideEtaNode $ Draw.showStorage $ Draw.showStorageEdge $
         Draw.hideVariableIndex $ Draw.optionsDefault) $
     EqSys.solve TripodGiven.seqFlowGraph TripodGiven.equationSystem

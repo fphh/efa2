@@ -11,8 +11,8 @@ module EFA.Graph.Topology (
        ClassifiedTopology,
        FlowGraph,
        DirFlowGraph,
-       SequFlowGraph,
-       DirSequFlowGraph,
+       SeqFlowGraph,
+       DirSeqFlowGraph,
        StateFlowGraph,
        DirStateFlowGraph,
        pathExists,
@@ -194,8 +194,8 @@ type
          (Node.Type (Maybe StoreDir)) ()
 
 
-type SequFlowGraph node = FlowGraph Idx.Section node
-type DirSequFlowGraph node = DirFlowGraph Idx.Section node
+type SeqFlowGraph node = FlowGraph Idx.Section node
+type DirSeqFlowGraph node = DirFlowGraph Idx.Section node
 
 type StateFlowGraph node = FlowGraph Idx.State node
 type DirStateFlowGraph node = DirFlowGraph Idx.State node
@@ -215,7 +215,7 @@ then the storage equations would not work.
 Therefore we should not remove "dead nodes"
 iff they are storages.
 Anyway, I don't remove dead nodes,
-because it will make DirSequFlowGraph more complicated
+because it will make DirSeqFlowGraph more complicated
 or the generation of storage equations will be more complicated.
 -}
 dirFromFlowGraph ::

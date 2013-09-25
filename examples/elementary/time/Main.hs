@@ -147,5 +147,5 @@ main = do
    -- let solved' = EqSys.solve (given 0.9 undefined) flowGraph
 
    concurrentlyMany_ [
-      Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault solved ]
-      -- Draw.sequFlowGraph Draw.optionsDefault "" flowGraph solved' ]
+      Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault solved ]
+      -- Draw.seqFlowGraph Draw.optionsDefault "" flowGraph solved' ]

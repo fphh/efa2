@@ -46,7 +46,7 @@ given =
 
 main :: IO ()
 main =
-   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault $
+   Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault $
       EqSys.solve
          (seqFlowGraphFromStates Tripod.topology [2, 3])
          given

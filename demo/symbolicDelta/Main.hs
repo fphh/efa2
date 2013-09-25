@@ -60,6 +60,6 @@ given =
 main :: IO ()
 main =
    Draw.xterm $
-      Draw.sequFlowGraph (Draw.deltaVariable Draw.optionsDefault) $
+      Draw.seqFlowGraph (Draw.deltaVariable Draw.optionsDefault) $
       SeqFlow.mapGraph Record.delta Record.delta $
       EqSys.solve (seqFlowGraphFromStates Tripod.topology [1]) given

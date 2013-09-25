@@ -10,7 +10,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 import EFA.Graph.Topology
-          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph)
+          (Topology, FlowTopology, ClassifiedTopology, SeqFlowGraph)
 import EFA.Graph (DirEdge(DirEdge), labNodes)
 
 import qualified EFA.Signal.Signal as S
@@ -153,15 +153,15 @@ genFlowState (Record _time flowMap) =
    FlowState $ Map.map (fromScalar . sigSign . S.sum) flowMap
 
 -- | Function to generate Flow Topologies for all Sections
-genSequFlowTops ::
+genSeqFlowTops ::
   (Ord node, Show node) =>
   Topology node -> Sequ.List (FlowState node) -> Sequ.List (FlowTopology node)
-genSequFlowTops topo = fmap (genFlowTopology topo)
+genSeqFlowTops topo = fmap (genFlowTopology topo)
 
-genSequFlowTopsIgnoreUnknownPPos ::
+genSeqFlowTopsIgnoreUnknownPPos ::
   (Ord node, Show node) =>
   Topology node -> Sequ.List (FlowState node) -> Sequ.List (FlowTopology node)
-genSequFlowTopsIgnoreUnknownPPos topo =
+genSeqFlowTopsIgnoreUnknownPPos topo =
   fmap (genFlowTopologyIgnoreUnknownPPos topo)
 
 
@@ -201,7 +201,7 @@ genFlowTopologyIgnoreUnknownPPos topo (FlowState fs) =
 
 sectionFromClassTopo ::
   (Ord node) =>
-  Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
+  Idx.Section -> ClassifiedTopology node -> SeqFlowGraph node
 sectionFromClassTopo sec =
    Graph.ixmap
       (Idx.PartNode (Idx.augment sec))
@@ -234,7 +234,7 @@ getStorageSequences =
          fmap (Map.singleton s) $
          Map.mapMaybe Topo.maybeStorage $ Graph.nodeLabels g)
 
-type RangeGraph node = (Map Idx.Section S.Range, SequFlowGraph node)
+type RangeGraph node = (Map Idx.Section S.Range, SeqFlowGraph node)
 
 type FlowEdge = Topo.FlowEdge Graph.EitherEdge
 type AugNode sec = Idx.PartNode (Idx.Augmented sec)

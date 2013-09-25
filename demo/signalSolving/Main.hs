@@ -58,5 +58,5 @@ given =
 
 main :: IO ()
 main =
-   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault $
+   Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault $
       EqSys.solve TripodGiven.seqFlowGraph given

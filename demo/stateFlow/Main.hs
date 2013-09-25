@@ -15,15 +15,15 @@ import Data.Monoid (Monoid, mempty)
 main :: IO ()
 main = do
 
-   let sequFlowGraph =
+   let seqFlowGraph =
           EqSys.solve TripodGiven.seqFlowGraph TripodGiven.equationSystem
 
        stateFlowGraph =
           StateFlow.flowGraphFromCumResult $
-          StateFlow.fromSequenceFlowResult False sequFlowGraph
+          StateFlow.fromSequenceFlowResult False seqFlowGraph
 
    concurrentlyMany_ $ map Draw.xterm $
-      Draw.sequFlowGraph Draw.optionsDefault sequFlowGraph :
+      Draw.seqFlowGraph Draw.optionsDefault seqFlowGraph :
       Draw.stateFlowGraph Draw.optionsDefault stateFlowGraph :
       Draw.stateFlowGraph Draw.optionsDefault
          (StateEqSys.solve stateFlowGraph mempty) :

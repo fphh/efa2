@@ -109,7 +109,7 @@ main = do
   concurrentlyMany_ [
     Draw.xterm $
       Draw.title "Aktuell berechnet" $
-      Draw.sequFlowGraph Draw.optionsDefault env,
+      Draw.seqFlowGraph Draw.optionsDefault env,
     Draw.xterm $
       Draw.title "Zielvorgabe" $
-      Draw.sequFlowGraph Draw.optionsDefault testEnv ]
+      Draw.seqFlowGraph Draw.optionsDefault testEnv ]

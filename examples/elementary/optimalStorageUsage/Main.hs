@@ -398,18 +398,18 @@ main = do
 
     Draw.xterm $
       Draw.title "Section 0 Mean" $
-        Draw.sequFlowGraph Draw.optionsDefault env0,
+        Draw.seqFlowGraph Draw.optionsDefault env0,
     Draw.xterm $
       Draw.title "Section 1 Mean" $
-        Draw.sequFlowGraph Draw.optionsDefault env1,
+        Draw.seqFlowGraph Draw.optionsDefault env1,
 
     Draw.xterm $
-      Draw.sequFlowGraph Draw.optionsDefault
+      Draw.seqFlowGraph Draw.optionsDefault
         (flowGraph :: SeqFlow.Graph Node (Result Double) (Result Double)),
 
     Draw.xterm $
       Draw.title "Hypothetical Usage Sequence Flow Graph" $
-      Draw.sequFlowGraph Draw.optionsDefault envHU,
+      Draw.seqFlowGraph Draw.optionsDefault envHU,
 
 
     PlotIO.xy "Test" DefaultTerm.cons id sinkRangeSig2 [
@@ -474,5 +474,5 @@ main2 = do
   concurrentlyMany_ [
     PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
               [ esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, etaSysSig, eSourceSig],
-    Draw.xterm $ Draw.sequFlowGraph flowGraph ]
+    Draw.xterm $ Draw.seqFlowGraph flowGraph ]
 -}

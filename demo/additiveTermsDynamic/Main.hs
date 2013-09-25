@@ -97,7 +97,7 @@ mainSymbolic = do
    putStrLn $ Format.unUnicode $ Format.lines $
       SeqFlowAssignMap.format $ SeqFlow.toAssignMap solved
 
-   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault solved
+   Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault solved
 
 
 type

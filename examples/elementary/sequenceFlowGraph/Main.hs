@@ -56,7 +56,7 @@ drawSeqGraph sol = do
    xs <- parse `fmap`
            prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
    Draw.xterm $
-      Draw.sequFlowGraph Draw.optionsDefault $
+      Draw.seqFlowGraph Draw.optionsDefault $
       SeqFlow.mapGraph
          (\a -> a :: Result Double)
          (\v -> v :: Result Double) $

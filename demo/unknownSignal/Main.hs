@@ -139,4 +139,4 @@ main =
                  XIdx.ppos node1 node2,
                  XIdx.ppos node1 node3 ],
 
-            Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault flowGraph ]
+            Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault flowGraph ]

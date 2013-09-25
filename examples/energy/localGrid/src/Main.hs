@@ -126,7 +126,7 @@ process rawSignals =
 
       sequenceFlowGraph =
         Flow.sequenceGraph $
-        Flow.genSequFlowTops System.topology $
+        Flow.genSeqFlowTops System.topology $
         sectionMapping flowStatesUnmapped
 
       externalEnv =
@@ -175,7 +175,7 @@ main = do
           Draw.xterm $
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphWithEnv
+          Draw.seqFlowGraphWithEnv
              (Draw.hideStorageEdge $
               Draw.absoluteVariable Draw.optionsDefault)
              topo env
@@ -183,7 +183,7 @@ main = do
           Draw.xterm $
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphWithEnv
+          Draw.seqFlowGraphWithEnv
              (Draw.hideStorageEdge $
               Draw.deltaVariable Draw.optionsDefault)
              topo env

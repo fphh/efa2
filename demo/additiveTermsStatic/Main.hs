@@ -157,7 +157,7 @@ mainSymbolic = do
       SeqFlowAssignMap.format $ SeqFlow.toAssignMap $
       SeqFlow.mapGraph Record.summands simplifiedSummands solved
 
-   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault $
+   Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault $
       SeqFlow.mapGraph
          (Record.Absolute . Record.summands)
          (Record.Absolute . simplifiedSummands)

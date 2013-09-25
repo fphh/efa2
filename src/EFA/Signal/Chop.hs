@@ -65,9 +65,9 @@ data EventType = LeftEvent
                | NoEvent
 
 
-{-# DEPRECATED genSequFlow "better use (fmap Record.partIntegrate)" #-}
+{-# DEPRECATED genSeqFlow "better use (fmap Record.partIntegrate)" #-}
 -- | Generate Sequence Flow
-genSequFlow :: (Num a,
+genSeqFlow :: (Num a,
                 V.Zipper v,
                 V.Walker v,
                 V.Storage v a,
@@ -76,7 +76,7 @@ genSequFlow :: (Num a,
                 SB.BSum a,
                 SB.BProd a a)=>
                (Sequ.List (PowerRecord node v a)) -> Sequ.List (FlowRecord node v a)
-genSequFlow sqPRec = fmap Record.partIntegrate sqPRec
+genSeqFlow sqPRec = fmap Record.partIntegrate sqPRec
 
 
 -- | Filter Sequence Flow
@@ -119,7 +119,7 @@ makeSeqFlowGraph ::
    Flow.RangeGraph node
 makeSeqFlowGraph topo =
    Flow.sequenceGraph .
-   Flow.genSequFlowTops topo .
+   Flow.genSeqFlowTops topo .
    Flow.genSequFState
 
 
@@ -135,7 +135,7 @@ makeSequence ::
    PowerRecord node [] Val ->
    Sequ.List (FlowRecord node [] Val)
 makeSequence =
-    genSequFlow . genSequ . addZeroCrossings
+    genSeqFlow . genSequ . addZeroCrossings
 
 -----------------------------------------------------------------------------------
 {-

@@ -72,4 +72,4 @@ main :: IO ()
 main = do
    putStrLn $ unlines $ map solve enRange
 
-   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault $ solveGraph 0.5
+   Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault $ solveGraph 0.5

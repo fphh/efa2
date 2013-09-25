@@ -70,7 +70,7 @@ fromGraph ::
    Eq a, Arith.Product v,
    Arith.Product a, Arith.Integrate v, Node.C node) =>
   Bool ->
-  Topo.DirSequFlowGraph node -> EquationSystem node s a v
+  Topo.DirSeqFlowGraph node -> EquationSystem node s a v
 fromGraph = EqGen.fromGraph
 
 constant :: x -> Expression node s a v x

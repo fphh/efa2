@@ -132,7 +132,7 @@ pre topology epsZero epsT epsE rawSignals =
 2. switch to dTime with fmap Record.diffTime
 2. make delta - Analysis from two envs
 
-external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
+external sequenceFlowTopology seqFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute seqFlowRecord
 
 initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
@@ -154,11 +154,11 @@ external :: (Eq d,
             Flow.RangeGraph System.Node ->
             Sequ.List (FlowRecord System.Node v d) ->
             Env.Complete System.Node (Result Double) (Result d)
-external sequenceFlowTopology sequFlowRecord =
+external sequenceFlowTopology seqFlowRecord =
   Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
   EqGen.solveFromMeasurement
     sequenceFlowTopology $
-    makeGivenFromExternal Idx.Absolute sequFlowRecord
+    makeGivenFromExternal Idx.Absolute seqFlowRecord
 
 initStorage :: (Arith.Constant a) => a
 initStorage = Arith.fromRational $ 0.7*3600*1000
@@ -204,10 +204,10 @@ external2 ::
       (Result (Data Nil a))
       (Result (Data (v D.:> Nil) a))
 
-external2 sequenceFlowTopology sequFlowRecord =
+external2 sequenceFlowTopology seqFlowRecord =
   Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
   EqGen.solveFromMeasurement sequenceFlowTopology $
-    makeGivenFromExternal2 sequFlowRecord -- $ Record.diffTime sequFlowRecord
+    makeGivenFromExternal2 seqFlowRecord -- $ Record.diffTime seqFlowRecord
 
 -- makeGivenFromExternal2 ::
 --  makeGivenFromExternal2 env = EqAbs.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)

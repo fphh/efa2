@@ -277,7 +277,7 @@ main = do
   ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
 
-  let flowToposX = map (Flow.genSequFlowTops System.topology) flowStatesX
+  let flowToposX = map (Flow.genSeqFlowTops System.topology) flowStatesX
 
 ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
@@ -338,12 +338,12 @@ main = do
           Draw.dot (ti ++ "vehicle_delta.dot") $
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphDeltaWithEnv topo env
+          Draw.seqFlowGraphDeltaWithEnv topo env
       drawAbs (Record.Name ti) topo env c =
           Draw.dot (ti++"vehicle.dot")$
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphAbsWithEnv topo env
+          Draw.seqFlowGraphAbsWithEnv topo env
 
 
 

@@ -26,7 +26,7 @@ main = do
        cumSolved = CumEqSys.solve cum mempty
 
    concurrentlyMany_ $ map Draw.xterm $
-      Draw.sequFlowGraph Draw.optionsDefault solved :
+      Draw.seqFlowGraph Draw.optionsDefault solved :
       Draw.cumulatedFlow cum :
       Draw.cumulatedFlow cumSolved :
       []

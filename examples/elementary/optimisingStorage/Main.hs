@@ -426,5 +426,5 @@ main = do
   concurrentlyMany_ $
     map ( Draw.xterm
           . Draw.title "Topology"
-          . Draw.sequFlowGraph Draw.optionsDefault )
+          . Draw.seqFlowGraph Draw.optionsDefault )
         [envhh,envhl, envlh, envll]
