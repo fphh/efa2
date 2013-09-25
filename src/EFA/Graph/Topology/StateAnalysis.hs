@@ -167,9 +167,9 @@ nodeDegrees =
    Graph.graphMap
 
 splitNodesEdges ::
-   (Ord node, Ord (edge node), Graph.Edge edge) =>
-   Graph node edge (Node.Type ()) () ->
-   (CountTopology node, [edge node])
+   (Ord node) =>
+   Topology node ->
+   (CountTopology node, [Graph.DirEdge node])
 splitNodesEdges topo =
    (Graph.fromMap (nodeDegrees topo) Map.empty,
     Graph.edges topo)
