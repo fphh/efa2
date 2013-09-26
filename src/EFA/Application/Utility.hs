@@ -90,14 +90,31 @@ seqFlowGraphFromTopology topo =
          then flowTopo
          else error "seqFlowGraphFromTopology: topology has forbidden default edges"
 
+
+dirEdge :: node -> node -> Graph.EitherEdge node
+dirEdge x y = Graph.EDirEdge $ Graph.DirEdge x y
+
+undirEdge :: (Ord node) => node -> node -> Graph.EitherEdge node
+undirEdge x y = Graph.EUnDirEdge $ Graph.UnDirEdge x y
+
+identifyFlowState ::
+   (Ord node) =>
+   Topo.Topology node -> [Graph.EitherEdge node] -> Topo.FlowTopology node
+identifyFlowState topo givenEdges =
+   case StateAnalysis.identify topo givenEdges of
+      [] -> error "identifyFlowState: impossible given edges"
+      [flowTopo] -> flowTopo
+      _ -> error "identifyFlowState: ambiguous given edges"
+
 seqFlowGraphFromStates ::
    (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
-   Topo.Topology node -> [Int] ->
+   Topo.Topology node ->
+   [[Graph.EitherEdge node]] ->
    SeqFlowQuant.Graph node a v
 seqFlowGraphFromStates topo =
    SeqFlowQuant.graphFromPlain .
    SeqFlow.sequenceGraph .
-   fmap (StateAnalysis.bruteForce topo !!) .
+   fmap (identifyFlowState topo) .
    Sequ.fromList
 
 

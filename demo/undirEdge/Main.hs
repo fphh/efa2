@@ -4,7 +4,7 @@ module Main where
 import qualified EFA.Example.Topology.TripodA as Tripod
 import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
 
-import EFA.Application.Utility (seqFlowGraphFromStates)
+import EFA.Application.Utility (seqFlowGraphFromStates, dirEdge, undirEdge)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
@@ -48,5 +48,7 @@ main :: IO ()
 main =
    Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault $
       EqSys.solve
-         (seqFlowGraphFromStates Tripod.topology [2, 3])
+         (seqFlowGraphFromStates Tripod.topology
+            [[dirEdge node0 node2, undirEdge node2 node3],
+             [dirEdge node0 node2, undirEdge node1 node2]])
          given

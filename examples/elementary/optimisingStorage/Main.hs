@@ -5,7 +5,8 @@ import qualified EFA.Example.Topology.TripodB as Tripod
 import EFA.Example.Topology.TripodB (Node, node0, node1, node2, node3)
 
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility ( seqFlowGraphFromStates, checkDetermined )
+import EFA.Application.Utility
+          ( seqFlowGraphFromStates, checkDetermined, dirEdge, undirEdge )
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -48,7 +49,10 @@ sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
 flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = seqFlowGraphFromStates Tripod.topology [0, 4]
+flowGraph =
+   seqFlowGraphFromStates Tripod.topology
+      [[dirEdge node1 node2, dirEdge node1 node3],
+       [undirEdge node0 node1, dirEdge node1 node2]]
 
 
 type Expr s a = EqSys.ExpressionIgnore Node s Double Double a

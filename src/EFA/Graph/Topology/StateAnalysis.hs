@@ -483,7 +483,7 @@ It is an checked error if one of the given edges
 is not contained in the topology.
 -}
 identify ::
-   (Ord node, Ord (edge node), Graph.Edge edge) =>
+   (Ord node) =>
    Topology node -> [Graph.EitherEdge node] -> [FlowTopology node]
 identify topo givenEdges =
    let edges = Graph.edges topo

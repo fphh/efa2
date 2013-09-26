@@ -5,7 +5,7 @@ import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
 
 import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.Symbolic ((=<>), (.=))
-import EFA.Application.Utility (seqFlowGraphFromStates)
+import EFA.Application.Utility (seqFlowGraphFromStates, dirEdge)
 
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -62,4 +62,7 @@ main =
    Draw.xterm $
       Draw.seqFlowGraph (Draw.deltaVariable Draw.optionsDefault) $
       SeqFlow.mapGraph Record.delta Record.delta $
-      EqSys.solve (seqFlowGraphFromStates Tripod.topology [1]) given
+      EqSys.solve
+         (seqFlowGraphFromStates Tripod.topology
+            [[dirEdge node0 node2, dirEdge node3 node2]])
+         given

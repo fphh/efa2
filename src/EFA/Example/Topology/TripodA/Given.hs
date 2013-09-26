@@ -2,7 +2,7 @@ module EFA.Example.Topology.TripodA.Given where
 
 import qualified EFA.Example.Topology.TripodA as Tripod
 import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
-import EFA.Application.Utility ( seqFlowGraphFromStates )
+import EFA.Application.Utility (seqFlowGraphFromStates, dirEdge)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -61,4 +61,7 @@ equationSystem =
 
 seqFlowGraph :: SeqFlow.Graph Node (Result a) (Result v)
 seqFlowGraph =
-   seqFlowGraphFromStates Tripod.topology [1, 0, 1]
+   seqFlowGraphFromStates Tripod.topology
+      [[dirEdge node0 node2, dirEdge node3 node2],
+       [dirEdge node2 node1, dirEdge node2 node3],
+       [dirEdge node0 node2, dirEdge node3 node2]]
