@@ -38,22 +38,17 @@ This ordering warrants that graphviz displays the graph in a top-down fashion.
 -}
 data Node = Source | Crossing Int | Sink deriving (Eq, Ord, Show)
 
-instance Enum Node where
-   fromEnum Sink = 0
-   fromEnum Source = 1
-   fromEnum (Crossing x) = x+2
-
-   toEnum 0 = Sink
-   toEnum 1 = Source
-   toEnum x = Crossing (x-2)
-
 instance Node.C Node where
    display Sink = Format.literal "Sink"
    display Source = Format.literal "Source"
    display (Crossing c) = Format.integer $ fromIntegral c
 
    subscript = Node.subscriptDefault
-   dotId = Node.dotIdDefault
+
+   dotId Sink = "sink"
+   dotId Source = "source"
+   dotId (Crossing c) = show c
+
    typ Sink = Node.AlwaysSink
    typ Source = Node.AlwaysSource
    typ (Crossing _) = Node.Crossing
