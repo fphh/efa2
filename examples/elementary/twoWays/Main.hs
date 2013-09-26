@@ -33,7 +33,10 @@ sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Node = Sink | Source | Crossing Int deriving (Eq, Ord, Show)
+{- |
+This ordering warrants that graphviz displays the graph in a top-down fashion.
+-}
+data Node = Source | Crossing Int | Sink deriving (Eq, Ord, Show)
 
 instance Enum Node where
    fromEnum Sink = 0
