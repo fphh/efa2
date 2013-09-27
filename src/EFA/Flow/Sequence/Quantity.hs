@@ -99,6 +99,7 @@ import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid, mempty, (<>))
+import Data.Maybe.HT (toMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -625,32 +626,20 @@ sequenceFromPlain ::
       (Node.Type (Maybe Topo.StoreDir)) () ->
    Sequence node a v
 sequenceFromPlain =
-   let sum = Sum unknown unknown
-       noSum   = Sums { sumIn = Nothing,  sumOut = Nothing }
-       inSum   = Sums { sumIn = Just sum, sumOut = Nothing }
-       outSum  = Sums { sumIn = Nothing,  sumOut = Just sum }
-       bothSum = Sums { sumIn = Just sum, sumOut = Just sum }
-   in  Map.map $ \(rng, ((), gr)) ->
-          (,) rng $
-          (unknown,
-           Graph.mapNode
-              (\nt ->
-                 case nt of
-                    Node.Storage Nothing -> noSum
-                    Node.Storage (Just Topo.In) -> inSum
-                    Node.Storage (Just Topo.Out) -> outSum
-                    Node.Sink -> inSum
-                    Node.AlwaysSink -> inSum
-                    Node.Source -> outSum
-                    Node.AlwaysSource -> outSum
-                    Node.Crossing -> bothSum
-                    Node.DeadNode -> noSum
-                    Node.NoRestriction -> bothSum) $
-           Graph.mapEdgeWithKey
-              (\ee _ ->
-                 case ee of
-                    Graph.EUnDirEdge _ -> Nothing
-                    Graph.EDirEdge _ -> Just $ pure unknown) gr)
+   Map.map $ \(rng, ((), gr)) ->
+      (,) rng $
+      (unknown,
+       Graph.mapNodeWithInOut
+          (\(pre, _, suc) ->
+             let maybeDir es =
+                    toMaybe (any (Topo.isActive . fst) es) $
+                    Sum unknown unknown
+             in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc}) $
+       Graph.mapEdgeWithKey
+          (\ee _ ->
+             case ee of
+                Graph.EUnDirEdge _ -> Nothing
+                Graph.EDirEdge _ -> Just $ pure unknown) gr)
 
 
 
