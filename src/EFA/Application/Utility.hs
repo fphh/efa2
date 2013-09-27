@@ -118,10 +118,6 @@ seqFlowGraphFromStates topo =
    Sequ.fromList
 
 
-select :: [topo] -> [Int] -> Sequ.List topo
-select ts = Sequ.fromList . map (ts !!)
-
-
 checkDetermined :: String -> Result a -> a
 checkDetermined name rx =
    case rx of

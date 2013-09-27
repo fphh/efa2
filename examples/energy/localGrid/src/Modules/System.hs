@@ -1,6 +1,7 @@
 module Modules.System where
 
 import qualified EFA.Application.Utility as AppUt
+import EFA.Application.Utility (identifyFlowState, dirEdge)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -9,6 +10,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 
+import qualified EFA.Signal.Sequence as Sequ
 import EFA.Signal.Record (SigId(SigId))
 
 import qualified Data.Map as Map
@@ -125,5 +127,17 @@ edgeNamesOpt = Map.fromList el
 ----------------------------------------------------------------------
 -- | SequenceTopology for Optimisation
 
+flowState0, flowState4 :: Topo.FlowTopology Node
+flowState0 =
+   identifyFlowState topologyOpt
+      [dirEdge Gas Network, dirEdge Sun LocalNetwork, dirEdge Wind Network,
+       dirEdge Water Network]
+
+flowState4 =
+   identifyFlowState topologyOpt
+      [dirEdge Gas Network, dirEdge Sun LocalNetwork, dirEdge Wind Network,
+       dirEdge Network Water, dirEdge Network LocalNetwork]
+
 seqTopoOpt :: Flow.RangeGraph Node
-seqTopoOpt = Flow.sequenceGraph (AppUt.select flowStatesOpt [4,0])
+seqTopoOpt =
+   Flow.sequenceGraph $ Sequ.fromList [flowState4, flowState0]

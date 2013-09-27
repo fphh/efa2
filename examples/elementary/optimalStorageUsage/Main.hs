@@ -6,10 +6,10 @@
 module Main where
 
 import qualified EFA.Example.Topology.TripodB as Tripod
-import EFA.Example.Topology.TripodB (Node, source, crossing, sink, storage)
+import EFA.Example.Topology.TripodB (Node, source, crossing, sink, storage, node0, node1, node2, node3)
 
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility (select)
+import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -19,11 +19,12 @@ import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.SystemEta (detEtaSys)
 import EFA.Flow.Sequence.Absolute ((.=), (=%%=), (=.=))
 
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
+import EFA.Graph.Topology (FlowTopology)
 
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Data as D
@@ -61,15 +62,18 @@ sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-flowGraphFunc :: [Int] -> SeqFlow.Graph Node (Result a) (Result v)
-flowGraphFunc =
+assembleFlowTopos :: [FlowTopology Node] -> SeqFlow.Graph Node (Result a) (Result v)
+assembleFlowTopos =
    SeqFlow.graphFromPlain .
    SeqFlowPlain.sequenceGraph .
-   -- Gefaehrlich: man darf sich nicht auf eine spezielle Reihenfolge verlassen!
-   select (StateAnalysis.advanced Tripod.topology)
+   Sequ.fromList
+
+state0, state3 :: FlowTopology Node
+state0 = identifyFlowState Tripod.topology [dirEdge node1 node2, dirEdge node1 node3]
+state3 = identifyFlowState Tripod.topology [dirEdge node1 node2, undirEdge node0 node1]
 
 flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = flowGraphFunc [0, 3]
+flowGraph = assembleFlowTopos [state0, state3]
 
 
 lookupStCrDown :: Double -> Double
@@ -205,7 +209,10 @@ borderFunc ss xs p =
            zip (Sig.toList ss) (Sig.toList xs)
 
 sectionHU ::
-  (d -> Int) -> Sig.PSignal [] d -> [(Int, Sig.PSignal [] d)]
+  (Eq topo) =>
+  (d -> topo) ->
+  Sig.PSignal [] d ->
+  [(topo, Sig.PSignal [] d)]
 sectionHU bf =
   map (\(NonEmpty.Cons (s, w) xs) -> (s, Sig.fromList (w : map snd xs))) .
   NonEmptyMixed.groupBy (equating fst) . map (\s -> (bf s, s)) . Sig.toList
@@ -377,17 +384,15 @@ main = do
       maxEtaSysStateLinear = Sig.argMax maxEtaSys0 maxEtaSys1
 
       bf = a . borderFunc maxEtaSysStateLinear sinkRangeSig
-           where a 0 = 3
-                 a 1 = 0
+           where a 0 = (3, state3)
+                 a 1 = (0, state0)
                  a _ = error "bf"
 
-      optimalState = Sig.map bf hypotheticalUsage
+      optimalState = Sig.map (fst . bf) hypotheticalUsage
 
-      secHU = sectionHU bf hypotheticalUsage
+      (secs, secSigsHU) = unzip $ sectionHU (snd . bf) hypotheticalUsage
 
-      (secs, secSigsHU) = unzip secHU
-
-      envHU = EqSys.solve (flowGraphFunc secs) $ givenEnvHU secSigsHU
+      envHU = EqSys.solve (assembleFlowTopos secs) $ givenEnvHU secSigsHU
 
       labeledEtaSys =
         PlotIO.label "Laden" etaSys0 :
@@ -422,7 +427,7 @@ main = do
 
     PlotIO.xy "Optimale Zustände" DefaultTerm.cons id sinkRangeSig [
       PlotIO.label "Hypothetical Usage" hypotheticalUsage,
-      PlotIO.label "Optimal State" $ Sig.map fromIntegral optimalState ],
+      PlotIO.label "Optimal State" optimalState ],
 
 
     PlotIO.surface "Test" DefaultTerm.cons varX varY labeledEtaSys,

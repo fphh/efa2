@@ -24,7 +24,6 @@ import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
-import EFA.Application.Utility (select)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -622,7 +621,7 @@ main = do
      time = Record.getTime rec
 
      -- | Build Sequenceflow graph for simulation
-     seqTopoSim = Flow.sequenceGraph (select System.flowStatesOpt [4])
+     seqTopoSim = Flow.sequenceGraph $ Sequ.fromList [System.flowState4]
 
      -- | Generate and solve Equation System
 
