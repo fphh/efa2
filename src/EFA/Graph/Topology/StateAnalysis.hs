@@ -25,13 +25,17 @@ import qualified Data.Set as Set; import Data.Set (Set)
 import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.List.HT as ListHT
 import qualified Data.FingerTree.PSQueue as PSQ
 import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
 import Data.PriorityQueue.FingerTree (PQueue)
 import Data.NonEmpty ((!:))
+import Data.List (unfoldr)
 import Control.Monad (foldM, guard)
 import Control.Functor.HT (void)
+import Data.Maybe.HT (toMaybe)
+import Data.Tuple.HT (mapSnd)
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
 
@@ -499,6 +503,38 @@ identify topo givenEdges =
             edges
          else error "StateAnalysis.identify: given edge is not contained in topology"
 
+
+isSingleton :: [a] -> Bool
+isSingleton xs =
+   case xs of
+      [] -> error "StateAnalysis.minimalGiven: topology can't be reproduced"
+      [_] -> True
+      _ -> False
+
+
+reducePattern ::
+   (Ord node) =>
+   CountTopology node -> [Graph.EitherEdge node] ->
+   [(CountTopology node, [Graph.EitherEdge node])]
+reducePattern reducedTopo freeEdges =
+   filter (isSingleton . uncurry complement) $
+   map (\e -> (Graph.delEdge e reducedTopo, e:freeEdges)) $
+   Graph.edges reducedTopo
+
+reducePatterns ::
+   (Ord node) =>
+   [(CountTopology node, [Graph.EitherEdge node])] ->
+   ([[Graph.EitherEdge node]], [(CountTopology node, [Graph.EitherEdge node])])
+reducePatterns =
+   mapSnd (Map.toList . Map.fromList . concat) .
+   ListHT.unzipEithers .
+   map
+      (\(topo,freeEdges) ->
+         let reductions = reducePattern topo freeEdges
+         in  if null reductions
+               then Left $ Graph.edges topo
+               else Right reductions)
+
 {- |
 Find all minimal sets of state identifying edges.
 For every minimal edge set @es@ it holds
@@ -515,22 +551,35 @@ If it is necessary there are certainly many ways to make it more efficient.
 minimalGiven ::
    (Ord node) =>
    FlowTopology node -> [[Graph.EitherEdge node]]
-minimalGiven topo =
-   let nodeDegs = nodeDegrees topo
-       isSingleton xs =
-          case xs of
-             [] -> error "StateAnalysis.minimalGiven: topology can't be reproduced"
-             [_] -> True
-             _ -> False
-       go reducedTopo freeEdges =
-          let reduced =
-                 filter (isSingleton . uncurry complement) $
-                 map (\e -> (Graph.delEdge e reducedTopo, e:freeEdges)) $
-                 Graph.edges reducedTopo
+minimalGiven fullTopo =
+   concat $ reverse $
+   unfoldr
+      (\topoEdges ->
+         toMaybe (not $ null topoEdges) $ reducePatterns topoEdges)
+      [(Graph.fromMap (nodeDegrees fullTopo) $ Graph.edgeLabels fullTopo,
+        [])]
+
+
+{-
+Possible tests:
+  minimalGiven must not return duplicates
+  minimalGiven returns the same as minimalGivenDuplicate after duplicate elimination
+
+
+topology in building/src/Modules/System causes duplicates:
+
+*Modules.System> Data.Foldable.mapM_ (print . StateAnalysis.minimalGiven) flowStates
+-}
+_minimalGivenDuplicate ::
+   (Ord node) =>
+   FlowTopology node -> [[Graph.EitherEdge node]]
+_minimalGivenDuplicate topo =
+   let go reducedTopo freeEdges =
+          let reduced = reducePattern reducedTopo freeEdges
           in  if null reduced
                 then [Graph.edges reducedTopo]
                 else concatMap (uncurry go) reduced
-   in  go (Graph.fromMap nodeDegs $ Graph.edgeLabels topo) []
+   in  go (Graph.fromMap (nodeDegrees topo) $ Graph.edgeLabels topo) []
 
 
 -- * various algorithms
