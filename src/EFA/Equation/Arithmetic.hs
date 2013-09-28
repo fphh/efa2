@@ -149,3 +149,19 @@ clear x = x~-x
 
 one :: Constant a => a
 one = fromInteger 1
+
+
+square :: Product a => a -> a
+square x = x~*x
+
+(^!) :: Product a => a -> Int -> a
+x^!n =
+   let go 1 y = y
+       go m y =
+          case divMod m 2 of
+             (q, r) ->
+                let yq = go q $ square y
+                in  if r==0 then yq else yq~*y
+   in  if n<=0
+         then error "exponent must be positive"
+         else go n x

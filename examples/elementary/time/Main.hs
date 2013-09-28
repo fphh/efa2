@@ -10,8 +10,8 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.Absolute ((.=), (=.=))
 
-import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Arithmetic ((^!))
 
 import EFA.Utility.Async (concurrentlyMany_)
 
@@ -31,12 +31,12 @@ n1, n2, n3, n4, n5, n6 :: Expr s Double -> Expr s Double
 
 -- steigend und fallend
 
-n1 = EqSys.liftF $ \x ->  0.95*exp(-0.05*((x-2)*(x-2)))
+n1 = EqSys.liftF $ \x ->  0.95*exp(-0.05*(x-2)^!2)
 n2 = EqSys.liftF $ \x -> -0.021 * (x - 12) * x
 
 -- fallend
-n3 = EqSys.liftF $ \x -> 1/(0.063*(x+4)*(x+4))
-n4 = EqSys.liftF $ \x -> exp(-0.05*x*x)
+n3 = EqSys.liftF $ \x -> 1/(0.063*(x+4)^!2)
+n4 = EqSys.liftF $ \x -> exp(-0.05*x^!2)
 n6 = EqSys.liftF $ \x -> 1-1/(1+1000*exp(-(x-2)))
 
 n7 :: Expr s Double -> Expr s Double -> Expr s Double
@@ -47,11 +47,10 @@ n7 =
       in  if p/n > s then 0 else n
 
 -- steigend
-n5 = EqSys.liftF $ \x -> x/sqrt(1+(x+2)*(x+2))
+n5 = EqSys.liftF $ \x -> x/sqrt(1+(x+2)^!2)
 
 
-n02, n21, n23, n32, p20 ::
-   (Eq a, Arith.Sum a) => Idx.Section -> Expr s a
+n02, n21, n23, n32, p20 :: Idx.Section -> Expr s a
 n02 sec = EqSys.variable $ XIdx.eta sec node0 node2
 n21 sec = EqSys.variable $ XIdx.eta sec node2 node1
 n23 sec = EqSys.variable $ XIdx.eta sec node2 node3

@@ -16,6 +16,7 @@ import EFA.Flow.Sequence.Absolute ((=.=))
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Arithmetic ((^!))
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.ConvertTable as CT
@@ -66,11 +67,6 @@ ein, eout0, eout1 :: XIdx.Energy Node
 ein = XIdx.energy sec0 node0 node2
 eout0 = XIdx.energy sec0 node1 node2
 eout1 = XIdx.energy sec1 node1 node2
-
-
--- maybe move this to Utility module
-(^!) :: Num a => a -> Int -> a
-(^!) = (^)
 
 
 -- | Provide time of sec1 and inner resistance of battery
