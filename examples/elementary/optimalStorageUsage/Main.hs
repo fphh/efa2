@@ -20,8 +20,6 @@ import EFA.Flow.Sequence.SystemEta (detEtaSys)
 import EFA.Flow.Sequence.Absolute ((.=), (=%%=), (=.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 import EFA.Graph.Topology (FlowTopology)
 
 import qualified EFA.Signal.Sequence as Sequ
@@ -31,11 +29,7 @@ import qualified EFA.Signal.Data as D
 import EFA.Signal.Typ (Typ,A,P,Tt)
 import EFA.Signal.Data (Data, Nil, (:>))
 
-import qualified EFA.Equation.Record as EqRec
-import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Result (Result(Determined))
-
-import qualified EFA.Report.Format as Format
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -46,8 +40,6 @@ import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Data.NonEmpty.Mixed as NonEmptyMixed
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List as List
-import qualified Data.Map as Map
-import qualified Data.Set as Set
 
 import Data.Eq.HT (equating)
 import Data.Ord (comparing)
@@ -55,14 +47,13 @@ import Data.Monoid (mconcat, (<>))
 import Data.Foldable (foldMap)
 import Data.Tuple.HT (swap)
 
-import Debug.Trace (trace)
-
 
 sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-assembleFlowTopos :: [FlowTopology Node] -> SeqFlow.Graph Node (Result a) (Result v)
+assembleFlowTopos ::
+   [FlowTopology Node] -> SeqFlow.Graph Node (Result a) (Result v)
 assembleFlowTopos =
    SeqFlow.graphFromPlain .
    SeqFlowPlain.sequenceGraph .
@@ -163,23 +154,11 @@ givenSec1Mean psink _ =
    []
 
 
-
-etaSys2 ::
-  (Ord (edge k), Ord k, Show k, Show (edge k), Show t2, Graph.Edge edge) =>
-  (t1, Graph k edge (Node.Type t2) edgeLabel) -> t -> a
-etaSys2 (_, topo) _ = trace (show sinks) undefined
-  where sinks = Map.filter isSink $ Graph.nodeEdges topo
-        isSink (_, el, x) =
-          case el of
-               Node.AlwaysSource -> Set.size x > 0
-               Node.Source -> Set.size x > 0
-               _ -> False
-
 sinkRange :: [Double]
-sinkRange = [0.1] -- , 0.2 .. 20]
+sinkRange = [0.1]
 
 ratioRange :: [Double]
-ratioRange = [0.1] -- , 0.2 .. 0.9]
+ratioRange = [0.1]
 
 varX', varY' :: [[Double]]
 (varX', varY') = CT.varMat sinkRange ratioRange
@@ -222,16 +201,9 @@ commonEnvHU ::
   [Idx.Section] ->
   EqSys.EquationSystemIgnore Node s (Data Nil Double) (Data ([] :> Nil) Double)
 commonEnvHU _ =
-  -- (foldMap (uncurry f) $ zip ss (tail ss))
-  -- <>
   ( mconcat $
     (XIdx.storage Idx.initial storage .= D.fromList 20.0) :
     [] )
-{-
-  where f sec0 sec1 =
-          XIdx.power sec0 storage crossing
-            =%%= XIdx.power sec1 storage crossing
--}
 
 givenEnvHUSec ::
   (Idx.Section, Sig.PSignal [] Double) ->
@@ -246,13 +218,6 @@ givenEnvHUSec (sec, Sig.TC sig) =
 
   ((EqSys.variable $ XIdx.eta sec crossing sink) =.=
     EqSys.liftF (D.map lookupCrSi) (EqSys.variable $ XIdx.power sec sink crossing)) :
-
-{-
-  ((EqSys.variable $ XIdx.eta sec  crossing storage) =.=
-    EqSys.liftF (D.map lookupStCrDown)
-                (EqSys.variable $ XIdx.power sec storage crossing)) :
-
--}
 
   -- invertieren!!! TODO!!!
   ((EqSys.variable $ XIdx.eta sec  crossing storage) =.=
@@ -278,66 +243,6 @@ givenEnvHU xs =
   in  commonEnvHU (map fst ys)
       <>
       foldMap givenEnvHUSec ys
-
-{-
-etaSys ::
-  (Show a, Num a, Fractional a, Show node, Ord node) =>
-  Flow.RangeGraph node ->
-  SeqFlow.Graph node b (EqRec.Absolute (Result a)) -> a
-etaSys (_, topo) env = sum sinks / sum sources
-  where m = Map.elems $ Graph.nodeEdges topo
-        sinks = map (Set.foldl sinkEnergies 0 . fst3) $ filter isActiveSink m
-        sources = map (Set.foldl sourceEnergies 0 . thd3) $ filter isActiveSource m
-
-        isActiveSink (ns, Node.AlwaysSink, _) = p ns
-        isActiveSink (ns, Node.Sink, _) = p ns
-        isActiveSink _ = False
-
-        isActiveSource (_, Node.AlwaysSource, ns) = p ns
-        isActiveSource (_, Node.Source, ns) = p ns
-        isActiveSource _ = False
-
-        p = (> 0) .
-            Set.size .
-            Set.filter
-              (\(Topo.FlowEdge (Topo.StructureEdge (Idx.InPart _ e))) -> Topo.isActive e)
-
-        sinkEnergies acc
-          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec
-                       (Graph.EDirEdge (Graph.DirEdge a b))))) =
-            acc + lookUp "etaSys" env (XIdx.energy sec b a)
-        sinkEnergies = error "etaSys: sinkEnergies"
-
-        sourceEnergies acc
-          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec
-                       (Graph.EDirEdge (Graph.DirEdge a b))))) =
-            acc + lookUp "etaSys" env (XIdx.energy sec a b)
--}
-
-lookUp ::
-  (Node.C node, Show v) =>
-  String ->
-  SeqFlow.Graph node a (EqRec.Absolute (Result v)) ->
-  XIdx.Energy node -> v
-lookUp caller env n =
-  case Var.checkedLookup caller SeqFlow.lookupEnergy n env of
-    EqRec.Absolute (Determined x) -> x
-    _ -> error (caller ++ ": undetermined " ++ Format.unUnicode (Var.formatIndex n))
-
-
-etaSysHU ::
-  SeqFlow.Graph Node
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double)) ->
-  Double
-etaSysHU env =
-  (lu eSinkSec0 + lu eSinkSec1) / (lu eSource)
-  where lu = lookUp "etaSysHU" env
-        eSource = XIdx.energy sec0 source crossing
-        eSinkSec0 = XIdx.energy sec0 sink crossing
-        eSinkSec1 = XIdx.energy sec1 sink crossing
-
-
 
 
 main :: IO ()
@@ -440,43 +345,3 @@ main = do
                    DefaultTerm.cons varX varY (PlotIO.label "Max" maxEtaSys),
     PlotIO.surface "Test"
                    DefaultTerm.cons varX varY (PlotIO.label "Max" maxEtaSysState) ]
-
-{-
-main2 :: IO ()
-main2 = do
-  let y = 1
-
-      f e x = lookUp "f" (EqSys.solve flowGraph $ givenSec0Mean x y) e
-      esc1 = XIdx.energy sec1 sink crossing
-      ecs1 = XIdx.energy sec1 crossing sink
-      estc1 = XIdx.energy sec1 storage crossing
-
-      ecst0 = XIdx.energy sec0 crossing storage
-
-      eSource = XIdx.energy sec0 source crossing
-
-      -- sinkRangeSig :: Sig.PSignal [] Double
-      sinkRangeSig = Sig.fromList sinkRange
-
-      --esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, eSourceSig :: Sig.PSignal [] Double
-      esc1Sig = Sig.fromList $ map (f esc1) sinkRange
-      ecs1Sig = Sig.fromList $ map (f ecs1) sinkRange
-      estc1Sig = Sig.fromList $ map (f estc1) sinkRange
-      ecst0Sig = Sig.fromList $ map (f ecst0) sinkRange
-      eSourceSig = Sig.fromList $ map (f eSource) sinkRange
-
-      h x = etaSys flowGraph $ EqSys.solve flowGraph $ givenSec0Mean x y
-      etaSysSig = Sig.fromList $ map h sinkRange
-
-      g 0 = "Sec 1, sink crossing"
-      g 1 = "Sec 1, crossing sink"
-      g 2 = "Sec 1, storage crossing"
-      g 3 = "Sec 0, crossing storage"
-      g 4 = "EtaSys"
-      g 5 = "Sec 0, source crossing"
-
-  concurrentlyMany_ [
-    PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
-              [ esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, etaSysSig, eSourceSig],
-    Draw.xterm $ Draw.seqFlowGraph flowGraph ]
--}

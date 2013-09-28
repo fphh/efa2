@@ -17,12 +17,10 @@ import EFA.Flow.Sequence.Absolute ((=.=))
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Signal as S
--- import qualified EFA.Signal.Data as D
 
 import EFA.Signal.Signal(Test2, (.+), (.-), (./))
 import EFA.Signal.Typ (A, P, Tt, F, N, Typ, Y)
@@ -58,11 +56,6 @@ flowGraph =
 type Expr s a = EqSys.ExpressionIgnore Node s Double Double a
 type ExpVar s = Expr s Double
 
-etaf :: (Arith.Sum a, Floating a) => Expr s a -> Expr s a
-etaf =
-   EqSys.liftF $ \x ->
-      let y = x/100
-      in  1/((y+sqrt(y*y+4*y))/(2*y))
 
 n01, n12, n13, n31, p10, p21, e31, e21, p31, p13 ::
   Idx.Section -> Expr s Double
@@ -87,25 +80,10 @@ ein = XIdx.energy sec0 node0 node1
 eout0 = XIdx.energy sec0 node2 node1
 eout1 = XIdx.energy sec1 node2 node1
 
-e33 :: Expr s Double
-e33 = EqSys.variable $ XIdx.stEnergy XIdx.initSection sec1 node3
-
-time :: Idx.Section -> Expr s Double
-time = EqSys.variable . XIdx.dTime
-
 
 -- maybe move this to Utility module
 (^!) :: Num a => a -> Int -> a
 (^!) = (^)
-
-f ::
-   (Arith.Sum a, Floating a) =>
-   Expr s a -> Expr s a -> Expr s a
-f =
-   EqSys.liftF2 $ \r x ->
-      let -- r = 0.9
-          ui = 200
-      in  x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
 
 
 -- | Provide time of sec1 and inner resistance of battery
@@ -171,21 +149,17 @@ getSignalVarEta ::
    XIdx.Eta Node -> Test2 (Typ A N Tt) Val
 getSignalVarEta = getSignalVar
 
--- ##############################
--- | Setting come here
 
--- | Variation ranges
+-- * Setting comes here
 
-
-yrange, rrange, prange :: [Double]
+-- ** Variation ranges
 
 -- | Variation of time which is equal to time share as time is one
+yrange :: [Double]
 yrange = [0.1,0.2 .. 0.9]
 
--- | Variation of Resistance
-rrange = 0.01:[0.1,0.2 .. 2]
-
 -- | Variation of Power Demand as Sink
+prange :: [Double]
 prange = [0.1,0.2 .. 1] -- 10 bis 100 kW
 
 batteryResistance :: Double
@@ -207,15 +181,7 @@ varY :: S.Test2 (Typ A P Tt) Double
 varY = S.fromList2 varY'
 
 
--- | ## Fuel Converter Curves
-{-
--- | Lookup Map ic-engine -- forward - convert to backward
-p_ic_fw = S.fromList [0,0.1 .. 1] :: S.Signal (Typ UT UT UT) Double
-eta_ic = S.fromList [0,0.7,0.9,0.95,0.97,1,0.97,0.95,0.9,0.85,0.8] :: S.Signal (Typ UT UT UT) Double
-feta_ic :: ExpVar s -> ExpVar s
-feta_ic (EqSys.ExprWithVars x) = EqSys.constant y
-  where (S.TC (D.Data y)) = S.interp1Lin (p_ic_fw.*eta_ic) eta_ic x
--}
+-- * Fuel Converter Curves
 
 -- | ic-engine - relative variable efficiency (max = 1) of an ic engine type fuel converter: n01 as function of p10
 fn01_p10_ic :: ExpVar s -> ExpVar s
@@ -233,9 +199,9 @@ fn01_p10_fc =
 
 fn01_p10 ::    ExpVar s -> ExpVar s
 fn01_p10 = fn01_p10_ic  -- Choose fuel converter type here
--- fn01_p10 = fn01_p10_fc 0.01
 
--- | ## Storage Efficiency Curves
+
+-- * Storage Efficiency Curves
 
 -- ## Battery
 -- | variable efficiency of energy storage in discharging mode as function of n31 over p13
@@ -260,9 +226,7 @@ fn13_p31_HC _ _ = 0.99
 
 
 -- ## Electric Flywheel
--- | Lookup
--- Power [0,0.1,0.2 ,0.5 ,0.7 ,1  ]
--- Eta   [0,0.9,0.93,0.95,0.93,0.9]
+-- * Lookup
 
 -- |  compareable to ic engine
 fn31_p13_EF :: ExpVar s ->  ExpVar s ->  ExpVar s
@@ -292,14 +256,12 @@ main = do
       -- get Energies
       eoutVar0 = getSignalVarEnergy varEnvs eout0
       eoutVar1 = getSignalVarEnergy varEnvs eout1
-  --Rep.report  [] ("eoutVar1",eoutVar1)
 
       varEout = eoutVar0 .+ (S.makeDelta eoutVar1)
       einVar = getSignalVarEnergy varEnvs ein
 
       -- calculate split share and system efficiency
       etaSysVar = (eoutVar0 .+ (S.makeDelta eoutVar1))./einVar
---      varY = S.changeType $ eoutVar1 ./ (eoutVar0 .+ (S.makeDelta eoutVar1)) :: S.Test2 (Typ A X Tt) Double
 
       -- calculate Losses
       varLossA = varE01 .- varE10
@@ -332,16 +294,10 @@ main = do
       n01Lin = S.concat varN01
 
       -- fuel converter
-      (p10Lin', n01Lin') = S.sortTwo (p10Lin,n01Lin)
+      (p10Lin', n01Lin') = S.sortTwo (p10Lin, n01Lin)
 
-      -- discharging
---      (p131Lin', n31Lin') = S.sortTwo (p131Lin,n31Lin)
 
-      -- charging
---      (p310Lin', n13Lin') = S.sortTwo (p310Lin,n13Lin)
-
--- ##################################
---  Debug Plots
+  -- Debug Plots
 
 
   -- Plots to check the variation
@@ -415,10 +371,8 @@ main = do
   -- Total System Efficiency
   Rep.report  [] ("EtaSys",etaSysVar)
   PlotIO.surface "EtaSys" plotTerm varX varY etaSysVar
-  PlotIO.xy "EtaSys" plotTerm id varX $ PlotIO.label "EtaSys" etaSysVar -- System efficiency in curves over split variation for multiple resistance values
-
--- ##################################
-
+  -- System efficiency in curves over split variation for multiple resistance values
+  PlotIO.xy "EtaSys" plotTerm id varX $ PlotIO.label "EtaSys" etaSysVar
 
 
   let envhh = head $ head varEnvs
