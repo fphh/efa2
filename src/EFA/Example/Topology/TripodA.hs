@@ -40,4 +40,4 @@ instance Node.C Node where
 topology :: Topo.Topology Node
 topology =
    topologyFromEdges
-      [(node0, node2), (node1, node2), (node2, node3)]
+      [(node0, node2), (node2, node1), (node2, node3)]
