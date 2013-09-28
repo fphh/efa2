@@ -5,7 +5,6 @@ import EFA.Application.Utility (identifyFlowState, dirEdge)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
@@ -94,14 +93,6 @@ convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
     f (Just sid) = sid
     f Nothing = SigId (show ppos)
 
-----------------------------------------------------------------------
--- * Calculate Flow States
-
-flowStates :: [Topo.FlowTopology Node]
-flowStates = StateAnalysis.advanced topology
-
-
-
 
 ----------------------------------------------------------------------
 -- | Topology for Optimisation
@@ -115,9 +106,6 @@ edgeListOpt = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
                (Network, LocalNetwork, "Transformer", "HighVoltage", "LowVoltage"),
                (Gas, LocalNetwork,"GasPlant","Gas","ElGas"),
                (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
-
-flowStatesOpt :: [Topo.FlowTopology Node]
-flowStatesOpt = StateAnalysis.advanced topologyOpt
 
 edgeNamesOpt :: Map (Node, Node) String
 edgeNamesOpt = Map.fromList el

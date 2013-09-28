@@ -16,6 +16,7 @@ module EFA.Graph.Topology (
        StateFlowGraph,
        DirStateFlowGraph,
        pathExists,
+       flowFromPlain,
        dirFromFlowGraph,
        structureEdgeFromDirEdge,
        dirEdgeFromStructureEdge,
@@ -208,6 +209,10 @@ pathExists src dst =
           (a==dst ||
            (any (go (Graph.delNode a topo)) $ Graph.suc topo a))
    in  flip go src
+
+
+flowFromPlain :: (Ord node) => Topology node -> FlowTopology node
+flowFromPlain = Graph.mapEdgesMaybe (Just . Graph.EDirEdge)
 
 {-
 In principle, we could remove "dead nodes", but
