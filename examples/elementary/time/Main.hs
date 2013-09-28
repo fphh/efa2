@@ -1,8 +1,8 @@
 
 module Main where
 
-import qualified EFA.Example.Topology.TripodB as Tripod
-import EFA.Example.Topology.TripodB (Node, node0, node1, node2, node3)
+import qualified EFA.Example.Topology.TripodA as Tripod
+import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
 
 import EFA.Application.Utility (seqFlowGraphFromStates, dirEdge, undirEdge)
 
@@ -37,8 +37,8 @@ sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
 flowGraph =
    seqFlowGraphFromStates Tripod.topology
-      [[dirEdge node1 node2, dirEdge node1 node3],
-       [undirEdge node0 node1, dirEdge node1 node2]]
+      [[dirEdge node2 node1, dirEdge node2 node3],
+       [undirEdge node0 node2, dirEdge node2 node1]]
 
 
 type Expr s a = EqSys.ExpressionIgnore Node s a a a
@@ -66,39 +66,39 @@ n7 =
 n5 = EqSys.liftF $ \x -> x/sqrt(1+(x+2)*(x+2))
 
 
-n01, n12, n13, n31, p10 ::
+n02, n21, n23, n32, p20 ::
    (Eq a, Arith.Sum a) => Idx.Section -> Expr s a
-n01 sec = EqSys.variable $ XIdx.eta sec node0 node1
-n12 sec = EqSys.variable $ XIdx.eta sec node1 node2
-n13 sec = EqSys.variable $ XIdx.eta sec node1 node3
-n31 sec = EqSys.variable $ XIdx.eta sec node3 node1
-p10 sec = EqSys.variable $ XIdx.power sec node1 node0
+n02 sec = EqSys.variable $ XIdx.eta sec node0 node2
+n21 sec = EqSys.variable $ XIdx.eta sec node2 node1
+n23 sec = EqSys.variable $ XIdx.eta sec node2 node3
+n32 sec = EqSys.variable $ XIdx.eta sec node3 node2
+p20 sec = EqSys.variable $ XIdx.power sec node2 node0
 
 esto :: XIdx.StEnergy Node
 esto = XIdx.stEnergy XIdx.initSection sec1 node3
 
 ein, eout0, eout1 :: XIdx.Energy Node
-ein = XIdx.energy sec0 node0 node1
-eout0 = XIdx.energy sec0 node2 node1
-eout1 = XIdx.energy sec1 node2 node1
+ein = XIdx.energy sec0 node0 node2
+eout0 = XIdx.energy sec0 node1 node2
+eout1 = XIdx.energy sec1 node1 node2
 
 
 given :: Double -> Double -> EqSys.EquationSystemIgnore Node s Double Double
 given _x t =
-  (n01 sec0 =.= n5 (p10 sec0))
-  <> (n12 sec0 =.= 1)
-  <> (n12 sec1 =.= 1)
-  <> (n13 sec0 =.= 1)
-  <> (n31 sec1 =.= 1)
-  <> (EqSys.variable (XIdx.energy sec1 node3 node1)
-        =.= EqSys.variable (XIdx.energy sec0 node3 node1))
+  (n02 sec0 =.= n5 (p20 sec0))
+  <> (n21 sec0 =.= 1)
+  <> (n21 sec1 =.= 1)
+  <> (n23 sec0 =.= 1)
+  <> (n32 sec1 =.= 1)
+  <> (EqSys.variable (XIdx.energy sec1 node3 node2)
+        =.= EqSys.variable (XIdx.energy sec0 node3 node2))
   <> (EqSys.variable (XIdx.dTime sec0) + EqSys.variable (XIdx.dTime sec1) =.= 12.1)
 
   <> (XIdx.dTime sec0 .= t)
   <> (XIdx.storage Idx.initial node3 .= 10)
 
-  <> (XIdx.power sec0 node2 node1 .= 10)
-  <> (XIdx.power sec1 node2 node1 .= 10)
+  <> (XIdx.power sec0 node1 node2 .= 10)
+  <> (XIdx.power sec1 node1 node2 .= 10)
 
 
 xrange, trange :: [Double]
