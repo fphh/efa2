@@ -5,24 +5,21 @@
 
 module Main where
 
-import qualified EFA.Example.Topology.TripodB as Tripod
-import EFA.Example.Topology.TripodB (Node, source, crossing, sink, storage, node0, node1, node2, node3)
+import EFA.Example.Topology.TripodA (Node, source, crossing, sink, storage)
+import EFA.Example.Topology.Tripod.State
+          (assembleFlowTopos, flowGraph, state0, state3, sec0, sec1)
 
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
-import qualified EFA.Flow.Sequence as SeqFlowPlain
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.SystemEta (detEtaSys)
 import EFA.Flow.Sequence.Absolute ((.=), (=%%=), (=.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Graph.Topology (FlowTopology)
 
-import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Data as D
@@ -31,8 +28,6 @@ import EFA.Signal.Data (Data, Nil, (:>))
 
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
@@ -46,25 +41,6 @@ import Data.Ord (comparing)
 import Data.Monoid (mconcat, (<>))
 import Data.Foldable (foldMap)
 import Data.Tuple.HT (swap)
-
-
-sec0, sec1 :: Idx.Section
-sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
-
-
-assembleFlowTopos ::
-   [FlowTopology Node] -> SeqFlow.Graph Node (Result a) (Result v)
-assembleFlowTopos =
-   SeqFlow.graphFromPlain .
-   SeqFlowPlain.sequenceGraph .
-   Sequ.fromList
-
-state0, state3 :: FlowTopology Node
-state0 = identifyFlowState Tripod.topology [dirEdge node1 node2, dirEdge node1 node3]
-state3 = identifyFlowState Tripod.topology [dirEdge node1 node2, undirEdge node0 node1]
-
-flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = assembleFlowTopos [state0, state3]
 
 
 lookupStCrDown :: Double -> Double

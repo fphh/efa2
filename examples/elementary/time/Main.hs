@@ -1,10 +1,8 @@
 
 module Main where
 
-import qualified EFA.Example.Topology.TripodA as Tripod
 import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
-
-import EFA.Application.Utility (seqFlowGraphFromStates, dirEdge, undirEdge)
+import EFA.Example.Topology.Tripod.State (flowGraph, sec0, sec1)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -14,11 +12,8 @@ import EFA.Flow.Sequence.Absolute ((.=), (=.=))
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Result (Result)
 
-import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
-import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Report.Format as Format
@@ -28,17 +23,6 @@ import Control.Monad (when)
 import Control.Applicative ((<$>), (<*>))
 
 import Data.Monoid ((<>))
-
-
-sec0, sec1 :: Idx.Section
-sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
-
-
-flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph =
-   seqFlowGraphFromStates Tripod.topology
-      [[dirEdge node2 node1, dirEdge node2 node3],
-       [undirEdge node0 node2, dirEdge node2 node1]]
 
 
 type Expr s a = EqSys.ExpressionIgnore Node s a a a

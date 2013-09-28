@@ -1,12 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
-import qualified EFA.Example.Topology.TripodA as Tripod
 import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
+import EFA.Example.Topology.Tripod.State (flowGraph, sec0, sec1)
 
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility
-          ( seqFlowGraphFromStates, checkDetermined, dirEdge, undirEdge )
+import EFA.Application.Utility (checkDetermined)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -28,9 +27,7 @@ import EFA.Signal.Base(Val)
 
 import qualified EFA.Report.Report as Rep
 
-import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
-import EFA.Utility.Stream (Stream((:~)))
 
 import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
@@ -41,16 +38,6 @@ import Data.Monoid ((<>))
 
 plotTerm :: WXT.T
 plotTerm = WXT.cons
-
-sec0, sec1 :: Idx.Section
-sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
-
-
-flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph =
-   seqFlowGraphFromStates Tripod.topology
-      [[dirEdge node2 node1, dirEdge node2 node3],
-       [undirEdge node0 node2, dirEdge node2 node1]]
 
 
 type Expr s a = EqSys.ExpressionIgnore Node s Double Double a

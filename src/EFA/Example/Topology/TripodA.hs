@@ -16,6 +16,11 @@ node1 = Node1
 node2 = Node2
 node3 = Node3
 
+source, sink, crossing, storage :: Node
+source   = Node0
+sink     = Node1
+crossing = Node2
+storage  = Node3
 
 instance Node.C Node where
    display Node0 = Format.literal "null"
