@@ -2,8 +2,8 @@ module EFA.Test.Tree where
 
 import qualified EFA.TestUtility as Test
 
-import qualified EFA.Example.Topology.TripodA as Tripod
-import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
+import qualified EFA.Example.Topology.Tripod as Tripod
+import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 
 import qualified EFA.Application.Tree as Tree
 import EFA.Application.Tree ( (<+) )

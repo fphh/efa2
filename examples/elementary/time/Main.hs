@@ -1,8 +1,8 @@
 
 module Main where
 
-import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
 import EFA.Example.Topology.Tripod.State (flowGraph, sec0, sec1)
+import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow

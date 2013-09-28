@@ -1,4 +1,4 @@
-module EFA.Example.Topology.TripodA where
+module EFA.Example.Topology.Tripod where
 
 import EFA.Application.Utility ( topologyFromEdges )
 

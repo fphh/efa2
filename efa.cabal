@@ -152,8 +152,8 @@ Library
     EFA.Application.OneStorage
     EFA.Example.Topology.LinearOne
     EFA.Example.Topology.LinearTwo
-    EFA.Example.Topology.TripodA
-    EFA.Example.Topology.TripodA.Given
+    EFA.Example.Topology.Tripod
+    EFA.Example.Topology.Tripod.Given
     EFA.Example.Topology.Tripod.State
   Other-Modules:
     EFA.Equation.SystemRecord

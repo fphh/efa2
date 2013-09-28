@@ -5,7 +5,7 @@
 
 module Main where
 
-import EFA.Example.Topology.TripodA (Node, source, crossing, sink, storage)
+import EFA.Example.Topology.Tripod (Node, source, crossing, sink, storage)
 import EFA.Example.Topology.Tripod.State
           (assembleFlowTopos, flowGraph, state0, state3, sec0, sec1)
 

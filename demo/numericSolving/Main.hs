@@ -1,6 +1,6 @@
 module Main where
 
-import qualified EFA.Example.Topology.TripodA.Given as TripodGiven
+import qualified EFA.Example.Topology.Tripod.Given as TripodGiven
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Draw as Draw

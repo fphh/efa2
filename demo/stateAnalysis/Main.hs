@@ -2,7 +2,7 @@
 
 module Main where
 
-import qualified EFA.Example.Topology.TripodA as Tripod
+import qualified EFA.Example.Topology.Tripod as Tripod
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
