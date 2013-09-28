@@ -23,10 +23,10 @@ crossing = Node2
 storage  = Node3
 
 instance Node.C Node where
-   display Node0 = Format.literal "null"
-   display Node1 = Format.literal "eins"
-   display Node2 = Format.literal "zwei"
-   display Node3 = Format.literal "drei"
+   display Node0 = Format.literal "Quelle"
+   display Node1 = Format.literal "Senke"
+   display Node2 = Format.literal "Kreuzung"
+   display Node3 = Format.literal "Speicher"
 
    subscript = Format.integer . fromIntegral . fromEnum
    dotId = Node.dotIdDefault
