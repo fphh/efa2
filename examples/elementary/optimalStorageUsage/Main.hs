@@ -195,10 +195,10 @@ hypotheticalUsage = Sig.fromList [
   2, 3 ]
 
 borderFunc ::
-  (Eq b, Ord a, Show b, Show a, D.FromList c1, D.FromList c,
-  D.Storage c1 d1, D.Storage c d, D.NestedList c1 d1 ~ [a],
-  D.NestedList c d ~ [b]) =>
-  Sig.TC s t (Data c d) -> Sig.TC s1 t1 (Data c1 d1) -> a -> b
+  (D.FromList c0, D.Storage c0 d0, D.NestedList c0 d0 ~ [d0], Show d0, Eq d0,
+   D.FromList c1, D.Storage c1 d1, D.NestedList c1 d1 ~ [d1], Show d1, Ord d1) =>
+  Sig.TC s0 t0 (Data c0 d0) ->
+  Sig.TC s1 t1 (Data c1 d1) -> d1 -> d0
 borderFunc ss xs p =
   case dropWhile ((< p) . fst) zs of
        (_, s):_ -> s
@@ -241,7 +241,7 @@ givenEnvHUSec (sec, Sig.TC sig) =
   (XIdx.dTime sec .= D.map (const 1.0) sig) :
   (XIdx.power sec sink crossing .= sig) :
 
-  -- Warunung: Ueberschreibt:
+  -- Warnung: Ueberschreibt:
   (XIdx.x sec crossing sink .= D.map (const 0.3) sig) :
 
   ((EqSys.variable $ XIdx.eta sec crossing sink) =.=
@@ -326,8 +326,7 @@ lookUp caller env n =
 
 
 etaSysHU ::
-  SeqFlow.Graph
-    Node
+  SeqFlow.Graph Node
     (EqRec.Absolute (Result Double))
     (EqRec.Absolute (Result Double)) ->
   Double
@@ -370,7 +369,8 @@ main = do
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
       maxEtaSysState :: Sig.UTSignal2 [] [] Double
-      maxEtaSysState = Sig.map fromIntegral $ Sig.argMax etaSys0 etaSys1
+      maxEtaSysState =
+         Sig.map (fromIntegral . fromEnum) $ Sig.argMax etaSys0 etaSys1
 
       maxEtaSys0, maxEtaSys1 :: Sig.NTestRow [] Double
       maxEtaSys0 = Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSys0)
@@ -380,13 +380,12 @@ main = do
       maxEtaLinear = Sig.zipWith max maxEtaSys0 maxEtaSys1
 
 
-      maxEtaSysStateLinear :: Sig.UTTestRow [] Int
+      maxEtaSysStateLinear :: Sig.UTTestRow [] Sig.ArgMax
       maxEtaSysStateLinear = Sig.argMax maxEtaSys0 maxEtaSys1
 
       bf = a . borderFunc maxEtaSysStateLinear sinkRangeSig
-           where a 0 = (3, state3)
-                 a 1 = (0, state0)
-                 a _ = error "bf"
+           where a Sig.ArgMax0 = (3, state3)
+                 a Sig.ArgMax1 = (0, state0)
 
       optimalState = Sig.map (fst . bf) hypotheticalUsage
 
@@ -422,7 +421,7 @@ main = do
       PlotIO.label "Entladen"     maxEtaSys1,
       PlotIO.label "maxEtaLinear" maxEtaLinear,
       PlotIO.label "Zustand" $ Sig.setType $
-        Sig.map fromIntegral maxEtaSysStateLinear ],
+        Sig.map (fromIntegral . fromEnum) maxEtaSysStateLinear ],
 
 
     PlotIO.xy "Optimale Zustände" DefaultTerm.cons id sinkRangeSig [

@@ -241,53 +241,52 @@ makePics ::
   (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->
   TPT.Map Double ->
   Double ->
-  ( Sig.UTSignal2 V.Vector V.Vector Double,
+  ( Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax,
     Sig.PSignal2 V.Vector V.Vector Double,
     Sig.PSignal2 V.Vector V.Vector Double,
     Sig.NSignal2 V.Vector V.Vector Double )
-makePics eqs tabEta socDrive = t
-  where t = (state, optWater, optGas, etaSysMax)
-
-        chargeFunc = maxOptChargeFunc socDrive
+makePics eqs tabEta socDrive = (state, optWater, optGas, etaSysMax)
+  where chargeFunc = maxOptChargeFunc socDrive
         dischargeFunc = maxOptDischargeFunc socDrive
 
-        state = Sig.map fromIntegral $ Sig.argMax maxETACharge maxETADischarge
+        state =
+          Sig.argMax maxETACharge maxETADischarge
 
         optWater = Sweep.combineOptimalMaps maxEtaSysState
                      powerWaterChargeOpt powerWaterDischargeOpt
         optGas = Sweep.combineOptimalMaps maxEtaSysState
                      powerGasChargeOpt powerGasDischargeOpt
 
-        --maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
-        maxEtaSysState = Sig.map fromIntegral $
+        maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax
+        maxEtaSysState =
           Sig.argMax maxETACharge maxETADischarge
 
-        --etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
+        etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
         etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
 
-        --powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterChargeOpt = Sig.setType $
           Sig.map (lookupDetPower $ XIdx.power sec0 Network Water) envsChargeOpt
 
 
-        --powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterDischargeOpt = Sig.setType $
           Sig.map (lookupDetPower $ XIdx.power sec1 Network Water) envsDischargeOpt
 
-        -- powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerGasChargeOpt = Sig.setType $
           Sig.map (lookupDetPower $ XIdx.power sec0 LocalNetwork Gas) envsChargeOpt
 
 
-        --powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerGasDischargeOpt = Sig.setType $
           Sig.map (lookupDetPower $ XIdx.power sec1 LocalNetwork Gas) envsDischargeOpt
 
-        --maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
+        maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETACharge = Sig.setType $ Sig.map fst $
           Sig.map chargeFunc envsCharge
 
-        --maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
+        maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETADischarge = Sig.setType $ Sig.map fst $
           Sig.map dischargeFunc envsDischarge
 
@@ -307,7 +306,7 @@ makePics eqs tabEta socDrive = t
 
 {-
 
--- Alternative Approch to get StateFlowGraph Data
+-- Alternative Approach to get StateFlowGraph Data
 
 stateFlow2SeqFlow :: (Ord node) => Topo.StateFlowGraph node -> Topo.SeqFlowGraph node
 stateFlow2SeqFlow = Graph.ixmap f g
@@ -491,9 +490,8 @@ main = do
      etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
      etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
 
-     maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
-     maxEtaSysState = Sig.map fromIntegral $
-       Sig.argMax maxETACharge maxETADischarge
+     maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax
+     maxEtaSysState = Sig.argMax maxETACharge maxETADischarge
 
 
      -- | Get the correspondig optimal envs for both states
@@ -574,7 +572,9 @@ main = do
        Sig.tzipWith
          (\x y -> Sig.interp2WingProfile
            "stateSignal"
-           varRestPower1D varLocalPower maxEtaSysState x y)
+           varRestPower1D varLocalPower
+           (Sig.map (fromIntegral . fromEnum) maxEtaSysState)
+           x y)
          powerSignalRest powerSignalLocal
 
      powerSignalWater =
@@ -700,7 +700,8 @@ main = do
      PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts varRestPower varLocalPower etaSysMax,
 
 
-     PlotIO.surfaceWithOpts "Optimal State" DefaultTerm.cons id frameOpts varRestPower varLocalPower maxEtaSysState,
+     PlotIO.surfaceWithOpts "Optimal State" DefaultTerm.cons id frameOpts varRestPower varLocalPower
+        (Sig.map (fromIntegral . fromEnum) maxEtaSysState),
 
      PlotIO.surfaceWithOpts "Charging Optimal System Efficiency " DefaultTerm.cons id frameOpts varRestPower varLocalPower maxETACharge,
      PlotIO.surfaceWithOpts "Discharging Optimal System Efficiency " DefaultTerm.cons id frameOpts varRestPower varLocalPower maxETADischarge,

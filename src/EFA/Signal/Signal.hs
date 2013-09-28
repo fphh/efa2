@@ -1700,17 +1700,16 @@ calcEtaWithSign pSign p1 p2 = changeType $ map f $ changeSignalType $ zip pSign 
 
 -- | Index of maximum
 
+data ArgMax = ArgMax0 | ArgMax1 deriving (Eq, Enum, Show)
+
 argMax ::
-   (Ord d, D.ZipWith c, D.Storage c d,
-    D.Storage c (d, Int), D.Storage c Int) =>
+   (Ord d, D.ZipWith c, D.Storage c d, D.Storage c ArgMax) =>
    TC s typ0 (Data c d) ->
    TC s typ0 (Data c d) ->
-   TC (Arith s s) typ1 (Data c Int)
-argMax etaSys0 etaSys1 =
-   map P.snd $
-   zipWith P.max
-      (map (P.flip (,) 0) etaSys0)
-      (map (P.flip (,) 1) etaSys1)
+   TC (Arith s s) typ1 (Data c ArgMax)
+argMax =
+   zipWith
+      (\x y -> if x P.>= y then ArgMax0 else ArgMax1)
 
 argMaximum ::
    (Ord d, SV.FromList v, SV.Storage v d, SV.Storage v Int) =>
