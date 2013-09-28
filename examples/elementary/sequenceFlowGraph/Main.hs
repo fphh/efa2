@@ -1,6 +1,6 @@
 module Main where
 
-import EFA.Application.Utility (topologyFromEdges, select)
+import EFA.Application.Utility (topologyFromEdges)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence as SeqFlowPlain
@@ -9,6 +9,8 @@ import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
+
+import qualified EFA.Signal.Sequence as Sequ
 
 import EFA.Equation.Result (Result)
 
@@ -51,12 +53,15 @@ readNum s =
            else error $ "cannot handle characters \"" ++ trailer ++ "\""
       _ -> error "parse error: not a number!"
 
+select :: [topo] -> [Int] -> Sequ.List topo
+select ts = Sequ.fromList . map (ts !!)
+
 drawSeqGraph :: [Topo.FlowTopology Node.Int] ->  IO ()
 drawSeqGraph sol = do
    xs <- parse `fmap`
            prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
    Draw.xterm $
-      Draw.sequFlowGraph Draw.optionsDefault $
+      Draw.seqFlowGraph Draw.optionsDefault $
       SeqFlow.mapGraph
          (\a -> a :: Result Double)
          (\v -> v :: Result Double) $

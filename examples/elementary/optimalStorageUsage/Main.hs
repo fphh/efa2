@@ -6,10 +6,10 @@
 module Main where
 
 import qualified EFA.Example.Topology.TripodB as Tripod
-import EFA.Example.Topology.TripodB (Node, source, crossing, sink, storage)
+import EFA.Example.Topology.TripodB (Node, source, crossing, sink, storage, node0, node1, node2, node3)
 
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility (select)
+import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -19,11 +19,12 @@ import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.SystemEta (detEtaSys)
 import EFA.Flow.Sequence.Absolute ((.=), (=%%=), (=.=))
 
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
+import EFA.Graph.Topology (FlowTopology)
 
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Data as D
@@ -61,15 +62,18 @@ sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-flowGraphFunc :: [Int] -> SeqFlow.Graph Node (Result a) (Result v)
-flowGraphFunc =
+assembleFlowTopos :: [FlowTopology Node] -> SeqFlow.Graph Node (Result a) (Result v)
+assembleFlowTopos =
    SeqFlow.graphFromPlain .
    SeqFlowPlain.sequenceGraph .
-   -- Gefaehrlich: man darf sich nicht auf eine spezielle Reihenfolge verlassen!
-   select (StateAnalysis.advanced Tripod.topology)
+   Sequ.fromList
+
+state0, state3 :: FlowTopology Node
+state0 = identifyFlowState Tripod.topology [dirEdge node1 node2, dirEdge node1 node3]
+state3 = identifyFlowState Tripod.topology [dirEdge node1 node2, undirEdge node0 node1]
 
 flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = flowGraphFunc [0, 3]
+flowGraph = assembleFlowTopos [state0, state3]
 
 
 lookupStCrDown :: Double -> Double
@@ -191,10 +195,10 @@ hypotheticalUsage = Sig.fromList [
   2, 3 ]
 
 borderFunc ::
-  (Eq b, Ord a, Show b, Show a, D.FromList c1, D.FromList c,
-  D.Storage c1 d1, D.Storage c d, D.NestedList c1 d1 ~ [a],
-  D.NestedList c d ~ [b]) =>
-  Sig.TC s t (Data c d) -> Sig.TC s1 t1 (Data c1 d1) -> a -> b
+  (D.FromList c0, D.Storage c0 d0, D.NestedList c0 d0 ~ [d0], Show d0, Eq d0,
+   D.FromList c1, D.Storage c1 d1, D.NestedList c1 d1 ~ [d1], Show d1, Ord d1) =>
+  Sig.TC s0 t0 (Data c0 d0) ->
+  Sig.TC s1 t1 (Data c1 d1) -> d1 -> d0
 borderFunc ss xs p =
   case dropWhile ((< p) . fst) zs of
        (_, s):_ -> s
@@ -205,7 +209,10 @@ borderFunc ss xs p =
            zip (Sig.toList ss) (Sig.toList xs)
 
 sectionHU ::
-  (d -> Int) -> Sig.PSignal [] d -> [(Int, Sig.PSignal [] d)]
+  (Eq topo) =>
+  (d -> topo) ->
+  Sig.PSignal [] d ->
+  [(topo, Sig.PSignal [] d)]
 sectionHU bf =
   map (\(NonEmpty.Cons (s, w) xs) -> (s, Sig.fromList (w : map snd xs))) .
   NonEmptyMixed.groupBy (equating fst) . map (\s -> (bf s, s)) . Sig.toList
@@ -234,7 +241,7 @@ givenEnvHUSec (sec, Sig.TC sig) =
   (XIdx.dTime sec .= D.map (const 1.0) sig) :
   (XIdx.power sec sink crossing .= sig) :
 
-  -- Warunung: Ueberschreibt:
+  -- Warnung: Ueberschreibt:
   (XIdx.x sec crossing sink .= D.map (const 0.3) sig) :
 
   ((EqSys.variable $ XIdx.eta sec crossing sink) =.=
@@ -319,8 +326,7 @@ lookUp caller env n =
 
 
 etaSysHU ::
-  SeqFlow.Graph
-    Node
+  SeqFlow.Graph Node
     (EqRec.Absolute (Result Double))
     (EqRec.Absolute (Result Double)) ->
   Double
@@ -363,7 +369,8 @@ main = do
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
       maxEtaSysState :: Sig.UTSignal2 [] [] Double
-      maxEtaSysState = Sig.map fromIntegral $ Sig.argMax etaSys0 etaSys1
+      maxEtaSysState =
+         Sig.map (fromIntegral . fromEnum) $ Sig.argMax etaSys0 etaSys1
 
       maxEtaSys0, maxEtaSys1 :: Sig.NTestRow [] Double
       maxEtaSys0 = Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSys0)
@@ -373,21 +380,18 @@ main = do
       maxEtaLinear = Sig.zipWith max maxEtaSys0 maxEtaSys1
 
 
-      maxEtaSysStateLinear :: Sig.UTTestRow [] Int
+      maxEtaSysStateLinear :: Sig.UTTestRow [] Sig.ArgMax
       maxEtaSysStateLinear = Sig.argMax maxEtaSys0 maxEtaSys1
 
       bf = a . borderFunc maxEtaSysStateLinear sinkRangeSig
-           where a 0 = 3
-                 a 1 = 0
-                 a _ = error "bf"
+           where a Sig.ArgMax0 = (3, state3)
+                 a Sig.ArgMax1 = (0, state0)
 
-      optimalState = Sig.map bf hypotheticalUsage
+      optimalState = Sig.map (fst . bf) hypotheticalUsage
 
-      secHU = sectionHU bf hypotheticalUsage
+      (secs, secSigsHU) = unzip $ sectionHU (snd . bf) hypotheticalUsage
 
-      (secs, secSigsHU) = unzip secHU
-
-      envHU = EqSys.solve (flowGraphFunc secs) $ givenEnvHU secSigsHU
+      envHU = EqSys.solve (assembleFlowTopos secs) $ givenEnvHU secSigsHU
 
       labeledEtaSys =
         PlotIO.label "Laden" etaSys0 :
@@ -398,18 +402,18 @@ main = do
 
     Draw.xterm $
       Draw.title "Section 0 Mean" $
-        Draw.sequFlowGraph Draw.optionsDefault env0,
+        Draw.seqFlowGraph Draw.optionsDefault env0,
     Draw.xterm $
       Draw.title "Section 1 Mean" $
-        Draw.sequFlowGraph Draw.optionsDefault env1,
+        Draw.seqFlowGraph Draw.optionsDefault env1,
 
     Draw.xterm $
-      Draw.sequFlowGraph Draw.optionsDefault
+      Draw.seqFlowGraph Draw.optionsDefault
         (flowGraph :: SeqFlow.Graph Node (Result Double) (Result Double)),
 
     Draw.xterm $
       Draw.title "Hypothetical Usage Sequence Flow Graph" $
-      Draw.sequFlowGraph Draw.optionsDefault envHU,
+      Draw.seqFlowGraph Draw.optionsDefault envHU,
 
 
     PlotIO.xy "Test" DefaultTerm.cons id sinkRangeSig2 [
@@ -417,12 +421,12 @@ main = do
       PlotIO.label "Entladen"     maxEtaSys1,
       PlotIO.label "maxEtaLinear" maxEtaLinear,
       PlotIO.label "Zustand" $ Sig.setType $
-        Sig.map fromIntegral maxEtaSysStateLinear ],
+        Sig.map (fromIntegral . fromEnum) maxEtaSysStateLinear ],
 
 
     PlotIO.xy "Optimale Zustände" DefaultTerm.cons id sinkRangeSig [
       PlotIO.label "Hypothetical Usage" hypotheticalUsage,
-      PlotIO.label "Optimal State" $ Sig.map fromIntegral optimalState ],
+      PlotIO.label "Optimal State" optimalState ],
 
 
     PlotIO.surface "Test" DefaultTerm.cons varX varY labeledEtaSys,
@@ -474,5 +478,5 @@ main2 = do
   concurrentlyMany_ [
     PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
               [ esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, etaSysSig, eSourceSig],
-    Draw.xterm $ Draw.sequFlowGraph flowGraph ]
+    Draw.xterm $ Draw.seqFlowGraph flowGraph ]
 -}

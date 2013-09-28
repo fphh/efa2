@@ -21,6 +21,8 @@ import EFA.Signal.Signal (TC, Scalar, toScalar)
 import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
 
@@ -126,7 +128,7 @@ process rawSignals =
 
       sequenceFlowGraph =
         Flow.sequenceGraph $
-        Flow.genSequFlowTops System.topology $
+        Flow.genSeqFlowTops System.topology $
         sectionMapping flowStatesUnmapped
 
       externalEnv =
@@ -175,7 +177,7 @@ main = do
           Draw.xterm $
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphWithEnv
+          Draw.seqFlowGraphWithEnv
              (Draw.hideStorageEdge $
               Draw.absoluteVariable Draw.optionsDefault)
              topo env
@@ -183,7 +185,7 @@ main = do
           Draw.xterm $
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphWithEnv
+          Draw.seqFlowGraphWithEnv
              (Draw.hideStorageEdge $
               Draw.deltaVariable Draw.optionsDefault)
              topo env
@@ -195,8 +197,11 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Draw flow states
-    ++ ignore [putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))]
-    ++ ignore [Draw.xterm $ Draw.flowTopologies (take 20 System.flowStates)]
+    ++ ignore
+          (let flowStates :: [Topo.FlowTopology System.Node]
+               flowStates = StateAnalysis.advanced System.topology
+           in  [putStrLn ("Number of possible flow states: " ++ show (length flowStates)),
+                Draw.xterm $ Draw.flowTopologies $ take 20 flowStates])
 
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals

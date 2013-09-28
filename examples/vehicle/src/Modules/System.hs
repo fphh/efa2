@@ -8,7 +8,6 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import EFA.Signal.Record (SigId(SigId))
 
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
@@ -92,9 +91,3 @@ convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
   where
     f (Just sid) = sid
     f Nothing = SigId (show ppos)
-
-----------------------------------------------------------------------
--- * Calculate Flow States
-
-flowStates :: [Topo.FlowTopology Node]
-flowStates = StateAnalysis.advanced topology

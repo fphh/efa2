@@ -90,13 +90,14 @@ doubleSweep f =
 
 -- verallgemeinern für n states
 combineOptimalMaps ::
-  Sig.UTSignal2 V.Vector V.Vector Double ->
+  Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax ->
   Sig.PSignal2 V.Vector V.Vector Double ->
   Sig.PSignal2 V.Vector V.Vector Double ->
   Sig.PSignal2 V.Vector V.Vector Double
 combineOptimalMaps state charge discharge =
-  Sig.zipWith f state $ Sig.zip charge discharge
-  where f s (c, d) = if s < 0.1 then c else d
+  Sig.zipWith
+     (\s (c, d) -> case s of Sig.ArgMax0 -> c; Sig.ArgMax1 -> d) state $
+  Sig.zip charge discharge
 
 optimalSolution2D ::
   (Fractional v, Ord node, Show node, Show v, Ord v, Eq a) =>

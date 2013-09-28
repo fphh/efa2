@@ -153,6 +153,7 @@ Library
     EFA.Example.Topology.LinearOne
     EFA.Example.Topology.LinearTwo
     EFA.Example.Topology.TripodA
+    EFA.Example.Topology.TripodA.Given
     EFA.Example.Topology.TripodB
   Other-Modules:
     EFA.Equation.SystemRecord
@@ -604,8 +605,9 @@ Executable demo-state-analysis
   If flag(buildDemos)
      Build-Depends:
        efa,
-       base,
-       containers
+       utility-ht,
+       containers,
+       base
   Else
     Buildable: False
 

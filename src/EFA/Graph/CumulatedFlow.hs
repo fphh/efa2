@@ -45,7 +45,7 @@ cumulatedEnergyFlow ::
   (Arith.Integrate v, Arith.Sum a, Arith.Scalar v ~ a, Arith.Constant a,
    Ord node) =>
   Topo.Topology node ->
-  Topo.DirSequFlowGraph node ->
+  Topo.DirSeqFlowGraph node ->
   Env.Complete node (Result a) (Result v) ->
   ( EnergyMap node (Result a), EnergyMap node (Result a) )
 cumulatedEnergyFlow topo seqTopo env =
@@ -83,7 +83,7 @@ cumulate ::
   (Arith.Integrate v, Arith.Sum a, Arith.Scalar v ~ a, Arith.Constant a,
    Ord node) =>
   Topo.Topology node ->
-  (ranges, Topo.SequFlowGraph node) ->
+  (ranges, Topo.SeqFlowGraph node) ->
   Env.Complete node (Result a) (Result v) ->
   ( ( Topo.Topology node, EnergyMap node (Result a) ),
     ( Topo.Topology node, EnergyMap node (Result a) ) )

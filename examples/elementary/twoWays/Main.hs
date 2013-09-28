@@ -1,7 +1,7 @@
 
 module Main where
 
-import EFA.Application.Utility (topologyFromEdges, seqFlowGraphFromStates)
+import EFA.Application.Utility (topologyFromEdges, seqFlowGraphFromTopology)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -33,16 +33,10 @@ sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Node = Sink | Source | Crossing Int deriving (Eq, Ord, Show)
-
-instance Enum Node where
-   fromEnum Sink = 0
-   fromEnum Source = 1
-   fromEnum (Crossing x) = x+2
-
-   toEnum 0 = Sink
-   toEnum 1 = Source
-   toEnum x = Crossing (x-2)
+{- |
+This ordering warrants that graphviz displays the graph in a top-down fashion.
+-}
+data Node = Source | Crossing Int | Sink deriving (Eq, Ord, Show)
 
 instance Node.C Node where
    display Sink = Format.literal "Sink"
@@ -50,7 +44,11 @@ instance Node.C Node where
    display (Crossing c) = Format.integer $ fromIntegral c
 
    subscript = Node.subscriptDefault
-   dotId = Node.dotIdDefault
+
+   dotId Sink = "sink"
+   dotId Source = "source"
+   dotId (Crossing c) = show c
+
    typ Sink = Node.AlwaysSink
    typ Source = Node.AlwaysSource
    typ (Crossing _) = Node.Crossing
@@ -61,11 +59,13 @@ c0 :~ c1 :~ c2 :~ c3 :~ _ = fmap Crossing $ Stream.enumFrom 0
 topo :: Topo.Topology Node
 topo =
    topologyFromEdges
-      [(Source, c0), (c0, c1), (c1, c2), (c2, Sink),
-       (c0, c3), (c3, c2)]
+      [(Source, c0),
+       (c0, c1), (c1, c3),
+       (c0, c2), (c2, c3),
+       (c3, Sink)]
 
-flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = seqFlowGraphFromStates topo [0]
+flowGraph :: SeqFlow.Graph Node (Result Double) (Result Double)
+flowGraph = seqFlowGraphFromTopology topo
 
 given :: Double -> Double -> EqSys.EquationSystemIgnore Node s Double Double
 given e x =
@@ -74,20 +74,20 @@ given e x =
    (XIdx.x sec0 c0 c1 .= x) :
    (XIdx.power sec0 Source c0 .= e) :
    (XIdx.eta sec0 Source c0 .= 1) :
-   (XIdx.eta sec0 c1 c2 .= 1) :
-   (XIdx.eta sec0 c3 c2 .= 1) :
-   (XIdx.eta sec0 c2 Sink .= 1) : []
+   (XIdx.eta sec0 c1 c3 .= 1) :
+   (XIdx.eta sec0 c2 c3 .= 1) :
+   (XIdx.eta sec0 c3 Sink .= 1) : []
 
 
 type Expr s a v x = EqSys.ExpressionIgnore Node s a v x
 
 c02, c04 :: (Eq v, Arith.Sum v) => Expr s a v v
 c02 = EqSys.variable $ XIdx.power sec0 c0 c1
-c04 = EqSys.variable $ XIdx.power sec0 c0 c3
+c04 = EqSys.variable $ XIdx.power sec0 c0 c2
 
 n12, n14 :: (Eq v, Arith.Sum v) => Expr s a v v
 n12 = EqSys.variable $ XIdx.eta sec0 c0 c1
-n14 = EqSys.variable $ XIdx.eta sec0 c0 c3
+n14 = EqSys.variable $ XIdx.eta sec0 c0 c2
 
 n1, n2 :: (Fractional x) => Expr s a v x -> Expr s a v x
 n1 p = -0.012 * (p - 12) * (p - 3) + 0.5
@@ -107,7 +107,7 @@ enRange = 0.01:[1..12]
 
 
 eout, ein :: XIdx.Energy Node
-eout = XIdx.energy sec0 Sink c2
+eout = XIdx.energy sec0 Sink c3
 ein  = XIdx.energy sec0 Source c0
 
 

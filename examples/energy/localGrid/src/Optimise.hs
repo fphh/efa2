@@ -24,7 +24,6 @@ import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
-import EFA.Application.Utility (select)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -242,53 +241,52 @@ makePics ::
   (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->
   TPT.Map Double ->
   Double ->
-  ( Sig.UTSignal2 V.Vector V.Vector Double,
+  ( Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax,
     Sig.PSignal2 V.Vector V.Vector Double,
     Sig.PSignal2 V.Vector V.Vector Double,
     Sig.NSignal2 V.Vector V.Vector Double )
-makePics eqs tabEta socDrive = t
-  where t = (state, optWater, optGas, etaSysMax)
-
-        chargeFunc = maxOptChargeFunc socDrive
+makePics eqs tabEta socDrive = (state, optWater, optGas, etaSysMax)
+  where chargeFunc = maxOptChargeFunc socDrive
         dischargeFunc = maxOptDischargeFunc socDrive
 
-        state = Sig.map fromIntegral $ Sig.argMax maxETACharge maxETADischarge
+        state =
+          Sig.argMax maxETACharge maxETADischarge
 
         optWater = Sweep.combineOptimalMaps maxEtaSysState
                      powerWaterChargeOpt powerWaterDischargeOpt
         optGas = Sweep.combineOptimalMaps maxEtaSysState
                      powerGasChargeOpt powerGasDischargeOpt
 
-        --maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
-        maxEtaSysState = Sig.map fromIntegral $
+        maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax
+        maxEtaSysState =
           Sig.argMax maxETACharge maxETADischarge
 
-        --etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
+        etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
         etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
 
-        --powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterChargeOpt = Sig.setType $
           Sig.map (lookupDetPower $ XIdx.power sec0 Network Water) envsChargeOpt
 
 
-        --powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterDischargeOpt = Sig.setType $
           Sig.map (lookupDetPower $ XIdx.power sec1 Network Water) envsDischargeOpt
 
-        -- powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerGasChargeOpt = Sig.setType $
           Sig.map (lookupDetPower $ XIdx.power sec0 LocalNetwork Gas) envsChargeOpt
 
 
-        --powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerGasDischargeOpt = Sig.setType $
           Sig.map (lookupDetPower $ XIdx.power sec1 LocalNetwork Gas) envsDischargeOpt
 
-        --maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
+        maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETACharge = Sig.setType $ Sig.map fst $
           Sig.map chargeFunc envsCharge
 
-        --maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
+        maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETADischarge = Sig.setType $ Sig.map fst $
           Sig.map dischargeFunc envsDischarge
 
@@ -308,10 +306,10 @@ makePics eqs tabEta socDrive = t
 
 {-
 
--- Alternative Approch to get StateFlowGraph Data
+-- Alternative Approach to get StateFlowGraph Data
 
-stateFlow2SequFlow :: (Ord node) => Topo.StateFlowGraph node -> Topo.SequFlowGraph node
-stateFlow2SequFlow = Graph.ixmap f g
+stateFlow2SeqFlow :: (Ord node) => Topo.StateFlowGraph node -> Topo.SeqFlowGraph node
+stateFlow2SeqFlow = Graph.ixmap f g
   where f :: Idx.AugNode Idx.State node -> Idx.AugNode Idx.Section node
         f (Idx.PartNode Idx.Exit x) = Idx.PartNode Idx.Exit x
         f (Idx.PartNode (Idx.NoExit Idx.Init) x) =
@@ -492,9 +490,8 @@ main = do
      etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
      etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
 
-     maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
-     maxEtaSysState = Sig.map fromIntegral $
-       Sig.argMax maxETACharge maxETADischarge
+     maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax
+     maxEtaSysState = Sig.argMax maxETACharge maxETADischarge
 
 
      -- | Get the correspondig optimal envs for both states
@@ -575,7 +572,9 @@ main = do
        Sig.tzipWith
          (\x y -> Sig.interp2WingProfile
            "stateSignal"
-           varRestPower1D varLocalPower maxEtaSysState x y)
+           varRestPower1D varLocalPower
+           (Sig.map (fromIntegral . fromEnum) maxEtaSysState)
+           x y)
          powerSignalRest powerSignalLocal
 
      powerSignalWater =
@@ -622,7 +621,7 @@ main = do
      time = Record.getTime rec
 
      -- | Build Sequenceflow graph for simulation
-     seqTopoSim = Flow.sequenceGraph (select System.flowStatesOpt [4])
+     seqTopoSim = Flow.sequenceGraph $ Sequ.fromList [System.flowState4]
 
      -- | Generate and solve Equation System
 
@@ -666,7 +665,7 @@ main = do
            in  (flowState, Flow.adjustSigns System.topologyOpt flowState state))
          sequenceFlowsFilt
 
-     flowTopos = Flow.genSequFlowTops System.topologyOpt flowStates
+     flowTopos = Flow.genSeqFlowTops System.topologyOpt flowStates
      sequenceFlowTopologySim = makeSeqFlowTopology flowTopos
      envSimAnalysis = Analysis.external2 sequenceFlowTopologySim adjustedFlows
      envSimAnalysisCumulated = Analysis.external2 sequenceFlowTopologySim
@@ -674,11 +673,11 @@ main = do
 
  {-
    concurrentlyMany_ [
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv System.seqTopoOpt
                   (fromJust (Sig.getSample2D envsChargeOpt (Sig.SignalIdx 0, Sig.SignalIdx 0))),
 
 
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv System.seqTopoOpt
                   (Sig.getSample2D (Sig.getSample2D envsDischarge (Sig.SignalIdx 1, Sig.SignalIdx 1)) (Sig.SignalIdx 1, Sig.SignalIdx 1)) ]
 
 -}
@@ -696,12 +695,13 @@ main = do
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
 -}
-     Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt,
+     Draw.xterm $ Draw.seqFlowGraph System.seqTopoOpt,
 
      PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts varRestPower varLocalPower etaSysMax,
 
 
-     PlotIO.surfaceWithOpts "Optimal State" DefaultTerm.cons id frameOpts varRestPower varLocalPower maxEtaSysState,
+     PlotIO.surfaceWithOpts "Optimal State" DefaultTerm.cons id frameOpts varRestPower varLocalPower
+        (Sig.map (fromIntegral . fromEnum) maxEtaSysState),
 
      PlotIO.surfaceWithOpts "Charging Optimal System Efficiency " DefaultTerm.cons id frameOpts varRestPower varLocalPower maxETACharge,
      PlotIO.surfaceWithOpts "Discharging Optimal System Efficiency " DefaultTerm.cons id frameOpts varRestPower varLocalPower maxETADischarge,
@@ -755,10 +755,10 @@ main = do
                                                powerSignalGasOptCharge,
                                                powerSignalGasOptDischarge],
 -}
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  seqTopoSim envSim,
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv  seqTopoSim envSim,
 
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv sequenceFlowTopologySim envSimAnalysisCumulated,
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv sequenceFlowTopologySim envSimAnalysisCumulated,
 
        return ()
      ]

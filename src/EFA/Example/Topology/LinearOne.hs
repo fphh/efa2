@@ -21,4 +21,4 @@ instance Node.C Node where
 
 
 topology :: Topo.Topology Node
-topology = topologyFromEdges [(Sink, Source)]
+topology = topologyFromEdges [(Source, Sink)]

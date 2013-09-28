@@ -22,10 +22,8 @@ import qualified EFA.Graph.StateFlow.Environment as EqEnv
 import qualified EFA.Graph.StateFlow as StateFlow
 
 import qualified EFA.Graph.Topology.Index as Idx
---import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil,(:>))
@@ -59,20 +57,22 @@ solve :: (Node.C node,
           SV.FromList v,
           Base.BSum a) =>
          Topo.Topology node ->
-         (Idx.State ->  EtaAssignMap node) ->
+         (Idx.State -> EtaAssignMap node) ->
          Map String (a -> a) ->
          Record.PowerRecord node v a ->
          EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
-solve topology etaAssign etaFunc powerRecord = EqGen.solveSimple $
-                                              givenSimulate stateFlowGraph etaAssign etaFunc powerRecord
+solve topology etaAssign etaFunc powerRecord =
+    EqGen.solveSimple $
+    givenSimulate stateFlowGraph etaAssign etaFunc powerRecord
   where
     -- | Build Sequenceflow graph for simulation
-    stateFlowGraph = StateFlow.stateGraphActualStorageEdges $ fmap (flowStates !!) $ Sequ.fromList [0]
-    flowStates = StateAnalysis.advanced topology
+    stateFlowGraph =
+      StateFlow.stateGraphActualStorageEdges $
+      Sequ.fromList [Topo.flowFromPlain topology]
 
 
 givenSimulate ::
- (Eq a, Show a, Fractional a, Ord a, Ord node, Node.C node,
+ (Show a, Fractional a, Ord a, Node.C node,
   Base.BSum a, EqArith.Sum a, EqArith.Constant a,
   Eq (v a),
   SV.Zipper v,SV.FromList v,SV.Len (v a),

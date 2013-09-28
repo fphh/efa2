@@ -4,7 +4,7 @@ module Main where
 import qualified EFA.Example.Topology.TripodB as Tripod
 import EFA.Example.Topology.TripodB (Node, node0, node1, node2, node3)
 
-import EFA.Application.Utility ( seqFlowGraphFromStates, )
+import EFA.Application.Utility (seqFlowGraphFromStates, dirEdge, undirEdge)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -34,7 +34,10 @@ sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
 flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = seqFlowGraphFromStates Tripod.topology [0, 4]
+flowGraph =
+   seqFlowGraphFromStates Tripod.topology
+      [[dirEdge node1 node2, dirEdge node1 node3],
+       [undirEdge node0 node1, dirEdge node1 node2]]
 
 
 type Expr s a = EqSys.ExpressionIgnore Node s a a a
@@ -147,5 +150,5 @@ main = do
    -- let solved' = EqSys.solve (given 0.9 undefined) flowGraph
 
    concurrentlyMany_ [
-      Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault solved ]
-      -- Draw.sequFlowGraph Draw.optionsDefault "" flowGraph solved' ]
+      Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault solved ]
+      -- Draw.seqFlowGraph Draw.optionsDefault "" flowGraph solved' ]
