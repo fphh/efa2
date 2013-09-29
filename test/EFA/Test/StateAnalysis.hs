@@ -9,8 +9,8 @@ import qualified EFA.Utility.Map as MapU
 
 import qualified Data.List.Key as Key
 import qualified Data.Foldable as Fold
-import qualified Data.Map as M
-import qualified Data.Set as S
+import qualified Data.Map as Map ; import Data.Map (Map)
+import qualified Data.Set as Set
 import Data.Traversable (sequenceA)
 
 import qualified Test.QuickCheck as QC
@@ -28,20 +28,20 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
       case Graph.nodeSet g of
          ns ->
             map (ArbTopology . flip Graph.delNodeSet g .
-                 S.difference ns . S.fromList) $
-            QC.shrink $ S.toList ns
+                 Set.difference ns . Set.fromList) $
+            QC.shrink $ Set.toList ns
    arbitrary = do
       edges <-
          fmap
-            (M.fromList . take maxArbEdges . filter (not . Graph.isLoop . fst))
+            (Map.fromList . take maxArbEdges . filter (not . Graph.isLoop . fst))
             QC.arbitrary
       nodes <-
          sequenceA $ MapU.fromSet (const QC.arbitrary) $
-         Fold.foldMap (Fold.foldMap S.singleton) $
-         M.keys edges
+         Fold.foldMap (Fold.foldMap Set.singleton) $
+         Map.keys edges
       return $ ArbTopology $
          Graph.fromMap nodes $
-         M.mapKeys (\(Graph.UnDirEdge x y) -> Graph.DirEdge x y) edges
+         Map.mapKeys (\(Graph.UnDirEdge x y) -> Graph.DirEdge x y) edges
 
 
 type Node = Int
@@ -59,8 +59,8 @@ Instead I use this function locally for 'Key.sort'.
 graphIdent ::
    (Ord node) =>
    Graph node Graph.EitherEdge nodeLabel edgeLabel ->
-   (M.Map node nodeLabel,
-    M.Map (Graph.EitherEdge node) edgeLabel)
+   (Map node nodeLabel,
+    Map (Graph.EitherEdge node) edgeLabel)
 graphIdent g = (Graph.nodeLabels g, Graph.edgeLabels g)
 
 {-
