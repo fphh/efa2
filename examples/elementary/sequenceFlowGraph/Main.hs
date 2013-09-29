@@ -27,8 +27,8 @@ node2 = Node.intCrossing 0
 node3 = Node.intStorage 0
 
 
-topoDreibein :: Topo.Topology Node.Int
-topoDreibein =
+topoTripod :: Topo.Topology Node.Int
+topoTripod =
    topologyFromEdges
       [ (node0, node2), (node1, node2), (node2, node3) ]
 
@@ -71,7 +71,7 @@ drawSeqGraph sol = do
 
 main :: IO ()
 main = do
-   let sol = StateAnalysis.advanced topoDreibein
+   let sol = StateAnalysis.advanced topoTripod
 
    concurrentlyMany_ $
       (Draw.xterm $ Draw.flowTopologies sol) :
