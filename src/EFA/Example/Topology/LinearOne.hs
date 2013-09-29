@@ -8,7 +8,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Report.Format as Format
 
 
-data Node = Sink | Source deriving (Ord, Eq, Enum, Show)
+data Node = Source | Sink deriving (Ord, Eq, Enum, Show)
 
 instance Node.C Node where
    display = Node.displayDefault

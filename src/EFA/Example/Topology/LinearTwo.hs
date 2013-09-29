@@ -8,7 +8,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Report.Format as Format
 
 
-data Node = Sink | Crossing | Source deriving (Eq, Ord, Enum, Show)
+data Node = Source | Crossing | Sink deriving (Eq, Ord, Enum, Show)
 
 node0, node1, node2 :: Node
 node0 = Source
