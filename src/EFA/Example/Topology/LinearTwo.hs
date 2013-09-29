@@ -17,7 +17,9 @@ node2 = Sink
 
 
 instance Node.C Node where
-   display = Format.integer . fromIntegral . fromEnum
+   display Source   = Format.literal "Quelle"
+   display Crossing = Format.literal "Kreuzung"
+   display Sink     = Format.literal "Senke"
    subscript = Format.integer . fromIntegral . fromEnum
    dotId = Node.dotIdDefault
 
