@@ -9,7 +9,10 @@ module EFA.Graph.Topology.StateAnalysis (
    admissibleTopology,
    identify,
    minimalGiven,
+
    minimalGivenDuplicate,
+   checkNodeType,
+   checkIncompleteNodeType,
    ) where
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -44,6 +47,10 @@ import Data.Eq.HT (equating)
 type NodeType = Node.Type ()
 
 -- How should it be ordered to be faster?
+{- |
+We export this function only for testing.
+Do not use it outside of the module.
+-}
 checkNodeType :: NodeType -> Bool -> Bool -> Bool
 checkNodeType Node.Crossing sucActive preActive = sucActive == preActive
 checkNodeType Node.NoRestriction _ _ = True
@@ -76,6 +83,10 @@ infix 1 `implies`
 implies :: Bool -> Bool -> Bool
 implies x y = not x || y
 
+{- |
+We export this function only for testing.
+Do not use it outside of the module.
+-}
 checkIncompleteNodeType :: NodeType -> Bool -> Bool -> Bool -> Bool
 checkIncompleteNodeType typ complete sucActive preActive =
    case typ of

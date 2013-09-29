@@ -2,6 +2,7 @@
 module EFA.Test.StateAnalysis where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 import EFA.Graph.Topology (Topology, FlowTopology)
@@ -64,6 +65,18 @@ graphIdent ::
    (Map node nodeLabel,
     Map (Graph.EitherEdge node) edgeLabel)
 graphIdent g = (Graph.nodeLabels g, Graph.edgeLabels g)
+
+
+prop_admissible :: ArbTopology Node -> Bool
+prop_admissible (ArbTopology g) =
+   Fold.all StateAnalysis.admissibleTopology $
+   StateAnalysis.branchAndBound g
+
+prop_checkNode :: Node.Type () -> Bool -> Bool -> Bool
+prop_checkNode nt sucActive preActive =
+   StateAnalysis.checkNodeType nt sucActive preActive
+   ==
+   StateAnalysis.checkIncompleteNodeType nt True sucActive preActive
 
 {-
 I do not convert to Set, but use 'sort' in order to check for duplicates.
