@@ -2,6 +2,7 @@
 module EFA.Test.StateAnalysis where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import qualified EFA.Graph.Topology.Count as Count
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
@@ -76,7 +77,7 @@ prop_checkNode :: Node.Type () -> Bool -> Bool -> Bool
 prop_checkNode nt sucActive preActive =
    StateAnalysis.checkNodeType nt sucActive preActive
    ==
-   StateAnalysis.checkIncompleteNodeType nt True sucActive preActive
+   Count.checkNodeType nt True sucActive preActive
 
 {-
 I do not convert to Set, but use 'sort' in order to check for duplicates.

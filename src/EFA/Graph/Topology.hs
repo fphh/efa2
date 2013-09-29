@@ -25,6 +25,7 @@ module EFA.Graph.Topology (
        maybeStorage,
        isActive,
        isInactive,
+       anyActive,
        edgeType,
        isStructureEdge,
        isStorageEdge,
@@ -33,6 +34,7 @@ module EFA.Graph.Topology (
        classifyStorages,
        viewNodeDir,
        ViewNodeDir(..),
+       InOut,
        ) where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -40,7 +42,8 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 import EFA.Graph (Graph)
 
-
+import qualified Data.Map as Map; import Data.Map (Map)
+import qualified Data.Foldable as Fold
 import Control.Monad (mplus)
 import Data.Foldable (Foldable, foldMap)
 import Data.Maybe.HT (toMaybe)
@@ -81,6 +84,10 @@ isActive (Graph.EDirEdge _) = True
 
 isInactive :: Graph.EitherEdge node -> Bool
 isInactive = not . isActive
+
+anyActive :: Map (Graph.EitherEdge node) () -> Bool
+anyActive = Fold.any isActive . Map.keysSet
+
 
 
 isStructureEdge :: Eq node => FlowEdge structEdge (Idx.AugNode sec node) -> Bool
@@ -254,6 +261,12 @@ dirEdgeFromStructureEdge (Idx.StructureEdge x y) = Graph.DirEdge x y
 
 
 data StoreDir = In | Out deriving (Eq, Ord, Show)
+
+type InOut node nodeLabel =
+        (Map (Graph.EitherEdge node) (),
+         nodeLabel,
+         Map (Graph.EitherEdge node) ())
+
 
 {- |
 Classify the storages in in and out storages,
