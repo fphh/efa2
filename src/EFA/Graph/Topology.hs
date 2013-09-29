@@ -17,6 +17,7 @@ module EFA.Graph.Topology (
        DirStateFlowGraph,
        pathExists,
        flowFromPlain,
+       plainFromFlow,
        dirFromFlowGraph,
        structureEdgeFromDirEdge,
        dirEdgeFromStructureEdge,
@@ -213,6 +214,15 @@ pathExists src dst =
 
 flowFromPlain :: (Ord node) => Topology node -> FlowTopology node
 flowFromPlain = Graph.mapEdgesMaybe (Just . Graph.EDirEdge)
+
+plainFromFlow :: (Ord node) => FlowTopology node -> Topology node
+plainFromFlow =
+   Graph.mapEdgesMaybe
+      (\e ->
+         Just $
+         case e of
+            Graph.EDirEdge de -> de
+            Graph.EUnDirEdge ue -> Graph.DirEdge (Graph.from ue) (Graph.to ue))
 
 {-
 In principle, we could remove "dead nodes", but

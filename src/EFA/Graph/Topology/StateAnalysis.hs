@@ -9,6 +9,7 @@ module EFA.Graph.Topology.StateAnalysis (
    admissibleTopology,
    identify,
    minimalGiven,
+   minimalGivenDuplicate,
    ) where
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -539,7 +540,7 @@ reducePatterns =
 Find all minimal sets of state identifying edges.
 For every minimal edge set @es@ it holds
 
-1. @identify topo es@ is a singleton.
+1. @identify topo es@ is a singleton containing the flow topology.
 
 2. @es@ is empty or removing one edge from @es@
    makes @identify topo es@ returning more than one possible topology.
@@ -561,19 +562,17 @@ minimalGiven fullTopo =
 
 
 {-
-Possible tests:
-  minimalGiven must not return duplicates
-  minimalGiven returns the same as minimalGivenDuplicate after duplicate elimination
-
-
 topology in building/src/Modules/System causes duplicates:
 
 *Modules.System> Data.Foldable.mapM_ (print . StateAnalysis.minimalGiven) flowStates
 -}
-_minimalGivenDuplicate ::
+{- |
+Don't call that function, we only need it for testing.
+-}
+minimalGivenDuplicate ::
    (Ord node) =>
    FlowTopology node -> [[Graph.EitherEdge node]]
-_minimalGivenDuplicate topo =
+minimalGivenDuplicate topo =
    let go reducedTopo freeEdges =
           let reduced = reducePattern reducedTopo freeEdges
           in  if null reduced

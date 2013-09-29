@@ -2,12 +2,14 @@
 module EFA.Test.StateAnalysis where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
-import EFA.Graph.Topology (Topology)
+import EFA.Graph.Topology (Topology, FlowTopology)
+
 import qualified EFA.Utility.Map as MapU
 
 import qualified Data.List.Key as Key
+import qualified Data.List.HT as ListHT
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Set as Set
@@ -116,6 +118,60 @@ speed_clustering (ArbTopology g) =
 speed_setCover :: ArbTopology Node -> Bool
 speed_setCover (ArbTopology g) =
    StateAnalysis.setCover g == StateAnalysis.setCover g
+
+
+
+newtype ArbFlowTopology node = ArbFlowTopology (FlowTopology node)
+   deriving (Show)
+
+instance
+   (QC.Arbitrary node, Ord node) =>
+      QC.Arbitrary (ArbFlowTopology node) where
+   arbitrary =
+      let try = do
+             ArbTopology topo <- QC.arbitrary
+             let flowTopos = StateAnalysis.advanced topo
+             if null flowTopos
+               then try
+               else fmap ArbFlowTopology $ QC.elements flowTopos
+      in  try
+
+prop_identifyProjective :: ArbFlowTopology Node -> Bool
+prop_identifyProjective (ArbFlowTopology g) =
+   [g] ==
+      (StateAnalysis.identify (Topo.plainFromFlow g) $
+       Graph.edges g)
+
+prop_identifySelf :: Int -> ArbFlowTopology Node -> Bool
+prop_identifySelf n (ArbFlowTopology g) =
+   elem g $
+   StateAnalysis.identify (Topo.plainFromFlow g) $
+   take n $ Graph.edges g
+
+prop_minimalGivenUnique :: ArbFlowTopology Node -> Bool
+prop_minimalGivenUnique (ArbFlowTopology g) =
+   Fold.and $ Map.fromListWith (\_ _ -> False) $
+   map (flip (,) True) $ StateAnalysis.minimalGiven g
+
+prop_minimalGivenDuplicate :: ArbFlowTopology Node -> Bool
+prop_minimalGivenDuplicate (ArbFlowTopology g) =
+   Set.fromList (StateAnalysis.minimalGiven g)
+   ==
+   Set.fromList (StateAnalysis.minimalGivenDuplicate g)
+
+prop_minimalGivenIdentifies :: ArbFlowTopology Node -> Bool
+prop_minimalGivenIdentifies (ArbFlowTopology g) =
+   Fold.all (\es -> StateAnalysis.identify (Topo.plainFromFlow g) es == [g]) $
+   StateAnalysis.minimalGiven g
+
+prop_minimalGivenMinimal :: ArbFlowTopology Node -> Bool
+prop_minimalGivenMinimal (ArbFlowTopology g) =
+   Fold.all
+      (Fold.all
+         (ListHT.lengthAtLeast 2 .
+          StateAnalysis.identify (Topo.plainFromFlow g) . snd) .
+       ListHT.removeEach) $
+   StateAnalysis.minimalGiven g
 
 
 runTests :: IO Bool
