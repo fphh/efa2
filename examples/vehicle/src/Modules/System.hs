@@ -80,14 +80,9 @@ powerPositonNames = Map.fromList $ concat $ map f edgeList
                              (SeqIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
 showPowerId :: SeqIdx.PPos Node -> String
-showPowerId ppos = f (Map.lookup  ppos powerPositonNames)
-  where
-    f (Just sid) = show sid
-    f Nothing = (show ppos)
-
+showPowerId ppos =
+  maybe (show ppos) show $ Map.lookup  ppos powerPositonNames
 
 convertPowerId :: SeqIdx.PPos Node -> SigId
-convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
-  where
-    f (Just sid) = sid
-    f Nothing = SigId (show ppos)
+convertPowerId ppos =
+  Map.findWithDefault (SigId $ show ppos) ppos powerPositonNames
