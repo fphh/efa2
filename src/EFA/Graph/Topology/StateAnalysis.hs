@@ -448,6 +448,10 @@ For every minimal edge set @es@ it holds
 
 2. @es@ is empty or removing one edge from @es@
    makes @identify topo es@ returning more than one possible topology.
+
+
+This algorithm basically finds candidate keys.
+This is a common problem in relational database theory.
 -}
 {-
 This algorithm is not optimized.
