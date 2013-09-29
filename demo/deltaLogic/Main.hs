@@ -30,10 +30,6 @@ import Data.Monoid (mempty, (<>))
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
-node0, node1 :: Node
-node0 = Source
-node1 = Sink
-
 
 {-
 Use SumProduct.Term here since it simplifies automatically.
@@ -42,19 +38,19 @@ given, sys ::
    Symbolic.EquationSystem Symbolic.Ignore
       Record.Delta Node s SumProduct.Term
 given =
-   Idx.before (XIdx.power sec0 node0 node1) =<>
-   Idx.before (XIdx.eta sec0 node0 node1) =<>
+   Idx.before (XIdx.power sec0 Source Sink) =<>
+   Idx.before (XIdx.eta sec0 Source Sink) =<>
 
-   Idx.after (XIdx.eta sec0 node0 node1) =<>
+   Idx.after (XIdx.eta sec0 Source Sink) =<>
 
-   Idx.delta (XIdx.power sec0 node0 node1) =<>
+   Idx.delta (XIdx.power sec0 Source Sink) =<>
 
    mempty
 
 sys =
-   EqSys.variableRecord (XIdx.power sec0 node1 node0) =%=
-      EqSys.variableRecord (XIdx.eta sec0 node0 node1) ~*
-      EqSys.variableRecord (XIdx.power sec0 node0 node1)
+   EqSys.variableRecord (XIdx.power sec0 Sink Source) =%=
+      EqSys.variableRecord (XIdx.eta sec0 Source Sink) ~*
+      EqSys.variableRecord (XIdx.power sec0 Source Sink)
 
 run ::
    (forall s.
