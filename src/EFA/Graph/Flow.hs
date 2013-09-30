@@ -19,7 +19,7 @@ import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord, getSig)
-import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(TC))
+import EFA.Signal.Signal (TC(TC), fromScalar, neg)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
@@ -39,7 +39,7 @@ data Dir = Pos | Neg | Zero deriving (Show,Eq)
 
 type EdgeFlow = (Dir,Quality)
 
-newtype EdgeStates node = EdgeStates (Map (DirEdge node ) EdgeFlow) deriving (Show)
+newtype EdgeStates node = EdgeStates (Map (DirEdge node) EdgeFlow) deriving (Show)
 
 getEdgeState :: (Fractional a,
                  Ord a,
@@ -55,7 +55,7 @@ getEdgeState :: (Fractional a,
 getEdgeState topo rec = EdgeStates $ MapU.fromSet f $ Graph.edgeSet topo
   where
     f (DirEdge n1 n2) =
-          case sigSign $ S.sum s1 of
+          case S.sign $ S.sum s1 of
              TC (Data s) -> (convertSign s, edgeFlowQuality s1 s2)
        where s1 = getSig rec (XIdx.ppos n1 n2)
              s2 = getSig rec (XIdx.ppos n2 n1)
@@ -79,7 +79,7 @@ edgeFlowQuality :: (Num d,
                    TC s typ (Data (v :> Nil) d)->
                    Quality
 edgeFlowQuality s1 s2 =
-   if' (sigSign (S.sum s1) /= sigSign (S.sum s2)) Wrong $
+   if' (S.sign (S.sum s1) /= S.sign (S.sum s2)) Wrong $
    if' (S.hasSignChange s1 && S.hasSignChange s2) Dirty $
    Clean
 
@@ -144,7 +144,7 @@ genFlowState ::
   (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
   FlowRecord node v a -> FlowState node
 genFlowState (Record _time flowMap) =
-   FlowState $ Map.map (fromScalar . sigSign . S.sum) flowMap
+   FlowState $ Map.map (fromScalar . S.sign . S.sum) flowMap
 
 -- | Function to generate Flow Topologies for all Sections
 genSeqFlowTops ::

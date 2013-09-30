@@ -822,10 +822,10 @@ instance D.All c => All s c where
 ----------------------------------------------------------
 -- signal sign
 
-sigSign ::
+sign ::
    (Ord d, Num d, D.Map c, D.Storage c d, D.Storage c B.Sign, Fractional d) =>
    TC s typ (Data c d) -> TC s typ (Data c B.Sign)
-sigSign x = map B.sign x
+sign x = map B.sign x
 
 -- | Convert between List and different Vector formats
 convert ::
@@ -1003,12 +1003,6 @@ mapMaybe f (TC (Data x)) = TC $ Data $ SV.mapMaybe f x
 
 sampleAverage :: Fractional d => TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d)
 sampleAverage (TC (Data x)) (TC (Data y)) = TC $ Data $ (x+y)/2
-
-
-sign ::
-   (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d, Fractional d) =>
-   TC s typ (Data c d) -> TC s (Typ A SZ UT) (Data c B.Sign)
-sign x = changeType $ map B.sign x
 
 
 abs :: (Num d, D.Storage c d, D.Map c)  => TC s t (Data c d) -> TC s t (Data c d)
