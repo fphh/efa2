@@ -139,12 +139,6 @@ adjustSignsIgnoreUnknownPPos topo (FlowState state) (Record dt flow) =
                       f state Map.lookup (XIdx.ppos idx1 idx2)
 
 
--- | Function to calculate flow states for the whole sequence
-genSequFState ::
-  (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
-  Sequ.List (FlowRecord node v a) -> Sequ.List (FlowState node)
-genSequFState sqFRec = fmap genFlowState sqFRec
-
 -- | Function to extract the flow state out of a Flow Record
 genFlowState ::
   (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>

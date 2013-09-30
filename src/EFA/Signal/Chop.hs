@@ -120,7 +120,7 @@ makeSeqFlowGraph ::
 makeSeqFlowGraph topo =
    Flow.sequenceGraph .
    Flow.genSeqFlowTops topo .
-   Flow.genSequFState
+   fmap Flow.genFlowState
 
 
 makeSeqFlowTopology ::
