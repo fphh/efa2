@@ -18,8 +18,6 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Sequence as Sequ
--- import qualified EFA.Signal.Plot as Plot
-import EFA.Signal.Chop (makeSeqFlowTopology)
 import EFA.Signal.Signal (TC, Scalar,toScalar)
 import EFA.Signal.Data (Data, Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
@@ -288,7 +286,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
 
-  let sequenceFlowTopologyX = map makeSeqFlowTopology flowToposX
+  let sequenceFlowTopologyX = map Flow.sequenceGraph flowToposX
 
 ---------------------------------------------------------------------------------------
 -- *  Section Flow States as Graphs

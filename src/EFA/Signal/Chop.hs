@@ -7,7 +7,7 @@ module EFA.Signal.Chop where
 
 
 import qualified EFA.Graph.Flow as Flow
-import EFA.Graph.Topology (Topology, FlowTopology)
+import EFA.Graph.Topology (Topology)
 
 import qualified EFA.Signal.Sequence as Sequ
 
@@ -122,13 +122,6 @@ makeSeqFlowGraph topo =
    Flow.genSeqFlowTops topo .
    fmap Flow.genFlowState
 
-
-makeSeqFlowTopology ::
-   (Ord node, Show node) =>
-   Sequ.List (FlowTopology node) ->
-   Flow.RangeGraph node
-makeSeqFlowTopology =
-   Flow.sequenceGraph
 
 makeSequence ::
    (Show node, Ord node) =>

@@ -363,7 +363,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
       stateFlowEnvWithGraph =
         let sequ = Flow.genSeqFlowTops System.topology (fst flowStatesWithAdj)
             envLocal = external initStorage
-                           (Chop.makeSeqFlowTopology sequ) (snd flowStatesWithAdj)
+                           (Flow.sequenceGraph sequ) (snd flowStatesWithAdj)
             e = second (fmap Arith.integrate) envLocal
             sm = snd $ StateFlow.stateMaps sequ
         in  ( StateFlow.stateGraphAllStorageEdges sequ,
