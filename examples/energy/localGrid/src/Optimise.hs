@@ -626,8 +626,7 @@ main = do
      -- | Generate and solve Equation System
 
      eqs :: EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
-     eqs = Optimisation.givenSimulate etaAssign etaFunc $
-             Sequ.List [Sequ.Section (Idx.Section 0) undefined rec]
+     eqs = Optimisation.givenSimulate etaAssign etaFunc $ Sequ.fromList [rec]
 
      envSim = EqGen.solve seqTopoSim eqs
 
