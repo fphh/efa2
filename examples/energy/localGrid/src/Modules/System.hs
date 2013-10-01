@@ -118,13 +118,13 @@ edgeNamesOpt = Map.fromList el
 flowState0, flowState4 :: Topo.FlowTopology Node
 flowState0 =
    identifyFlowState topologyOpt
-      [dirEdge Gas Network, dirEdge Sun LocalNetwork, dirEdge Wind Network,
+      [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork,
        dirEdge Water Network]
 
 flowState4 =
    identifyFlowState topologyOpt
-      [dirEdge Gas Network, dirEdge Sun LocalNetwork, dirEdge Wind Network,
-       dirEdge Network Water, dirEdge Network LocalNetwork]
+      [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork,
+       dirEdge Network Water]
 
 seqTopoOpt :: Flow.RangeGraph Node
 seqTopoOpt =
