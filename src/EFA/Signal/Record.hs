@@ -38,7 +38,7 @@ import EFA.Signal.Data (Data(Data),
                         (:>),
                         Nil)
 
-import EFA.Signal.Base (Sign, BSum, BProd)
+import EFA.Signal.Base (BSum, BProd)
 
 import qualified EFA.Graph.Topology.Index as Idx
 
@@ -107,10 +107,6 @@ type DTimePowerRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A P Tt) (
 type DistRecord n v d = Record FDistrib FDistrib (Typ UT UT UT) (Typ A F Tt) (Idx.PPos n) v ([S.Class d], [S.SignalIdx]) d
 
 -- data DistRecord n v d = DistRecord (UTDistr v ([S.Class d], [S.SignalIdx])) (Map (Idx.PPos n) (FDistr v d))
-
-
--- | Flow record to contain flow signals assigned to the tree
-newtype FlowState node = FlowState (Map (Idx.PPos node) Sign) deriving (Show)
 
 
 newtype Name = Name String

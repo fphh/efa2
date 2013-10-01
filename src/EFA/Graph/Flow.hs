@@ -17,8 +17,7 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
-import EFA.Signal.Record
-          (Record(Record), FlowState(FlowState), FlowRecord, getSig)
+import EFA.Signal.Record (Record(Record), FlowRecord, getSig)
 import EFA.Signal.Signal (TC(TC), fromScalar, neg)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
@@ -32,6 +31,10 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Bool.HT (if')
 
+
+
+-- | Flow record to contain flow signals assigned to the tree
+newtype State node = State (Map (Idx.PPos node) Sign) deriving (Show)
 
 
 data Quality = Clean | Dirty | Wrong deriving (Show,Eq)
@@ -105,8 +108,8 @@ adjustSigns ::
   (Show (v a), DArith0 a,
   SV.Walker v, SV.Storage v a, Ord node, Show node) =>
   Topology node ->
-  FlowState node -> FlowRecord node v a -> FlowRecord node v a
-adjustSigns topo (FlowState state) (Record dt flow) =
+  State node -> FlowRecord node v a -> FlowRecord node v a
+adjustSigns topo (State state) (Record dt flow) =
    Record dt (Map.foldrWithKey g Map.empty uniquePPos)
       where m!k = checkedLookup "EFA.Graph.Flow.adjustSigns" m k
             g ppos NSign acc =
@@ -126,8 +129,8 @@ adjustSignsIgnoreUnknownPPos ::
   (Show (v a), DArith0 a,
   SV.Walker v, SV.Storage v a, Ord node, Show node) =>
   Topology node ->
-  FlowState node -> FlowRecord node v a -> FlowRecord node v a
-adjustSignsIgnoreUnknownPPos topo (FlowState state) (Record dt flow) =
+  State node -> FlowRecord node v a -> FlowRecord node v a
+adjustSignsIgnoreUnknownPPos topo (State state) (Record dt flow) =
    Record dt (Map.foldrWithKey g Map.empty uniquePPos)
       where f m lkup ppos acc =
               maybe acc (flip (Map.insert ppos) acc) (lkup ppos m)
@@ -142,16 +145,15 @@ adjustSignsIgnoreUnknownPPos topo (FlowState state) (Record dt flow) =
 -- | Function to extract the flow state out of a Flow Record
 genFlowState ::
   (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
-  FlowRecord node v a -> FlowState node
+  FlowRecord node v a -> State node
 genFlowState (Record _time flowMap) =
-   FlowState $ Map.map (fromScalar . S.sign . S.sum) flowMap
-
+   State $ Map.map (fromScalar . S.sign . S.sum) flowMap
 
 -- | Function to generate Flow Topology -- only use one state per signal
 genFlowTopology ::
   (Ord node, Show node) =>
-  Topology node -> FlowState node -> FlowTopology node
-genFlowTopology topo (FlowState fs) =
+  Topology node -> State node -> FlowTopology node
+genFlowTopology topo (State fs) =
    Graph.fromList (labNodes topo) $ map (flip (,) ()) $
    map
       (\(DirEdge idx1 idx2) ->
@@ -164,8 +166,8 @@ genFlowTopology topo (FlowState fs) =
 
 genFlowTopologyIgnoreUnknownPPos ::
   (Ord node, Show node) =>
-  Topology node -> FlowState node -> FlowTopology node
-genFlowTopologyIgnoreUnknownPPos topo (FlowState fs) =
+  Topology node -> State node -> FlowTopology node
+genFlowTopologyIgnoreUnknownPPos topo (State fs) =
    Graph.fromList (labNodes topo) $ map (flip (,) ()) $
    map
       (\(DirEdge idx1 idx2) ->

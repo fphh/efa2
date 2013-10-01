@@ -62,7 +62,7 @@ pre :: Topo.Topology System.Node
       -> SignalRecord [] Double
       -> (Sequ.List (PowerRecord System.Node [] Double),
          Sequ.List (FlowRecord System.Node [] Double),
-         Sequ.List (Record.FlowState System.Node),
+         Sequ.List (Flow.State System.Node),
          PowerRecord System.Node [] Double,
          SignalRecord [] Double)
 
