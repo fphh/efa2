@@ -5,10 +5,6 @@
 
 module EFA.Signal.Chop where
 
-
-import qualified EFA.Graph.Flow as Flow
-import EFA.Graph.Topology (Topology)
-
 import qualified EFA.Signal.Sequence as Sequ
 
 import qualified EFA.Signal.Base as SB
@@ -105,21 +101,6 @@ separateUncleanSections  (xs, ys, zs) =
           g (_,q) = q == Flow.Dirty
           h (_,q) = q == Flow.Wrong
 -}
-
-makeSeqFlowGraph ::
-  (Fractional a,
-   Ord a,
-   V.Walker v,
-   V.Storage v a,
-   SB.BSum a,
-   Ord node,
-   Show node) =>
-   Topology node ->
-   Sequ.List (FlowRecord node v a) ->
-   Flow.RangeGraph node
-makeSeqFlowGraph topo =
-   Flow.sequenceGraph .
-   fmap (Flow.genFlowTopology topo . Flow.genFlowState)
 
 
 makeSequence ::
