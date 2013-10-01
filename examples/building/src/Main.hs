@@ -341,19 +341,17 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
 
       sequenceFlowsFilt :: Sequ.List (Record.FlowRecord Node [] Double)
       sequenceFlowsFilt =
-        snd
-        $ Sequ.unzip
-        $ Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime . snd)
-        $ fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
+        Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime) $
+        fmap Record.partIntegrate sequencePowers
 
-      flowStatesWithAdj ::
-        ( Sequ.List (Record.FlowState Node),
-          Sequ.List (Record.FlowRecord Node [] Double) )
-      flowStatesWithAdj =
-        Sequ.unzip
-        $ fmap (\rec ->
+      flowTopos :: Sequ.List (Topo.FlowTopology Node)
+      adjustedFlows :: Sequ.List (Record.FlowRecord Node [] Double)
+      (flowTopos, adjustedFlows) =
+        Sequ.unzip $
+        fmap (\rec ->
                  let flowState = Flow.genFlowState rec
-                 in  (flowState, Flow.adjustSigns System.topology flowState rec))
+                 in  (Flow.genFlowTopology System.topology flowState,
+                      Flow.adjustSigns System.topology flowState rec))
         sequenceFlowsFilt
 
       stateFlowEnvWithGraph ::
@@ -361,15 +359,11 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
           StateEnv.Complete Node (Data Nil Double) (Data Nil Double) )
 
       stateFlowEnvWithGraph =
-        let sequ =
-               fmap
-                  (Flow.genFlowTopology System.topology)
-                  (fst flowStatesWithAdj)
-            envLocal = external initStorage
-                           (Flow.sequenceGraph sequ) (snd flowStatesWithAdj)
+        let envLocal = external initStorage
+                           (Flow.sequenceGraph flowTopos) adjustedFlows
             e = second (fmap Arith.integrate) envLocal
-            sm = snd $ StateFlow.stateMaps sequ
-        in  ( StateFlow.stateGraphAllStorageEdges sequ,
+            sm = snd $ StateFlow.stateMaps flowTopos
+        in  ( StateFlow.stateGraphAllStorageEdges flowTopos,
               StateEnv.mapMaybe Result.toMaybe Result.toMaybe $
                 StateFlow.envFromSequenceEnvResult sm e)
 
