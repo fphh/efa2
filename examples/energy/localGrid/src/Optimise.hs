@@ -651,20 +651,19 @@ main = do
 
      sequencePowers :: Sequ.List (Record.PowerRecord System.Node [] Double)
      sequencePowers = genSequ rec0
-     (_, sequenceFlowsFilt) =
-         Sequ.unzip $
-         Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime . snd) $
-         fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
+     sequenceFlowsFilt =
+         Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime) $
+         fmap Record.partIntegrate sequencePowers
 
-     (flowStates, adjustedFlows) =
+     (flowTopos, adjustedFlows) =
          Sequ.unzip $
          fmap
          (\state ->
            let flowState = Flow.genFlowState state
-           in  (flowState, Flow.adjustSigns System.topologyOpt flowState state))
+           in  (Flow.genFlowTopology System.topologyOpt flowState,
+                Flow.adjustSigns System.topologyOpt flowState state))
          sequenceFlowsFilt
 
-     flowTopos = fmap (Flow.genFlowTopology System.topologyOpt) flowStates
      sequenceFlowTopologySim = Flow.sequenceGraph flowTopos
      envSimAnalysis = Analysis.external2 sequenceFlowTopologySim adjustedFlows
      envSimAnalysisCumulated = Analysis.external2 sequenceFlowTopologySim
