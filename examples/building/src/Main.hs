@@ -361,7 +361,10 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
           StateEnv.Complete Node (Data Nil Double) (Data Nil Double) )
 
       stateFlowEnvWithGraph =
-        let sequ = Flow.genSeqFlowTops System.topology (fst flowStatesWithAdj)
+        let sequ =
+               fmap
+                  (Flow.genFlowTopology System.topology)
+                  (fst flowStatesWithAdj)
             envLocal = external initStorage
                            (Flow.sequenceGraph sequ) (snd flowStatesWithAdj)
             e = second (fmap Arith.integrate) envLocal

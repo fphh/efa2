@@ -664,7 +664,7 @@ main = do
            in  (flowState, Flow.adjustSigns System.topologyOpt flowState state))
          sequenceFlowsFilt
 
-     flowTopos = Flow.genSeqFlowTops System.topologyOpt flowStates
+     flowTopos = fmap (Flow.genFlowTopology System.topologyOpt) flowStates
      sequenceFlowTopologySim = Flow.sequenceGraph flowTopos
      envSimAnalysis = Analysis.external2 sequenceFlowTopologySim adjustedFlows
      envSimAnalysisCumulated = Analysis.external2 sequenceFlowTopologySim

@@ -146,19 +146,6 @@ genFlowState ::
 genFlowState (Record _time flowMap) =
    FlowState $ Map.map (fromScalar . S.sign . S.sum) flowMap
 
--- | Function to generate Flow Topologies for all Sections
-genSeqFlowTops ::
-  (Ord node, Show node) =>
-  Topology node -> Sequ.List (FlowState node) -> Sequ.List (FlowTopology node)
-genSeqFlowTops topo = fmap (genFlowTopology topo)
-
-genSeqFlowTopsIgnoreUnknownPPos ::
-  (Ord node, Show node) =>
-  Topology node -> Sequ.List (FlowState node) -> Sequ.List (FlowTopology node)
-genSeqFlowTopsIgnoreUnknownPPos topo =
-  fmap (genFlowTopologyIgnoreUnknownPPos topo)
-
-
 
 -- | Function to generate Flow Topology -- only use one state per signal
 genFlowTopology ::

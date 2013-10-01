@@ -281,7 +281,7 @@ main = do
   ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
 
-  let flowToposX = map (Flow.genSeqFlowTops System.topology) flowStatesX
+  let flowToposX = map (fmap $ Flow.genFlowTopology System.topology) flowStatesX
 
 ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph

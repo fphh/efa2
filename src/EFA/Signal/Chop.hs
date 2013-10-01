@@ -119,8 +119,7 @@ makeSeqFlowGraph ::
    Flow.RangeGraph node
 makeSeqFlowGraph topo =
    Flow.sequenceGraph .
-   Flow.genSeqFlowTops topo .
-   fmap Flow.genFlowState
+   fmap (Flow.genFlowTopology topo . Flow.genFlowState)
 
 
 makeSequence ::

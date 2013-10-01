@@ -128,7 +128,7 @@ process rawSignals =
 
       sequenceFlowGraph =
         Flow.sequenceGraph $
-        Flow.genSeqFlowTops System.topology $
+        fmap (Flow.genFlowTopology System.topology) $
         sectionMapping flowStatesUnmapped
 
       externalEnv =
