@@ -55,6 +55,17 @@ solve graph sys =
    Env.completeFMap Record.unAbsolute Record.unAbsolute $
    EqGen.solve graph sys
 
+solveFromMeasurement ::
+   (Eq a, Arith.Constant a, a ~ Arith.Scalar v,
+    Eq v, Arith.Product v, Arith.Integrate v,
+    Node.C node) =>
+   Flow.RangeGraph node ->
+   (forall s. EquationSystem node s a v) ->
+   Env.Complete node (Result a) (Result v)
+solveFromMeasurement graph sys =
+   Env.completeFMap Record.unAbsolute Record.unAbsolute $
+   EqGen.solveFromMeasurement graph sys
+
 
 solveSimple ::
    (Node.C node) =>
