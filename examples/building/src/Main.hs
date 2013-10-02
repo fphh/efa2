@@ -404,9 +404,13 @@ main = do
       initEnv = AppOpt.initialEnv System.Water System.stateFlowGraph
 
 
-      (time, [pwind, psolar, phouse, pindustry]) =
+      (time,
+       NonEmpty.Cons pwind
+          (NonEmpty.Cons psolar
+             (NonEmpty.Cons phouse
+                (NonEmpty.Cons pindustry Empty.Cons)))) =
         CT.getPowerSignalsWithSameTime tabPower
-          ["wind", "solar", "house", "industry"]
+          ("wind" !: "solar" !: "house" !: "industry" !: Empty.Cons)
 
       prest = Sig.scale restScale pwind
       plocal = Sig.offset 0.4 $ Sig.scale localScale $

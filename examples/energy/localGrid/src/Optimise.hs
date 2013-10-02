@@ -65,11 +65,14 @@ import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 
-import qualified Data.Map as Map ; import Data.Map (Map)
-import qualified Data.Vector as V
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
---import qualified EFA.Graph.StateFlow.Environment as StFlEnv
+import qualified Data.Map as Map ; import Data.Map (Map)
+import qualified Data.Vector as V
+
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
+import Data.NonEmpty ((!:))
 
 --import Text.Printf (printf)
 
@@ -442,11 +445,13 @@ main = do
          getEtas etaFunc ["storage", "storage", "gas", "coal", "transformer"]-}
 
    -- | Import Power Curves
-   let (_, powerSignalWind) :
-         (_, powerSignalSolar) :
-         (_, powerSignalHouse) :
-         (_, powerSignalIndustry) : _
-           = CT.getPowerSignals tabPower ["wind", "solar", "house", "industry"]
+   let (NonEmpty.Cons powerSignalWind
+         (NonEmpty.Cons powerSignalSolar
+           (NonEmpty.Cons powerSignalHouse
+             (NonEmpty.Cons powerSignalIndustry Empty.Cons))))
+          = fmap snd $
+            CT.getPowerSignals tabPower
+               ("wind" !: "solar" !: "house" !: "industry" !: Empty.Cons)
 
 
        powerSignalRest = Sig.scale restPowerScale powerSignalWind
