@@ -446,7 +446,7 @@ main = do
          (_, powerSignalSolar) :
          (_, powerSignalHouse) :
          (_, powerSignalIndustry) : _
-           = ModUt.getPowerSignals tabPower ["wind", "solar", "house", "industry"]
+           = CT.getPowerSignals tabPower ["wind", "solar", "house", "industry"]
 
 
        powerSignalRest = Sig.scale restPowerScale powerSignalWind

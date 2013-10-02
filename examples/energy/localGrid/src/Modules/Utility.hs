@@ -13,15 +13,8 @@ import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.ConvertTable as CT
 import EFA.Signal.Data (Data, Nil, (:>))
 
-import qualified EFA.IO.TableParserTypes as TPT
-
-
---import EFA.Utility.Map (checkedLookup)
-
-import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map ; import Data.Map (Map)
 
 -- | Warning -- only works for one section in env
@@ -43,14 +36,3 @@ envToPowerRecord env time sec =
 getEtas :: Map String (a -> a) -> [String] -> [a -> a]
 getEtas etaFunc = map $
   \str -> Map.findWithDefault (error $ "getEtas :" ++ str ++ " not found") str etaFunc
-
-
--- @HH Fehlermeldung bei f beseitigen - PG
-getPowerSignals ::
-  Map String (TPT.T Double) ->
-  [String] ->
-  [(Sig.TSignal [] Double, Sig.PSignal [] Double)]
-getPowerSignals tabPower =
-    map (f . CT.convertToSignal2D .
-         flip (Map.findWithDefault (error "getPowerSignals: signal not found")) tabPower)
-  where f (x, NonEmpty.Cons y []) = (x, y)
