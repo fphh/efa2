@@ -657,12 +657,7 @@ main = do
 
      (flowTopos, adjustedFlows) =
          Sequ.unzip $
-         fmap
-         (\state ->
-           let flowState = Flow.genFlowState state
-           in  (Flow.genFlowTopology System.topologyOpt flowState,
-                Flow.adjustSigns System.topologyOpt flowState state))
-         sequenceFlowsFilt
+         fmap (Flow.adjustedTopology System.topologyOpt) sequenceFlowsFilt
 
      sequenceFlowTopologySim = Flow.sequenceGraph flowTopos
      envSimAnalysis = Analysis.external2 sequenceFlowTopologySim adjustedFlows

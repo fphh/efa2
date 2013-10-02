@@ -348,11 +348,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
       adjustedFlows :: Sequ.List (Record.FlowRecord Node [] Double)
       (flowTopos, adjustedFlows) =
         Sequ.unzip $
-        fmap (\rec ->
-                 let flowState = Flow.genFlowState rec
-                 in  (Flow.genFlowTopology System.topology flowState,
-                      Flow.adjustSigns System.topology flowState rec))
-        sequenceFlowsFilt
+        fmap (Flow.adjustedTopology System.topology) sequenceFlowsFilt
 
       stateFlowEnvWithGraph ::
         ( Topo.StateFlowGraph Node,

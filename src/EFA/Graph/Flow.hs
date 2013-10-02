@@ -181,6 +181,18 @@ genFlowTopologyIgnoreUnknownPPos topo (State fs) =
    Graph.edges topo
 
 
+adjustedTopology ::
+  (Ord node, Show node,
+   Fractional a, Ord a, BSum a, DArith0 a,
+   SV.Walker v, SV.Storage v a, Show (v a)) =>
+  Topology node -> FlowRecord node v a ->
+  (FlowTopology node, FlowRecord node v a)
+adjustedTopology topo state =
+   let flowState = genFlowState state
+   in  (genFlowTopology topo flowState,
+        adjustSigns topo flowState state)
+
+
 
 sectionFromClassTopo ::
   (Ord node) =>

@@ -117,13 +117,7 @@ pre topology epsZero epsT epsE rawSignals =
       fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
     (flowTopos, adjustedFlows) =
-      Sequ.unzip $
-      fmap
-      (\state ->
-        let flowState = Flow.genFlowState state
-        in  (Flow.genFlowTopology topology flowState,
-             Flow.adjustSigns topology flowState state))
-      sequenceFlowsFilt
+      Sequ.unzip $ fmap (Flow.adjustedTopology topology) sequenceFlowsFilt
 
 {-
 
