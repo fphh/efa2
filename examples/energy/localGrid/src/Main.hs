@@ -115,7 +115,7 @@ process ::
     Flow.RangeGraph System.Node)
 
 process rawSignals =
-  let (_, sequenceFlowsFiltUnmapped, flowStatesUnmapped, powerSignals, signal) =
+  let (_, sequenceFlowsFiltUnmapped, flowToposUnmapped, powerSignals, signal) =
         Analysis.pre System.topology
           zeroNoiseTolerance sectionFilterTime sectionFilterEnergy
           rawSignals
@@ -127,9 +127,7 @@ process rawSignals =
       sequenceFlowsFilt = sectionMapping sequenceFlowsFiltUnmapped
 
       sequenceFlowGraph =
-        Flow.sequenceGraph $
-        fmap (Flow.genFlowTopology System.topology) $
-        sectionMapping flowStatesUnmapped
+        Flow.sequenceGraph $ sectionMapping flowToposUnmapped
 
       externalEnv =
         Env.completeFMap

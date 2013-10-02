@@ -62,12 +62,12 @@ pre :: Topo.Topology System.Node
       -> SignalRecord [] Double
       -> (Sequ.List (PowerRecord System.Node [] Double),
          Sequ.List (FlowRecord System.Node [] Double),
-         Sequ.List (Flow.State System.Node),
+         Sequ.List (Topo.FlowTopology System.Node),
          PowerRecord System.Node [] Double,
          SignalRecord [] Double)
 
 pre topology epsZero epsT epsE rawSignals =
-  (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
+  (sequencePowersFilt, adjustedFlows, flowTopos, powerSignals0, signals0)
   where
     ---------------------------------------------------------------------------------------
     -- * Condition Signals, Calculate Powers, Remove ZeroNoise
@@ -95,12 +95,13 @@ pre topology epsZero epsT epsE rawSignals =
       Sequ.filter (Record.major epsE epsT . snd) $
       fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
-    (flowStates, adjustedFlows) =
+    (flowTopos, adjustedFlows) =
       Sequ.unzip $
       fmap
-      (\state ->
-        let flowState = Flow.genFlowState state
-        in  (flowState, Flow.adjustSigns topology flowState state))
+        (\state ->
+          let flowState = Flow.genFlowState state
+          in  (Flow.genFlowTopology topology flowState,
+               Flow.adjustSigns topology flowState state))
       sequenceFlowsFilt
 
 -------------------------------------------------------------------------------------------------

@@ -261,27 +261,20 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
 
-
-  let preProcessedDataX =
+  let (_,sequenceFlowsFiltUnmappedX,flowToposUnmappedX,powerSignalsX,signalsX) =
+        List.unzip5 $
         map (Analysis.pre System.topology zeroNoiseToleranz sectionFilterTime sectionFilterEnergy) rawSignalsX
+--  let (sequencePowersFiltX,sequenceFlowsFiltX,flowToposX,powerSignalsX,signalsX) = List.unzip5 preProcessedDataX
 
-  let (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) =
-        List.unzip5 preProcessedDataX
---  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = List.unzip5 preProcessedDataX
-
-  let allSignalsX = zipWith (Record.combinePowerAndSignalWithFunction System.convertPowerId) powerSignalsX signalsX
+  let _allSignalsX = zipWith (Record.combinePowerAndSignalWithFunction System.convertPowerId) powerSignalsX signalsX
 
 ---------------------------------------------------------------------------------------
 -- *  ReIndex Sequences to allow Sequence Matching
 
   let sequenceFlowsFiltX = sectionMapping sequenceFlowsFiltUnmappedX
 
-  let flowStatesX = sectionMapping flowStatesUnmappedX
+  let flowToposX = sectionMapping flowToposUnmappedX
 
-  ---------------------------------------------------------------------------------------
--- *  Generate Flow States as Graphs
-
-  let flowToposX = map (fmap $ Flow.genFlowTopology System.topology) flowStatesX
 
 ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
