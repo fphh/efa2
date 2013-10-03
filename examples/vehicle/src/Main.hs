@@ -7,18 +7,15 @@ module Main where
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
 import qualified Modules.Signals as Signals
--- import qualified Modules.Plots as Plots
 
--- import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Utility (checkDetermined)
--- import EFA.Application.Absolute ((.=))
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Sequence as Sequ
-import EFA.Signal.Signal (TC, Scalar,toScalar)
+import EFA.Signal.Signal (TC, Scalar, toScalar)
 import EFA.Signal.Data (Data, Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
@@ -30,19 +27,13 @@ import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
--- import qualified EFA.Equation.Stack as Stack
 
 import EFA.IO.PLTImport (modelicaPLTImport)
-import EFA.Graph.Topology(isStructureEdge)
-import EFA.Graph(lefilter)
 import EFA.Utility.Async (concurrentlyMany_)
 
 
 --import qualified Graphics.Gnuplot.Terminal.X11 as X11
 import qualified Graphics.Gnuplot.Terminal.WXT as WXT
-
---import qualified Graphics.Gnuplot.Terminal as Terminal
---import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
@@ -50,11 +41,9 @@ import qualified System.IO as IO
 import System.Environment (getEnv)
 import System.FilePath ((</>))
 
--- import qualified Data.Map as Map
 import qualified Data.List.HT as ListHT
 import qualified Data.List as List
 import Control.Monad (when)
-import Data.Tuple.HT (mapSnd)
 
 
 -- | O. Generelle Settings
@@ -282,11 +271,6 @@ main = do
   let sequenceFlowTopologyX = map Flow.sequenceGraph flowToposX
 
 ---------------------------------------------------------------------------------------
--- *  Section Flow States as Graphs
-
-  let sectionToposX =  map (mapSnd (lefilter (isStructureEdge .fst))) sequenceFlowTopologyX
-
----------------------------------------------------------------------------------------
 -- *  Make Base Analysis on external Data
 
   let externalEnvX =
@@ -376,14 +360,14 @@ main = do
     -- Section flow
     ++ List.zipWith4 drawAbs
          datasetsX
-         sequenceFlowTopologyX --sectionToposX
+         sequenceFlowTopologyX
          externalEnvX
          colours
 
     -- Delta Section Flow
     ++ List.zipWith4 drawDelta
          deltasetsX
-         sectionToposX
+         sequenceFlowTopologyX
          externalDeltaEnvX
          (tail colours)
 
@@ -431,5 +415,4 @@ main = do
 -- * Draw Predicted Diagram
 
     -- Prediction Based on a specific Record
-    ++ [drawAbs (Record.Name "Prediction 900kg") (head sectionToposX) prediction Colors.Yellow]
-    -- ++ [drawAbs (Record.Name "Prediction 900kg") (head sequenceFlowTopologyX) prediction Colors.Yellow]
+    ++ [drawAbs (Record.Name "Prediction 900kg") (head sequenceFlowTopologyX) prediction Colors.Yellow]
