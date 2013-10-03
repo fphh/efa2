@@ -5,12 +5,12 @@
 
 module Modules.Analysis where
 
-----------------------------------
--- * Example Specific Imports
 import qualified Modules.System as System
 import qualified Modules.Signals as Signals
 
 import qualified EFA.Application.Absolute as EqAbs
+import EFA.Application.Absolute ((.=))
+
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Equation.System as EqGen
@@ -22,8 +22,6 @@ import qualified EFA.Equation.Record as EqRecord
 import EFA.Equation.Arithmetic ((~*))
 import EFA.Equation.Result (Result)
 import EFA.Equation.Stack (Stack)
-import EFA.Equation.Verify (Ignore)
-import EFA.Equation.System ((.=))
 
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
@@ -36,17 +34,12 @@ import EFA.Signal.Record (SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord, getTime, newTimeBase)
 
-
 import EFA.Signal.Chop (addZeroCrossings, genSequ)
-
---import qualified EFA.Equation.Arithmetic as Arith
-
---import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Signal (TC, Scalar)
 import EFA.Signal.Data (Data, Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
-import EFA.Report.FormatValue (FormatValue, FormatSignalIndex)
+import EFA.Report.FormatValue (FormatSignalIndex)
 
 import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Graph.Topology.Index as Idx
@@ -150,38 +143,28 @@ external :: (Eq d,
             Sequ.List (FlowRecord System.Node v d) ->
             Env.Complete System.Node (Result Double) (Result d)
 external sequenceFlowTopology seqFlowRecord =
-  Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
-  EqGen.solveFromMeasurement
-    sequenceFlowTopology $
-    makeGivenFromExternal Idx.Absolute seqFlowRecord
+   EqAbs.solveFromMeasurement sequenceFlowTopology $
+   makeGivenFromExternal seqFlowRecord
 
 initStorage :: (Arith.Constant a) => a
 initStorage = Arith.fromRational $ 0.7*3600*1000
 
-makeGivenFromExternal :: (Vec.Zipper v,
-                          Vec.Walker v,
-                          Vec.Singleton v,
-                          B.BSum d,
-                          Eq d,
-                          Arith.Constant d,
-                          Vec.Storage v d,
-                          Vec.FromList v,
-                          EqGen.Record rec,
-                          idx ~ EqRecord.ToIndex rec) =>
-                         idx ->
-                         Sequ.List (FlowRecord System.Node v d) ->
-                         EqGen.EquationSystem Ignore rec System.Node s Double d
+makeGivenFromExternal ::
+   (Vec.Zipper v, Vec.Walker v, Vec.Singleton v, Vec.FromList v,
+    B.BSum d, Eq d, Arith.Constant d, Vec.Storage v d) =>
+   Sequ.List (FlowRecord System.Node v d) ->
+   EqAbs.EquationSystem System.Node s Double d
 
-makeGivenFromExternal idx sf =
-   (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
-   <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
+makeGivenFromExternal sf =
+   (XIdx.storage Idx.initial System.Battery .= initStorage)
+   <> (XIdx.storage Idx.initial System.VehicleInertia .= 0)
    <> fold (Sequ.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.InPart sec Idx.DTime) .=
+           (Idx.InPart sec Idx.DTime .=
               Arith.integrate (Sig.toList $ Sig.delta t)) <>
            fold (Map.mapWithKey g xs)
            where g ppos e =
-                    Idx.Record idx (XIdx.energyFromPPos sec ppos) .=
+                    XIdx.energyFromPPos sec ppos .=
                        Arith.integrate (Sig.toList e)
 
 external2 ::
@@ -200,12 +183,9 @@ external2 ::
       (Result (Data (v D.:> Nil) a))
 
 external2 sequenceFlowTopology seqFlowRecord =
-  Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
-  EqGen.solveFromMeasurement sequenceFlowTopology $
-    makeGivenFromExternal2 seqFlowRecord -- $ Record.diffTime seqFlowRecord
+  EqAbs.solveFromMeasurement sequenceFlowTopology $
+    makeGivenFromExternal2 seqFlowRecord
 
--- makeGivenFromExternal2 ::
---  makeGivenFromExternal2 env = EqAbs.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
 makeGivenFromExternal2 ::
    (Eq (v a), TDNode.C node, Arith.Sum a, Vec.Zipper v,
     Vec.Walker v, Vec.Storage v a, Vec.Singleton v,
@@ -235,8 +215,8 @@ makeGivenForPrediction ::
    EqAbs.EquationSystem System.Node s a v
 
 makeGivenForPrediction (Env.Complete _scal sig) =
-    (XIdx.storage Idx.initial System.Battery .== initStorage)
-    <> (XIdx.storage Idx.initial System.VehicleInertia .== Arith.zero)
+    (XIdx.storage Idx.initial System.Battery .= initStorage)
+    <> (XIdx.storage Idx.initial System.VehicleInertia .= Arith.zero)
 --    <> (EqAbs.fromMap $ Env.etaMap scal) -- hier müssen rote-Kante Gleichungen erzeugt werden
     <> (EqAbs.fromMap $ Env.etaMap sig)
     <> (EqAbs.fromMap $ Env.dtimeMap sig)
@@ -259,20 +239,11 @@ type
          (Stack (Var.SectionAny System.Node) Double)
 
 
-infix 0 .==
-
-(.==) ::
-  (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
-   Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
-   idx node -> x ->
-   EqAbs.EquationSystem node s a v
-(.==) = (EqAbs..=)
-
 deltaPair ::
    (Ord (idx System.Node), Env.AccessSignalMap idx, FormatSignalIndex idx) =>
    Idx.InSection idx System.Node -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delt =
-   idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delt
+   idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delt
 
 type DeltaDouble = EqRecord.Delta Double
 
@@ -297,7 +268,7 @@ makeGivenForDifferentialAnalysis ::
   Env.Complete System.Node DeltaDouble DeltaDouble ->
   EquationSystemNumeric s
 makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
-  (XIdx.storage Idx.initial System.Battery .== initStorage) <>
+  (XIdx.storage Idx.initial System.Battery .= initStorage) <>
   (stackFromDeltaMap $ Env.etaMap sig) <>
   (stackFromDeltaMap $ Env.dtimeMap sig) <>
   (stackFromDeltaMap $ Map.filterWithKey (const . filterCriterion) $
