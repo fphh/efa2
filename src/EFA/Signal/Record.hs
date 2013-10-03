@@ -73,9 +73,6 @@ import EFA.Utility (myShowList)
 
 import qualified Prelude as P; import Prelude hiding (map)
 
-import Debug.Trace
-
-
 newtype SigId = SigId String deriving (Eq, Ord, Show, Read)
 
 {-
@@ -344,7 +341,7 @@ unionWithNewTime ::
     V.Singleton v, V.Lookup v, V.Find v, V.Sort v) =>
   NonEmpty.T [] (Record S.Signal S.Signal (Typ A T Tt) t2 id v d d) ->
   Record S.Signal S.Signal (Typ A T Tt) t2 id v d d
-unionWithNewTime rs = trace "hallo, unionWithNewTime" Record newTime $
+unionWithNewTime rs = Record newTime $
   Map.unionsWith (error "unionWithNewTime: duplicate signal ids") $
   NonEmpty.toList $ fmap g rs
   where g x = recordSignalMap $ newTimeBase "unionWithNewTime" x newTime
@@ -353,8 +350,8 @@ unionWithNewTime rs = trace "hallo, unionWithNewTime" Record newTime $
         filt =
            S.filter $
               inRange
-                 (S.fromScalar (maximum starts),
-                  S.fromScalar (minimum ends))
+                 (S.fromScalar (NonEmpty.maximum starts),
+                  S.fromScalar (NonEmpty.minimum ends))
 
 -- | Modify the SigId
 modifySigId ::

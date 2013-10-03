@@ -106,6 +106,12 @@ identifyFlowState topo givenEdges =
       [flowTopo] -> flowTopo
       _ -> error "identifyFlowState: ambiguous given edges"
 
+identifyFlowStates ::
+   (Ord node) =>
+   Topo.Topology node -> [Graph.EitherEdge node] -> [Topo.FlowTopology node]
+identifyFlowStates topo givenEdges = StateAnalysis.identify topo givenEdges
+
+
 seqFlowGraphFromStates ::
    (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
    Topo.Topology node ->
@@ -243,6 +249,6 @@ lookupEnergyStateMaybe idx env =
   $ Map.lookup idx (StateEnv.energyMap $ StateEnv.signal env)
   where toDet (Determined x) = x
         toDet _ =
-          error $ "lookupDetEnergyState undetermined value at "
+          error $ "lookupEnergyStateMaybe undetermined value at "
                   ++ show idx ++ "\nin\n"
                   ++ myShowList (Map.keys $ StateEnv.energyMap $ StateEnv.signal env)

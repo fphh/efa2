@@ -36,9 +36,8 @@ import Data.Foldable (foldMap)
 import Data.Maybe (catMaybes, isJust)
 --import Data.List (filter)
 
-
-state0, state1, state2, state3 :: Idx.State
-state0 :~ state1 :~ state2 :~ state3 :~ _ = Stream.enumFrom $ Idx.State 0
+state0, state1, state2, state3, state4, state5, state6, state7 :: Idx.State
+state0 :~ state1 :~ state2 :~ state3 :~ state4 :~ state5 :~ state6 :~ state7 :~ _ = Stream.enumFrom $ Idx.State 0
 
 
 type Env a = StateEnv.Complete System.Node (Data Nil a) (Data Nil a)
@@ -106,9 +105,11 @@ commonGiven ::
 commonGiven =
    foldMap f idx
    where f st = (XIdx.dTime st .= Data 1)
-                <> (XIdx.energy state0 System.Water System.Network
-                     EqGen.=%%= XIdx.energy st System.Water System.Network)
-         idx = take 20 [Idx.State 1 ..]
+       --         <> (XIdx.energy state0 System.Water System.Network
+       --              EqGen.=%%= XIdx.energy st System.Water System.Network)
+         idx = [Idx.State 1 .. Idx.State 5] -- Noch sieben, weil wir acht Zustände haben im Zustandsflussgraphen!!!
+
+
 --
 --   mconcat $
 --   (XIdx.dTime state0 .= Data 1) :

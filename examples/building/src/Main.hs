@@ -68,9 +68,10 @@ import Data.Monoid ((<>))
 import Data.Tuple.HT (fst3, snd3, thd3)
 import Data.Foldable (foldMap)
 
+import System.IO.Unsafe
+
 import Control.Functor.HT (for)
 import Control.Monad (void, (>=>))
-
 
 frameOpts ::
   Opts.T (Graph3D.T Double Double Double) ->
@@ -122,17 +123,28 @@ water = [0.2, 0.3, 0.9, 1.9, 3]
 gas =   [0.2, 0.7, 1.1, 2.7, 3]
 -}
 
+
 local = [0.2, 3]
 rest =  [0.2, 3]
-water = [-0.3, 0.3, 0.7]
-gas =   [0.4, 3]
+--water = [-0.3, 0.3, 0.7]
+--gas =   [0.4, 3]
+
+water = [0.3]
+gas =   [0.4]
+
 
 sweepPts :: Sweep.Points Param2 Param2 Double
 sweepPts = Sweep.Pair (local !: rest !: Empty.Cons) (water !: gas !: Empty.Cons)
 
 optimalPower :: One.OptimalPower Node
 optimalPower =
-  One.optimalPower [(Optimisation.state0, lst), (Optimisation.state1, lst)]
+  One.optimalPower $
+    (Optimisation.state0, lst) :
+    (Optimisation.state1, lst) :
+    (Optimisation.state2, lst) :
+    (Optimisation.state3, lst) :
+    (Optimisation.state4, lst) :
+    (Optimisation.state5, lst) : []
   where lst =
            [SeqIdx.ppos System.Network System.Water,
             SeqIdx.ppos System.LocalNetwork System.Gas]
@@ -164,15 +176,21 @@ optimalEtasWithPowers params forceFactor env =
         forcing = One.noforcing forceFactor
         stateFlowGraph = One.stateFlowGraph params
         etaMap = One.etaMap params
+
+        f :: Idx.State -> [Idx.PPos Node] -> Map (Idx.PPos Node) (Map (Param2 Double) (Double, Double))
         f state = Map.fromList . map g
           where
-                solveFunc =
-                  Optimisation.solve
-                    stateFlowGraph
-                    System.etaAssignState
-                    etaMap
-                    env
-                    state
+                solveFunc x = unsafePerformIO $ do
+                  let newEnv = 
+                        Optimisation.solve
+                             stateFlowGraph
+                             System.etaAssignState
+                             etaMap
+                             env
+                             state
+                             x
+                  Draw.xterm $ Draw.stateFlowGraphWithEnv Draw.optionsDefault stateFlowGraph newEnv
+                  return newEnv
 
                 envsSweep :: Map (Param2 Double) [EnvResult Double]
                 envsSweep =
@@ -327,6 +345,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
           (SeqIdx.ppos System.Rest System.Network, prest) :
           []
 
+      envSims :: StateEnv.Complete Node (Result (Data Nil Double)) (Result (Data ([] :> Nil) Double))
       envSims =
         AppSim.solve
           System.topology
@@ -334,7 +353,8 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
           etaMap
           givenSigs
 
-      recZeroCross = envToPowerRecord time envSims
+
+  let recZeroCross = envToPowerRecord time envSims
 
       sequencePowers :: Sequ.List (Record.PowerRecord System.Node [] Double)
       sequencePowers = Chop.genSequ recZeroCross
@@ -363,7 +383,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
               StateEnv.mapMaybe Result.toMaybe Result.toMaybe $
                 StateFlow.envFromSequenceEnvResult sm e)
 
-  Draw.xterm $ Draw.stateFlowGraph (fst stateFlowEnvWithGraph)
+  --Draw.xterm $ Draw.stateFlowGraph (fst stateFlowEnvWithGraph)
 
   PlotIO.record "Calculated Signals" DefaultTerm.cons show id recZeroCross
 
@@ -416,7 +436,10 @@ main = do
       plocal = Sig.offset 0.4 $ Sig.scale localScale $
         psolar Sig..+ Sig.makeDelta phouse Sig..+ Sig.makeDelta pindustry
 
+  --Draw.xterm $ Draw.seqFlowGraph System.seqTopology
+  --print initEnv
+
   void $
-     nestM 4
+     nestM 2
         (solveAndCalibrateAvgEffWithGraph time prest plocal etaMap)
         (System.stateFlowGraph, initEnv)
