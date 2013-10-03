@@ -57,8 +57,8 @@ colours = [ Colors.White,
             Colors.Gray80,
             Colors.Gray70 ]
 
-zeroNoiseToleranz :: Double
-zeroNoiseToleranz = 10^^(-2::Int)
+zeroNoiseTolerance :: Double
+zeroNoiseTolerance = 10^^(-2::Int)
 
 
 -- List of Operation Point Plots
@@ -252,8 +252,7 @@ main = do
 
   let (_,sequenceFlowsFiltUnmappedX,flowToposUnmappedX,powerSignalsX,signalsX) =
         List.unzip5 $
-        map (Analysis.pre System.topology zeroNoiseToleranz sectionFilterTime sectionFilterEnergy) rawSignalsX
---  let (sequencePowersFiltX,sequenceFlowsFiltX,flowToposX,powerSignalsX,signalsX) = List.unzip5 preProcessedDataX
+        map (Analysis.pre System.topology zeroNoiseTolerance sectionFilterTime sectionFilterEnergy) rawSignalsX
 
   let _allSignalsX = zipWith (Record.combinePowerAndSignalWithFunction System.convertPowerId) powerSignalsX signalsX
 
