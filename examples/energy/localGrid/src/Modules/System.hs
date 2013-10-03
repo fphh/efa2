@@ -3,14 +3,18 @@ module Modules.System where
 import qualified EFA.Application.Utility as AppUt
 import EFA.Application.Utility (identifyFlowState, dirEdge)
 
+import EFA.Equation.Result (Result)
+
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence as SeqFlowPlain
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Signal.Sequence as Sequ
 import EFA.Signal.Record (SigId(SigId))
+import EFA.Signal.Data (Data, Nil)
 
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -126,6 +130,9 @@ flowState4 =
       [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork,
        dirEdge Network Water]
 
-seqTopoOpt :: Flow.RangeGraph Node
+seqTopoOpt ::
+   SeqFlow.Graph Node (Result (Data Nil Double)) (Result (Data Nil Double))
 seqTopoOpt =
-   Flow.sequenceGraph $ Sequ.fromList [flowState4, flowState0]
+   SeqFlow.graphFromPlain $
+   SeqFlowPlain.sequenceGraph $
+   Sequ.fromList [flowState4, flowState0]

@@ -54,8 +54,8 @@ type
 
 
 solve ::
-   (Eq a, Arith.Constant a, a ~ Arith.Scalar v,
-    Eq v, Arith.Product v, Arith.Integrate v,
+   (Arith.Constant a, a ~ Arith.Scalar v,
+    Arith.Product v, Arith.Integrate v,
     Node.C node) =>
    SeqFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem Verify.Ignore node s a v) ->
@@ -65,8 +65,8 @@ solve graph sys =
    EqSys.solve (SeqFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveFromMeasurement ::
-   (Eq a, Arith.Constant a, a ~ Arith.Scalar v,
-    Eq v, Arith.Product v, Arith.Integrate v,
+   (Arith.Constant a, a ~ Arith.Scalar v,
+    Arith.Product v, Arith.Integrate v,
     Node.C node) =>
    SeqFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem Verify.Ignore node s a v) ->

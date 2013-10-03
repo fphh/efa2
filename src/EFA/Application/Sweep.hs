@@ -9,15 +9,18 @@ module EFA.Application.Sweep where
 import qualified EFA.Application.EtaSys as ES
 
 import qualified EFA.Signal.Signal as Sig
---import qualified EFA.Signal.Data as Data
 
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence.SystemEta as ES0
+
+import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
-
-import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph.Flow as Flow
 
 import Control.Applicative (liftA2)
 
@@ -108,6 +111,18 @@ optimalSolution2D ::
   Maybe (v, EqEnv.Complete node a (Result v))
 optimalSolution2D cond forcing topo sigEnvs = liftA2 (,) etaMax env
   where etaSys = Sig.map (ES.objectiveFunction cond forcing topo) sigEnvs
+        etaMax = Sig.fromScalar $ Sig.maximum etaSys
+        (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
+        env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
+
+optimalSolution2DNew ::
+  (Node.C node, Show node, Eq a, Show v, Ord v, Arith.Constant v) =>
+  ES0.Condition node a v ->
+  ES0.Forcing node a v ->
+  Sig.UTSignal2 V.Vector V.Vector (SeqFlow.Graph node a (Result v)) ->
+  Maybe (v, SeqFlow.Graph node a (Result v))
+optimalSolution2DNew cond forcing sigEnvs = liftA2 (,) etaMax env
+  where etaSys = Sig.map (ES0.objectiveFunction cond forcing) sigEnvs
         etaMax = Sig.fromScalar $ Sig.maximum etaSys
         (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
         env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx

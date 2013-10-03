@@ -4,8 +4,6 @@
 
 module Main where
 
-
-
 import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Analysis as Analysis
@@ -20,34 +18,30 @@ import Modules.Optimisation
    (EnvDouble, sec0,sec1, lookupDetPower, condition, forcing)
 
 import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.Utility as AppUt
-import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
 
+import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Sequence.Record as RecSeq
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence as SeqFlowPlain
+import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph.Draw as Draw
---import qualified EFA.Graph as Graph
 
 import qualified EFA.Equation.Arithmetic as EqArith
-import qualified EFA.Equation.Environment as EqEnv
---import qualified EFA.Equation.Record as EqRec
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Plot as Plot
---import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Chop (addZeroCrossings, genSequ,)
 import EFA.Signal.Signal (TC,Scalar)
-import EFA.Signal.Data (Data(Data), Nil, (:>))-- getData)
+import EFA.Signal.Data (Data(Data), Nil, getData, (:>))
 import EFA.Signal.Typ (Typ, F, T, A, Tt) --,UT)
 
 import EFA.Utility.Async (concurrentlyMany_)
@@ -56,10 +50,7 @@ import EFA.Report.Report(report, ROpt(RAll))
 import qualified EFA.IO.TableParser as Table
 import qualified EFA.IO.TableParserTypes as TPT
 
---import qualified EFA.Utility.Bifunctor as BF
-
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
---import qualified Graphics.Gnuplot.Terminal.PostScript as PostScript
 --import qualified Graphics.Gnuplot.Terminal.PNG as PNG
 
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
@@ -73,11 +64,6 @@ import qualified Data.Vector as V
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Empty as Empty
 import Data.NonEmpty ((!:))
-
---import Text.Printf (printf)
-
---import Data.Maybe (fromJust)
---import Data.Tuple.HT (fst3, snd3, thd3)
 
 import qualified System.IO as IO
 
@@ -214,8 +200,7 @@ doubleSweep ::
   [[Double]] ->
   Sig.UTSignal2 V.Vector V.Vector
     (Sig.UTSignal2 V.Vector V.Vector
-      (EqEnv.Complete
-        Node
+      (SeqFlow.Graph Node
         (Result (Data Nil Double))
         (Result (Data Nil Double))))
 doubleSweep func etaFunc varOptX varOptY varX varY=
@@ -226,22 +211,36 @@ doubleSweep func etaFunc varOptX varOptY varX varY=
         yo = mm varOptY
         mm = map (map Data)
 
+sweepGetData ::
+  Sig.UTSignal2 V.Vector V.Vector
+    (Sig.UTSignal2 V.Vector V.Vector
+      (SeqFlow.Graph Node
+        (Result (Data Nil Double))
+        (Result (Data Nil Double)))) ->
+  Sig.UTSignal2 V.Vector V.Vector
+    (Sig.UTSignal2 V.Vector V.Vector
+      (SeqFlow.Graph Node
+        (Result Double)
+        (Result Double)))
+sweepGetData =
+  Sig.map (Sig.map (SeqFlow.mapGraph (fmap getData) (fmap getData)))
+
 maxOptChargeFunc, maxOptDischargeFunc ::
   Double ->
   Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
   (Double, EnvDouble)
 maxOptChargeFunc socDrive =
   maybe (error "maxOptChargeFunc") id .
-  Sweep.optimalSolution2D condition
-    (forcing $ Optimisation.ChargeDrive socDrive) System.seqTopoOpt
+  Sweep.optimalSolution2DNew condition
+    (forcing $ Optimisation.ChargeDrive socDrive)
 
 maxOptDischargeFunc socDrive =
   maybe (error "maxOptDischargeFunc") id .
-  Sweep.optimalSolution2D condition
-    (forcing $ Optimisation.DischargeDrive socDrive) System.seqTopoOpt
+  Sweep.optimalSolution2DNew condition
+    (forcing $ Optimisation.DischargeDrive socDrive)
 
 makePics ::
-  (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->
+  SeqFlow.Graph Node (Result (Data Nil Double)) (Result (Data Nil Double)) ->
   TPT.Map Double ->
   Double ->
   ( Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax,
@@ -293,11 +292,13 @@ makePics eqs tabEta socDrive = (state, optWater, optGas, etaSysMax)
         maxETADischarge = Sig.setType $ Sig.map fst $
           Sig.map dischargeFunc envsDischarge
 
-        envsCharge = Sig.map (Sig.map AppUt.envGetData) $
+        envsCharge =
+          sweepGetData $
           doubleSweep (Optimisation.solveCharge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-        envsDischarge = Sig.map (Sig.map AppUt.envGetData) $
+        envsDischarge =
+          sweepGetData $
           doubleSweep (Optimisation.solveDischarge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
@@ -325,7 +326,7 @@ stateFlow2SeqFlow = Graph.ixmap f g
         g = undefined
 
 
-stateEnv2SequEnv :: (Ord node) => StFlEnv.Complete node a v -> EqEnv.Complete node a v
+stateEnv2SequEnv :: (Ord node) => StFlEnv.Complete node a v -> SeqFlow.Graph node a v
 stateEnv2SequEnv (StFlEnv.Complete scal sig) =
   let StFlEnv.Scalar a b c d = scal
       StFlEnv.Signal u v w x y z = sig
@@ -369,8 +370,8 @@ main = do
    let eqs ::
          (a ~ EqArith.Scalar v, Eq a, EqArith.Constant a,
          Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
-         EqGen.EquationSystem Node s a v
-       eqs = EqGen.fromGraph True (Topo.dirFromFlowGraph (snd System.seqTopoOpt))
+         EqSys.EquationSystemIgnore Node s a v
+       eqs = EqSys.fromGraph True (Topo.dirFromFlowGraph (snd System.seqTopoOpt))
 
        plotwaterpng n pic =
          PlotIO.surfaceWithOpts "Optimal Water Power"
@@ -433,12 +434,6 @@ main = do
    tabEta <- Table.read "../simulation/maps/eta.txt"
    tabPower <- Table.read "../simulation/maps/power.txt"
 
-   let eqsys ::
-         (a ~ EqArith.Scalar v, Eq a, Eq v,
-          EqArith.Constant a, EqArith.Product v, EqArith.Integrate v) =>
-         EqGen.EquationSystem Node s a v
-       eqsys = EqGen.fromGraph True (Topo.dirFromFlowGraph (snd System.seqTopoOpt))
-
    -- |Import Efficiency Curves
    let etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
 {-       etaWaterCharge:etaWaterDischarge:etaGas:etaCoal:etaTransHL:_ =
@@ -465,15 +460,17 @@ main = do
      envsCharge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
-     envsCharge = Sig.map (Sig.map AppUt.envGetData) $
-       doubleSweep (Optimisation.solveCharge eqsys)
+     envsCharge =
+       sweepGetData $
+       doubleSweep (Optimisation.solveCharge System.seqTopoOpt)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      envsDischarge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
-     envsDischarge = Sig.map (Sig.map AppUt.envGetData) $
-       doubleSweep (Optimisation.solveDischarge eqsys)
+     envsDischarge =
+       sweepGetData $
+       doubleSweep (Optimisation.solveDischarge System.seqTopoOpt)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      socDrive = 0.0
@@ -626,14 +623,17 @@ main = do
      time = Record.getTime rec
 
      -- | Build Sequenceflow graph for simulation
-     seqTopoSim = Flow.sequenceGraph $ Sequ.fromList [System.flowState4]
+     seqTopoSim =
+        SeqFlow.graphFromPlain $
+        SeqFlowPlain.sequenceGraph $
+        Sequ.fromList [System.flowState4]
 
      -- | Generate and solve Equation System
 
-     eqs :: EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
+     eqs :: EqSys.EquationSystemIgnore Node s (Data Nil Double) (Data ([] :> Nil) Double)
      eqs = Optimisation.givenSimulate etaAssign etaFunc $ Sequ.fromList [rec]
 
-     envSim = EqGen.solve seqTopoSim eqs
+     envSim = EqSys.solve seqTopoSim eqs
 
 
      -- | extract power record from simulation env to allow subsequent EFA
@@ -656,18 +656,21 @@ main = do
 
      sequencePowers :: Sequ.List (Record.PowerRecord System.Node [] Double)
      sequencePowers = genSequ rec0
-     sequenceFlowsFilt =
-         Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime) $
-         fmap Record.partIntegrate sequencePowers
 
-     (flowTopos, adjustedFlows) =
-         Sequ.unzip $
-         fmap (Flow.adjustedTopology System.topologyOpt) sequenceFlowsFilt
+     sequenceFlowTopologySim ::
+        SeqFlow.Graph System.Node
+           (Result (Data Nil Double))
+           (Result (Data ([] :> Nil) Double))
+     sequenceFlowTopologySim =
+        RecSeq.fromGraphFromSequence $
+        fmap (RecSeq.flowTopologyFromRecord System.topologyOpt) $
+        Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime) $
+        fmap Record.partIntegrate sequencePowers
 
-     sequenceFlowTopologySim = Flow.sequenceGraph flowTopos
-     envSimAnalysis = Analysis.external2 sequenceFlowTopologySim adjustedFlows
-     envSimAnalysisCumulated = Analysis.external2 sequenceFlowTopologySim
-                                 (fmap Record.sumFlowRecord adjustedFlows)
+     envSimAnalysis = Analysis.external2 sequenceFlowTopologySim
+     envSimAnalysisCumulated =
+        Analysis.external3 $
+        SeqFlow.mapGraph id (fmap EqArith.integrate) sequenceFlowTopologySim
 
  {-
    concurrentlyMany_ [
@@ -693,7 +696,7 @@ main = do
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
 -}
-     Draw.xterm $ Draw.seqFlowGraph System.seqTopoOpt,
+     Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault System.seqTopoOpt,
 
      PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts varRestPower varLocalPower etaSysMax,
 
@@ -753,11 +756,10 @@ main = do
                                                powerSignalGasOptCharge,
                                                powerSignalGasOptDischarge],
 -}
-     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
-     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv  seqTopoSim envSim,
+     Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault envSimAnalysis,
+     Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault envSim,
 
-     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv sequenceFlowTopologySim envSimAnalysisCumulated,
-
-       return ()
+     Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault envSimAnalysisCumulated,
+     return ()
      ]
 
