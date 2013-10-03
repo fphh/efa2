@@ -120,6 +120,7 @@ Library
     EFA.Flow.Sequence
     EFA.Flow.Sequence.Index
     EFA.Flow.Sequence.Quantity
+    EFA.Flow.Sequence.Record
     EFA.Flow.Sequence.EquationSystem
     EFA.Flow.Sequence.AssignMap
     EFA.Flow.Sequence.Absolute

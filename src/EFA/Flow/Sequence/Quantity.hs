@@ -28,6 +28,7 @@ module EFA.Flow.Sequence.Quantity (
    graphFromPlain,
    storagesFromPlain,
    sequenceFromPlain,
+   unknownTopologyNodes,
 
    mapGraphWithVar,
    mapStoragesWithVar,
@@ -36,6 +37,7 @@ module EFA.Flow.Sequence.Quantity (
    mapCarryWithVar,
 
    Quant.liftEdgeFlow,
+   Quant.dirFromFlowGraph,
 
    lookupPower,
    lookupEnergy,
@@ -629,19 +631,24 @@ sequenceFromPlain =
    Map.map $ \(rng, ((), gr)) ->
       (,) rng $
       (unknown,
-       Graph.mapNodeWithInOut
-          (\(pre, _, suc) ->
-             let maybeDir es =
-                    toMaybe (any (Topo.isActive . fst) es) $
-                    Sum unknown unknown
-             in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc}) $
+       unknownTopologyNodes $
        Graph.mapEdgeWithKey
           (\ee _ ->
              case ee of
                 Graph.EUnDirEdge _ -> Nothing
                 Graph.EDirEdge _ -> Just $ pure unknown) gr)
 
-
+unknownTopologyNodes ::
+   (Ord node, Unknown a, Unknown v) =>
+   Graph.Graph node Graph.EitherEdge nl el ->
+   Graph.Graph node Graph.EitherEdge (Sums a v) el
+unknownTopologyNodes =
+   Graph.mapNodeWithInOut
+      (\(pre, _, suc) ->
+         let maybeDir es =
+                toMaybe (any (Topo.isActive . fst) es) $
+                Sum unknown unknown
+         in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc})
 
 mapGraphWithVar ::
    (Ord node) =>
