@@ -301,10 +301,6 @@ main = do
   ---------------------------------------------------------------------------------------
 -- *  Make the Deltas for subsequent Datasets
 
---  let externalDeltaEnvX =
---        zipWith (flip Analysis.delta (head sequenceFlowsFiltX))
---                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
-
   let externalDeltaEnvX =
         ListHT.mapAdjacent
            (Env.intersectionWith EqRecord.deltaCons EqRecord.deltaCons)

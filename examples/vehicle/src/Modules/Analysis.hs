@@ -248,31 +248,6 @@ makeGivenForPrediction (Env.Complete _scal sig) =
           h _ r = r
 
 
----------------------------------------------------------------------------------------------------
--- ## Make Delta
-
-delta :: (Vec.Zipper v1, Vec.Zipper v2,
-          Vec.Walker v1, Vec.Walker v2,
-          Vec.Singleton v1, Vec.Singleton v2,
-          Vec.Storage v1 d,Vec.Storage v2 d,
-          Vec.FromList v1,Vec.FromList v2,
-          B.BSum d,
-          Eq d,
-          Arith.Constant d,
-          Arith.Integrate d,
-          Arith.Scalar d ~ Double) =>
-         Flow.RangeGraph System.Node
-         -> Sequ.List (FlowRecord System.Node v1 d)
-         -> Sequ.List (FlowRecord System.Node v2 d)
-         -> Env.Complete
-         System.Node
-         (EqRecord.Delta (Result Double))
-         (EqRecord.Delta (Result d))
-delta sequenceFlowTopology sequenceFlow sequenceFlow'=
-  EqGen.solveFromMeasurement sequenceFlowTopology $
-    ( makeGivenFromExternal Idx.Before sequenceFlow <>
-      makeGivenFromExternal Idx.After sequenceFlow')
-
 ------------------------------------------------------------------
 -- ## Make Difference Analysis
 
