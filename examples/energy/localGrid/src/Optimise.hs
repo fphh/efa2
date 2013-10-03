@@ -620,8 +620,6 @@ main = do
    let
 -}
 
-     time = Record.getTime rec
-
      -- | Build Sequenceflow graph for simulation
      seqTopoSim =
         SeqFlow.graphFromPlain $
@@ -637,7 +635,7 @@ main = do
 
 
      -- | extract power record from simulation env to allow subsequent EFA
-     powerRecSim = ModUt.envToPowerRecord envSim time (Idx.Section 0)
+     powerRecSim = ModUt.envToPowerRecord (Idx.Section 0) envSim
 
      -- | flip signs of power signals at water edge, as edge flips direction between state 0 and 4
      flipwater (Idx.PPos (Idx.StructureEdge Network Water)) x = Sig.neg x
