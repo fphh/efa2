@@ -38,7 +38,7 @@ import EFA.Signal.Data (Data(Data),
                         (:>),
                         Nil)
 
-import EFA.Signal.Base (Sign, BSum, BProd)
+import EFA.Signal.Base (BSum, BProd)
 
 import qualified EFA.Graph.Topology.Index as Idx
 
@@ -110,10 +110,6 @@ type DTimePowerRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A P Tt) (
 type DistRecord n v d = Record FDistrib FDistrib (Typ UT UT UT) (Typ A F Tt) (Idx.PPos n) v ([S.Class d], [S.SignalIdx]) d
 
 -- data DistRecord n v d = DistRecord (UTDistr v ([S.Class d], [S.SignalIdx])) (Map (Idx.PPos n) (FDistr v d))
-
-
--- | Flow record to contain flow signals assigned to the tree
-newtype FlowState node = FlowState (Map (Idx.PPos node) Sign) deriving (Show)
 
 
 newtype Name = Name String
@@ -354,12 +350,11 @@ unionWithNewTime rs = trace "hallo, unionWithNewTime" Record newTime $
   where g x = recordSignalMap $ newTimeBase "unionWithNewTime" x newTime
         (starts, ends) = nonEmptyUnzip $ fmap getTimeWindow rs
         newTime = NonEmpty.foldBalanced (S.mergeBy (<=)) $ fmap (filt . getTime) rs
-        filt = S.filter $ inRange $ (,)
-                 (S.fromScalar (NonEmpty.maximum starts))
-                 (S.fromScalar (NonEmpty.minimum ends))
-
-
-
+        filt =
+           S.filter $
+              inRange
+                 (S.fromScalar (maximum starts),
+                  S.fromScalar (minimum ends))
 
 -- | Modify the SigId
 modifySigId ::

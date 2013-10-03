@@ -8,10 +8,15 @@ import qualified Modules.Analysis as Analysis
 import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Utility (checkDetermined)
 
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Sequence.Record as RecSeq
+import qualified EFA.Flow.Draw as Draw
+
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
 import EFA.Equation.Result (Result)
 
@@ -20,9 +25,6 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.Signal (TC, Scalar, toScalar)
 import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
-
-import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Utility as Utility
 import EFA.Utility.Async (concurrentlyMany_)
@@ -102,18 +104,17 @@ ignore :: [a] -> [a]
 ignore _ = []
 
 
-type Env = Env.Complete System.Node
+type Env a v = SeqFlow.Graph System.Node a v
 
 process ::
    Record.SignalRecord [] Double ->
    (Record.SignalRecord [] Double,
     Env Double Double,
     Env (Result (Data Nil Double)) (Result (Data ([] :> Nil) Double)),
-    Record.PowerRecord System.Node [] Double,
-    Flow.RangeGraph System.Node)
+    Record.PowerRecord System.Node [] Double)
 
 process rawSignals =
-  let (_, sequenceFlowsFiltUnmapped, flowStatesUnmapped, powerSignals, signal) =
+  let (_, flowToposUnmapped, powerSignals, signal) =
         Analysis.pre System.topology
           zeroNoiseTolerance sectionFilterTime sectionFilterEnergy
           rawSignals
@@ -122,23 +123,18 @@ process rawSignals =
         Record.combinePowerAndSignalWithFunction System.convertPowerId
           powerSignals signal
 
-      sequenceFlowsFilt = sectionMapping sequenceFlowsFiltUnmapped
-
       sequenceFlowGraph =
-        Flow.sequenceGraph $
-        Flow.genSequFlowTops System.topology $
-        sectionMapping flowStatesUnmapped
+        RecSeq.fromGraphFromSequence $ sectionMapping flowToposUnmapped
 
       externalEnv =
-        Env.completeFMap
+        SeqFlow.mapGraph
           (checkDetermined "external scalar")
           (checkDetermined "external signal") $
-        Analysis.external  sequenceFlowGraph sequenceFlowsFilt
+        Analysis.external sequenceFlowGraph
       externalSignalEnv =
-        Analysis.external2 sequenceFlowGraph sequenceFlowsFilt
+        Analysis.external2 sequenceFlowGraph
 
-  in  (allSignals, externalEnv, externalSignalEnv,
-       powerSignals, sequenceFlowGraph)
+  in  (allSignals, externalEnv, externalSignalEnv, powerSignals)
 
 
 importDataset :: FilePath -> IO (Record.SignalRecord [] Double)
@@ -154,13 +150,13 @@ main = do
   rawSignalsB <- importDataset $ datasetPath datasetB
 
   let (allSignalsA, externalEnvA, externalSignalEnvA,
-       powerSignalsA, seqFlowGraphA) = process rawSignalsA
+       powerSignalsA) = process rawSignalsA
 
       (allSignalsB, externalEnvB, _externalSignalEnvB,
-       powerSignalsB, _seqFlowGraphB) = process rawSignalsB
+       powerSignalsB) = process rawSignalsB
 
       externalDeltaEnv =
-        Env.intersectionWith
+        SeqFlow.checkedZipWithGraph "externalDeltaEnv"
           EqRecord.deltaCons EqRecord.deltaCons
           externalEnvA externalEnvB
 
@@ -171,22 +167,20 @@ main = do
     let Record.Record _ sigs = rawSignalsA
     putStrLn $ Utility.myShowList $ Map.keys sigs
 
-  let drawDelta (Record.DeltaName ti) topo env c =
-          Draw.xterm $
-          Draw.title ti $
-          Draw.bgcolour c $
-          Draw.sequFlowGraphWithEnv
+  let drawDelta (Record.DeltaName ti) c =
+          Draw.xterm .
+          Draw.title ti .
+          Draw.bgcolour c .
+          Draw.seqFlowGraph
              (Draw.hideStorageEdge $
               Draw.absoluteVariable Draw.optionsDefault)
-             topo env
-      drawAbs (Record.Name ti) topo env c =
-          Draw.xterm $
-          Draw.title ti $
-          Draw.bgcolour c $
-          Draw.sequFlowGraphWithEnv
+      drawAbs (Record.Name ti) c =
+          Draw.xterm .
+          Draw.title ti .
+          Draw.bgcolour c .
+          Draw.seqFlowGraph
              (Draw.hideStorageEdge $
               Draw.deltaVariable Draw.optionsDefault)
-             topo env
 
   concurrentlyMany_ $ [
     -- Topologie
@@ -195,8 +189,11 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Draw flow states
-    ++ ignore [putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))]
-    ++ ignore [Draw.xterm $ Draw.flowTopologies (take 20 System.flowStates)]
+    ++ ignore
+          (let flowStates :: [Topo.FlowTopology System.Node]
+               flowStates = StateAnalysis.advanced System.topology
+           in  [putStrLn ("Number of possible flow states: " ++ show (length flowStates)),
+                Draw.xterm $ Draw.flowTopologies $ take 20 flowStates])
 
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
@@ -231,24 +228,17 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Draw Section flows
 
-    ++ [drawAbs (datasetName datasetA)
-          seqFlowGraphA
-          externalEnvA
-          (datasetColor datasetA)]
+    ++ [drawAbs (datasetName datasetA) (datasetColor datasetA) externalEnvA]
 
 ---------------------------------------------------------------------------------------
 -- * Draw Delta Section flows
 
     ++ ignore
-       [drawDelta deltasetName
-          seqFlowGraphA
-          externalDeltaEnv
-          Colors.Gray90]
+       [drawDelta deltasetName Colors.Gray90 externalDeltaEnv]
 
 ---------------------------------------------------------------------------------------
 -- * Draw Section flows
 
     ++ [drawAbs (Record.Name "Signal")
-         seqFlowGraphA
-         (Env.completeFMap id (fmap (fmap Arith.integrate)) externalSignalEnvA)
-         (datasetColor datasetA)]
+         (datasetColor datasetA)
+         (SeqFlow.mapGraph id (fmap (fmap Arith.integrate)) externalSignalEnvA)]

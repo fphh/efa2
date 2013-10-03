@@ -2,23 +2,23 @@ module Modules.System where
 
 import qualified EFA.Application.Utility as AppUt
 
-import EFA.Application.Utility (select)
-import EFA.Application.Optimisation (etaOverPowerInState, etaOverPowerOutState)
+import EFA.Application.Utility (identifyFlowState, dirEdge)
+import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.State.Index as StateIdx
 
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.StateFlow as StateFlow
 import qualified EFA.Graph.Flow as Flow
+
+import qualified EFA.Signal.Sequence as Sequ
 --import qualified EFA.Signal.Base as Base
 --import qualified EFA.Signal.Record as Rec
 --import qualified EFA.Signal.Typ as Typ
 --import qualified EFA.Signal.Vector as Vec
-import qualified EFA.Graph.Topology.Index as Idx
 
 --import EFA.Signal.Signal ((.+), (./))
 
@@ -81,38 +81,40 @@ powerPositonNames = Map.fromList $ concat $ map f edgeList
                              (SeqIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
 
-flowStates :: [Topo.FlowTopology Node]
-flowStates = StateAnalysis.advanced topology
-
+flowStates :: Sequ.List (Topo.FlowTopology Node)
+flowStates =
+   fmap (identifyFlowState topology) $
+   Sequ.fromList $
+      [[dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network],
+       [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water]]
 
 seqTopology :: Flow.RangeGraph Node
-seqTopology = Flow.sequenceGraph (select flowStates [0, 4])
+seqTopology = Flow.sequenceGraph flowStates
 
 
 stateFlowGraph :: Topo.StateFlowGraph Node
-stateFlowGraph =
-  StateFlow.stateGraphAllStorageEdges $ select flowStates [0, 4]
+stateFlowGraph = StateFlow.stateGraphAllStorageEdges flowStates
 
 etaAssignState ::
   Idx.State ->
   Map (StateIdx.Eta Node) (String, String, StateIdx.Eta Node -> StateIdx.Power Node)
 etaAssignState sec = Map.fromList $
-  (StateIdx.eta sec Water Network, ( "storage", "storage", etaOverPowerInState)) :
-  (StateIdx.eta sec Network Water, ( "storage", "storage", etaOverPowerOutState)) :
+  (StateIdx.eta sec Water Network, ( "storage", "storage", etaOverPowerIn)) :
+  (StateIdx.eta sec Network Water, ( "storage", "storage", etaOverPowerOut)) :
 
-  (StateIdx.eta sec Coal Network, ( "coal", "coal", etaOverPowerInState)) :
-  (StateIdx.eta sec Network Coal, ( "coal", "coal", etaOverPowerOutState)) :
+  (StateIdx.eta sec Coal Network, ( "coal", "coal", etaOverPowerIn)) :
+  (StateIdx.eta sec Network Coal, ( "coal", "coal", etaOverPowerOut)) :
 
-  (StateIdx.eta sec Gas LocalNetwork, ( "gas", "gas", etaOverPowerInState)) :
-  (StateIdx.eta sec LocalNetwork Gas, ( "gas", "gas", etaOverPowerOutState)) :
+  (StateIdx.eta sec Gas LocalNetwork, ( "gas", "gas", etaOverPowerIn)) :
+  (StateIdx.eta sec LocalNetwork Gas, ( "gas", "gas", etaOverPowerOut)) :
 
-  (StateIdx.eta sec Network LocalNetwork, ( "transformer", "transformer", etaOverPowerInState)) :
-  (StateIdx.eta sec LocalNetwork Network, ( "transformer", "transformer", etaOverPowerOutState)) :
+  (StateIdx.eta sec Network LocalNetwork, ( "transformer", "transformer", etaOverPowerIn)) :
+  (StateIdx.eta sec LocalNetwork Network, ( "transformer", "transformer", etaOverPowerOut)) :
 
-  (StateIdx.eta sec LocalNetwork LocalRest, ( "local", "local", etaOverPowerInState)) :
-  (StateIdx.eta sec LocalRest LocalNetwork, ( "local", "local", etaOverPowerOutState)) :
+  (StateIdx.eta sec LocalNetwork LocalRest, ( "local", "local", etaOverPowerIn)) :
+  (StateIdx.eta sec LocalRest LocalNetwork, ( "local", "local", etaOverPowerOut)) :
 
-  (StateIdx.eta sec Network Rest, ( "rest", "rest", etaOverPowerInState)) :
-  (StateIdx.eta sec Rest Network, ( "rest", "rest", etaOverPowerOutState)) :
+  (StateIdx.eta sec Network Rest, ( "rest", "rest", etaOverPowerIn)) :
+  (StateIdx.eta sec Rest Network, ( "rest", "rest", etaOverPowerOut)) :
 
   []

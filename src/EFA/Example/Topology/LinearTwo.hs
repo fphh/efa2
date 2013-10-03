@@ -8,7 +8,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Report.Format as Format
 
 
-data Node = Sink | Crossing | Source deriving (Eq, Ord, Enum, Show)
+data Node = Source | Crossing | Sink deriving (Eq, Ord, Enum, Show)
 
 node0, node1, node2 :: Node
 node0 = Source
@@ -17,7 +17,9 @@ node2 = Sink
 
 
 instance Node.C Node where
-   display = Format.integer . fromIntegral . fromEnum
+   display Source   = Format.literal "Quelle"
+   display Crossing = Format.literal "Kreuzung"
+   display Sink     = Format.literal "Senke"
    subscript = Format.integer . fromIntegral . fromEnum
    dotId = Node.dotIdDefault
 
@@ -27,4 +29,4 @@ instance Node.C Node where
 
 
 topology :: Topo.Topology Node
-topology = topologyFromEdges [(node0, node1), (node1, node2)]
+topology = topologyFromEdges [(Source, Crossing), (Crossing, Sink)]

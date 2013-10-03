@@ -83,12 +83,12 @@ pre :: Topo.Topology System.Node
       -> SignalRecord [] Double
       -> (Sequ.List (PowerRecord System.Node [] Double),
          Sequ.List (FlowRecord System.Node [] Double),
-         Sequ.List (Record.FlowState System.Node),
+         Sequ.List (Topo.FlowTopology System.Node),
          PowerRecord System.Node [] Double,
          SignalRecord [] Double)
 
 pre topology epsZero epsT epsE rawSignals =
-  (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
+  (sequencePowersFilt, adjustedFlows, flowTopos, powerSignals0, signals0)
   where
     ---------------------------------------------------------------------------------------
     -- * Condition Signals, Calculate Powers, Remove ZeroNoise
@@ -116,23 +116,18 @@ pre topology epsZero epsT epsE rawSignals =
       Sequ.filter (Record.major epsE epsT . snd) $
       fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
-    (flowStates, adjustedFlows) =
-      Sequ.unzip $
-      fmap
-      (\state ->
-        let flowState = Flow.genFlowState state
-        in  (flowState, Flow.adjustSigns topology flowState state))
-      sequenceFlowsFilt
+    (flowTopos, adjustedFlows) =
+      Sequ.unzip $ fmap (Flow.adjustedTopology topology) sequenceFlowsFilt
 
 {-
 
--- New Approach with Utility-Funktions from HT - the challenges:
+-- New Approach with Utility-Functions from HT - the challenges:
 
 1. scalar value are in the moment double / signals are in data container. Best to move both to container
 2. switch to dTime with fmap Record.diffTime
 2. make delta - Analysis from two envs
 
-external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
+external sequenceFlowTopology seqFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute seqFlowRecord
 
 initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
@@ -154,11 +149,11 @@ external :: (Eq d,
             Flow.RangeGraph System.Node ->
             Sequ.List (FlowRecord System.Node v d) ->
             Env.Complete System.Node (Result Double) (Result d)
-external sequenceFlowTopology sequFlowRecord =
+external sequenceFlowTopology seqFlowRecord =
   Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
   EqGen.solveFromMeasurement
     sequenceFlowTopology $
-    makeGivenFromExternal Idx.Absolute sequFlowRecord
+    makeGivenFromExternal Idx.Absolute seqFlowRecord
 
 initStorage :: (Arith.Constant a) => a
 initStorage = Arith.fromRational $ 0.7*3600*1000
@@ -204,10 +199,10 @@ external2 ::
       (Result (Data Nil a))
       (Result (Data (v D.:> Nil) a))
 
-external2 sequenceFlowTopology sequFlowRecord =
+external2 sequenceFlowTopology seqFlowRecord =
   Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
   EqGen.solveFromMeasurement sequenceFlowTopology $
-    makeGivenFromExternal2 sequFlowRecord -- $ Record.diffTime sequFlowRecord
+    makeGivenFromExternal2 seqFlowRecord -- $ Record.diffTime seqFlowRecord
 
 -- makeGivenFromExternal2 ::
 --  makeGivenFromExternal2 env = EqAbs.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
@@ -252,31 +247,6 @@ makeGivenForPrediction (Env.Complete _scal sig) =
                x ~* Arith.fromRational 1.1
           h _ r = r
 
-
----------------------------------------------------------------------------------------------------
--- ## Make Delta
-
-delta :: (Vec.Zipper v1, Vec.Zipper v2,
-          Vec.Walker v1, Vec.Walker v2,
-          Vec.Singleton v1, Vec.Singleton v2,
-          Vec.Storage v1 d,Vec.Storage v2 d,
-          Vec.FromList v1,Vec.FromList v2,
-          B.BSum d,
-          Eq d,
-          Arith.Constant d,
-          Arith.Integrate d,
-          Arith.Scalar d ~ Double) =>
-         Flow.RangeGraph System.Node
-         -> Sequ.List (FlowRecord System.Node v1 d)
-         -> Sequ.List (FlowRecord System.Node v2 d)
-         -> Env.Complete
-         System.Node
-         (EqRecord.Delta (Result Double))
-         (EqRecord.Delta (Result d))
-delta sequenceFlowTopology sequenceFlow sequenceFlow'=
-  EqGen.solveFromMeasurement sequenceFlowTopology $
-    ( makeGivenFromExternal Idx.Before sequenceFlow <>
-      makeGivenFromExternal Idx.After sequenceFlow')
 
 ------------------------------------------------------------------
 -- ## Make Difference Analysis

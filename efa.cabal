@@ -101,6 +101,7 @@ Library
     EFA.Graph.Topology.Node
     EFA.Graph.Topology.Node.Int
     EFA.Graph.Topology.StateAnalysis
+    EFA.Graph.Topology.Count
     EFA.Graph.Flow
     EFA.Graph.CumulatedFlow
     EFA.Graph.StateFlow
@@ -119,6 +120,7 @@ Library
     EFA.Flow.Sequence
     EFA.Flow.Sequence.Index
     EFA.Flow.Sequence.Quantity
+    EFA.Flow.Sequence.Record
     EFA.Flow.Sequence.EquationSystem
     EFA.Flow.Sequence.AssignMap
     EFA.Flow.Sequence.Absolute
@@ -152,8 +154,9 @@ Library
     EFA.Application.OneStorage
     EFA.Example.Topology.LinearOne
     EFA.Example.Topology.LinearTwo
-    EFA.Example.Topology.TripodA
-    EFA.Example.Topology.TripodB
+    EFA.Example.Topology.Tripod
+    EFA.Example.Topology.Tripod.Given
+    EFA.Example.Topology.Tripod.State
   Other-Modules:
     EFA.Equation.SystemRecord
     EFA.Flow.Quantity
@@ -604,8 +607,9 @@ Executable demo-state-analysis
   If flag(buildDemos)
      Build-Depends:
        efa,
-       base,
-       containers
+       utility-ht,
+       containers,
+       base
   Else
     Buildable: False
 

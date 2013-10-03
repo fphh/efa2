@@ -16,6 +16,7 @@ import qualified EFA.Signal.Base as Base
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.Match as Match
+import qualified Data.Foldable as Fold
 
 
 
@@ -116,30 +117,36 @@ getEtas etaFunc = map $
   \str -> Map.findWithDefault (error $ "getEtas :" ++ str ++ " not found") str etaFunc
 
 
---  @HH -- Fehlermeldung bitte beseitigen PG
--- Warning: Pattern match(es) are non-exhaustive
---             In an equation for `f':
---                 Patterns not matched: (_, NonEmpty.Cons _ (_ : _))
+{-
+Diese ganzen 'error's sind hier falsch.
+Die Fehler muessen im Parser abgefangen werden.
+-}
 
 getPowerSignals ::
-  Map String (TPT.T Double) ->
-  [String] ->
-  [(Sig.TSignal [] Double, Sig.PSignal [] Double)]
+   (Functor f) =>
+   Map String (TPT.T Double) ->
+   f String ->
+   f (Sig.TSignal [] Double, Sig.PSignal [] Double)
 getPowerSignals tabPower =
-    map (f . convertToSignal2D .
-         flip (Map.findWithDefault (error "getPowerSignals: signal not found")) tabPower)
+   fmap
+      (f . convertToSignal2D .
+       flip (Map.findWithDefault (error "getPowerSignals: signal not found")) tabPower)
   where f (x, NonEmpty.Cons y []) = (x, y)
         f _ = error $ "getPowerSignals: NonEmpty.Cons contains more than one element"
 
 
 getPowerSignalsWithSameTime ::
-  Map String (TPT.T Double) ->
-  [String] ->
-  (Sig.TSignal [] Double,[Sig.PSignal [] Double])
-getPowerSignalsWithSameTime tabPower signalNames = (f times, powers)
-  where  (times,powers) = unzip $ getPowerSignals tabPower signalNames
-         f ts = case ts of
-            [] ->  error "Error in getPowerSignalsWithSameTime: no time vectors in imported Signals"
-            x:[] -> x
-            x:xs -> if all (x==) xs then x
-                    else error "Error in getPowerSignalsWithSameTime: differing time vectors on imported Signals"
+   (Functor f, Fold.Foldable f) =>
+   Map String (TPT.T Double) ->
+   NonEmpty.T f String ->
+   (Sig.TSignal [] Double, NonEmpty.T f (Sig.PSignal [] Double))
+getPowerSignalsWithSameTime tabPower signalNames = (time, fmap snd timesPowers)
+   where timesPowers = getPowerSignals tabPower signalNames
+         time =
+            case fmap fst timesPowers of
+               NonEmpty.Cons x xs ->
+                  if Fold.all (x==) xs
+                    then x
+                    else error $
+                            "getPowerSignalsWithSameTime: " ++
+                            "differing time vectors on imported signals"

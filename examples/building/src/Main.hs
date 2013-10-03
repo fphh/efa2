@@ -341,32 +341,25 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
 
       sequenceFlowsFilt :: Sequ.List (Record.FlowRecord Node [] Double)
       sequenceFlowsFilt =
-        snd
-        $ Sequ.unzip
-        $ Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime . snd)
-        $ fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
+        Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime) $
+        fmap Record.partIntegrate sequencePowers
 
-      flowStatesWithAdj ::
-        ( Sequ.List (Record.FlowState Node),
-          Sequ.List (Record.FlowRecord Node [] Double) )
-      flowStatesWithAdj =
-        Sequ.unzip
-        $ fmap (\rec ->
-                 let flowState = Flow.genFlowState rec
-                 in  (flowState, Flow.adjustSigns System.topology flowState rec))
-        sequenceFlowsFilt
+      flowTopos :: Sequ.List (Topo.FlowTopology Node)
+      adjustedFlows :: Sequ.List (Record.FlowRecord Node [] Double)
+      (flowTopos, adjustedFlows) =
+        Sequ.unzip $
+        fmap (Flow.adjustedTopology System.topology) sequenceFlowsFilt
 
       stateFlowEnvWithGraph ::
         ( Topo.StateFlowGraph Node,
           StateEnv.Complete Node (Data Nil Double) (Data Nil Double) )
 
       stateFlowEnvWithGraph =
-        let sequ = Flow.genSequFlowTops System.topology (fst flowStatesWithAdj)
-            envLocal = external initStorage
-                           (Chop.makeSeqFlowTopology sequ) (snd flowStatesWithAdj)
+        let envLocal = external initStorage
+                           (Flow.sequenceGraph flowTopos) adjustedFlows
             e = second (fmap Arith.integrate) envLocal
-            sm = snd $ StateFlow.stateMaps sequ
-        in  ( StateFlow.stateGraphAllStorageEdges sequ,
+            sm = snd $ StateFlow.stateMaps flowTopos
+        in  ( StateFlow.stateGraphAllStorageEdges flowTopos,
               StateEnv.mapMaybe Result.toMaybe Result.toMaybe $
                 StateFlow.envFromSequenceEnvResult sm e)
 
@@ -411,9 +404,13 @@ main = do
       initEnv = AppOpt.initialEnv System.Water System.stateFlowGraph
 
 
-      (time, [pwind, psolar, phouse, pindustry]) =
+      (time,
+       NonEmpty.Cons pwind
+          (NonEmpty.Cons psolar
+             (NonEmpty.Cons phouse
+                (NonEmpty.Cons pindustry Empty.Cons)))) =
         CT.getPowerSignalsWithSameTime tabPower
-          ["wind", "solar", "house", "industry"]
+          ("wind" !: "solar" !: "house" !: "industry" !: Empty.Cons)
 
       prest = Sig.scale restScale pwind
       plocal = Sig.offset 0.4 $ Sig.scale localScale $

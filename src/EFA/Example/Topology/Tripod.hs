@@ -1,9 +1,11 @@
-module EFA.Example.Topology.TripodB where
+module EFA.Example.Topology.Tripod where
 
 import EFA.Application.Utility ( topologyFromEdges )
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
+
+import qualified EFA.Report.Format as Format
 
 
 data Node = Node0 | Node1 | Node2 | Node3 deriving (Show, Eq, Ord, Enum)
@@ -14,25 +16,28 @@ node1 = Node1
 node2 = Node2
 node3 = Node3
 
-source, crossing, sink, storage :: Node
+source, sink, crossing, storage :: Node
 source   = Node0
-crossing = Node1
-sink     = Node2
+sink     = Node1
+crossing = Node2
 storage  = Node3
 
-
 instance Node.C Node where
-   display = Node.displayDefault
-   subscript = Node.subscriptDefault
+   display Node0 = Format.literal "Quelle"
+   display Node1 = Format.literal "Senke"
+   display Node2 = Format.literal "Kreuzung"
+   display Node3 = Format.literal "Speicher"
+
+   subscript = Format.integer . fromIntegral . fromEnum
    dotId = Node.dotIdDefault
 
    typ Node0 = Node.Source
-   typ Node1 = Node.Crossing
-   typ Node2 = Node.Sink
+   typ Node1 = Node.Sink
+   typ Node2 = Node.Crossing
    typ Node3 = Node.storage
 
 
 topology :: Topo.Topology Node
 topology =
    topologyFromEdges
-      [(Node0, Node1), (Node1, Node3), (Node1, Node2)]
+      [(node0, node2), (node2, node1), (node2, node3)]

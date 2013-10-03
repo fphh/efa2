@@ -5,7 +5,7 @@ module EFA.Test.Sequence where
 
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Chop as Chop
-import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.Signal as Signal
 import EFA.Signal.Record (PowerRecord, Record(Record))
 import EFA.Signal.Base (Val)
 
@@ -33,9 +33,9 @@ prop_chopMatchingCutsApprox prec =
           eqAdjacent
              (\(Record xt xm)
                (Record yt ym) ->
-                 fmap snd (S.viewR xt) == fmap fst (S.viewL yt)
+                 fmap snd (Signal.viewR xt) == fmap fst (Signal.viewL yt)
                  &&
-                 fmap (fmap snd . S.viewR) xm == fmap (fmap fst . S.viewL) ym)
+                 fmap (fmap snd . Signal.viewR) xm == fmap (fmap fst . Signal.viewL) ym)
              xs
 
 
@@ -58,9 +58,9 @@ prop_chopMatchingCutsExact prec =
          eqAdjacent
             (\(Record xt xm)
               (Record yt ym) ->
-                fmap snd (S.viewR xt) == fmap fst (S.viewL yt)
+                fmap snd (Signal.viewR xt) == fmap fst (Signal.viewL yt)
                 &&
-                fmap (fmap snd . S.viewR) xm == fmap (fmap fst . S.viewL) ym)
+                fmap (fmap snd . Signal.viewR) xm == fmap (fmap fst . Signal.viewL) ym)
             xs
 
 prop_chopProjectiveExact ::

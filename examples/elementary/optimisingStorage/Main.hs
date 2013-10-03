@@ -1,11 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
-import qualified EFA.Example.Topology.TripodB as Tripod
-import EFA.Example.Topology.TripodB (Node, node0, node1, node2, node3)
+import EFA.Example.Topology.Tripod.State (flowGraph, sec0, sec1)
+import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility ( seqFlowGraphFromStates, checkDetermined )
+import EFA.Application.Utility (checkDetermined)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -16,12 +16,11 @@ import EFA.Flow.Sequence.Absolute ((=.=))
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic ((^!))
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Signal as S
--- import qualified EFA.Signal.Data as D
 
 import EFA.Signal.Signal(Test2, (.+), (.-), (./))
 import EFA.Signal.Typ (A, P, Tt, F, N, Typ, Y)
@@ -29,9 +28,7 @@ import EFA.Signal.Base(Val)
 
 import qualified EFA.Report.Report as Rep
 
-import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
-import EFA.Utility.Stream (Stream((:~)))
 
 import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
@@ -43,65 +40,33 @@ import Data.Monoid ((<>))
 plotTerm :: WXT.T
 plotTerm = WXT.cons
 
-sec0, sec1 :: Idx.Section
-sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
-
-
-flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = seqFlowGraphFromStates Tripod.topology [0, 4]
-
 
 type Expr s a = EqSys.ExpressionIgnore Node s Double Double a
 type ExpVar s = Expr s Double
 
-etaf :: (Arith.Sum a, Floating a) => Expr s a -> Expr s a
-etaf =
-   EqSys.liftF $ \x ->
-      let y = x/100
-      in  1/((y+sqrt(y*y+4*y))/(2*y))
 
-n01, n12, n13, n31, p10, p21, e31, e21, p31, p13 ::
+n02, n21, n23, n32, p20, p12, e32, e12, p32, p23 ::
   Idx.Section -> Expr s Double
-n01 sec = EqSys.variable $ XIdx.eta sec node0 node1
-n12 sec = EqSys.variable $ XIdx.eta sec node1 node2
-n13 sec = EqSys.variable $ XIdx.eta sec node1 node3
-n31 sec = EqSys.variable $ XIdx.eta sec node3 node1
-p10 sec = EqSys.variable $ XIdx.power sec node1 node0
-p21 sec = EqSys.variable $ XIdx.power sec node2 node1
-e31 sec = EqSys.variable $ XIdx.energy sec node3 node1
-e21 sec = EqSys.variable $ XIdx.energy sec node2 node1
+n02 sec = EqSys.variable $ XIdx.eta sec node0 node2
+n21 sec = EqSys.variable $ XIdx.eta sec node2 node1
+n23 sec = EqSys.variable $ XIdx.eta sec node2 node3
+n32 sec = EqSys.variable $ XIdx.eta sec node3 node2
+p20 sec = EqSys.variable $ XIdx.power sec node2 node0
+p12 sec = EqSys.variable $ XIdx.power sec node1 node2
+e32 sec = EqSys.variable $ XIdx.energy sec node3 node2
+e12 sec = EqSys.variable $ XIdx.energy sec node1 node2
 
-p31 sec = EqSys.variable $ XIdx.power sec node3 node1
-p13 sec = EqSys.variable $ XIdx.power sec node1 node3
+p32 sec = EqSys.variable $ XIdx.power sec node3 node2
+p23 sec = EqSys.variable $ XIdx.power sec node2 node3
 
 
 stoinit :: Expr s Double
 stoinit = EqSys.variable $ XIdx.storage Idx.initial node3
 
 ein, eout0, eout1 :: XIdx.Energy Node
-ein = XIdx.energy sec0 node0 node1
-eout0 = XIdx.energy sec0 node2 node1
-eout1 = XIdx.energy sec1 node2 node1
-
-e33 :: Expr s Double
-e33 = EqSys.variable $ XIdx.stEnergy XIdx.initSection sec1 node3
-
-time :: Idx.Section -> Expr s Double
-time = EqSys.variable . XIdx.dTime
-
-
--- maybe move this to Utility module
-(^!) :: Num a => a -> Int -> a
-(^!) = (^)
-
-f ::
-   (Arith.Sum a, Floating a) =>
-   Expr s a -> Expr s a -> Expr s a
-f =
-   EqSys.liftF2 $ \r x ->
-      let -- r = 0.9
-          ui = 200
-      in  x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
+ein = XIdx.energy sec0 node0 node2
+eout0 = XIdx.energy sec0 node1 node2
+eout1 = XIdx.energy sec1 node1 node2
 
 
 -- | Provide time of sec1 and inner resistance of battery
@@ -112,18 +77,18 @@ given :: Val ->
 given y' p' nParam' =
   (stoinit =.= EqSys.constant 3)
 
-  <> (p21 sec0 =.= p)
-  <> (e21 sec0 =.= (1-y)*(t*p))
-  <> (e31 sec0 =.= e31 sec1)
+  <> (p12 sec0 =.= p)
+  <> (e12 sec0 =.= (1-y)*(t*p))
+  <> (e32 sec0 =.= e32 sec1)
 
-  <> (n01 sec0 =.= fn01_p10 (p10 sec0))
-  <> (n12 sec0 =.= 1)
-  <> (n13 sec0 =.= (fn13_p31 nParam (p31 sec0)))
+  <> (n02 sec0 =.= fn02_p20 (p20 sec0))
+  <> (n21 sec0 =.= 1)
+  <> (n23 sec0 =.= (fn23_p32 nParam (p32 sec0)))
 
-  <> (e21 sec1 =.= y*(1*p))
-  <> (p21 sec1 =.= p)
-  <> (n12 sec1 =.= 1)
-  <> (n31 sec1 =.= fn31_p13 nParam (p13 sec1))
+  <> (e12 sec1 =.= y*p)
+  <> (p12 sec1 =.= p)
+  <> (n21 sec1 =.= 1)
+  <> (n32 sec1 =.= fn32_p23 nParam (p23 sec1))
   where y = EqSys.constant y'
         nParam = EqSys.constant nParam'
         t = EqSys.constant 1
@@ -167,21 +132,17 @@ getSignalVarEta ::
    XIdx.Eta Node -> Test2 (Typ A N Tt) Val
 getSignalVarEta = getSignalVar
 
--- ##############################
--- | Setting come here
 
--- | Variation ranges
+-- * Setting comes here
 
-
-yrange, rrange, prange :: [Double]
+-- ** Variation ranges
 
 -- | Variation of time which is equal to time share as time is one
+yrange :: [Double]
 yrange = [0.1,0.2 .. 0.9]
 
--- | Variation of Resistance
-rrange = 0.01:[0.1,0.2 .. 2]
-
 -- | Variation of Power Demand as Sink
+prange :: [Double]
 prange = [0.1,0.2 .. 1] -- 10 bis 100 kW
 
 batteryResistance :: Double
@@ -203,80 +164,70 @@ varY :: S.Test2 (Typ A P Tt) Double
 varY = S.fromList2 varY'
 
 
--- | ## Fuel Converter Curves
-{-
--- | Lookup Map ic-engine -- forward - convert to backward
-p_ic_fw = S.fromList [0,0.1 .. 1] :: S.Signal (Typ UT UT UT) Double
-eta_ic = S.fromList [0,0.7,0.9,0.95,0.97,1,0.97,0.95,0.9,0.85,0.8] :: S.Signal (Typ UT UT UT) Double
-feta_ic :: ExpVar s -> ExpVar s
-feta_ic (EqSys.ExprWithVars x) = EqSys.constant y
-  where (S.TC (D.Data y)) = S.interp1Lin (p_ic_fw.*eta_ic) eta_ic x
--}
+-- * Fuel Converter Curves
 
--- | ic-engine - relative variable efficiency (max = 1) of an ic engine type fuel converter: n01 as function of p10
-fn01_p10_ic :: ExpVar s -> ExpVar s
-fn01_p10_ic =
+-- | ic-engine - relative variable efficiency (max = 1) of an ic engine type fuel converter: n02 as function of p20
+fn02_p20_ic :: ExpVar s -> ExpVar s
+fn02_p20_ic =
    EqSys.liftF $ \x ->
       let y = x
       in  1/((y+sqrt(y*y+4*y))/(2*y))
 
 -- | fuel cell - relative variable efficiency fuel cell type
-fn01_p10_fc :: ExpVar s ->  ExpVar s ->  ExpVar s
-fn01_p10_fc =
+fn02_p20_fc :: ExpVar s ->  ExpVar s ->  ExpVar s
+fn02_p20_fc =
    EqSys.liftF2 $ \x r ->
       let ui = 1
       in  x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
 
-fn01_p10 ::    ExpVar s -> ExpVar s
-fn01_p10 = fn01_p10_ic  -- Choose fuel converter type here
--- fn01_p10 = fn01_p10_fc 0.01
+fn02_p20 ::    ExpVar s -> ExpVar s
+fn02_p20 = fn02_p20_ic  -- Choose fuel converter type here
 
--- | ## Storage Efficiency Curves
+
+-- * Storage Efficiency Curves
 
 -- ## Battery
--- | variable efficiency of energy storage in discharging mode as function of n31 over p13
-fn31_p13_ba :: ExpVar s ->  ExpVar s ->  ExpVar s
-fn31_p13_ba =
+-- | variable efficiency of energy storage in discharging mode as function of n32 over p23
+fn32_p23_ba :: ExpVar s ->  ExpVar s ->  ExpVar s
+fn32_p23_ba =
    EqSys.liftF2 $ \ r x ->
       let ui = 1
       in  nsto_const*x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
 
--- | variable efficiency of energy storage in charging mode as function of n13 over p31
-fn13_p31_ba ::  ExpVar s ->  ExpVar s ->  ExpVar s
-fn13_p31_ba r x = nsto_const / (1 + (x*r)/(ui^!2))
+-- | variable efficiency of energy storage in charging mode as function of n23 over p32
+fn23_p32_ba ::  ExpVar s ->  ExpVar s ->  ExpVar s
+fn23_p32_ba r x = nsto_const / (1 + (x*r)/(ui^!2))
   where ui = 1
 
 -- ## HyperCaps (Capacitors)
 -- |  simply very good constant efficiency
-fn31_p13_HC :: ExpVar s ->  ExpVar s ->  ExpVar s
-fn31_p13_HC _ _ = 0.99
+fn32_p23_HC :: ExpVar s ->  ExpVar s ->  ExpVar s
+fn32_p23_HC _ _ = 0.99
 
-fn13_p31_HC :: ExpVar s ->  ExpVar s ->  ExpVar s
-fn13_p31_HC _ _ = 0.99
+fn23_p32_HC :: ExpVar s ->  ExpVar s ->  ExpVar s
+fn23_p32_HC _ _ = 0.99
 
 
 -- ## Electric Flywheel
--- | Lookup
--- Power [0,0.1,0.2 ,0.5 ,0.7 ,1  ]
--- Eta   [0,0.9,0.93,0.95,0.93,0.9]
+-- * Lookup
 
 -- |  compareable to ic engine
-fn31_p13_EF :: ExpVar s ->  ExpVar s ->  ExpVar s
-fn31_p13_EF =
+fn32_p23_EF :: ExpVar s ->  ExpVar s ->  ExpVar s
+fn32_p23_EF =
    EqSys.liftF2 $ \_ x ->
       let y = x
       in  1/((y+sqrt(y*y+4*y))/(2*y))
 
 -- |  compareable to ic engine
-fn13_p31_EF :: ExpVar s ->  ExpVar s ->  ExpVar s
-fn13_p31_EF =
+fn23_p32_EF :: ExpVar s ->  ExpVar s ->  ExpVar s
+fn23_p32_EF =
    EqSys.liftF2 $ \_ x ->
       let y=x
       in  1/((y+sqrt(y*y+4*y))/(2*y))
 
-fn31_p13, fn13_p31:: ExpVar s ->  ExpVar s ->  ExpVar s
-fn31_p13 = fn13_p31_ba
-fn13_p31 = fn13_p31_ba
+fn32_p23, fn23_p32:: ExpVar s ->  ExpVar s ->  ExpVar s
+fn32_p23 = fn23_p32_ba
+fn23_p32 = fn23_p32_ba
 
 
 main :: IO ()
@@ -288,56 +239,48 @@ main = do
       -- get Energies
       eoutVar0 = getSignalVarEnergy varEnvs eout0
       eoutVar1 = getSignalVarEnergy varEnvs eout1
-  --Rep.report  [] ("eoutVar1",eoutVar1)
 
-      varEout = eoutVar0 .+ (S.makeDelta eoutVar1)
+      varEout = eoutVar0 .+ S.makeDelta eoutVar1
       einVar = getSignalVarEnergy varEnvs ein
 
       -- calculate split share and system efficiency
-      etaSysVar = (eoutVar0 .+ (S.makeDelta eoutVar1))./einVar
---      varY = S.changeType $ eoutVar1 ./ (eoutVar0 .+ (S.makeDelta eoutVar1)) :: S.Test2 (Typ A X Tt) Double
+      etaSysVar = (eoutVar0 .+ S.makeDelta eoutVar1)./einVar
 
       -- calculate Losses
-      varLossA = varE01 .- varE10
-      varLossB = varE10 .- varEout
-      varLoss = varE01 .- varEout
+      varLossA = varE02 .- varE20
+      varLossB = varE20 .- varEout
+      varLoss = varE02 .- varEout
 
       -- Get more Env values
-      varN13 = getSignalVarEta varEnvs (XIdx.eta sec0 node1 node3)
-      varN31 = getSignalVarEta varEnvs (XIdx.eta sec1 node3 node1)
-      varN01 = getSignalVarEta varEnvs (XIdx.eta sec0 node0 node1)
+      varN23 = getSignalVarEta varEnvs (XIdx.eta sec0 node2 node3)
+      varN32 = getSignalVarEta varEnvs (XIdx.eta sec1 node3 node2)
+      varN02 = getSignalVarEta varEnvs (XIdx.eta sec0 node0 node2)
 
-      varP31_0 = getSignalVarPower varEnvs (XIdx.power sec0 node3 node1)
-      varP31_1 = getSignalVarPower varEnvs (XIdx.power sec1 node3 node1)
+      varP32_0 = getSignalVarPower varEnvs (XIdx.power sec0 node3 node2)
+      varP32_1 = getSignalVarPower varEnvs (XIdx.power sec1 node3 node2)
 
 
-      varP13_0 = getSignalVarPower varEnvs (XIdx.power sec0 node1 node3)
-      varP13_1 = getSignalVarPower varEnvs (XIdx.power sec1 node1 node3)
+      varP23_0 = getSignalVarPower varEnvs (XIdx.power sec0 node2 node3)
+      varP23_1 = getSignalVarPower varEnvs (XIdx.power sec1 node2 node3)
 
-      varP10 = getSignalVarPower varEnvs (XIdx.power sec0 node1 node0)
-      varP01 = getSignalVarPower varEnvs (XIdx.power sec0 node0 node1)
+      varP20 = getSignalVarPower varEnvs (XIdx.power sec0 node2 node0)
+      varP02 = getSignalVarPower varEnvs (XIdx.power sec0 node0 node2)
 
-      varE10 = getSignalVarEnergy varEnvs (XIdx.energy sec0 node1 node0)
-      varE01 = getSignalVarEnergy varEnvs (XIdx.energy sec0 node0 node1)
+      varE20 = getSignalVarEnergy varEnvs (XIdx.energy sec0 node2 node0)
+      varE02 = getSignalVarEnergy varEnvs (XIdx.energy sec0 node0 node2)
 
-      varPout0 = getSignalVarPower varEnvs (XIdx.power sec0 node2 node1)
-      varPout1 = getSignalVarPower varEnvs (XIdx.power sec1 node2 node1)
+      varPout0 = getSignalVarPower varEnvs (XIdx.power sec0 node1 node2)
+      varPout1 = getSignalVarPower varEnvs (XIdx.power sec1 node1 node2)
 
-      -- create curve of n01 in used power range
-      p10Lin = S.concat varP10
-      n01Lin = S.concat varN01
+      -- create curve of n02 in used power range
+      p20Lin = S.concat varP20
+      n02Lin = S.concat varN02
 
       -- fuel converter
-      (p10Lin', n01Lin') = S.sortTwo (p10Lin,n01Lin)
+      (p20Lin', n02Lin') = S.sortTwo (p20Lin, n02Lin)
 
-      -- discharging
---      (p131Lin', n31Lin') = S.sortTwo (p131Lin,n31Lin)
 
-      -- charging
---      (p310Lin', n13Lin') = S.sortTwo (p310Lin,n13Lin)
-
--- ##################################
---  Debug Plots
+  -- Debug Plots
 
 
   -- Plots to check the variation
@@ -362,41 +305,44 @@ main = do
 
   -- Plots to check variable efficiency at fuel converter
 
-  PlotIO.surface "N01" plotTerm varX varY varN01
+  PlotIO.surface "N02" plotTerm varX varY varN02
 
 
-  PlotIO.surface "P10" plotTerm varX varY varP10
+  PlotIO.surface "P20" plotTerm varX varY varP20
 
-  PlotIO.surface "P01" plotTerm varX varY varP01
+  PlotIO.surface "P02" plotTerm varX varY varP02
 
-  PlotIO.xy "N01 - Curve" plotTerm id p10Lin' $ PlotIO.label "efficiency N01" n01Lin'
+  PlotIO.xy "N02 - Curve" plotTerm id p20Lin' $
+    PlotIO.label "efficiency N02" n02Lin'
 
   -- Plots to check variable efficiency at storage -- charging
-  PlotIO.surface "P13_0 - externe Ladeleistung" plotTerm varX varY varP13_0
-  Rep.report [] ("varP13_0",varP13_0)
+  PlotIO.surface "P23_0 - externe Ladeleistung" plotTerm varX varY varP23_0
+  Rep.report [] ("varP23_0", varP23_0)
 
-  PlotIO.surface "P31_0 - interne LadeLeistung" plotTerm varX varY varP31_0
-  Rep.report [] ("varP31_0",varP31_0)
+  PlotIO.surface "P32_0 - interne LadeLeistung" plotTerm varX varY varP32_0
+  Rep.report [] ("varP32_0", varP32_0)
 
-  PlotIO.surface "N13 - Charging" plotTerm varP31_0 varY varN13
-  PlotIO.xy "N13 - Charging" plotTerm id varP31_0 (PlotIO.label "efficiency N13" varN13)
-  Rep.report  [] ("N13 - Charging",varN13)
+  PlotIO.surface "N23 - Charging" plotTerm varP32_0 varY varN23
+  PlotIO.xy "N23 - Charging" plotTerm id varP32_0 $
+    PlotIO.label "efficiency N23" varN23
+  Rep.report  [] ("N23 - Charging", varN23)
 
 
-  PlotIO.surface "P13_1 - externe Entladeleistung" plotTerm varX varY varP13_1
-  Rep.report [] ("varP13_1",varP13_1)
+  PlotIO.surface "P23_1 - externe Entladeleistung" plotTerm varX varY varP23_1
+  Rep.report [] ("varP23_1", varP23_1)
 
-  PlotIO.surface "P31_1 - interne EntladeLeistung" plotTerm varX varY varP31_1
-  Rep.report [] ("varP31_1",varP31_1)
+  PlotIO.surface "P32_1 - interne EntladeLeistung" plotTerm varX varY varP32_1
+  Rep.report [] ("varP32_1", varP32_1)
 
-  Rep.report  [] ("N31 - Discharging",varN31)
-  PlotIO.surface  "N31 - Discharging" plotTerm varP13_1 varY varN31
-  PlotIO.xy "N31 - Discharging" plotTerm id varP13_1 $ PlotIO.label "efficiency N31" varN31
+  Rep.report  [] ("N32 - Discharging", varN32)
+  PlotIO.surface  "N32 - Discharging" plotTerm varP23_1 varY varN32
+  PlotIO.xy "N32 - Discharging" plotTerm id varP23_1 $
+    PlotIO.label "efficiency N32" varN32
 
 
   -- Check Losses
 
-  -- Loss of N01
+  -- Loss of N02
   PlotIO.surface "LossA" plotTerm varX varY varLossA
 
   -- Loss of the Rest of the system
@@ -411,10 +357,8 @@ main = do
   -- Total System Efficiency
   Rep.report  [] ("EtaSys",etaSysVar)
   PlotIO.surface "EtaSys" plotTerm varX varY etaSysVar
-  PlotIO.xy "EtaSys" plotTerm id varX $ PlotIO.label "EtaSys" etaSysVar -- System efficiency in curves over split variation for multiple resistance values
-
--- ##################################
-
+  -- System efficiency in curves over split variation for multiple resistance values
+  PlotIO.xy "EtaSys" plotTerm id varX $ PlotIO.label "EtaSys" etaSysVar
 
 
   let envhh = head $ head varEnvs
@@ -426,5 +370,5 @@ main = do
   concurrentlyMany_ $
     map ( Draw.xterm
           . Draw.title "Topology"
-          . Draw.sequFlowGraph Draw.optionsDefault )
+          . Draw.seqFlowGraph Draw.optionsDefault )
         [envhh,envhl, envlh, envll]

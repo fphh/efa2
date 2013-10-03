@@ -5,10 +5,6 @@
 
 module EFA.Signal.Chop where
 
-
-import qualified EFA.Graph.Flow as Flow
-import EFA.Graph.Topology (Topology, FlowTopology)
-
 import qualified EFA.Signal.Sequence as Sequ
 
 import qualified EFA.Signal.Base as SB
@@ -65,9 +61,9 @@ data EventType = LeftEvent
                | NoEvent
 
 
-{-# DEPRECATED genSequFlow "better use (fmap Record.partIntegrate)" #-}
+{-# DEPRECATED genSeqFlow "better use (fmap Record.partIntegrate)" #-}
 -- | Generate Sequence Flow
-genSequFlow :: (Num a,
+genSeqFlow :: (Num a,
                 V.Zipper v,
                 V.Walker v,
                 V.Storage v a,
@@ -76,7 +72,7 @@ genSequFlow :: (Num a,
                 SB.BSum a,
                 SB.BProd a a)=>
                (Sequ.List (PowerRecord node v a)) -> Sequ.List (FlowRecord node v a)
-genSequFlow sqPRec = fmap Record.partIntegrate sqPRec
+genSeqFlow sqPRec = fmap Record.partIntegrate sqPRec
 
 
 -- | Filter Sequence Flow
@@ -106,36 +102,13 @@ separateUncleanSections  (xs, ys, zs) =
           h (_,q) = q == Flow.Wrong
 -}
 
-makeSeqFlowGraph ::
-  (Fractional a,
-   Ord a,
-   V.Walker v,
-   V.Storage v a,
-   SB.BSum a,
-   Ord node,
-   Show node) =>
-   Topology node ->
-   Sequ.List (FlowRecord node v a) ->
-   Flow.RangeGraph node
-makeSeqFlowGraph topo =
-   Flow.sequenceGraph .
-   Flow.genSequFlowTops topo .
-   Flow.genSequFState
-
-
-makeSeqFlowTopology ::
-   (Ord node, Show node) =>
-   Sequ.List (FlowTopology node) ->
-   Flow.RangeGraph node
-makeSeqFlowTopology =
-   Flow.sequenceGraph
 
 makeSequence ::
    (Show node, Ord node) =>
    PowerRecord node [] Val ->
    Sequ.List (FlowRecord node [] Val)
 makeSequence =
-    genSequFlow . genSequ . addZeroCrossings
+    genSeqFlow . genSequ . addZeroCrossings
 
 -----------------------------------------------------------------------------------
 {-
@@ -157,7 +130,7 @@ genSequ pRec =
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) =
            recyc rTail rHead
-              ((Sequ.rangeSingleton (S.SignalIdx 0), []),
+              ((S.rangeSingleton (S.SignalIdx 0), []),
                (Record.singleton $ rHead, []))
           where
             (rHead, rTail) = maybe err id $ Record.viewL rSig
@@ -203,7 +176,7 @@ removeNilSections ::
    Sequ.List (PowerRecord node v a) ->
    Sequ.List (PowerRecord node v a)
 removeNilSections =
-   Sequ.filterRange (not . Sequ.rangeIsSingleton)
+   Sequ.filterRange (not . S.rangeIsSingleton)
 
 
 -- | Function to detect and classify a step over several signals

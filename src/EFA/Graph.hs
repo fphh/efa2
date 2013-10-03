@@ -34,6 +34,7 @@ module EFA.Graph (
    delNode,
    -- delNodes,
    delNodeSet,
+   delEdge,
    -- delEdges,
    -- delEdgeSet,
    lefilter,
@@ -451,7 +452,18 @@ delNodes ::
    (ConsEdge e, Ord (e n), Ord n) =>
    [n] -> Graph n e nl el -> Graph n e nl el
 delNodes nsl = delNodeSet $ Set.fromList nsl
+-}
 
+delEdge ::
+   (Edge e, Ord (e n), Ord n) =>
+   e n -> Graph n e nl el -> Graph n e nl el
+delEdge e (Graph ns) =
+   Graph $
+   Map.adjust (mapThd3 $ Map.delete e) (from e) $
+   Map.adjust (mapFst3 $ Map.delete e) (to e) $
+   ns
+
+{-
 delEdgeSet ::
    (Edge e, Ord (e n), Ord n) =>
    Set (e n) -> Graph n e nl el -> Graph n e nl el

@@ -121,6 +121,12 @@ unSignalIdx (SignalIdx x) = x
 data Range = Range SignalIdx SignalIdx
    deriving (Eq, Show)
 
+rangeSingleton :: SignalIdx -> Range
+rangeSingleton n = Range n n
+
+rangeIsSingleton :: Range -> Bool
+rangeIsSingleton (Range from to) = from P.== to
+
 
 typ :: TC s t d -> t
 typ _ = error "Signal.typ: got phantom type"
@@ -817,10 +823,10 @@ instance D.All c => All s c where
 ----------------------------------------------------------
 -- signal sign
 
-sigSign ::
+sign ::
    (Ord d, Num d, D.Map c, D.Storage c d, D.Storage c B.Sign, Fractional d) =>
    TC s typ (Data c d) -> TC s typ (Data c B.Sign)
-sigSign x = map B.sign x
+sign x = map B.sign x
 
 -- | Convert between List and different Vector formats
 convert ::
@@ -998,12 +1004,6 @@ mapMaybe f (TC (Data x)) = TC $ Data $ SV.mapMaybe f x
 
 sampleAverage :: Fractional d => TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d)
 sampleAverage (TC (Data x)) (TC (Data y)) = TC $ Data $ (x+y)/2
-
-
-sign ::
-   (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d, Fractional d) =>
-   TC s typ (Data c d) -> TC s (Typ A SZ UT) (Data c B.Sign)
-sign x = changeType $ map B.sign x
 
 
 abs :: (Num d, D.Storage c d, D.Map c)  => TC s t (Data c d) -> TC s t (Data c d)
@@ -1695,17 +1695,16 @@ calcEtaWithSign pSign p1 p2 = changeType $ map f $ changeSignalType $ zip pSign 
 
 -- | Index of maximum
 
+data ArgMax = ArgMax0 | ArgMax1 deriving (Eq, Enum, Show)
+
 argMax ::
-   (Ord d, D.ZipWith c, D.Storage c d,
-    D.Storage c (d, Int), D.Storage c Int) =>
+   (Ord d, D.ZipWith c, D.Storage c d, D.Storage c ArgMax) =>
    TC s typ0 (Data c d) ->
    TC s typ0 (Data c d) ->
-   TC (Arith s s) typ1 (Data c Int)
-argMax etaSys0 etaSys1 =
-   map P.snd $
-   zipWith P.max
-      (map (P.flip (,) 0) etaSys0)
-      (map (P.flip (,) 1) etaSys1)
+   TC (Arith s s) typ1 (Data c ArgMax)
+argMax =
+   zipWith
+      (\x y -> if x P.>= y then ArgMax0 else ArgMax1)
 
 argMaximum ::
    (Ord d, SV.FromList v, SV.Storage v d, SV.Storage v Int) =>

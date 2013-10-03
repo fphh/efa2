@@ -3,10 +3,8 @@
 
 module EFA.Test.EquationSystem.Given where
 
-import qualified EFA.Example.Topology.TripodA as Tripod
-import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
-
-import EFA.Application.Utility ( seqFlowGraphFromStates )
+import qualified EFA.Example.Topology.Tripod.Given as TripodGiven
+import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -48,7 +46,7 @@ bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ _ =
 
 
 flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = seqFlowGraphFromStates Tripod.topology [1, 0, 1]
+flowGraph = TripodGiven.seqFlowGraph
 
 
 -- Hilfsfunktion, um das testGiven-Gleichungssystem zu bauen.

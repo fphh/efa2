@@ -13,6 +13,11 @@ import Prelude hiding (String, Int)
 import qualified Prelude as P
 
 
+{- |
+The ordering imposed by the Ord instance
+influences how GraphViz draws a graph.
+Nodes with low numbers will by placed at the top of the picture..
+-}
 class Ord node => C node where
    display :: Format output => node -> output
    subscript :: Format output => node -> output

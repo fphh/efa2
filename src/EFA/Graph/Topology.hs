@@ -11,11 +11,13 @@ module EFA.Graph.Topology (
        ClassifiedTopology,
        FlowGraph,
        DirFlowGraph,
-       SequFlowGraph,
-       DirSequFlowGraph,
+       SeqFlowGraph,
+       DirSeqFlowGraph,
        StateFlowGraph,
        DirStateFlowGraph,
        pathExists,
+       flowFromPlain,
+       plainFromFlow,
        dirFromFlowGraph,
        structureEdgeFromDirEdge,
        dirEdgeFromStructureEdge,
@@ -23,6 +25,7 @@ module EFA.Graph.Topology (
        maybeStorage,
        isActive,
        isInactive,
+       anyActive,
        edgeType,
        isStructureEdge,
        isStorageEdge,
@@ -31,6 +34,7 @@ module EFA.Graph.Topology (
        classifyStorages,
        viewNodeDir,
        ViewNodeDir(..),
+       InOut,
        ) where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -38,7 +42,8 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 import EFA.Graph (Graph)
 
-
+import qualified Data.Map as Map; import Data.Map (Map)
+import qualified Data.Foldable as Fold
 import Control.Monad (mplus)
 import Data.Foldable (Foldable, foldMap)
 import Data.Maybe.HT (toMaybe)
@@ -79,6 +84,10 @@ isActive (Graph.EDirEdge _) = True
 
 isInactive :: Graph.EitherEdge node -> Bool
 isInactive = not . isActive
+
+anyActive :: Map (Graph.EitherEdge node) () -> Bool
+anyActive = Fold.any isActive . Map.keysSet
+
 
 
 isStructureEdge :: Eq node => FlowEdge structEdge (Idx.AugNode sec node) -> Bool
@@ -194,8 +203,8 @@ type
          (Node.Type (Maybe StoreDir)) ()
 
 
-type SequFlowGraph node = FlowGraph Idx.Section node
-type DirSequFlowGraph node = DirFlowGraph Idx.Section node
+type SeqFlowGraph node = FlowGraph Idx.Section node
+type DirSeqFlowGraph node = DirFlowGraph Idx.Section node
 
 type StateFlowGraph node = FlowGraph Idx.State node
 type DirStateFlowGraph node = DirFlowGraph Idx.State node
@@ -209,13 +218,26 @@ pathExists src dst =
            (any (go (Graph.delNode a topo)) $ Graph.suc topo a))
    in  flip go src
 
+
+flowFromPlain :: (Ord node) => Topology node -> FlowTopology node
+flowFromPlain = Graph.mapEdgesMaybe (Just . Graph.EDirEdge)
+
+plainFromFlow :: (Ord node) => FlowTopology node -> Topology node
+plainFromFlow =
+   Graph.mapEdgesMaybe
+      (\e ->
+         Just $
+         case e of
+            Graph.EDirEdge de -> de
+            Graph.EUnDirEdge ue -> Graph.DirEdge (Graph.from ue) (Graph.to ue))
+
 {-
 In principle, we could remove "dead nodes", but
 then the storage equations would not work.
 Therefore we should not remove "dead nodes"
 iff they are storages.
 Anyway, I don't remove dead nodes,
-because it will make DirSequFlowGraph more complicated
+because it will make DirSeqFlowGraph more complicated
 or the generation of storage equations will be more complicated.
 -}
 dirFromFlowGraph ::
@@ -239,6 +261,12 @@ dirEdgeFromStructureEdge (Idx.StructureEdge x y) = Graph.DirEdge x y
 
 
 data StoreDir = In | Out deriving (Eq, Ord, Show)
+
+type InOut node nodeLabel =
+        (Map (Graph.EitherEdge node) (),
+         nodeLabel,
+         Map (Graph.EitherEdge node) ())
+
 
 {- |
 Classify the storages in in and out storages,

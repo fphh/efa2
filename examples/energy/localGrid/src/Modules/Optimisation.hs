@@ -12,22 +12,19 @@ import Modules.System (
       Rest, LocalRest
    ))
 
-import qualified EFA.Application.Absolute as EqGen
---import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Utility as AppUt
 
-import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
-
-import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Arithmetic as EqArith
+import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Result (Result)
 
+import qualified EFA.Flow.Sequence.Absolute as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import EFA.Flow.Sequence.Absolute ( (.=), (=%%=), (=.=) )
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Flow as Flow
-
-import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
@@ -46,8 +43,6 @@ import qualified Data.Vector as V
 import qualified Data.Foldable as Fold
 import Data.Monoid (mconcat, (<>))
 
---import Control.Applicative (liftA2)
-
 
 sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
@@ -62,14 +57,13 @@ type SolveFunc a =
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
-  EqEnv.Complete
-    Node
+  SeqFlow.Graph Node
     (Result (Data Nil a))
     (Result (Data Nil a))
 
 commonGiven ::
   (EqArith.Sum a, Num a, Eq a) =>
-  EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
+  EqSys.EquationSystemIgnore System.Node s (Data Nil a) (Data Nil a)
 commonGiven =
    mconcat $
    (XIdx.dTime sec0 .= Data 1) :
@@ -83,10 +77,10 @@ etaGiven ::
     Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a) =>
    EtaAssignMap ->
    Map String (a -> a) ->
-   EqGen.EquationSystem Node s x (Data c a)
+   EqSys.EquationSystemIgnore Node s x (Data c a)
 etaGiven etaAssign etaFunc = Fold.fold $ Map.mapWithKey f etaAssign
   where f n (strP, strN, g) =
-          EqGen.variable n =.= EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
+          EqSys.variable n =.= EqSys.liftF (Data.map ef) (EqSys.variable $ g n)
           where ef x = if x >= 0 then fpos x else fneg x
                 fpos = maybe (err strP) id (Map.lookup strP etaFunc)
                 fneg = maybe (err strN) (\h -> recip . h . negate)
@@ -97,17 +91,17 @@ etaGiven etaAssign etaFunc = Fold.fold $ Map.mapWithKey f etaAssign
 eqs ::
   (a ~ EqArith.Scalar v, Eq a,
    Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
-  EqGen.EquationSystem Node s a v
-eqs = EqGen.fromGraph True (Topo.dirFromFlowGraph (snd System.seqTopoOpt))
+  EqSys.EquationSystemIgnore Node s a v
+eqs = EqSys.fromGraph True (Topo.dirFromFlowGraph (snd System.seqTopoOpt))
 -}
 
 solveCharge ::
-  (Ord a, Fractional a, Show a, EqArith.Sum a) =>
-  (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) ->
+  (Ord a, Fractional a, Show a, EqArith.Constant a) =>
+  SeqFlow.Graph Node (Result (Data Nil a)) (Result (Data Nil a)) ->
   SolveFunc a
-solveCharge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
-  EqGen.solveSimple $
-    eqs <> givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas
+solveCharge flowGraph etaAssign etaFunc pRest pRestLocal pWater pGas =
+  EqSys.solve flowGraph
+     (givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas)
 
 givenCharging ::
   (Ord a, Fractional a, Show a, EqArith.Sum a) =>
@@ -117,7 +111,7 @@ givenCharging ::
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
-  EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
+  EqSys.EquationSystemIgnore System.Node s (Data Nil a) (Data Nil a)
 givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas =
    ((commonGiven <> etaGiven (etaAssign sec0) etaFunc) <>) $
    mconcat $
@@ -142,24 +136,24 @@ givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 
 solveDischarge ::
-  ( Eq a, Show a, EqArith.Product a, EqArith.Integrate a, Ord a,
-    Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) =>
-  (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) ->
+  (Show a, Ord a, Fractional a,
+   EqArith.Constant a, EqArith.Integrate a) =>
+  SeqFlow.Graph Node (Result (Data Nil a)) (Result (Data Nil a)) ->
   SolveFunc a
-solveDischarge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
-  EqGen.solveSimple $
-    eqs <> givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas
+solveDischarge flowGraph etaAssign etaFunc pRest pRestLocal pWater pGas =
+  EqSys.solve flowGraph
+    (givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas)
 
 
 givenDischarging ::
-  (Eq a, Num a, Show a, EqArith.Sum a, Fractional a,Ord a) =>
+  (Show a, Ord a, Fractional a, EqArith.Sum a) =>
   (Idx.Section -> EtaAssignMap) ->
   Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
-  EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
+  EqSys.EquationSystemIgnore System.Node s (Data Nil a) (Data Nil a)
 givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas =
    ((commonGiven <> etaGiven (etaAssign sec1) etaFunc) <>) $
    mconcat $
@@ -192,7 +186,7 @@ givenSimulate ::
   (Idx.Section -> EtaAssignMap) ->
   Map String (a -> a) ->
   Sequ.List (Record.PowerRecord Node v a) ->
-  EqGen.EquationSystem Node s (Data Nil a) (Data (v :> Nil) a)
+  EqSys.EquationSystemIgnore Node s (Data Nil a) (Data (v :> Nil) a)
 
 givenSimulate etaAssign etaFunc sf =
   (XIdx.storage Idx.initial Water .= Data 0)
@@ -212,20 +206,22 @@ givenSimulate etaAssign etaFunc sf =
 
 type
    EnvDouble =
-      EqEnv.Complete Node (Result Double) (Result Double)
+      SeqFlow.Graph Node (Result Double) (Result Double)
 
 
 lookupDetPower ::
-  XIdx.Power Node -> EqEnv.Complete Node b (Result Double) -> Double
+  XIdx.Power Node -> SeqFlow.Graph Node b (Result Double) -> Double
 lookupDetPower idx =
   AppUt.checkDetermined ("lookupDetPower determined: " ++ show idx) .
-  flip (AppUt.lookupAbsPower ("lookupDetPower lookup: " ++ show idx)) idx
+  Var.checkedLookup ("lookupDetPower lookup: " ++ show idx)
+    SeqFlow.lookupPower idx
 
 lookupDetEnergy ::
-  XIdx.Energy Node -> EqEnv.Complete Node b (Result Double) -> Double
+  XIdx.Energy Node -> SeqFlow.Graph Node b (Result Double) -> Double
 lookupDetEnergy idx =
   AppUt.checkDetermined ("lookupDetEnergy determined: " ++ show idx) .
-  flip (AppUt.lookupAbsEnergy ("lookupDetEnergy lookup: " ++ show idx)) idx
+  Var.checkedLookup ("lookupDetEnergy lookup: " ++ show idx)
+    SeqFlow.lookupEnergy idx
 
 
 -----------------------------------------------------------------------------
@@ -236,7 +232,7 @@ data SocDrive a = NoDrive
 
 
 
-forcing :: SocDrive Double -> EqEnv.Complete Node b (Result Double) -> Double
+forcing :: SocDrive Double -> SeqFlow.Graph Node b (Result Double) -> Double
 forcing socDrive env =
   case socDrive of
        NoDrive -> 0
@@ -248,7 +244,7 @@ forcing socDrive env =
 -----------------------------------------------------------------------------
 
 
-condition :: EqEnv.Complete Node b (Result Double) -> Bool
+condition :: SeqFlow.Graph Node b (Result Double) -> Bool
 condition env = all (>0) [eCoal0, eCoal1, eTrans0, eTrans1]
   where eCoal0     = lookupDetEnergy (XIdx.energy sec0 Coal Network) env
         eCoal1     = lookupDetEnergy (XIdx.energy sec1 Coal Network) env
@@ -258,9 +254,6 @@ condition env = all (>0) [eCoal0, eCoal1, eTrans0, eTrans1]
 -----------------------------------------------------------------------------
 
 maxEta ::
-  Flow.RangeGraph Node ->
   Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
   Maybe (Double, EnvDouble)
-maxEta topo sigEnvs =
-  Sweep.optimalSolution2D condition (forcing NoDrive) topo sigEnvs
-
+maxEta = Sweep.optimalSolution2DNew condition (forcing NoDrive)

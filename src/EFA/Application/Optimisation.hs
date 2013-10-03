@@ -8,7 +8,6 @@ import qualified EFA.Application.AbsoluteState as EqGenState
 import EFA.Application.AbsoluteState ( (=.=) )
 
 import qualified EFA.Flow.State.Index as StateIdx
-import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil)
@@ -30,29 +29,26 @@ import Data.Tuple.HT (snd3)
 import Data.Monoid((<>),mempty)
 import Data.Maybe (mapMaybe)
 
--- | TODO Functios below could ventually be moved to a module Application/Given
+-- | TODO Functions below could eventually be moved to a module Application/Given
 
 
--- | Function to specifiy that an efficiency function in etaAssign is to be looked up with input power
-etaOverPowerInState :: StateIdx.Eta node -> StateIdx.Power node
-etaOverPowerInState =
-   Idx.liftInState $ \(Idx.Eta e) -> Idx.Power $ Idx.flip e
-
--- | Function to specifiy that an efficiency function in etaAssign is to be looked up with output power
-etaOverPowerOutState :: StateIdx.Eta node -> StateIdx.Power node
-etaOverPowerOutState =
-   Idx.liftInState $ \(Idx.Eta e) -> Idx.Power e
-
--- | Function to specifiy that an efficiency function in etaAssign is to be looked up with input power
-etaOverPowerIn :: SeqIdx.Eta node -> SeqIdx.Power node
+{- |
+Function to specify that an efficiency function in etaAssign
+is to be looked up with input power
+-}
+etaOverPowerIn ::
+   Idx.InPart part Idx.Eta node -> Idx.InPart part Idx.Power node
 etaOverPowerIn =
-   Idx.liftInSection $ \(Idx.Eta e) -> Idx.Power $ Idx.flip e
+   Idx.liftInPart $ \(Idx.Eta e) -> Idx.Power $ Idx.flip e
 
--- | Function to specifiy that an efficiency function
--- | in etaAssign is to be looked up with output power
-etaOverPowerOut :: SeqIdx.Eta node -> SeqIdx.Power node
+{- |
+Function to specify that an efficiency function in etaAssign
+is to be looked up with output power
+-}
+etaOverPowerOut ::
+   Idx.InPart part Idx.Eta node -> Idx.InPart part Idx.Power node
 etaOverPowerOut =
-   Idx.liftInSection $ \(Idx.Eta e) -> Idx.Power e
+   Idx.liftInPart $ \(Idx.Eta e) -> Idx.Power e
 
 type EtaAssignMap node =
   Map (StateIdx.Eta node)

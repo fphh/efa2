@@ -10,16 +10,15 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 import EFA.Graph.Topology
-          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph)
+          (Topology, FlowTopology, ClassifiedTopology, SeqFlowGraph)
 import EFA.Graph (DirEdge(DirEdge), labNodes)
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
-import EFA.Signal.Record
-          (Record(Record), FlowState(FlowState), FlowRecord, getSig)
-import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(TC))
+import EFA.Signal.Record (Record(Record), FlowRecord, getSig)
+import EFA.Signal.Signal (TC(TC), fromScalar, neg)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
@@ -34,12 +33,16 @@ import Data.Bool.HT (if')
 
 
 
+-- | Flow record to contain flow signals assigned to the tree
+newtype State node = State (Map (Idx.PPos node) Sign) deriving (Show)
+
+
 data Quality = Clean | Dirty | Wrong deriving (Show,Eq)
 data Dir = Pos | Neg | Zero deriving (Show,Eq)
 
 type EdgeFlow = (Dir,Quality)
 
-newtype EdgeStates node = EdgeStates (Map (DirEdge node ) EdgeFlow) deriving (Show)
+newtype EdgeStates node = EdgeStates (Map (DirEdge node) EdgeFlow) deriving (Show)
 
 getEdgeState :: (Fractional a,
                  Ord a,
@@ -55,7 +58,7 @@ getEdgeState :: (Fractional a,
 getEdgeState topo rec = EdgeStates $ MapU.fromSet f $ Graph.edgeSet topo
   where
     f (DirEdge n1 n2) =
-          case sigSign $ S.sum s1 of
+          case S.sign $ S.sum s1 of
              TC (Data s) -> (convertSign s, edgeFlowQuality s1 s2)
        where s1 = getSig rec (XIdx.ppos n1 n2)
              s2 = getSig rec (XIdx.ppos n2 n1)
@@ -79,7 +82,7 @@ edgeFlowQuality :: (Num d,
                    TC s typ (Data (v :> Nil) d)->
                    Quality
 edgeFlowQuality s1 s2 =
-   if' (sigSign (S.sum s1) /= sigSign (S.sum s2)) Wrong $
+   if' (S.sign (S.sum s1) /= S.sign (S.sum s2)) Wrong $
    if' (S.hasSignChange s1 && S.hasSignChange s2) Dirty $
    Clean
 
@@ -105,8 +108,8 @@ adjustSigns ::
   (Show (v a), DArith0 a,
   SV.Walker v, SV.Storage v a, Ord node, Show node) =>
   Topology node ->
-  FlowState node -> FlowRecord node v a -> FlowRecord node v a
-adjustSigns topo (FlowState state) (Record dt flow) =
+  State node -> FlowRecord node v a -> FlowRecord node v a
+adjustSigns topo (State state) (Record dt flow) =
    Record dt (Map.foldrWithKey g Map.empty uniquePPos)
       where m!k = checkedLookup "EFA.Graph.Flow.adjustSigns" m k
             g ppos NSign acc =
@@ -126,8 +129,8 @@ adjustSignsIgnoreUnknownPPos ::
   (Show (v a), DArith0 a,
   SV.Walker v, SV.Storage v a, Ord node, Show node) =>
   Topology node ->
-  FlowState node -> FlowRecord node v a -> FlowRecord node v a
-adjustSignsIgnoreUnknownPPos topo (FlowState state) (Record dt flow) =
+  State node -> FlowRecord node v a -> FlowRecord node v a
+adjustSignsIgnoreUnknownPPos topo (State state) (Record dt flow) =
    Record dt (Map.foldrWithKey g Map.empty uniquePPos)
       where f m lkup ppos acc =
               maybe acc (flip (Map.insert ppos) acc) (lkup ppos m)
@@ -139,38 +142,18 @@ adjustSignsIgnoreUnknownPPos topo (FlowState state) (Record dt flow) =
                       f state Map.lookup (XIdx.ppos idx1 idx2)
 
 
--- | Function to calculate flow states for the whole sequence
-genSequFState ::
-  (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
-  Sequ.List (FlowRecord node v a) -> Sequ.List (FlowState node)
-genSequFState sqFRec = fmap genFlowState sqFRec
-
 -- | Function to extract the flow state out of a Flow Record
 genFlowState ::
   (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
-  FlowRecord node v a -> FlowState node
+  FlowRecord node v a -> State node
 genFlowState (Record _time flowMap) =
-   FlowState $ Map.map (fromScalar . sigSign . S.sum) flowMap
-
--- | Function to generate Flow Topologies for all Sections
-genSequFlowTops ::
-  (Ord node, Show node) =>
-  Topology node -> Sequ.List (FlowState node) -> Sequ.List (FlowTopology node)
-genSequFlowTops topo = fmap (genFlowTopology topo)
-
-genSequFlowTopsIgnoreUnknownPPos ::
-  (Ord node, Show node) =>
-  Topology node -> Sequ.List (FlowState node) -> Sequ.List (FlowTopology node)
-genSequFlowTopsIgnoreUnknownPPos topo =
-  fmap (genFlowTopologyIgnoreUnknownPPos topo)
-
-
+   State $ Map.map (fromScalar . S.sign . S.sum) flowMap
 
 -- | Function to generate Flow Topology -- only use one state per signal
 genFlowTopology ::
   (Ord node, Show node) =>
-  Topology node -> FlowState node -> FlowTopology node
-genFlowTopology topo (FlowState fs) =
+  Topology node -> State node -> FlowTopology node
+genFlowTopology topo (State fs) =
    Graph.fromList (labNodes topo) $ map (flip (,) ()) $
    map
       (\(DirEdge idx1 idx2) ->
@@ -183,8 +166,8 @@ genFlowTopology topo (FlowState fs) =
 
 genFlowTopologyIgnoreUnknownPPos ::
   (Ord node, Show node) =>
-  Topology node -> FlowState node -> FlowTopology node
-genFlowTopologyIgnoreUnknownPPos topo (FlowState fs) =
+  Topology node -> State node -> FlowTopology node
+genFlowTopologyIgnoreUnknownPPos topo (State fs) =
    Graph.fromList (labNodes topo) $ map (flip (,) ()) $
    map
       (\(DirEdge idx1 idx2) ->
@@ -198,10 +181,22 @@ genFlowTopologyIgnoreUnknownPPos topo (FlowState fs) =
    Graph.edges topo
 
 
+adjustedTopology ::
+  (Ord node, Show node,
+   Fractional a, Ord a, BSum a, DArith0 a,
+   SV.Walker v, SV.Storage v a, Show (v a)) =>
+  Topology node -> FlowRecord node v a ->
+  (FlowTopology node, FlowRecord node v a)
+adjustedTopology topo state =
+   let flowState = genFlowState state
+   in  (genFlowTopology topo flowState,
+        adjustSigns topo flowState state)
+
+
 
 sectionFromClassTopo ::
   (Ord node) =>
-  Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
+  Idx.Section -> ClassifiedTopology node -> SeqFlowGraph node
 sectionFromClassTopo sec =
    Graph.ixmap
       (Idx.PartNode (Idx.augment sec))
@@ -234,10 +229,8 @@ getStorageSequences =
          fmap (Map.singleton s) $
          Map.mapMaybe Topo.maybeStorage $ Graph.nodeLabels g)
 
-type RangeGraph node = (Map Idx.Section S.Range, SequFlowGraph node)
 
-type FlowEdge = Topo.FlowEdge Graph.EitherEdge
-type AugNode sec = Idx.PartNode (Idx.Augmented sec)
+type RangeGraph node = (Map Idx.Section S.Range, SeqFlowGraph node)
 
 insEdges ::
    (Ord sec, Ord node) =>

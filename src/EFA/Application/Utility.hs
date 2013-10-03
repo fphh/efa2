@@ -72,19 +72,50 @@ makePPosLabelMap edgeList = Map.fromList $ concatMap f edgeList
   where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, l1),
                              (SeqIdx.ppos n2 n1, l2)]
 
+
+{- |
+Construct sequence flow graph with a single section
+containing the topology with default directions.
+-}
+seqFlowGraphFromTopology ::
+   (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
+   Topo.Topology node ->
+   SeqFlowQuant.Graph node a v
+seqFlowGraphFromTopology topo =
+   SeqFlowQuant.graphFromPlain $
+   SeqFlow.sequenceGraph $
+   Sequ.fromList $ (:[]) $
+   let flowTopo = Graph.mapEdgesMaybe (Just . Graph.EDirEdge) topo
+   in  if StateAnalysis.admissibleTopology flowTopo
+         then flowTopo
+         else error "seqFlowGraphFromTopology: topology has forbidden default edges"
+
+
+dirEdge :: node -> node -> Graph.EitherEdge node
+dirEdge x y = Graph.EDirEdge $ Graph.DirEdge x y
+
+undirEdge :: (Ord node) => node -> node -> Graph.EitherEdge node
+undirEdge x y = Graph.EUnDirEdge $ Graph.UnDirEdge x y
+
+identifyFlowState ::
+   (Ord node) =>
+   Topo.Topology node -> [Graph.EitherEdge node] -> Topo.FlowTopology node
+identifyFlowState topo givenEdges =
+   case StateAnalysis.identify topo givenEdges of
+      [] -> error "identifyFlowState: impossible given edges"
+      [flowTopo] -> flowTopo
+      _ -> error "identifyFlowState: ambiguous given edges"
+
 seqFlowGraphFromStates ::
    (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
-   Topo.Topology node -> [Int] ->
+   Topo.Topology node ->
+   [[Graph.EitherEdge node]] ->
    SeqFlowQuant.Graph node a v
 seqFlowGraphFromStates topo =
    SeqFlowQuant.graphFromPlain .
    SeqFlow.sequenceGraph .
-   fmap (StateAnalysis.bruteForce topo !!) .
+   fmap (identifyFlowState topo) .
    Sequ.fromList
-
-
-select :: [topo] -> [Int] -> Sequ.List topo
-select ts = Sequ.fromList . map (ts !!)
 
 
 checkDetermined :: String -> Result a -> a

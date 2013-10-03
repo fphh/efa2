@@ -2,15 +2,19 @@
 module EFA.Test.StateAnalysis where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-
+import qualified EFA.Graph.Topology.Count as Count
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
-import EFA.Graph.Topology (Topology)
+import EFA.Graph.Topology (Topology, FlowTopology)
+
 import qualified EFA.Utility.Map as MapU
 
 import qualified Data.List.Key as Key
+import qualified Data.List.HT as ListHT
 import qualified Data.Foldable as Fold
-import qualified Data.Map as M
-import qualified Data.Set as S
+import qualified Data.Map as Map ; import Data.Map (Map)
+import qualified Data.Set as Set
 import Data.Traversable (sequenceA)
 
 import qualified Test.QuickCheck as QC
@@ -28,20 +32,20 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
       case Graph.nodeSet g of
          ns ->
             map (ArbTopology . flip Graph.delNodeSet g .
-                 S.difference ns . S.fromList) $
-            QC.shrink $ S.toList ns
+                 Set.difference ns . Set.fromList) $
+            QC.shrink $ Set.toList ns
    arbitrary = do
       edges <-
          fmap
-            (M.fromList . take maxArbEdges . filter (not . Graph.isLoop . fst))
+            (Map.fromList . take maxArbEdges . filter (not . Graph.isLoop . fst))
             QC.arbitrary
       nodes <-
          sequenceA $ MapU.fromSet (const QC.arbitrary) $
-         Fold.foldMap (Fold.foldMap S.singleton) $
-         M.keys edges
+         Fold.foldMap (Fold.foldMap Set.singleton) $
+         Map.keys edges
       return $ ArbTopology $
          Graph.fromMap nodes $
-         M.mapKeys (\(Graph.UnDirEdge x y) -> Graph.DirEdge x y) edges
+         Map.mapKeys (\(Graph.UnDirEdge x y) -> Graph.DirEdge x y) edges
 
 
 type Node = Int
@@ -59,9 +63,21 @@ Instead I use this function locally for 'Key.sort'.
 graphIdent ::
    (Ord node) =>
    Graph node Graph.EitherEdge nodeLabel edgeLabel ->
-   (M.Map node nodeLabel,
-    M.Map (Graph.EitherEdge node) edgeLabel)
+   (Map node nodeLabel,
+    Map (Graph.EitherEdge node) edgeLabel)
 graphIdent g = (Graph.nodeLabels g, Graph.edgeLabels g)
+
+
+prop_admissible :: ArbTopology Node -> Bool
+prop_admissible (ArbTopology g) =
+   Fold.all StateAnalysis.admissibleTopology $
+   StateAnalysis.branchAndBound g
+
+prop_checkNode :: Node.Type () -> Bool -> Bool -> Bool
+prop_checkNode nt sucActive preActive =
+   StateAnalysis.checkNodeType nt sucActive preActive
+   ==
+   Count.checkNodeType nt True sucActive preActive
 
 {-
 I do not convert to Set, but use 'sort' in order to check for duplicates.
@@ -116,6 +132,60 @@ speed_clustering (ArbTopology g) =
 speed_setCover :: ArbTopology Node -> Bool
 speed_setCover (ArbTopology g) =
    StateAnalysis.setCover g == StateAnalysis.setCover g
+
+
+
+newtype ArbFlowTopology node = ArbFlowTopology (FlowTopology node)
+   deriving (Show)
+
+instance
+   (QC.Arbitrary node, Ord node) =>
+      QC.Arbitrary (ArbFlowTopology node) where
+   arbitrary =
+      let try = do
+             ArbTopology topo <- QC.arbitrary
+             let flowTopos = StateAnalysis.advanced topo
+             if null flowTopos
+               then try
+               else fmap ArbFlowTopology $ QC.elements flowTopos
+      in  try
+
+prop_identifyProjective :: ArbFlowTopology Node -> Bool
+prop_identifyProjective (ArbFlowTopology g) =
+   [g] ==
+      (StateAnalysis.identify (Topo.plainFromFlow g) $
+       Graph.edges g)
+
+prop_identifySelf :: Int -> ArbFlowTopology Node -> Bool
+prop_identifySelf n (ArbFlowTopology g) =
+   elem g $
+   StateAnalysis.identify (Topo.plainFromFlow g) $
+   take n $ Graph.edges g
+
+prop_minimalGivenUnique :: ArbFlowTopology Node -> Bool
+prop_minimalGivenUnique (ArbFlowTopology g) =
+   Fold.and $ Map.fromListWith (\_ _ -> False) $
+   map (flip (,) True) $ StateAnalysis.minimalGiven g
+
+prop_minimalGivenDuplicate :: ArbFlowTopology Node -> Bool
+prop_minimalGivenDuplicate (ArbFlowTopology g) =
+   Set.fromList (StateAnalysis.minimalGiven g)
+   ==
+   Set.fromList (StateAnalysis.minimalGivenDuplicate g)
+
+prop_minimalGivenIdentifies :: ArbFlowTopology Node -> Bool
+prop_minimalGivenIdentifies (ArbFlowTopology g) =
+   Fold.all (\es -> StateAnalysis.identify (Topo.plainFromFlow g) es == [g]) $
+   StateAnalysis.minimalGiven g
+
+prop_minimalGivenMinimal :: ArbFlowTopology Node -> Bool
+prop_minimalGivenMinimal (ArbFlowTopology g) =
+   Fold.all
+      (Fold.all
+         (ListHT.lengthAtLeast 2 .
+          StateAnalysis.identify (Topo.plainFromFlow g) . snd) .
+       ListHT.removeEach) $
+   StateAnalysis.minimalGiven g
 
 
 runTests :: IO Bool

@@ -4,10 +4,10 @@ module EFA.Graph.Draw (
   fig, dot,
   title, bgcolour,
 
-  sequFlowGraph,
-  sequFlowGraphWithEnv,
-  sequFlowGraphAbsWithEnv,
-  sequFlowGraphDeltaWithEnv,
+  seqFlowGraph,
+  seqFlowGraphWithEnv,
+  seqFlowGraphAbsWithEnv,
+  seqFlowGraphDeltaWithEnv,
 
   stateFlowGraph,
   stateFlowGraphWithEnv,
@@ -136,7 +136,7 @@ data StructureEdgeShow part node =
 type StorageEdgeShow part node =
         Idx.ForNode (Idx.StorageEdge part) node -> [Unicode]
 
-dotFromSequFlowGraph ::
+dotFromSeqFlowGraph ::
   (Node.C node) =>
   Flow.RangeGraph node ->
   Maybe (Idx.Section -> Unicode) ->
@@ -145,7 +145,7 @@ dotFromSequFlowGraph ::
   StructureEdgeShow Idx.Section node ->
   Maybe (StorageEdgeShow Idx.Section node) ->
   DotGraph T.Text
-dotFromSequFlowGraph (rngs, g)
+dotFromSeqFlowGraph (rngs, g)
     mtshow nshow storeNShow structEShow storeEShow =
        dotDirGraph stmts
 
@@ -526,11 +526,11 @@ dotIdentFromEtaNode (Idx.PartNode s x) (Idx.PartNode _s y) =
 dotIdentFromNode :: (Node.C node) => node -> T.Text
 dotIdentFromNode n = T.pack $ Node.dotId n
 
-sequFlowGraph ::
+seqFlowGraph ::
   (Node.C node) =>
   Flow.RangeGraph node -> DotGraph T.Text
-sequFlowGraph topo =
-  dotFromSequFlowGraph topo Nothing nshow Nothing
+seqFlowGraph topo =
+  dotFromSeqFlowGraph topo Nothing nshow Nothing
      (HideEtaNode $ const []) (Just $ const [])
   where nshow _before (Idx.PartNode _ n, l) = formatTypedNode (n,l)
 
@@ -891,13 +891,13 @@ lookupFormatAssign opts mp makeIdx x =
                else Format.edgeIdent idx)
             (lookupFormat opts mp idx)
 
-sequFlowGraphWithEnv ::
+seqFlowGraphWithEnv ::
   (FormatValue a, FormatValue v, Node.C node) =>
   Options Unicode -> Flow.RangeGraph node ->
   Env.Complete node a v -> DotGraph T.Text
-sequFlowGraphWithEnv opts g
+seqFlowGraphWithEnv opts g
     (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n dt x _s)) =
-  dotFromSequFlowGraph g (Just formatTime)
+  dotFromSeqFlowGraph g (Just formatTime)
     formatNode (toMaybe (optStorage opts) formatStorageContent)
     (structureEdgeShow opts e x n)
     (toMaybe (optStorageEdge opts) storeEShow)
@@ -923,20 +923,20 @@ sequFlowGraphWithEnv opts g
                  formatStX (Idx.flip te) :
                  []
 
-sequFlowGraphAbsWithEnv ::
+seqFlowGraphAbsWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Flow.RangeGraph node ->
    Env.Complete node a v ->
    DotGraph T.Text
-sequFlowGraphAbsWithEnv =
-   sequFlowGraphWithEnv $ absoluteVariable optionsDefault
+seqFlowGraphAbsWithEnv =
+   seqFlowGraphWithEnv $ absoluteVariable optionsDefault
 
-sequFlowGraphDeltaWithEnv ::
+seqFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Flow.RangeGraph node ->
    Env.Complete node a v -> DotGraph T.Text
-sequFlowGraphDeltaWithEnv =
-   sequFlowGraphWithEnv $ deltaVariable optionsDefault
+seqFlowGraphDeltaWithEnv =
+   seqFlowGraphWithEnv $ deltaVariable optionsDefault
 
 
 stateFlowGraphWithEnv ::

@@ -13,7 +13,7 @@ import EFA.Application.NestedDelta
            givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
-import EFA.Application.Utility (seqFlowGraphFromStates)
+import EFA.Application.Utility (seqFlowGraphFromTopology)
 
 import qualified EFA.Flow.Sequence.AssignMap as SeqFlowAssignMap
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys
@@ -150,14 +150,14 @@ mainSymbolic = do
 
    let solved =
           EqSys.solve
-             (seqFlowGraphFromStates LinearTwo.topology [0])
+             (seqFlowGraphFromTopology LinearTwo.topology)
              givenSymbolic
 
    putStrLn $ Format.unUnicode $ Format.lines $
       SeqFlowAssignMap.format $ SeqFlow.toAssignMap $
       SeqFlow.mapGraph Record.summands simplifiedSummands solved
 
-   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault $
+   Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault $
       SeqFlow.mapGraph
          (Record.Absolute . Record.summands)
          (Record.Absolute . simplifiedSummands)
@@ -201,7 +201,7 @@ mainNumeric = do
 
    let solved =
           EqSys.solve
-             (seqFlowGraphFromStates LinearTwo.topology [0])
+             (seqFlowGraphFromTopology LinearTwo.topology)
              givenNumeric
 
    case SeqFlow.lookupEnergy eout solved of

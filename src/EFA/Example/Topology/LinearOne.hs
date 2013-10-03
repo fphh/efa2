@@ -8,12 +8,12 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Report.Format as Format
 
 
-data Node = Sink | Source deriving (Ord, Eq, Enum, Show)
+data Node = Source | Sink deriving (Ord, Eq, Enum, Show)
 
 instance Node.C Node where
-   display = Node.displayDefault
-   subscript Source = Format.integer 0
-   subscript Sink = Format.integer 1
+   display Source   = Format.literal "Quelle"
+   display Sink     = Format.literal "Senke"
+   subscript = Format.integer . fromIntegral . fromEnum
    dotId = Node.dotIdDefault
 
    typ Source = Node.AlwaysSource
@@ -21,4 +21,4 @@ instance Node.C Node where
 
 
 topology :: Topo.Topology Node
-topology = topologyFromEdges [(Sink, Source)]
+topology = topologyFromEdges [(Source, Sink)]

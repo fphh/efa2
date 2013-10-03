@@ -5,7 +5,7 @@ module EFA.Flow.Draw (
    fig, dot,
    title, bgcolour,
 
-   sequFlowGraph,
+   seqFlowGraph,
    stateFlowGraph,
 
    Options, optionsDefault,
@@ -656,10 +656,10 @@ hideEtaNode opts = opts { optEtaNode = False }
 
 
 
-sequFlowGraph ::
+seqFlowGraph ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Options Unicode -> SeqFlowQuant.Graph node a v -> DotGraph T.Text
-sequFlowGraph opts gr =
+seqFlowGraph opts gr =
    dotFromFlowGraph
       (if optStorage opts
          then
@@ -694,9 +694,9 @@ sequFlowGraph opts gr =
                         in  (content before,
                              content $ Idx.afterSection sec))
                        (fmap SeqFlowQuant.carrySum $
-                        SeqFlowQuant.sumOut sums)
+                        SeqFlowQuant.sumIn sums)
                        (fmap SeqFlowQuant.carrySum $
-                        SeqFlowQuant.sumIn sums)) $
+                        SeqFlowQuant.sumOut sums)) $
               Graph.mapEdgeWithKey
                  (\edge ->
                     if optEtaNode opts

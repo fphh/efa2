@@ -18,13 +18,13 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Sequence as Sequ
--- import qualified EFA.Signal.Plot as Plot
-import EFA.Signal.Chop (makeSeqFlowTopology)
 import EFA.Signal.Signal (TC, Scalar,toScalar)
 import EFA.Signal.Data (Data, Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
 
@@ -53,6 +53,7 @@ import System.FilePath ((</>))
 -- import qualified Data.Map as Map
 import qualified Data.List.HT as ListHT
 import qualified Data.List as List
+import Control.Monad (when)
 import Data.Tuple.HT (mapSnd)
 
 
@@ -245,8 +246,11 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * State Analysis
 
---  putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))
---  Draw.flowTopologies (take 20 System.flowStates)
+  when False $ do
+    let flowStates :: [Topo.FlowTopology System.Node]
+        flowStates = StateAnalysis.advanced System.topology
+    putStrLn ("Number of possible flow states: " ++ show (length flowStates))
+    Draw.xterm $ Draw.flowTopologies $ take 20 flowStates
 
 ---------------------------------------------------------------------------------------
 -- * Import signals from Csv-file
@@ -257,32 +261,25 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
 
-
-  let preProcessedDataX =
+  let (_,sequenceFlowsFiltUnmappedX,flowToposUnmappedX,powerSignalsX,signalsX) =
+        List.unzip5 $
         map (Analysis.pre System.topology zeroNoiseToleranz sectionFilterTime sectionFilterEnergy) rawSignalsX
+--  let (sequencePowersFiltX,sequenceFlowsFiltX,flowToposX,powerSignalsX,signalsX) = List.unzip5 preProcessedDataX
 
-  let (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) =
-        List.unzip5 preProcessedDataX
---  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = List.unzip5 preProcessedDataX
-
-  let allSignalsX = zipWith (Record.combinePowerAndSignalWithFunction System.convertPowerId) powerSignalsX signalsX
+  let _allSignalsX = zipWith (Record.combinePowerAndSignalWithFunction System.convertPowerId) powerSignalsX signalsX
 
 ---------------------------------------------------------------------------------------
 -- *  ReIndex Sequences to allow Sequence Matching
 
   let sequenceFlowsFiltX = sectionMapping sequenceFlowsFiltUnmappedX
 
-  let flowStatesX = sectionMapping flowStatesUnmappedX
+  let flowToposX = sectionMapping flowToposUnmappedX
 
-  ---------------------------------------------------------------------------------------
--- *  Generate Flow States as Graphs
-
-  let flowToposX = map (Flow.genSequFlowTops System.topology) flowStatesX
 
 ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
 
-  let sequenceFlowTopologyX = map makeSeqFlowTopology flowToposX
+  let sequenceFlowTopologyX = map Flow.sequenceGraph flowToposX
 
 ---------------------------------------------------------------------------------------
 -- *  Section Flow States as Graphs
@@ -303,10 +300,6 @@ main = do
 
   ---------------------------------------------------------------------------------------
 -- *  Make the Deltas for subsequent Datasets
-
---  let externalDeltaEnvX =
---        zipWith (flip Analysis.delta (head sequenceFlowsFiltX))
---                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
 
   let externalDeltaEnvX =
         ListHT.mapAdjacent
@@ -338,12 +331,12 @@ main = do
           Draw.dot (ti ++ "vehicle_delta.dot") $
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphDeltaWithEnv topo env
+          Draw.seqFlowGraphDeltaWithEnv topo env
       drawAbs (Record.Name ti) topo env c =
           Draw.dot (ti++"vehicle.dot")$
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphAbsWithEnv topo env
+          Draw.seqFlowGraphAbsWithEnv topo env
 
 
 

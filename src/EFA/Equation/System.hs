@@ -596,7 +596,7 @@ fromGraph ::
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  Topo.DirSequFlowGraph node -> EquationSystem mode rec node s a v
+  Topo.DirSeqFlowGraph node -> EquationSystem mode rec node s a v
 fromGraph equalInOutSums g = mconcat $
   fromEdges (Graph.edges g) :
   fromNodes equalInOutSums g :
@@ -626,7 +626,7 @@ fromNodes ::
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  Topo.DirSequFlowGraph node -> EquationSystem mode rec node s a v
+  Topo.DirSeqFlowGraph node -> EquationSystem mode rec node s a v
 fromNodes equalInOutSums =
   fold . Map.mapWithKey f . Graph.nodeEdges
    where f an (ins, nodeType, outs) =
@@ -692,7 +692,7 @@ fromStorageSequences ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
-  Topo.DirSequFlowGraph node -> EquationSystem mode rec node s a v
+  Topo.DirSeqFlowGraph node -> EquationSystem mode rec node s a v
 fromStorageSequences =
    let f xs =
           let charge old now (Idx.PartNode aug n, dir) =
@@ -725,7 +725,7 @@ withNode f sec node = f $ Idx.PartNode sec node
 -- Storages must not have more than one in or out edge.
 getStorageSequences ::
   (Node.C node) =>
-  Topo.DirSequFlowGraph node ->
+  Topo.DirSeqFlowGraph node ->
   Map node (Map (Idx.AugSecNode node) (Maybe Topo.StoreDir))
 getStorageSequences =
   MapU.curry "EquationSystem.getStorageSequences"

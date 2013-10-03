@@ -8,7 +8,7 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
-import EFA.Signal.Signal (SignalIdx, Range(Range))
+import EFA.Signal.Signal (Range(Range))
 
 import qualified EFA.Report.Report as Report
 import EFA.Report.Report (Table, toDoc, autoFormat)
@@ -42,11 +42,6 @@ newtype List a = List [Section a] deriving (Show, Eq)
 data Section a = Section Idx.Section Range a
    deriving (Eq, Show)
 
-rangeSingleton :: SignalIdx -> Range
-rangeSingleton n = Range n n
-
-rangeIsSingleton :: Range -> Bool
-rangeIsSingleton (Range from to) = from==to
 
 type instance D.Value (List a) = D.Value a
 
@@ -76,7 +71,7 @@ fromList =
    zipWith
       (\s ->
          Section (Idx.Section s)
-            (rangeSingleton $ S.SignalIdx $ fromIntegral s))
+            (S.rangeSingleton $ S.SignalIdx $ fromIntegral s))
       [0 ..]
 
 fromRangeList :: [(Range, a)] -> List a

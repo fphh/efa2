@@ -1,15 +1,20 @@
 module Modules.System where
 
 import qualified EFA.Application.Utility as AppUt
+import EFA.Application.Utility (identifyFlowState, dirEdge)
+
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence as SeqFlowPlain
 
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Flow as Flow
 
+import qualified EFA.Signal.Sequence as Sequ
 import EFA.Signal.Record (SigId(SigId))
+import EFA.Signal.Data (Data, Nil)
 
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -92,14 +97,6 @@ convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
     f (Just sid) = sid
     f Nothing = SigId (show ppos)
 
-----------------------------------------------------------------------
--- * Calculate Flow States
-
-flowStates :: [Topo.FlowTopology Node]
-flowStates = StateAnalysis.advanced topology
-
-
-
 
 ----------------------------------------------------------------------
 -- | Topology for Optimisation
@@ -114,9 +111,6 @@ edgeListOpt = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
                (Gas, LocalNetwork,"GasPlant","Gas","ElGas"),
                (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
 
-flowStatesOpt :: [Topo.FlowTopology Node]
-flowStatesOpt = StateAnalysis.advanced topologyOpt
-
 edgeNamesOpt :: Map (Node, Node) String
 edgeNamesOpt = Map.fromList el
   where el = map f edgeListOpt
@@ -125,5 +119,20 @@ edgeNamesOpt = Map.fromList el
 ----------------------------------------------------------------------
 -- | SequenceTopology for Optimisation
 
-seqTopoOpt :: Flow.RangeGraph Node
-seqTopoOpt = Flow.sequenceGraph (AppUt.select flowStatesOpt [4,0])
+flowState0, flowState4 :: Topo.FlowTopology Node
+flowState0 =
+   identifyFlowState topologyOpt
+      [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork,
+       dirEdge Water Network]
+
+flowState4 =
+   identifyFlowState topologyOpt
+      [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork,
+       dirEdge Network Water]
+
+seqTopoOpt ::
+   SeqFlow.Graph Node (Result (Data Nil Double)) (Result (Data Nil Double))
+seqTopoOpt =
+   SeqFlow.graphFromPlain $
+   SeqFlowPlain.sequenceGraph $
+   Sequ.fromList [flowState4, flowState0]
