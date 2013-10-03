@@ -19,7 +19,7 @@ module EFA.Application.Plot (
 --   sequenceSelect,
    stack,
    stacks,
-   stackfromEnv,
+   stackFromEnv,
    recordStackRow,
    sectionStackRow,
    etaDistr1Dim,
@@ -42,13 +42,13 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Typ (TDisp)
 
-import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Record as EqRecord
-import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Result (Result)
+import EFA.Equation.Stack (Stack)
+
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as TDNode
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Advanced as Plot
@@ -64,9 +64,8 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
 
-import qualified Data.Map as Map
+import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
-import Data.Map (Map)
 
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
@@ -380,8 +379,10 @@ sequenceSplit n ti term showKey opts =
 stack ::
    (FormatValue term, Show term, Ord term) =>
    String -> Format.ASCII -> Map term Double -> IO ()
-stack title var m =
-   void .  Plot.plotSync DefaultTerm.cons . Frame.cons (Plot.stackFrameAttr title var) . Plot.stack $ m
+stack title var =
+   void .
+   Plot.plotSync DefaultTerm.cons . Frame.cons (Plot.stackFrameAttr title var) .
+   Plot.stack
 
 
 {- |
@@ -390,48 +391,48 @@ The length of @[var]@ must match the one of the @[Double]@ lists.
 stacks ::
    (Ord term, FormatValue term, Show term) =>
    String -> [Format.ASCII] -> Map term [Double] -> IO ()
-stacks title vars xs =
+stacks title vars =
    void . Plot.plotSync DefaultTerm.cons .
-   Frame.cons (Plot.stacksFrameAttr title vars) . Plot.stacks $ xs
+   Frame.cons (Plot.stacksFrameAttr title vars) . Plot.stacks
 
 
-stackfromEnv:: (Show node, Ord i, FormatValue i, TDNode.C node, Show i) =>
-        String ->
-        XIdx.Energy node ->
-        Double ->
-        (Record.DeltaName, Env.Complete
-        node t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
-        IO ()
+stackFromEnv ::
+   (Node.C node, Show i, Ord i, FormatValue i) =>
+   String ->
+   XIdx.Energy node ->
+   Double ->
+   (Record.DeltaName,
+    Env.Complete node t (Result (Stack i Double))) ->
+   IO ()
 
-stackfromEnv ti energyIndex eps (Record.DeltaName recName, env) = do
-  stack ("Record " ++ recName ++ "-" ++ ti)
-    (formatValue $ Idx.delta $ Var.index energyIndex)
-    (AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env)
+stackFromEnv ti energyIndex eps (Record.DeltaName recName, env) = do
+   stack ("Record " ++ recName ++ "-" ++ ti)
+      (formatValue $ Idx.delta $ Var.index energyIndex)
+      (AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env)
 
-recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
-                            String
-                            -> [Record.DeltaName]
-                            -> XIdx.Energy node
-                            -> Double
-                            -> [Env.Complete node t
-                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
-                            -> IO ()
+recordStackRow ::
+   (Node.C node, Show i, Ord i, FormatValue i) =>
+   String ->
+   [Record.DeltaName] ->
+   XIdx.Energy node ->
+   Double ->
+   [Env.Complete node t (Result (Stack i Double))] ->
+   IO ()
 
-recordStackRow ti deltaSets energyIndex eps envs =
+recordStackRow ti deltaSets energyIndex eps =
    stacks ti
-   (map (Format.literal . (\ (Record.DeltaName x) -> x)) deltaSets)
-   (AssignMap.simultaneousThreshold eps .
+      (map (Format.literal . (\ (Record.DeltaName x) -> x)) deltaSets) .
+   AssignMap.simultaneousThreshold eps .
    AssignMap.transpose .
    map (AssignMap.lookupStack energyIndex)
-    $ envs)
 
-sectionStackRow:: (Ord node, TDNode.C node,Show i, Ord i, FormatValue i) =>
-                  String
-                  -> Idx.Energy node
-                  -> Double
-                  -> Env.Complete node t
-                         (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
-                  -> IO ()
+sectionStackRow ::
+   (Node.C node, Show i, Ord i, FormatValue i) =>
+   String ->
+   Idx.Energy node ->
+   Double ->
+   Env.Complete node t (Result (Stack i Double)) ->
+   IO ()
 sectionStackRow ti energyIndex eps env =
    case unzip $ Map.toList $ AssignMap.lookupEnergyStacks energyIndex env of
       (idxs, energyStacks) ->
@@ -440,13 +441,12 @@ sectionStackRow ti energyIndex eps env =
          map (Map.mapKeys AssignMap.deltaIndexSet) energyStacks
 
 aggregatedStack ::
-   (TDNode.C node, Ord node, Show node,
+   (Node.C node, Show node,
     Ord i, Show i, FormatValue i) =>
    String ->
    Idx.Energy node ->
    Double ->
-   Env.Complete node t
-      (EqRecord.Absolute (Result.Result (Stack.Stack i Double))) ->
+   Env.Complete node t (Result (Stack i Double)) ->
    IO ()
 
 aggregatedStack ti energyIndex eps env =

@@ -2,18 +2,19 @@
 
 module EFA.Application.AssignMap where
 
-import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Record as EqRecord
+import EFA.Equation.Arithmetic ((~+))
+import EFA.Equation.Result (Result)
+import EFA.Equation.Stack (Stack)
+
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Report.Format as Format
 
-import EFA.Equation.Result (Result)
-import EFA.Equation.Arithmetic ((~+))
+import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format)
 
@@ -137,15 +138,14 @@ stripSection =
 lookupStack ::
    (Ord i, Node.C node) =>
    SeqIdx.Energy node ->
-   Env.Complete
-      node t (EqRecord.Absolute (Result.Result (Stack.Stack i a))) ->
+   Env.Complete node t (Result (Stack i a)) ->
    Map.Map (IndexSet i) a
 lookupStack energyIndex (Env.Complete _scalarEnv signalEnv) =
   let eidxName = Format.unUnicode (formatValue energyIndex)
   in  case Map.lookup energyIndex (Env.energyMap signalEnv) of
         Nothing -> error (eidxName ++ " undefined")
         Just d ->
-          case EqRecord.unAbsolute d of
+          case d of
             Result.Undetermined -> error (eidxName ++ "undetermined")
             Result.Determined xs ->
               Map.mapKeys deltaIndexSet $
@@ -154,13 +154,11 @@ lookupStack energyIndex (Env.Complete _scalarEnv signalEnv) =
 lookupEnergyStacks ::
    (Ord i, Ord node, a ~ Arith.Scalar v, Arith.Integrate v) =>
    Idx.Energy node ->
-   Env.Complete node t
-      (EqRecord.Absolute (Result.Result (Stack.Stack i v))) ->
+   Env.Complete node t (Result (Stack i v)) ->
    Map Idx.Section (Map (Map i Stack.Branch) a)
 lookupEnergyStacks e0 =
    fmap (Stack.assignDeltaMap . Arith.integrate) .
    Map.mapMaybe Result.toMaybe .
-   fmap EqRecord.unAbsolute .
    Map.mapKeys (\(Idx.InPart sec _) -> sec) .
    Map.filterWithKey (\(Idx.InPart _sec e) _ -> e == e0) .
    Env.energyMap . Env.signal

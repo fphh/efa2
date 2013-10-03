@@ -13,7 +13,6 @@ import EFA.Application.Absolute ((.=))
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
-import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
@@ -120,7 +119,7 @@ pre topology epsZero epsT epsE rawSignals =
 2. switch to dTime with fmap Record.diffTime
 2. make delta - Analysis from two envs
 
-external sequenceFlowTopology seqFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute seqFlowRecord
+external sequenceFlowTopology seqFlowRecord =  EqSys.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute seqFlowRecord
 
 initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
@@ -234,9 +233,10 @@ makeGivenForPrediction (Env.Complete _scal sig) =
 
 type
    EquationSystemNumeric s =
-      EqAbs.EquationSystem System.Node s
-         (Stack (Var.SectionAny System.Node) Double)
-         (Stack (Var.SectionAny System.Node) Double)
+      EqAbs.EquationSystem System.Node s StackDouble StackDouble
+
+type DeltaDouble = EqRecord.Delta Double
+type StackDouble = Stack (Var.SectionAny System.Node) Double
 
 
 deltaPair ::
@@ -244,8 +244,6 @@ deltaPair ::
    Idx.InSection idx System.Node -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delt =
    idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delt
-
-type DeltaDouble = EqRecord.Delta Double
 
 stackFromDeltaMap ::
    (Ord (idx System.Node), Env.AccessSignalMap idx, FormatSignalIndex idx) =>
@@ -258,11 +256,9 @@ stackFromDeltaMap =
 difference ::
    Flow.RangeGraph System.Node ->
    Env.Complete System.Node DeltaDouble DeltaDouble ->
-   Env.Complete System.Node
-      (EqRecord.Absolute (Result (Stack (Var.SectionAny System.Node) Double)))
-      (EqRecord.Absolute (Result (Stack (Var.SectionAny System.Node) Double)))
+   Env.Complete System.Node (Result StackDouble) (Result StackDouble)
 difference sequenceFlowTopology env =
-  EqGen.solve sequenceFlowTopology (makeGivenForDifferentialAnalysis env)
+  EqAbs.solve sequenceFlowTopology (makeGivenForDifferentialAnalysis env)
 
 makeGivenForDifferentialAnalysis ::
   Env.Complete System.Node DeltaDouble DeltaDouble ->
