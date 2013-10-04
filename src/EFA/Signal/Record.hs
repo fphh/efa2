@@ -134,14 +134,6 @@ mapWithKey ::
    Record s s0 t t0 id v d1 d2 ->
    Record s s1 t t1 id v d1 d2
 mapWithKey f (Record t ma) = Record t (Map.mapWithKey f ma)
------------------------------------------------------------------------------------
--- | Indice Record Number
-
-data Idx = Idx Int | NoIdx
-
-instance Show Idx where
-  show (Idx x) = "Rec" ++ show x
-  show NoIdx = ""
 
 
 
