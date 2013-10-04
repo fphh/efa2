@@ -186,6 +186,38 @@ intCrossing      n = IntCrossing      (NodeInt.Crossing n)
 intDeadNode      n = IntDeadNode      (NodeInt.DeadNode n)
 intNoRestriction n = IntNoRestriction (NodeInt.NoRestriction n)
 
+instance QC.Arbitrary Int where
+   arbitrary =
+      QC.oneof $
+         fmap IntSink QC.arbitrary :
+         fmap IntAlwaysSink QC.arbitrary :
+         fmap IntSource QC.arbitrary :
+         fmap IntAlwaysSource QC.arbitrary :
+         fmap IntCrossing QC.arbitrary :
+         fmap IntDeadNode QC.arbitrary :
+         fmap IntNoRestriction QC.arbitrary :
+         []
+
+   shrink node =
+      case node of
+         IntNoRestriction _ -> []
+         IntAlwaysSink    n -> [IntSink   $ toEnum $ fromEnum n]
+         IntAlwaysSource  n -> [IntSource $ toEnum $ fromEnum n]
+         IntStorage       n -> [IntNoRestriction $ toEnum $ fromEnum n]
+         IntSink          n -> [IntNoRestriction $ toEnum $ fromEnum n]
+         IntSource        n -> [IntNoRestriction $ toEnum $ fromEnum n]
+         IntCrossing      n -> [IntNoRestriction $ toEnum $ fromEnum n]
+         IntDeadNode      n -> [IntNoRestriction $ toEnum $ fromEnum n]
+      ++
+      case node of
+         IntStorage       n -> map IntStorage       $ QC.shrink n
+         IntSink          n -> map IntSink          $ QC.shrink n
+         IntAlwaysSink    n -> map IntAlwaysSink    $ QC.shrink n
+         IntSource        n -> map IntSource        $ QC.shrink n
+         IntAlwaysSource  n -> map IntAlwaysSource  $ QC.shrink n
+         IntCrossing      n -> map IntCrossing      $ QC.shrink n
+         IntDeadNode      n -> map IntDeadNode      $ QC.shrink n
+         IntNoRestriction n -> map IntNoRestriction $ QC.shrink n
 
 
 data String = String (Type ()) P.String deriving (Show, Eq, Ord)
