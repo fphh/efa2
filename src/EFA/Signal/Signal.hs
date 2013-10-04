@@ -14,7 +14,7 @@ import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Base as B
 import EFA.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L)
-import EFA.Signal.Base (BSum(..), BProd(..), DArith0(..), Val, ZeroCrossing)
+import EFA.Signal.Base (BSum(..), BProd(..), DArith0(..), ZeroCrossing)
 import EFA.Signal.Typ
 import EFA.Report.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
 import EFA.Report.Base
@@ -50,7 +50,8 @@ import Prelude
           (Show, Read, Eq, Ord, Maybe, Bool, error, fmap,
            Enum, toEnum, fromEnum,
            String, (++),
-           Int, Num, Fractional, fromRational, (+), (-), (/), (*), fromIntegral)
+           Int, Double,
+           Num, Fractional, fromRational, (+), (-), (/), (*), fromIntegral)
 import qualified Prelude as P
 import Data.Maybe as Maybe
 
@@ -387,17 +388,16 @@ type PTestRow2 v2 v1 a = TC TestRow (Typ A P Tt)  (Data (v2 :> v1 :> Nil) a)
 
 -- generic Type Synonyms
 
-type Scal typ a = TC Scalar typ (DVal a)
-type DVal = D.Scalar
+type Scal typ a = TC Scalar typ (D.Scalar a)
 
-type Sc = Scal (Typ UT UT UT) Val
+type Sc = Scal (Typ UT UT UT) Double
 
 type Sig1 typ a = TC Signal typ (UVec a)
 type Sig2 typ a = TC Signal typ (Vec2 a)
 type Sig1L typ a = TC Signal typ (List a)
 type Sig2L typ a = TC Signal typ (List2 a)
 
-type Samp typ a = TC Sample typ (DVal a)
+type Samp typ a = TC Sample typ (D.Scalar a)
 type Samp1L typ a = TC Sample typ (List a)
 
 type FSig1 typ a = TC FSignal typ (UVec a)
@@ -405,7 +405,7 @@ type FSig2 typ a = TC FSignal typ (Vec2 a)
 type FSig1L typ a = TC FSignal typ (List a)
 type FSig2L typ a = TC FSignal typ (List2 a)
 
-type Test typ a = TC TestRow typ (DVal a)
+type Test typ a = TC TestRow typ (D.Scalar a)
 type Test1 typ a = TC TestRow typ (UVec a)
 type Test2 typ a = TC TestRow typ (UVec2 a)
 type Test1L typ a = TC TestRow typ (List a)
@@ -418,96 +418,96 @@ type Test2L typ a = TC TestRow typ (List2 a)
 -- #######################
 -- Time Signals
 -- time
-type TSig = Sig1 (Typ A T Tt) Val
-type TSigL = Sig1L (Typ A T Tt) Val
+type TSig = Sig1 (Typ A T Tt) Double
+type TSigL = Sig1L (Typ A T Tt) Double
 
 --power
-type PSig = Sig1 (Typ A P Tt) Val
-type PSig2 = Sig2 (Typ A P Tt) Val
-type PSigL = Sig1L (Typ A P Tt) Val
-type PSig2L = Sig2L (Typ A P Tt) Val
+type PSig = Sig1 (Typ A P Tt) Double
+type PSig2 = Sig2 (Typ A P Tt) Double
+type PSigL = Sig1L (Typ A P Tt) Double
+type PSig2L = Sig2L (Typ A P Tt) Double
 
 
 -- untyped
-type UTSig = Sig1 (Typ UT UT UT) Val
-type UTSigL = Sig1L (Typ UT UT UT) Val
+type UTSig = Sig1 (Typ UT UT UT) Double
+type UTSigL = Sig1L (Typ UT UT UT) Double
 
 -- #######################
 -- Time Samples
 -- Time Sample
-type DTSampleL = TC Sample (Typ D T Tt) (List Val)
-type DTSamp =  TC Sample (Typ D T Tt) (DVal Val)
-type TSamp =  TC Sample (Typ A T Tt) (DVal Val)
-type TSamp1 =  TC Sample (Typ A T Tt) (UVec Val)
-type TSamp1L =  TC Sample (Typ A T Tt) (List Val)
+type DTSampleL = TC Sample (Typ D T Tt) (List Double)
+type DTSamp =  TC Sample (Typ D T Tt) (D.Scalar Double)
+type TSamp =  TC Sample (Typ A T Tt) (D.Scalar Double)
+type TSamp1 =  TC Sample (Typ A T Tt) (UVec Double)
+type TSamp1L =  TC Sample (Typ A T Tt) (List Double)
 type TZeroSamp = TC Sample (Typ A T Tt) (Data Nil ZeroCrossing)
 type TZeroSamp1L = TC Sample (Typ A T Tt) (Data ([] :> Nil) ZeroCrossing)
 
-type PSamp2 = TC Sample (Typ A P Tt) (UVec2 Val)
-type PSamp1 =  TC Sample (Typ A P Tt) (UVec Val)
-type PSamp1L =  TC Sample (Typ A P Tt) (List Val)
-type PSamp2L = TC Sample (Typ A P Tt) (UVec2L Val)
-type PSamp2LL = TC Sample (Typ A P Tt) (List2 Val)
-type PSamp = TC Sample (Typ A P Tt) (DVal Val)
+type PSamp2 = TC Sample (Typ A P Tt) (UVec2 Double)
+type PSamp1 =  TC Sample (Typ A P Tt) (UVec Double)
+type PSamp1L =  TC Sample (Typ A P Tt) (List Double)
+type PSamp2L = TC Sample (Typ A P Tt) (UVec2L Double)
+type PSamp2LL = TC Sample (Typ A P Tt) (List2 Double)
+type PSamp = TC Sample (Typ A P Tt) (D.Scalar Double)
 
 
 -- #######################
 -- Flow Signals
 
 -- time
-type DTFSig = FSig1 (Typ D T Tt) Val
+type DTFSig = FSig1 (Typ D T Tt) Double
 
 -- energy Flow
-type FFSig = FSig1 (Typ A F Tt) Val
-type FFSig2 = FSig2 (Typ A F Tt) Val
-type FFSigL = FSig1L (Typ A F Tt) Val
-type FFSig2L = FSig2L (Typ A F Tt) Val
+type FFSig = FSig1 (Typ A F Tt) Double
+type FFSig2 = FSig2 (Typ A F Tt) Double
+type FFSigL = FSig1L (Typ A F Tt) Double
+type FFSig2L = FSig2L (Typ A F Tt) Double
 
 -- mean Power
-type PFSig = FSig1 (Typ A P Tt) Val
-type PFSig2 = FSig2 (Typ A P Tt) Val
-type PFSigL = FSig1L (Typ A P Tt) Val
-type PFSig2L = FSig2L (Typ A P Tt) Val
+type PFSig = FSig1 (Typ A P Tt) Double
+type PFSig2 = FSig2 (Typ A P Tt) Double
+type PFSigL = FSig1L (Typ A P Tt) Double
+type PFSig2L = FSig2L (Typ A P Tt) Double
 
 -- efficiency
-type NFSig = FSig1 (Typ A N Tt) Val
-type NFSig2 = FSig2 (Typ A N Tt) Val
-type NFSigL = FSig1L (Typ A N Tt) Val
-type NFSig2L = FSig2L (Typ A N Tt) Val
+type NFSig = FSig1 (Typ A N Tt) Double
+type NFSig2 = FSig2 (Typ A N Tt) Double
+type NFSigL = FSig1L (Typ A N Tt) Double
+type NFSig2L = FSig2L (Typ A N Tt) Double
 
 -- untyped
-type UTFSig = FSig1 (Typ UT UT UT) Val
+type UTFSig = FSig1 (Typ UT UT UT) Double
 
 -- ######################
 -- Flow Signal Samples
-type ESamp2 = TC FSample (Typ A E Tt) (UVec2 Val)
-type ESamp1 =  TC FSample (Typ A E Tt) (UVec Val)
-type ESamp1L =  TC FSample (Typ A E Tt) (List Val)
-type ESamp2L = TC FSample (Typ A E Tt) (UVec2L Val)
-type ESamp2LL = TC FSample (Typ A E Tt) (List2 Val)
-type ESamp = TC FSample (Typ A E Tt) (DVal Val)
+type ESamp2 = TC FSample (Typ A E Tt) (UVec2 Double)
+type ESamp1 =  TC FSample (Typ A E Tt) (UVec Double)
+type ESamp1L =  TC FSample (Typ A E Tt) (List Double)
+type ESamp2L = TC FSample (Typ A E Tt) (UVec2L Double)
+type ESamp2LL = TC FSample (Typ A E Tt) (List2 Double)
+type ESamp = TC FSample (Typ A E Tt) (D.Scalar Double)
 
-type FSamp2 = TC FSample (Typ A F Tt) (UVec2 Val)
-type FSamp1 =  TC FSample (Typ A F Tt) (UVec Val)
-type FSamp1L =  TC FSample (Typ A F Tt) (List Val)
-type FSamp2L = TC FSample (Typ A F Tt) (UVec2L Val)
-type FSamp2LL = TC FSample (Typ A F Tt) (List2 Val)
-type FSamp = TC FSample (Typ A F Tt) (DVal Val)
+type FSamp2 = TC FSample (Typ A F Tt) (UVec2 Double)
+type FSamp1 =  TC FSample (Typ A F Tt) (UVec Double)
+type FSamp1L =  TC FSample (Typ A F Tt) (List Double)
+type FSamp2L = TC FSample (Typ A F Tt) (UVec2L Double)
+type FSamp2LL = TC FSample (Typ A F Tt) (List2 Double)
+type FSamp = TC FSample (Typ A F Tt) (D.Scalar Double)
 
-type PFSamp2 = TC FSample (Typ A P Tt) (UVec2 Val)
-type PFSamp1 =  TC FSample (Typ A P Tt) (UVec Val)
-type PFSamp1L =  TC FSample (Typ A P Tt) (List Val)
-type PFSamp2L = TC FSample (Typ A P Tt) (UVec2L Val)
-type PFSamp2LL = TC FSample (Typ A P Tt) (List2 Val)
-type PFSamp = TC FSample (Typ A P Tt) (DVal Val)
+type PFSamp2 = TC FSample (Typ A P Tt) (UVec2 Double)
+type PFSamp1 =  TC FSample (Typ A P Tt) (UVec Double)
+type PFSamp1L =  TC FSample (Typ A P Tt) (List Double)
+type PFSamp2L = TC FSample (Typ A P Tt) (UVec2L Double)
+type PFSamp2LL = TC FSample (Typ A P Tt) (List2 Double)
+type PFSamp = TC FSample (Typ A P Tt) (D.Scalar Double)
 
 
 -- ########################
 -- Scalars
-type PVal = Scal (Typ A P Tt) Val
-type TVal = Scal (Typ A T Tt) Val
-type FVal = Scal (Typ A F Tt) Val
-type DTVal = Scal (Typ D T Tt) Val
+type PVal = Scal (Typ A P Tt) Double
+type TVal = Scal (Typ A T Tt) Double
+type FVal = Scal (Typ A F Tt) Double
+type DTVal = Scal (Typ D T Tt) Double
 
 
 ----------------------------------------------------------
@@ -897,7 +897,7 @@ sortTwo (TC x, TC y) =
 ----------------------------------------------------------
 -- Part & Full Integrate
 
--- DeltaSig Signal FSignal (Data (v1 :> Nil)) A D Val =>
+-- DeltaSig Signal FSignal (Data (v1 :> Nil)) A D Double =>
 -- | Partial Signal Integration
 partIntegrate ::  (SV.Zipper v1,
                 SV.Walker v1,

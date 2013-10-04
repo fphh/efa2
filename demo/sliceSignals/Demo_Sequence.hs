@@ -13,7 +13,6 @@ import qualified EFA.Signal.Sequence as Sequ
 
 import EFA.Signal.Record (PowerRecord, Record(Record))
 import EFA.Signal.Signal (PSigL, (.++))
-import EFA.Signal.Base (Val)
 
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -21,16 +20,16 @@ import Data.Map (Map)
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 
-mkSig :: Int -> [Val] -> PSigL
+mkSig :: Int -> [Double] -> PSigL
 mkSig m = S.fromList . concat . replicate m
 
-mkSigEnd :: Int -> [Val] -> PSigL
+mkSigEnd :: Int -> [Double] -> PSigL
 mkSigEnd m s = mkSig m s  .++  S.fromList [head s]
 
-time :: [Val]
+time :: [Double]
 time = take 13 [0 ..]
 
-s01, s10, s12, s21, s13, s31 :: [Val]
+s01, s10, s12, s21, s13, s31 :: [Double]
 s01 = [0, 2, 2, 0, 0, 0]
 s10 = [0, 0.8, 0.8, 0, 0, 0]
 s12 = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
@@ -53,11 +52,11 @@ pMap =
       []
 
 
-pRec, pRec0 :: (PowerRecord Int [] Val)
+pRec, pRec0 :: (PowerRecord Int [] Double)
 pRec = Record (S.fromList time) pMap
 pRec0 = Chop.addZeroCrossings pRec
 
-sequRecA, sequRecB :: Sequ.List (PowerRecord Int [] Val)
+sequRecA, sequRecB :: Sequ.List (PowerRecord Int [] Double)
 sequRecA = Chop.genSequ pRec0
 
 sequRecB = Chop.chopAtZeroCrossingsPowerRecord pRec

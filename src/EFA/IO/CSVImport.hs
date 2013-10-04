@@ -12,7 +12,6 @@ import Text.ParserCombinators.Parsec (parse)
 import qualified EFA.IO.CSVParser as CSV
 
 import EFA.Signal.Record(Record(Record),SignalRecord, SigId(SigId))
-import EFA.Signal.Base (Val)
 
 import qualified EFA.Signal.Signal as S
 
@@ -24,8 +23,8 @@ import qualified Data.Map as Map
 
 makeCSVRecord ::
   (NonEmpty.T (NonEmpty.T []) SigId,
-   [NonEmpty.T (NonEmpty.T []) Val]) ->
-  SignalRecord [] Val
+   [NonEmpty.T (NonEmpty.T []) Double]) ->
+  SignalRecord [] Double
 makeCSVRecord (NonEmpty.Cons _timeStr sigNames, hs) =
   let NonEmpty.Cons time sigs =
         Zip.transposeClip $ fmap NonEmpty.init hs
@@ -37,7 +36,7 @@ makeCSVRecord (NonEmpty.Cons _timeStr sigNames, hs) =
            (map S.fromList sigs))
 
 -- | Main Modelica CSV Import Function
-modelicaCSVImport :: FilePath -> IO (SignalRecord [] Val)
+modelicaCSVImport :: FilePath -> IO (SignalRecord [] Double)
 modelicaCSVImport path = do
   text <- readFile path
   let checkTime str =
@@ -56,9 +55,9 @@ modelicaCSVImport path = do
 
 
 
-type Filter = [[Val]] -> [[Val]]
+type Filter = [[Double]] -> [[Double]]
 
-filterWith :: Int -> (Val -> Bool) -> Filter
+filterWith :: Int -> (Double -> Bool) -> Filter
 filterWith r p = filter (p . (!! r))
 
 dontFilter :: Filter
@@ -66,8 +65,8 @@ dontFilter = id
 
 fortissCSVRecord ::
   NonEmpty.T [] Int -> Filter ->
-  ([SigId], [[Val]]) ->
-  SignalRecord [] Val
+  ([SigId], [[Double]]) ->
+  SignalRecord [] Double
 fortissCSVRecord idx filt (ids, hs) =
   Record (S.fromList time) (fmap S.fromList $ Map.fromList ks)
   where ths = zip ids $ Zip.transposeClip $ filt hs
@@ -78,7 +77,7 @@ fortissCSVRecord idx filt (ids, hs) =
 fortissCSVImport ::
   FilePath ->
   NonEmpty.T [] Int -> Filter ->
-  IO (SignalRecord [] Val)
+  IO (SignalRecord [] Double)
 fortissCSVImport path idx filt = do
   text <- readFile path
   let parser =

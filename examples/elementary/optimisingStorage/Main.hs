@@ -24,7 +24,6 @@ import qualified EFA.Signal.Signal as S
 
 import EFA.Signal.Signal(Test2, (.+), (.-), (./))
 import EFA.Signal.Typ (A, P, Tt, F, N, Typ, Y)
-import EFA.Signal.Base(Val)
 
 import qualified EFA.Report.Report as Rep
 
@@ -70,10 +69,10 @@ eout1 = XIdx.energy sec1 node1 node2
 
 
 -- | Provide time of sec1 and inner resistance of battery
-given :: Val ->
-         Val ->
-         Val ->
-         EqSys.EquationSystemIgnore Node s Val Val
+given :: Double ->
+         Double ->
+         Double ->
+         EqSys.EquationSystemIgnore Node s Double Double
 given y' p' nParam' =
   (stoinit =.= EqSys.constant 3)
 
@@ -95,11 +94,11 @@ given y' p' nParam' =
         p = EqSys.constant p'
 
 
-type AbsoluteResult = Result Val
+type AbsoluteResult = Result Double
 
 -- | r is inner Resistance of Battery
 solve ::
-   Val -> Val -> Val ->
+   Double -> Double -> Double ->
    SeqFlow.Graph Node AbsoluteResult AbsoluteResult
 solve nPar y p = EqSys.solve flowGraph (given y p nPar)
 
@@ -119,17 +118,17 @@ getSignalVar varEnvs idx =
 
 getSignalVarEnergy ::
    [[SeqFlow.Graph Node AbsoluteResult AbsoluteResult]] ->
-   XIdx.Energy Node -> Test2 (Typ A F Tt) Val
+   XIdx.Energy Node -> Test2 (Typ A F Tt) Double
 getSignalVarEnergy = getSignalVar
 
 getSignalVarPower ::
    [[SeqFlow.Graph Node AbsoluteResult AbsoluteResult]] ->
-   XIdx.Power Node -> Test2 (Typ A P Tt) Val
+   XIdx.Power Node -> Test2 (Typ A P Tt) Double
 getSignalVarPower = getSignalVar
 
 getSignalVarEta ::
    [[SeqFlow.Graph Node AbsoluteResult AbsoluteResult]] ->
-   XIdx.Eta Node -> Test2 (Typ A N Tt) Val
+   XIdx.Eta Node -> Test2 (Typ A N Tt) Double
 getSignalVarEta = getSignalVar
 
 

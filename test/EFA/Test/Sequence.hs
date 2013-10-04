@@ -7,7 +7,6 @@ import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Chop as Chop
 import qualified EFA.Signal.Signal as Signal
 import EFA.Signal.Record (PowerRecord, Record(Record))
-import EFA.Signal.Base (Val)
 
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as ListHT
@@ -16,7 +15,7 @@ import qualified Data.List.HT as ListHT
 import Test.QuickCheck.All (quickCheckAll)
 
 
-failing_prop_genSequ :: (Ord node) => PowerRecord node [] Val -> Bool
+failing_prop_genSequ :: (Ord node) => PowerRecord node [] Double -> Bool
 failing_prop_genSequ prec =
    Chop.approxSequPwrRecord (1e-8)
       (Chop.genSequ prec)
@@ -26,9 +25,9 @@ failing_prop_genSequ prec =
 
 prop_chopMatchingCutsApprox ::
   forall node. (Ord node) =>
-  PowerRecord node [] Val -> Bool
+  PowerRecord node [] Double -> Bool
 prop_chopMatchingCutsApprox prec =
-   case Chop.chopAtZeroCrossingsPowerRecord prec :: Sequ.List (PowerRecord node [] Val) of
+   case Chop.chopAtZeroCrossingsPowerRecord prec :: Sequ.List (PowerRecord node [] Double) of
        xs ->
           eqAdjacent
              (\(Record xt xm)
@@ -40,9 +39,9 @@ prop_chopMatchingCutsApprox prec =
 
 
 prop_chopProjectiveApprox ::
-  forall node. (Ord node) => PowerRecord node [] Val -> Bool
+  forall node. (Ord node) => PowerRecord node [] Double -> Bool
 prop_chopProjectiveApprox prec =
-   let secs :: Sequ.List (PowerRecord node [] Val)
+   let secs :: Sequ.List (PowerRecord node [] Double)
        secs = Chop.chopAtZeroCrossingsPowerRecord prec
    in  Chop.approxSequPwrRecord (1e-8)
           secs
