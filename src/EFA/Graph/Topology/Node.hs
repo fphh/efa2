@@ -94,9 +94,7 @@ instance StorageLabel () where
 
 instance StorageLabel a => QC.Arbitrary (Type a) where
    arbitrary =
-      QC.oneof $
-      (fmap Storage arbitraryStorageLabel :) $
-      map return $
+      QC.elements $
          Sink :
          AlwaysSink :
          Source :
