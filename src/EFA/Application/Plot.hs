@@ -142,7 +142,6 @@ record :: (Terminal.C term,
              Fractional d2,
              Fractional d1,
              Ord id,
-             Show id,
              SV.Walker v,
              SV.Storage v d2,
              SV.Storage v d1,
@@ -165,7 +164,6 @@ record ti term showKey opts x =
 
 recordList ::
    (Ord id,
-    Show id,
     SV.Walker v,
     SV.FromList v,
     TDisp t1,
@@ -258,7 +256,6 @@ recordSplit ::
     Fractional d1,
     Fractional d2,
     Ord id,
-    Show id,
     SV.Walker v,
     SV.Storage v d1,
     SV.Storage v d2,
@@ -283,7 +280,7 @@ recordSplit n ti term showKey opts r =
 {-
 recordSplitPlus ::
    (TDisp t1, TDisp t2,
-    Show id, Ord id,
+    Ord id,
     Fractional d,
     Tuple.C d, Atom.C d,
     SV.Walker v,
@@ -307,7 +304,7 @@ recordSplitPlus n ti term opts r list =
 {-
 sequenceFrame ::
    (Fractional d,
-    Show id, Ord id,
+    Ord id,
     SV.Walker v, SV.Storage v d, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C d, Atom.C d) =>
@@ -327,7 +324,6 @@ sequence ::
    (Fractional d1,
     Fractional d2,
     Ord id,
-    Show id,
     SV.Walker v,
     SV.Storage v d1,
     SV.Storage v d2,
@@ -352,7 +348,6 @@ sequenceSplit ::
    (Fractional d2,
     Fractional d1,
     Ord id,
-    Show id,
     SV.Walker v,
     SV.Storage v d2,
     SV.Storage v d1,
@@ -377,7 +372,7 @@ sequenceSplit n ti term showKey opts =
 -- | Plotting Stacks ---------------------------------------------------------------
 
 stack ::
-   (FormatValue term, Show term, Ord term) =>
+   (FormatValue term, Ord term) =>
    String -> Format.ASCII -> Map term Double -> IO ()
 stack title var =
    void .
@@ -389,7 +384,7 @@ stack title var =
 The length of @[var]@ must match the one of the @[Double]@ lists.
 -}
 stacks ::
-   (Ord term, FormatValue term, Show term) =>
+   (Ord term, FormatValue term) =>
    String -> [Format.ASCII] -> Map term [Double] -> IO ()
 stacks title vars =
    void . Plot.plotSync DefaultTerm.cons .
@@ -397,7 +392,7 @@ stacks title vars =
 
 
 stackFromEnv ::
-   (Node.C node, Show i, Ord i, FormatValue i) =>
+   (Node.C node, Ord i, FormatValue i) =>
    String ->
    XIdx.Energy node ->
    Double ->
@@ -411,7 +406,7 @@ stackFromEnv ti energyIndex eps (Record.DeltaName recName, env) = do
       (AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env)
 
 recordStackRow ::
-   (Node.C node, Show i, Ord i, FormatValue i) =>
+   (Node.C node, Ord i, FormatValue i) =>
    String ->
    [Record.DeltaName] ->
    XIdx.Energy node ->
@@ -427,7 +422,7 @@ recordStackRow ti deltaSets energyIndex eps =
    map (AssignMap.lookupStack energyIndex)
 
 sectionStackRow ::
-   (Node.C node, Show i, Ord i, FormatValue i) =>
+   (Node.C node, Ord i, FormatValue i) =>
    String ->
    Idx.Energy node ->
    Double ->
@@ -441,8 +436,7 @@ sectionStackRow ti energyIndex eps env =
          map (Map.mapKeys AssignMap.deltaIndexSet) energyStacks
 
 aggregatedStack ::
-   (Node.C node, Show node,
-    Ord i, Show i, FormatValue i) =>
+   (Node.C node, Ord i, FormatValue i) =>
    String ->
    Idx.Energy node ->
    Double ->
