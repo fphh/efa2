@@ -12,7 +12,9 @@ import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result)
 import EFA.Equation.Stack (Stack)
 
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as SeqIdx
+
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -162,3 +164,16 @@ lookupEnergyStacks e0 =
    Map.mapKeys (\(Idx.InPart sec _) -> sec) .
    Map.filterWithKey (\(Idx.InPart _sec e) _ -> e == e0) .
    Env.energyMap . Env.signal
+
+lookupEnergyStacksNew ::
+   (Ord i, Node.C node, a ~ Arith.Scalar v, Arith.Integrate v) =>
+   Idx.Energy node ->
+   SeqFlow.Graph node t (Result (Stack i v)) ->
+   Map Idx.Section (Map (Map i Stack.Branch) a)
+lookupEnergyStacksNew e =
+   fmap (Stack.assignDeltaMap . Arith.integrate) .
+   Map.mapMaybe Result.toMaybe .
+   fmap (maybe (error $ "lookupEnergyStacksNew" ++ Format.unUnicode (formatValue e)) id .
+         SeqFlow.lookupEnergyTopology e .
+         snd . snd) .
+   SeqFlow.sequence

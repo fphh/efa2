@@ -24,10 +24,12 @@ module EFA.Application.Plot (
    sectionStackRow,
    etaDistr1Dim,
    etaDistr1DimfromRecordList,
-   aggregatedStack
+   aggregatedStack,
    ) where
 
 import qualified EFA.Application.AssignMap as AssignMap
+
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Plot as Plot
@@ -440,14 +442,14 @@ aggregatedStack ::
    String ->
    Idx.Energy node ->
    Double ->
-   Env.Complete node t (Result (Stack i Double)) ->
+   SeqFlow.Graph node t (Result (Stack i Double)) ->
    IO ()
 
 aggregatedStack ti energyIndex eps env =
-  stack ti (formatValue $ Idx.delta energyIndex) $
-  AssignMap.threshold eps $
-  Map.mapKeys AssignMap.deltaIndexSet $ Fold.fold $
-  AssignMap.lookupEnergyStacks energyIndex env
+   stack ti (formatValue $ Idx.delta energyIndex) $
+   AssignMap.threshold eps $
+   Map.mapKeys AssignMap.deltaIndexSet $ Fold.fold $
+   AssignMap.lookupEnergyStacksNew energyIndex env
 
 
 -- | Plotting Average Efficiency Curves over Energy Flow Distribution -------------------------------

@@ -11,7 +11,11 @@ import qualified Modules.Signals as Signals
 import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Utility (checkDetermined)
 
+import qualified EFA.Flow.Sequence.Absolute as EqAbs
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence.Record as RecSeq
 import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Sequence as Sequ
@@ -22,10 +26,7 @@ import EFA.Signal.Typ (Typ, F, T, A, Tt)
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph.Draw as Draw
 
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
 
 import EFA.IO.PLTImport (modelicaPLTImport)
@@ -44,6 +45,7 @@ import System.FilePath ((</>))
 import qualified Data.List.HT as ListHT
 import qualified Data.List as List
 import Control.Monad (when)
+import Data.Monoid (mempty)
 
 
 -- | O. Generelle Settings
@@ -250,8 +252,8 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
 
-  let (_,sequenceFlowsFiltUnmappedX,flowToposUnmappedX,powerSignalsX,signalsX) =
-        List.unzip5 $
+  let (_,flowToposUnmappedX,powerSignalsX,signalsX) =
+        List.unzip4 $
         map (Analysis.pre System.topology zeroNoiseTolerance sectionFilterTime sectionFilterEnergy) rawSignalsX
 
   let _allSignalsX = zipWith (Record.combinePowerAndSignalWithFunction System.convertPowerId) powerSignalsX signalsX
@@ -259,67 +261,63 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  ReIndex Sequences to allow Sequence Matching
 
-  let sequenceFlowsFiltX = sectionMapping sequenceFlowsFiltUnmappedX
-
   let flowToposX = sectionMapping flowToposUnmappedX
-
-
----------------------------------------------------------------------------------------
--- *  Generate Sequence Flow Graph
-
-  let sequenceFlowTopologyX = map Flow.sequenceGraph flowToposX
 
 ---------------------------------------------------------------------------------------
 -- *  Make Base Analysis on external Data
 
   let externalEnvX =
-         map (Env.completeFMap
-                (checkDetermined "external scalar")
-                (checkDetermined "external signal")) $
-         zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
+         map
+            (SeqFlow.mapGraph
+               (checkDetermined "external scalar")
+               (checkDetermined "external signal") .
+             Analysis.external .
+             RecSeq.fromGraphFromSequence)
+            flowToposX
   let externalSignalEnvX =
-         zipWith Analysis.external2 sequenceFlowTopologyX sequenceFlowsFiltX
-
+         map
+            (\flowTopos ->
+               EqAbs.solveFromMeasurement
+                  (RecSeq.fromGraphFromSequence flowTopos) mempty)
+            flowToposX
 
   ---------------------------------------------------------------------------------------
 -- *  Make the Deltas for subsequent Datasets
 
   let externalDeltaEnvX =
         ListHT.mapAdjacent
-           (Env.intersectionWith EqRecord.deltaCons EqRecord.deltaCons)
+           (SeqFlow.checkedZipWithGraph "externalDeltaEnvX"
+              EqRecord.deltaCons EqRecord.deltaCons)
            externalEnvX
-
-
  ---------------------------------------------------------------------------------------
 -- *  Make the Prediction
 
-  let prediction =
-         Analysis.prediction
-            (head sequenceFlowTopologyX)
-            (head externalEnvX)
+  let prediction = Analysis.prediction (head externalEnvX)
 
   -- Hier gehts schief, wenn ich mit Signalen rechnen will
---  let prediction2 = Analysis.prediction (head sequenceFlowTopologyX) (head externalSignalEnvX)
+--  let prediction2 = Analysis.prediction (head externalSignalEnvX)
 
 ---------------------------------------------------------------------------------------
 -- *  Make difference Analysis
 
-  let differenceExtEnvs = zipWith Analysis.difference sequenceFlowTopologyX externalDeltaEnvX
+  let differenceExtEnvs = map Analysis.difference externalDeltaEnvX
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
 
   let -- drawDelta :: RecordName ->
-      drawDelta (Record.DeltaName ti) topo env c =
-          Draw.dot (ti ++ "vehicle_delta.dot") $
-          Draw.title ti $
-          Draw.bgcolour c $
-          Draw.seqFlowGraphDeltaWithEnv topo env
-      drawAbs (Record.Name ti) topo env c =
-          Draw.dot (ti++"vehicle.dot")$
-          Draw.title ti $
-          Draw.bgcolour c $
-          Draw.seqFlowGraphAbsWithEnv topo env
+      drawDelta (Record.DeltaName ti) c =
+          Draw.dot (ti ++ "vehicle_delta.dot") .
+          Draw.title ti .
+          Draw.bgcolour c .
+          Draw.seqFlowGraph
+             (Draw.absoluteVariable Draw.optionsDefault)
+      drawAbs (Record.Name ti) c =
+          Draw.dot (ti++"vehicle.dot").
+          Draw.title ti .
+          Draw.bgcolour c .
+          Draw.seqFlowGraph
+             (Draw.deltaVariable Draw.optionsDefault)
 
 
 
@@ -357,18 +355,16 @@ main = do
 -- * Draw Diagrams
 
     -- Section flow
-    ++ List.zipWith4 drawAbs
+    ++ List.zipWith3 drawAbs
          datasetsX
-         sequenceFlowTopologyX
-         externalEnvX
          colours
+         externalEnvX
 
     -- Delta Section Flow
-    ++ List.zipWith4 drawDelta
+    ++ List.zipWith3 drawDelta
          deltasetsX
-         sequenceFlowTopologyX
-         externalDeltaEnvX
          (tail colours)
+         externalDeltaEnvX
 
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
@@ -393,10 +389,10 @@ main = do
 -}
     -- overall stack at given position
     ++ [PlotIO.aggregatedStack
-        ("Cumulative Flow Change at  " ++ show energyIndex)
-        energyIndex
-        cumStack_filterEnergy
-        (head differenceExtEnvs)]
+           ("Cumulative Flow Change at  " ++ show energyIndex)
+           energyIndex
+           cumStack_filterEnergy
+           (head differenceExtEnvs)]
 
 
 {-     ++ [mapM_ (Plot.stackIOfromEnv  "Energy Flow Change at Tank in Section 6"
@@ -414,4 +410,4 @@ main = do
 -- * Draw Predicted Diagram
 
     -- Prediction Based on a specific Record
-    ++ [drawAbs (Record.Name "Prediction 900kg") (head sequenceFlowTopologyX) prediction Colors.Yellow]
+    ++ [drawAbs (Record.Name "Prediction 900kg") Colors.Yellow prediction]
