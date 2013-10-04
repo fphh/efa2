@@ -2,6 +2,8 @@
 
 module Main where
 
+import EFA.Example.Topology.LinearOne (Node(Source, Sink))
+
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
@@ -14,7 +16,9 @@ import EFA.Report.Report (ROpt(RVertical), report)
 import qualified Data.Map as Map
 
 
-data Node = Node0 | Node1 deriving (Eq, Ord, Enum, Show)
+node0, node1 :: Node
+node0 = Source
+node1 = Sink
 
 
 l :: [Double]
@@ -34,7 +38,7 @@ r :: PowerRecord Node [] Double
 r = Record t
       (Map.fromListWith
          (error "duplicate keys")
-         [(XIdx.ppos Node0 Node1, p1), (XIdx.ppos Node1 Node0, p2)])
+         [(XIdx.ppos node0 node1, p1), (XIdx.ppos node1 node0, p2)])
 
 
 main :: IO ()

@@ -2,6 +2,8 @@
 
 module Main where
 
+import EFA.Example.Topology.LinearTwo (Node(Source, Crossing, Sink))
+
 import qualified EFA.Application.Plot as PlotIO
 
 import qualified EFA.Flow.Sequence.Index as XIdx
@@ -14,7 +16,11 @@ import EFA.Signal.Signal (TSigL, PSigL)
 import qualified Data.Map as Map
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
-data Node = Node0 | Node1 | Node2 deriving (Eq, Ord, Show)
+
+node0, node1, node2 :: Node
+node0 = Source
+node1 = Crossing
+node2 = Sink
 
 t :: TSigL
 t = S.fromList [0,1,2]
@@ -28,9 +34,9 @@ pRec :: PowerRecord Node [] Double
 pRec = Record t
          (Map.fromListWith
             (error "duplicate keys")
-            [ (XIdx.ppos Node0 Node1, p1),
-              (XIdx.ppos Node1 Node0, p2),
-              (XIdx.ppos Node1 Node2, p3)])
+            [ (XIdx.ppos node0 node1, p1),
+              (XIdx.ppos node1 node0, p2),
+              (XIdx.ppos node1 node2, p3)])
 
 pRec0 :: PowerRecord Node [] Double
 pRec0 = addZeroCrossings pRec

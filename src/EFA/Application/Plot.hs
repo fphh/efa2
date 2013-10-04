@@ -190,8 +190,7 @@ recordList ti term showKey opts x =
      varOpts n = LineSpec.lineStyle n
 
 recordList_extract ::
-   (Ord id,
-    Show id,
+   (Record.Index id,
     SV.Walker v,
     SV.FromList v,
     TDisp t1,
@@ -221,8 +220,7 @@ recordList_extract ti term showKey opts xs idList =
 recordList_extractWithLeadSignal :: (Terminal.C term,
                                        Fractional d2,
                                        Fractional d1,
-                                       Ord id,
-                                       Show id,
+                                       Record.Index id,
                                        SV.Walker v,
                                        SV.Storage v d2,
                                        SV.Storage v d1,
@@ -257,7 +255,7 @@ recordSplit ::
    (Terminal.C term,
     Fractional d1,
     Fractional d2,
-    Ord id,
+    Record.Index id,
     SV.Walker v,
     SV.Storage v d1,
     SV.Storage v d2,
@@ -349,7 +347,7 @@ sequence ti term showKey opts =
 sequenceSplit ::
    (Fractional d2,
     Fractional d1,
-    Ord id,
+    Record.Index id,
     SV.Walker v,
     SV.Storage v d2,
     SV.Storage v d1,
@@ -476,34 +474,35 @@ etaDistr1Dim ti p n pDist fDist nDist =
 -- | Plot efficiency distribution from List of Records
 -- | pg: currently plots over input power, one should be able to choose
 -- | You however can choose which power you want to plot and classify over (abscissa)
-etaDistr1DimfromRecordList :: (Ord id,
-                             Show id,
-                             Show (v d),
-                             Base.BProd d d,
-                             Ord d,
-                             SV.Zipper v,
-                             SV.Walker v,
-                             SV.Storage v (d, d),
-                             SV.Storage v d,
-                             Fractional d,
-                             SV.FromList v,
-                             Atom.C d,
-                             Tuple.C d,
-                             SV.SortBy v,
-                             SV.Unique v (Sig.Class d),
-                             SV.Storage v Sig.SignalIdx,
-                             SV.Storage v Int,
-                             SV.Storage v (Sig.Class d),
-                             SV.Storage v ([Sig.Class d], [Sig.SignalIdx]),
-                             RealFrac d,
-                             SV.Lookup v,
-                             SV.Find v,
-                             Base.BSum d,
-                             Base.DArith0 d,
-                             SV.Storage v (d, (d, d)),
-                             SV.Singleton v) =>
-                            String  -> d -> d -> [(Record.Name, Record.DTimeFlowRecord id v d)]
-                            -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
+etaDistr1DimfromRecordList ::
+   (Node.C node,
+    Show (v d),
+    Base.BProd d d,
+    Ord d,
+    SV.Zipper v,
+    SV.Walker v,
+    SV.Storage v (d, d),
+    SV.Storage v d,
+    Fractional d,
+    SV.FromList v,
+    Atom.C d,
+    Tuple.C d,
+    SV.SortBy v,
+    SV.Unique v (Sig.Class d),
+    SV.Storage v Sig.SignalIdx,
+    SV.Storage v Int,
+    SV.Storage v (Sig.Class d),
+    SV.Storage v ([Sig.Class d], [Sig.SignalIdx]),
+    RealFrac d,
+    SV.Lookup v,
+    SV.Find v,
+    Base.BSum d,
+    Base.DArith0 d,
+    SV.Storage v (d, (d, d)),
+    SV.Singleton v) =>
+   String  -> d -> d ->
+   [(Record.Name, Record.DTimeFlowRecord node v d)] ->
+   (String, (Idx.PPos node, Idx.PPos node, Idx.PPos node)) -> IO ()
 
 etaDistr1DimfromRecordList ti  interval offset rList  (plotTitle, (idIn,idOut,idAbscissa)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do

@@ -4,6 +4,8 @@ module Main where
 
 -- | Demonstriert das Schneiden von Signalen
 
+import EFA.Example.Topology.LinearOne (Node(Source, Sink))
+
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Sequence as Sequ
@@ -19,11 +21,9 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 
 
-data Node = Node0 | Node1 deriving (Eq, Ord, Show)
-
 node0, node1 :: Node
-node0 = Node0
-node1 = Node1
+node0 = Source
+node1 = Sink
 
 time :: S.TC s t (Data ([] :> Nil) Double)
 time = S.fromList [0,10..50]
