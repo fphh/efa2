@@ -37,9 +37,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
-import Control.Applicative (pure)
 import Data.Monoid ((<>))
-import Data.Tuple.HT (mapSnd)
 
 
 {-
@@ -146,31 +144,29 @@ prediction ::
    SeqFlow.Graph System.Node (Result a) (Result v)
 prediction sequenceFlowTopology =
    EqAbs.solve
-      (makeGivenForPrediction $
-       SeqFlow.mapGraph Determined Determined sequenceFlowTopology)
+      (SeqFlow.mapGraphWithVar
+         (const $ const Undetermined) givenForPrediction
+         sequenceFlowTopology)
       ((XIdx.storage Idx.initial System.Battery .= initStorage) <>
        (XIdx.storage Idx.initial System.VehicleInertia .= Arith.zero))
 
-makeGivenForPrediction ::
-   (Eq a, Arith.Constant a,
-    Eq v, Arith.Constant v) =>
-   SeqFlow.Graph System.Node (Result a) (Result v) ->
-   SeqFlow.Graph System.Node (Result a) (Result v)
-makeGivenForPrediction gr =
-   gr {
-      SeqFlow.sequence =
-         fmap
-            (mapSnd $ mapSnd $ Graph.mapEdgeWithKey $ SeqFlow.liftEdgeFlow $ \edge flow ->
-               (pure Undetermined) {
-                  SeqFlow.flowEnergyOut =
-                     modifyPredictionEnergy edge $ SeqFlow.flowEnergyOut flow,
-                  SeqFlow.flowEnergyIn =
-                     modifyPredictionEnergy (Graph.reverseEdge edge) $
-                     SeqFlow.flowEnergyIn flow,
-                  SeqFlow.flowEta = SeqFlow.flowEta flow
-               }) $
-         SeqFlow.sequence gr
-   }
+givenForPrediction ::
+   (Arith.Constant v) =>
+   Var.InSectionSignal System.Node -> v -> Result v
+givenForPrediction (Idx.InPart _sec var) v =
+   case var of
+      Var.DTime _ -> Determined v
+      Var.Eta _ -> Determined v
+      Var.Energy idx ->
+         if filterCriterion idx
+           then Determined $
+              case idx of
+                 Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis) ->
+                    v ~* Arith.fromRational 1.1
+                 _ -> v
+           else Undetermined
+      _ -> Undetermined
+
 
 modifyPredictionEnergy ::
    (Arith.Constant a) =>
@@ -209,40 +205,23 @@ difference ::
    SeqFlow.Graph System.Node (Result StackDouble) (Result StackDouble)
 difference sequenceFlowTopology =
    EqAbs.solve
-      (makeGivenForDifferentialAnalysis $
-       SeqFlow.mapGraphWithVar
-          (\_i _a -> Undetermined)
-          (\i v -> Determined $ stackFromDelta i v) $
-       sequenceFlowTopology)
+      (SeqFlow.mapGraphWithVar
+          (\_i -> const Undetermined)
+          (\i -> givenForDifferentialAnalysis i . stackFromDelta i)
+          sequenceFlowTopology)
       (XIdx.storage Idx.initial System.Battery .= initStorage)
 
-makeGivenForDifferentialAnalysis ::
-   SeqFlow.Graph System.Node (Result StackDouble) (Result StackDouble) ->
-   SeqFlow.Graph System.Node (Result StackDouble) (Result StackDouble)
-makeGivenForDifferentialAnalysis gr =
-   gr {
-      SeqFlow.sequence =
-         fmap
-            (mapSnd $ mapSnd $ Graph.mapEdgeWithKey $ SeqFlow.liftEdgeFlow $ \edge flow ->
-               (pure Undetermined) {
-                  SeqFlow.flowEnergyOut =
-                     modifyDeltaEnergy edge $ SeqFlow.flowEnergyOut flow,
-                  SeqFlow.flowEnergyIn =
-                     modifyDeltaEnergy (Graph.reverseEdge edge) $
-                     SeqFlow.flowEnergyIn flow,
-                  SeqFlow.flowEta = SeqFlow.flowEta flow
-               }) $
-         SeqFlow.sequence gr
-   }
-
-modifyDeltaEnergy ::
-   (Arith.Constant a) =>
-   Graph.DirEdge System.Node ->
-   Result a -> Result a
-modifyDeltaEnergy edge energy =
-   if filterCriterion $ Idx.Energy $ Topo.structureEdgeFromDirEdge edge
-     then energy
-     else Undetermined
+givenForDifferentialAnalysis ::
+   Var.InSectionSignal System.Node -> v -> Result v
+givenForDifferentialAnalysis (Idx.InPart _sec var) v =
+   case var of
+      Var.DTime _ -> Determined v
+      Var.Eta _ -> Determined v
+      Var.Energy idx ->
+         if filterCriterion idx
+           then Determined v
+           else Undetermined
+      _ -> Undetermined
 
 
 filterCriterion :: Idx.Energy System.Node -> Bool
