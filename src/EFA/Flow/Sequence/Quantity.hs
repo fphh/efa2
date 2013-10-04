@@ -86,7 +86,6 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
-import qualified EFA.Report.FormatValue as FormatValue
 import EFA.Report.FormatValue (FormatValue, formatAssign)
 import EFA.Report.Format (Format)
 
@@ -535,19 +534,17 @@ class
       idx node -> Graph node a v -> Maybe (Env.Element idx a v)
 
 instance
-   (LookupSignal idx, FormatValue.FormatSignalIndex idx) =>
+   (LookupSignal idx, Var.SignalIndex idx) =>
       Lookup (Idx.InSection idx) where
    lookup = lookupSignal
 
 instance
-   (LookupScalar idx, FormatValue.FormatScalarIndex idx) =>
+   (LookupScalar idx, Var.ScalarIndex idx) =>
       Lookup (Idx.ForNode idx) where
    lookup = lookupScalar
 
 
-class
-   (Var.SignalIndex idx, FormatValue.FormatSignalIndex idx) =>
-      LookupSignal idx where
+class (Var.SignalIndex idx) => LookupSignal idx where
    lookupSignal ::
       (Ord node) => Idx.InSection idx node -> Graph node a v -> Maybe v
 
@@ -570,9 +567,7 @@ instance LookupSignal Idx.Sum where
    lookupSignal = lookupSum
 
 
-class
-   (Var.ScalarIndex idx, FormatValue.FormatScalarIndex idx) =>
-      LookupScalar idx where
+class (Var.ScalarIndex idx) => LookupScalar idx where
    lookupScalar ::
       (Ord node) => Idx.ForNode idx node -> Graph node a v -> Maybe a
 

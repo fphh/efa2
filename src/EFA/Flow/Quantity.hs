@@ -7,6 +7,8 @@ import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 
 import qualified EFA.Equation.Variable as Var
 
+import qualified EFA.Report.Format as Format
+
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
 
 import qualified Data.Foldable as Fold
@@ -130,7 +132,7 @@ traverseSum f g (Sum cs fs) =
 
 
 mapFlowTopologyWithVar ::
-   (Ord node) =>
+   (Format.Part part, Ord node) =>
    (Var.ForNodeScalar part node -> a0 -> a1) ->
    (Var.InPartSignal part node -> v0 -> v1) ->
    part ->

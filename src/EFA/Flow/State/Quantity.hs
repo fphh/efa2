@@ -69,7 +69,7 @@ import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.Signal.Sequence as Sequ
 
-import qualified EFA.Report.FormatValue as FormatValue
+import qualified EFA.Report.Format as Format
 
 import qualified EFA.Utility.Map as MapU
 
@@ -513,13 +513,13 @@ class
       idx node -> Graph node a v -> Maybe (Element idx a v)
 
 instance
-   (LookupSignal idx, FormatValue.FormatSignalIndex idx) =>
+   (LookupSignal idx, Var.SignalIndex idx) =>
       Lookup (Idx.InState idx) where
    type Environment (Idx.InState idx) = Env.Signal
    lookup = lookupSignal
 
 instance
-   (LookupScalar idx, FormatValue.FormatScalarIndex idx) =>
+   (LookupScalar idx, Var.ScalarIndex idx) =>
       Lookup (Idx.ForNode idx) where
    type Environment (Idx.ForNode idx) = Env.Scalar
    lookup = lookupScalar
@@ -613,12 +613,15 @@ mapStoragesWithVar f =
        Map.mapWithKey (mapCarryWithVar f node) edges)
 
 mapCarryWithVar ::
+   (Format.Part part) =>
    (Var.ForNodeScalar part node -> a0 -> a1) ->
    node -> Idx.StorageEdge part node -> Carry a0 -> Carry a1
 mapCarryWithVar f node edge =
    liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
 
-carryVars :: Carry (Idx.StorageEdge part node -> Var.Scalar part node)
+carryVars ::
+   (Format.Part part) =>
+   Carry (Idx.StorageEdge part node -> Var.Scalar part node)
 carryVars =
    Carry {
       carryEnergy = Var.scalarIndex . Idx.StEnergy,
