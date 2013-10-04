@@ -62,9 +62,9 @@ f ::
 f (idx, (title, (pRec, sqRec))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx + 1) ++ ": " ++ title
-  putStrLn ("XList: \n" ++ (show pRec))
-  putStrLn ("XList: \n" ++ (show (addZeroCrossings pRec)))
-  putStrLn ("Sequence: " ++  show sqRec)
+  putStrLn $ "XList: \n" ++ show pRec
+  putStrLn $ "XList: \n" ++ show (addZeroCrossings pRec)
+  putStrLn $ "Sequence: " ++  show sqRec
 
 main :: IO ()
 main = mapM_ f list
