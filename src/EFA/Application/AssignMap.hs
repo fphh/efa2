@@ -2,6 +2,8 @@
 
 module EFA.Application.AssignMap where
 
+import EFA.Application.Utility (checkDetermined)
+
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Stack as Stack
@@ -141,15 +143,13 @@ lookupStack ::
    Env.Complete node t (Result (Stack i a)) ->
    Map.Map (IndexSet i) a
 lookupStack energyIndex (Env.Complete _scalarEnv signalEnv) =
-  let eidxName = Format.unUnicode (formatValue energyIndex)
-  in  case Map.lookup energyIndex (Env.energyMap signalEnv) of
-        Nothing -> error (eidxName ++ " undefined")
-        Just d ->
-          case d of
-            Result.Undetermined -> error (eidxName ++ "undetermined")
-            Result.Determined xs ->
-              Map.mapKeys deltaIndexSet $
-              Stack.assignDeltaMap xs
+   let eidxName = Format.unUnicode (formatValue energyIndex)
+   in  case Map.lookup energyIndex (Env.energyMap signalEnv) of
+          Nothing -> error (eidxName ++ " undefined")
+          Just d ->
+             Map.mapKeys deltaIndexSet $
+             Stack.assignDeltaMap $
+             checkDetermined ("lookupStack " ++ eidxName) d
 
 lookupEnergyStacks ::
    (Ord i, Ord node, a ~ Arith.Scalar v, Arith.Integrate v) =>
