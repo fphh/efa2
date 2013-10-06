@@ -4,9 +4,8 @@
 
 module Main where
 
--- import EFA.Signal.Signal hiding (map,foldl,zip,filter)
-
 import qualified EFA.Signal.Signal as S
+import EFA.Signal.Signal (SignalIdx(SignalIdx))
 
 import qualified EFA.Signal.Vector as V
 import EFA.Signal.Data (Data(Data), (:>), Nil)
@@ -53,15 +52,15 @@ ks2 = classifySignal (classifyEven' 10 0) s2
 ks3 :: S.UTSignal [] (Class Double)
 ks3 = classifySignal (classifyEven' 10 0) s3
 
-generateDistribution :: (V.Storage v ([Class a],[Int]),
+generateDistribution :: (V.Storage v ([Class a],[SignalIdx]),
                 V.Storage v (Class a),
                 V.FromList v,
                 Ord (Class a)) =>
-               S.UTSignal v (Class a) -> S.UTDistr v ([Class a], [Int])
+               S.UTSignal v (Class a) -> S.UTDistr v ([Class a], [SignalIdx])
 generateDistribution classSig = S.fromList (map f classes)
   where list = S.toList classSig
         classes = map fst $ Map.toList $ Map.fromList $ zip list list
-        f clss = ([clss], List.findIndices (\x -> clss == x) list)
+        f clss = ([clss], map SignalIdx $ List.findIndices (\x -> clss == x) list)
 
 
 d1 = generateDistribution ks1
@@ -70,9 +69,9 @@ d3 = generateDistribution ks3
 
 
 -- | to combine Distributions
-combineDistributions :: (V.Storage v ([Class a], [Int]),
+combineDistributions :: (V.Storage v ([Class a], [SignalIdx]),
                          V.FromList v,V.Filter v) =>
-                        [S.UTDistr v ([Class a], [Int])] -> S.UTDistr v ([Class a],[Int])
+                        [S.UTDistr v ([Class a], [SignalIdx])] -> S.UTDistr v ([Class a],[SignalIdx])
 combineDistributions [] =  error("Error - empty list in combineDistributions")
 combineDistributions [d] = d
 combineDistributions (d:ds) = foldl f d ds
@@ -96,12 +95,12 @@ d4 = combineDistributions [d1, d2, d3]
 calcDistributionValues ::
   (Num a,
    V.Walker v,
-   V.Storage v ([Class a], [Int]),
+   V.Storage v ([Class a], [SignalIdx]),
    Eq a,
    V.Storage v a,
    V.Lookup v,
    BSum a) =>
-  S.UTDistr v ([Class a],[Int]) -> S.FFSignal v a -> S.FDistr v a
+  S.UTDistr v ([Class a],[SignalIdx]) -> S.FFSignal v a -> S.FDistr v a
 calcDistributionValues d s = S.setType $ S.map f d
   where f = S.fromScalar . S.sum . S.subSignal1D s . snd
 
