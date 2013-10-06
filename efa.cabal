@@ -662,3 +662,14 @@ Executable demo-state-flow
       base
   Else
     Buildable: False
+
+Executable demo-distribution
+  Main-Is: demo/distribution/Main.hs
+  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      containers,
+      base
+  Else
+    Buildable: False
