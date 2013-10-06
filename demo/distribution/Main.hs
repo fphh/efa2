@@ -5,113 +5,48 @@
 module Main where
 
 import qualified EFA.Signal.Signal as S
-import qualified EFA.Signal.Vector as V
-import EFA.Signal.Signal (SignalIdx(SignalIdx))
-import EFA.Signal.Data (Data, Nil, (:>))
-import EFA.Signal.Base (BSum)
-
-import qualified Data.List as List
-import qualified Data.Map as Map
-import Control.Applicative (liftA2)
+import EFA.Signal.Signal (Class, SignalIdx, classifyEven)
 
 
 -- | Without Typed Container First
 
-newtype Class a = Class a deriving (Show,Ord,Eq)
 
-
-classifyEven' :: Double -> Double -> Double -> Class Double
-classifyEven' interval offset x =
-   Class (fromIntegral(round((x+offset)/interval)::Integer)*interval-offset)
-
-
-classifySignal ::  (V.Walker v,
-                      V.Storage v a,
-                      V.Storage v (Class a)) =>
-                   (a -> Class a) -> S.UTSignal v a  -> S.UTSignal v (Class a)
-classifySignal f sig = S.map f sig
-
-
-s1, s2, s3 :: S.UTSigL
-s1 = S.fromList [2,17,5,5,20] :: S.UTSigL
-s2 = S.fromList [0,10,18,18,12] :: S.UTSigL
-s3 = S.fromList [3,12,7,7,19] :: S.UTSigL
+s1, s2, s3 :: S.UTFSignal [] Double
+s1 = S.fromList [2,17,5,5,20]
+s2 = S.fromList [0,10,18,18,12]
+s3 = S.fromList [3,12,7,7,19]
 
 e1 :: S.FFSigL
-e1 = S.fromList [10,20,100,50,50] :: S.FFSigL
+e1 = S.fromList [10,20,100,50,50]
 
-ks1 :: S.UTSignal [] (Class Double)
-ks1 = classifySignal (classifyEven' 10 0) s1
+ks1 :: S.UTFSignal [] (Class Double)
+ks1 = S.map (classifyEven 10 0) s1
 
+ks2 :: S.UTFSignal [] (Class Double)
+ks2 = S.map (classifyEven 10 0) s2
 
-ks2 :: S.UTSignal [] (Class Double)
-ks2 = classifySignal (classifyEven' 10 0) s2
-
-ks3 :: S.UTSignal [] (Class Double)
-ks3 = classifySignal (classifyEven' 10 0) s3
-
-generateDistribution :: (V.Storage v ([Class a],[SignalIdx]),
-                V.Storage v (Class a),
-                V.FromList v,
-                Ord (Class a)) =>
-               S.UTSignal v (Class a) -> S.UTDistr v ([Class a], [SignalIdx])
-generateDistribution classSig = S.fromList (map f classes)
-  where list = S.toList classSig
-        classes = map fst $ Map.toList $ Map.fromList $ zip list list
-        f clss = ([clss], map SignalIdx $ List.findIndices (\x -> clss == x) list)
+ks3 :: S.UTFSignal [] (Class Double)
+ks3 = S.map (classifyEven 10 0) s3
 
 d1, d2, d3, d4 :: S.UTDistr [] ([Class Double], [SignalIdx])
-d1 = generateDistribution ks1
-d2 = generateDistribution ks2
-d3 = generateDistribution ks3
+d1 = S.genDistribution1D (classifyEven 10 0) s1
+d2 = S.genDistribution1D (classifyEven 10 0) s2
+d3 = S.genDistribution1D (classifyEven 10 0) s3
 
 
--- | to combine Distributions
-combineDistributions :: (V.Storage v ([Class a], [SignalIdx]),
-                         V.FromList v,V.Filter v) =>
-                        [S.UTDistr v ([Class a], [SignalIdx])] -> S.UTDistr v ([Class a],[SignalIdx])
-combineDistributions [] =  error("Error - empty list in combineDistributions")
-combineDistributions [d] = d
-combineDistributions (d:ds) = foldl f d ds
-  where f acc e = S.filter (not.null.snd) $ combineWith g acc e
-        g (classes1,indices1) (classes2,indices2) = (classes1++classes2,List.intersect indices1 indices2)
-        -- vorher Kombination aller Klassen
-
-
-combineWith :: (V.Storage v d3,
-                V.FromList v,
-                V.Storage v d1,
-                V.Storage v d2) =>
-               (d1 -> d2 -> d3) -> S.TC s t (Data (v :> Nil) d1) -> S.TC s t (Data (v :> Nil) d2) ->  S.TC s t (Data (v :> Nil) d3)
-combineWith f xs ys =
-  S.fromList $ liftA2 f (S.toList xs) (S.toList ys)
-
-
-d4 = combineDistributions [d1, d2, d3]
-
-
-calcDistributionValues ::
-  (Num a,
-   V.Walker v,
-   V.Storage v ([Class a], [SignalIdx]),
-   Eq a,
-   V.Storage v a,
-   V.Lookup v,
-   BSum a) =>
-  S.UTDistr v ([Class a],[SignalIdx]) -> S.FFSignal v a -> S.FDistr v a
-calcDistributionValues d s = S.setType $ S.map f d
-  where f = S.fromScalar . S.sum . S.subSignal1D s . snd
+d4 = S.combineDistributions [d1, d2, d3]
 
 
 df4 :: S.FDistr [] Double
-df4 = calcDistributionValues d4 e1
+df4 = S.calcDistributionValues d4 e1
 
 main :: IO ()
 main = do
 
-  print $ classifyEven' 2 1 3.3
+  print $ classifyEven 2 1 (3.3::Double)
   print  ks1
   print  ks2
+  print  ks3
   print  d1
   print  d2
   print  d3
