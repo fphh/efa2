@@ -5,20 +5,15 @@
 module Main where
 
 import qualified EFA.Signal.Signal as S
-import EFA.Signal.Signal (SignalIdx(SignalIdx))
-
 import qualified EFA.Signal.Vector as V
-import EFA.Signal.Data (Data(Data), (:>), Nil)
+import EFA.Signal.Signal (SignalIdx(SignalIdx))
+import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Signal.Base (BSum)
-
-import Control.Applicative (liftA2)
-
-
-import qualified EFA.Signal.Plot as Plot
-
 
 import qualified Data.List as List
 import qualified Data.Map as Map
+import Control.Applicative (liftA2)
+
 
 -- | Without Typed Container First
 
@@ -26,7 +21,8 @@ newtype Class a = Class a deriving (Show,Ord,Eq)
 
 
 classifyEven' :: Double -> Double -> Double -> Class Double
-classifyEven' interval offset x = Class (fromIntegral(round((x+offset)/interval))*interval-offset)
+classifyEven' interval offset x =
+   Class (fromIntegral(round((x+offset)/interval)::Integer)*interval-offset)
 
 
 classifySignal ::  (V.Walker v,
@@ -36,10 +32,12 @@ classifySignal ::  (V.Walker v,
 classifySignal f sig = S.map f sig
 
 
+s1, s2, s3 :: S.UTSigL
 s1 = S.fromList [2,17,5,5,20] :: S.UTSigL
 s2 = S.fromList [0,10,18,18,12] :: S.UTSigL
 s3 = S.fromList [3,12,7,7,19] :: S.UTSigL
 
+e1 :: S.FFSigL
 e1 = S.fromList [10,20,100,50,50] :: S.FFSigL
 
 ks1 :: S.UTSignal [] (Class Double)
@@ -62,7 +60,7 @@ generateDistribution classSig = S.fromList (map f classes)
         classes = map fst $ Map.toList $ Map.fromList $ zip list list
         f clss = ([clss], map SignalIdx $ List.findIndices (\x -> clss == x) list)
 
-
+d1, d2, d3, d4 :: S.UTDistr [] ([Class Double], [SignalIdx])
 d1 = generateDistribution ks1
 d2 = generateDistribution ks2
 d3 = generateDistribution ks3
@@ -75,7 +73,7 @@ combineDistributions :: (V.Storage v ([Class a], [SignalIdx]),
 combineDistributions [] =  error("Error - empty list in combineDistributions")
 combineDistributions [d] = d
 combineDistributions (d:ds) = foldl f d ds
-  where f acc d = S.filter (not.null.snd) $ combineWith g acc d
+  where f acc e = S.filter (not.null.snd) $ combineWith g acc e
         g (classes1,indices1) (classes2,indices2) = (classes1++classes2,List.intersect indices1 indices2)
         -- vorher Kombination aller Klassen
 
@@ -105,6 +103,7 @@ calcDistributionValues d s = S.setType $ S.map f d
   where f = S.fromScalar . S.sum . S.subSignal1D s . snd
 
 
+df4 :: S.FDistr [] Double
 df4 = calcDistributionValues d4 e1
 
 main :: IO ()
