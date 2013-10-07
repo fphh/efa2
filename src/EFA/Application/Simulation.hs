@@ -40,10 +40,41 @@ import qualified Data.Foldable as Fold
 import Data.Map (Map)
 import Data.Monoid((<>))
 
+import Debug.Trace
+
 
 type EtaAssignMap node = Map (StateIdx.Eta node) (String, String, StateIdx.Eta node -> StateIdx.Power node)
 
 solve :: (Node.C node,
+          Eq (v a),
+          Fractional a,
+          Show node, Show (v a),
+          Ord a,
+          Show a,
+          EqArith.Constant a,
+          SV.Zipper v,
+          SV.Walker v,
+          SV.Storage v a,
+          SV.Singleton v,
+          SV.Len (v a),
+          SV.FromList v,
+          Base.BSum a) =>
+         Topo.Topology node ->
+         (Idx.State -> EtaAssignMap node) ->
+         Map String (a -> a) ->
+         Record.PowerRecord node v a ->
+         EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
+solve topology etaAssign etaFunc powerRecord = trace (show powerRecord)
+    EqGen.solveSimple $
+    givenSimulate stateFlowGraph etaAssign etaFunc powerRecord
+  where
+    -- | Build Sequenceflow graph for simulation
+    stateFlowGraph =
+      StateFlow.stateGraphActualStorageEdges $
+      Sequ.fromList [Topo.flowFromPlain topology]
+
+{-
+solve2 :: (Node.C node,
           Eq (v a),
           Fractional a,
           Ord a,
@@ -60,8 +91,8 @@ solve :: (Node.C node,
          (Idx.State -> EtaAssignMap node) ->
          Map String (a -> a) ->
          Record.PowerRecord node v a ->
-         EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
-solve topology etaAssign etaFunc powerRecord =
+         EqEnv.Complete node (Result (Data Nil a)) (Result (Data Nil a))
+solve2 topology etaAssign etaFunc powerRecord =
     EqGen.solveSimple $
     givenSimulate stateFlowGraph etaAssign etaFunc powerRecord
   where
@@ -69,6 +100,9 @@ solve topology etaAssign etaFunc powerRecord =
     stateFlowGraph =
       StateFlow.stateGraphActualStorageEdges $
       Sequ.fromList [Topo.flowFromPlain topology]
+-}
+
+
 
 
 givenSimulate ::

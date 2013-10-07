@@ -177,11 +177,15 @@ optimalEtasWithPowers params forceFactor env =
         stateFlowGraph = One.stateFlowGraph params
         etaMap = One.etaMap params
 
-        f :: Idx.State -> [Idx.PPos Node] -> Map (Idx.PPos Node) (Map (Param2 Double) (Double, Double))
+        f :: Idx.State ->
+             [Idx.PPos Node] ->
+             Map (Idx.PPos Node) (Map (Param2 Double) (Double, Double))
         f state = Map.fromList . map g
           where
+                solveFunc :: Optimisation.Param2x2 Double -> EnvResult Double
                 solveFunc x = unsafePerformIO $ do
-                  let newEnv = 
+                  let newEnv :: EnvResult Double
+                      newEnv = 
                         Optimisation.solve
                              stateFlowGraph
                              System.etaAssignState
@@ -212,6 +216,7 @@ optimalEtasWithPowers params forceFactor env =
 
 ------------------------------------------------------------------------
 
+
 -- | Warning -- only works for one section in env
 envToPowerRecord ::
   Sig.TSignal [] Double ->
@@ -227,6 +232,7 @@ envToPowerRecord time env =
   . StateEnv.signal) env
   where p (Idx.InPart st _) _ = st == Idx.State 0
         h (Idx.InPart _ (Idx.Power edge)) = Idx.PPos edge
+
 
 external ::
   (Eq (v a), Arith.Constant a, Base.BSum a, Vec.Zipper v,
@@ -352,7 +358,6 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
           System.etaAssignState
           etaMap
           givenSigs
-
 
   let recZeroCross = envToPowerRecord time envSims
 
