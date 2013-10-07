@@ -19,15 +19,17 @@ module EFA.Application.Plot (
 --   sequenceSelect,
    stack,
    stacks,
-   stackfromEnv,
+   stackFromEnv,
    recordStackRow,
    sectionStackRow,
    etaDistr1Dim,
    etaDistr1DimfromRecordList,
-   aggregatedStack
+   aggregatedStack,
    ) where
 
 import qualified EFA.Application.AssignMap as AssignMap
+
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Plot as Plot
@@ -42,13 +44,13 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Typ (TDisp)
 
-import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Record as EqRecord
-import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Result (Result)
+import EFA.Equation.Stack (Stack)
+
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as TDNode
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Advanced as Plot
@@ -64,9 +66,8 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
 
-import qualified Data.Map as Map
+import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
-import Data.Map (Map)
 
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
@@ -143,7 +144,6 @@ record :: (Terminal.C term,
              Fractional d2,
              Fractional d1,
              Ord id,
-             Show id,
              SV.Walker v,
              SV.Storage v d2,
              SV.Storage v d1,
@@ -166,7 +166,6 @@ record ti term showKey opts x =
 
 recordList ::
    (Ord id,
-    Show id,
     SV.Walker v,
     SV.FromList v,
     TDisp t1,
@@ -191,8 +190,7 @@ recordList ti term showKey opts x =
      varOpts n = LineSpec.lineStyle n
 
 recordList_extract ::
-   (Ord id,
-    Show id,
+   (Record.Index id,
     SV.Walker v,
     SV.FromList v,
     TDisp t1,
@@ -222,8 +220,7 @@ recordList_extract ti term showKey opts xs idList =
 recordList_extractWithLeadSignal :: (Terminal.C term,
                                        Fractional d2,
                                        Fractional d1,
-                                       Ord id,
-                                       Show id,
+                                       Record.Index id,
                                        SV.Walker v,
                                        SV.Storage v d2,
                                        SV.Storage v d1,
@@ -258,8 +255,7 @@ recordSplit ::
    (Terminal.C term,
     Fractional d1,
     Fractional d2,
-    Ord id,
-    Show id,
+    Record.Index id,
     SV.Walker v,
     SV.Storage v d1,
     SV.Storage v d2,
@@ -284,7 +280,7 @@ recordSplit n ti term showKey opts r =
 {-
 recordSplitPlus ::
    (TDisp t1, TDisp t2,
-    Show id, Ord id,
+    Ord id,
     Fractional d,
     Tuple.C d, Atom.C d,
     SV.Walker v,
@@ -308,7 +304,7 @@ recordSplitPlus n ti term opts r list =
 {-
 sequenceFrame ::
    (Fractional d,
-    Show id, Ord id,
+    Ord id,
     SV.Walker v, SV.Storage v d, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C d, Atom.C d) =>
@@ -328,7 +324,6 @@ sequence ::
    (Fractional d1,
     Fractional d2,
     Ord id,
-    Show id,
     SV.Walker v,
     SV.Storage v d1,
     SV.Storage v d2,
@@ -352,8 +347,7 @@ sequence ti term showKey opts =
 sequenceSplit ::
    (Fractional d2,
     Fractional d1,
-    Ord id,
-    Show id,
+    Record.Index id,
     SV.Walker v,
     SV.Storage v d2,
     SV.Storage v d1,
@@ -378,60 +372,62 @@ sequenceSplit n ti term showKey opts =
 -- | Plotting Stacks ---------------------------------------------------------------
 
 stack ::
-   (FormatValue term, Show term, Ord term) =>
+   (FormatValue term, Ord term) =>
    String -> Format.ASCII -> Map term Double -> IO ()
-stack title var m =
-   void .  Plot.plotSync DefaultTerm.cons . Frame.cons (Plot.stackFrameAttr title var) . Plot.stack $ m
+stack title var =
+   void .
+   Plot.plotSync DefaultTerm.cons . Frame.cons (Plot.stackFrameAttr title var) .
+   Plot.stack
 
 
 {- |
 The length of @[var]@ must match the one of the @[Double]@ lists.
 -}
 stacks ::
-   (Ord term, FormatValue term, Show term) =>
+   (Ord term, FormatValue term) =>
    String -> [Format.ASCII] -> Map term [Double] -> IO ()
-stacks title vars xs =
+stacks title vars =
    void . Plot.plotSync DefaultTerm.cons .
-   Frame.cons (Plot.stacksFrameAttr title vars) . Plot.stacks $ xs
+   Frame.cons (Plot.stacksFrameAttr title vars) . Plot.stacks
 
 
-stackfromEnv:: (Show node, Ord i, FormatValue i, TDNode.C node, Show i) =>
-        String ->
-        XIdx.Energy node ->
-        Double ->
-        (Record.DeltaName, Env.Complete
-        node t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
-        IO ()
+stackFromEnv ::
+   (Node.C node, Ord i, FormatValue i) =>
+   String ->
+   XIdx.Energy node ->
+   Double ->
+   (Record.DeltaName,
+    Env.Complete node t (Result (Stack i Double))) ->
+   IO ()
 
-stackfromEnv ti energyIndex eps (Record.DeltaName recName, env) = do
-  stack ("Record " ++ recName ++ "-" ++ ti)
-    (formatValue $ Idx.delta $ Var.index energyIndex)
-    (AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env)
+stackFromEnv ti energyIndex eps (Record.DeltaName recName, env) = do
+   stack ("Record " ++ recName ++ "-" ++ ti)
+      (formatValue $ Idx.delta $ Var.index energyIndex)
+      (AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env)
 
-recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
-                            String
-                            -> [Record.DeltaName]
-                            -> XIdx.Energy node
-                            -> Double
-                            -> [Env.Complete node t
-                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
-                            -> IO ()
+recordStackRow ::
+   (Node.C node, Ord i, FormatValue i) =>
+   String ->
+   [Record.DeltaName] ->
+   XIdx.Energy node ->
+   Double ->
+   [Env.Complete node t (Result (Stack i Double))] ->
+   IO ()
 
-recordStackRow ti deltaSets energyIndex eps envs =
+recordStackRow ti deltaSets energyIndex eps =
    stacks ti
-   (map (Format.literal . (\ (Record.DeltaName x) -> x)) deltaSets)
-   (AssignMap.simultaneousThreshold eps .
+      (map (Format.literal . (\ (Record.DeltaName x) -> x)) deltaSets) .
+   AssignMap.simultaneousThreshold eps .
    AssignMap.transpose .
    map (AssignMap.lookupStack energyIndex)
-    $ envs)
 
-sectionStackRow:: (Ord node, TDNode.C node,Show i, Ord i, FormatValue i) =>
-                  String
-                  -> Idx.Energy node
-                  -> Double
-                  -> Env.Complete node t
-                         (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
-                  -> IO ()
+sectionStackRow ::
+   (Node.C node, Ord i, FormatValue i) =>
+   String ->
+   Idx.Energy node ->
+   Double ->
+   Env.Complete node t (Result (Stack i Double)) ->
+   IO ()
 sectionStackRow ti energyIndex eps env =
    case unzip $ Map.toList $ AssignMap.lookupEnergyStacks energyIndex env of
       (idxs, energyStacks) ->
@@ -440,20 +436,18 @@ sectionStackRow ti energyIndex eps env =
          map (Map.mapKeys AssignMap.deltaIndexSet) energyStacks
 
 aggregatedStack ::
-   (TDNode.C node, Ord node, Show node,
-    Ord i, Show i, FormatValue i) =>
+   (Node.C node, Ord i, FormatValue i) =>
    String ->
    Idx.Energy node ->
    Double ->
-   Env.Complete node t
-      (EqRecord.Absolute (Result.Result (Stack.Stack i Double))) ->
+   SeqFlow.Graph node t (Result (Stack i Double)) ->
    IO ()
 
 aggregatedStack ti energyIndex eps env =
-  stack ti (formatValue $ Idx.delta energyIndex) $
-  AssignMap.threshold eps $
-  Map.mapKeys AssignMap.deltaIndexSet $ Fold.fold $
-  AssignMap.lookupEnergyStacks energyIndex env
+   stack ti (formatValue $ Idx.delta energyIndex) $
+   AssignMap.threshold eps $
+   Map.mapKeys AssignMap.deltaIndexSet $ Fold.fold $
+   AssignMap.lookupEnergyStacksNew energyIndex env
 
 
 -- | Plotting Average Efficiency Curves over Energy Flow Distribution -------------------------------
@@ -480,34 +474,35 @@ etaDistr1Dim ti p n pDist fDist nDist =
 -- | Plot efficiency distribution from List of Records
 -- | pg: currently plots over input power, one should be able to choose
 -- | You however can choose which power you want to plot and classify over (abscissa)
-etaDistr1DimfromRecordList :: (Ord id,
-                             Show id,
-                             Show (v d),
-                             Base.BProd d d,
-                             Ord d,
-                             SV.Zipper v,
-                             SV.Walker v,
-                             SV.Storage v (d, d),
-                             SV.Storage v d,
-                             Fractional d,
-                             SV.FromList v,
-                             Atom.C d,
-                             Tuple.C d,
-                             SV.SortBy v,
-                             SV.Unique v (Sig.Class d),
-                             SV.Storage v Sig.SignalIdx,
-                             SV.Storage v Int,
-                             SV.Storage v (Sig.Class d),
-                             SV.Storage v ([Sig.Class d], [Sig.SignalIdx]),
-                             RealFrac d,
-                             SV.Lookup v,
-                             SV.Find v,
-                             Base.BSum d,
-                             Base.DArith0 d,
-                             SV.Storage v (d, (d, d)),
-                             SV.Singleton v) =>
-                            String  -> d -> d -> [(Record.Name, Record.DTimeFlowRecord id v d)]
-                            -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
+etaDistr1DimfromRecordList ::
+   (Node.C node,
+    Show (v d),
+    Base.BProd d d,
+    Ord d,
+    SV.Zipper v,
+    SV.Walker v,
+    SV.Storage v (d, d),
+    SV.Storage v d,
+    Fractional d,
+    SV.FromList v,
+    Atom.C d,
+    Tuple.C d,
+    SV.SortBy v,
+    SV.Unique v (Sig.Class d),
+    SV.Storage v Sig.SignalIdx,
+    SV.Storage v Int,
+    SV.Storage v (Sig.Class d),
+    SV.Storage v ([Sig.Class d], [Sig.SignalIdx]),
+    RealFrac d,
+    SV.Lookup v,
+    SV.Find v,
+    Base.BSum d,
+    Base.DArith0 d,
+    SV.Storage v (d, (d, d)),
+    SV.Singleton v) =>
+   String  -> d -> d ->
+   [(Record.Name, Record.DTimeFlowRecord node v d)] ->
+   (String, (Idx.PPos node, Idx.PPos node, Idx.PPos node)) -> IO ()
 
 etaDistr1DimfromRecordList ti  interval offset rList  (plotTitle, (idIn,idOut,idAbscissa)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do

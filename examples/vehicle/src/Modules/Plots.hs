@@ -32,7 +32,6 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 sigsWithSpeed :: (Fractional d1,
                       Fractional d2,
                       Ord d2,
-                      Show (v d2),
                       V.Walker v,
                       V.Storage v d1,
                       V.Storage v d2,
@@ -51,16 +50,16 @@ sigsWithSpeed :: (Fractional d1,
 sigsWithSpeed term recList (componentName, idList) = PlotIO.recordList_extractWithLeadSignal ("Component " ++ componentName ++ " -  Signals with Vehicle Speed") term show id (Record.RangeFrom idList, Record.ToModify $ [Record.SigId "speedsensor1.v"]) recList
 
 
-operation :: (Fractional d, Ord id, Show (v d), Show id, V.Walker v,
+operation :: (Fractional d, Ord id, V.Walker v,
               V.Storage v d, V.FromList v, TDisp t2, Tuple.C d, Atom.C d,
               Terminal.C term) =>
               String ->
               term ->
               (LineSpec.T -> LineSpec.T) ->
-              [(Record.Name, Record s1 s2 t1 t2 id v d d)] -> ([Char], (id, id)) -> IO ()
+              [(Record.Name, Record s1 s2 t1 t2 id v d d)] -> (String, (id, id)) -> IO ()
 
 operation ti term opts rList  (plotTitle, (idx,idy)) = mapM_ f rList
-  where f ((Record.Name recTitle), rec) = do
+  where f (Record.Name recTitle, rec) = do
           let x = getSig rec idx
               y = getSig rec idy
               legend n = recTitle ++ " - Torque over Speed"

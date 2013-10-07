@@ -46,11 +46,10 @@ newtype EdgeStates node = EdgeStates (Map (DirEdge node) EdgeFlow) deriving (Sho
 
 getEdgeState :: (Fractional a,
                  Ord a,
-                 Ord node,
+                 Node.C node,
                  SV.Walker v,
                  SV.Storage v a,
                  BSum a,
-                 Show node,
                  Show (v a),
                  SV.Storage v Sign,
                  SV.Singleton v) =>

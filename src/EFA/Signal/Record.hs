@@ -41,19 +41,21 @@ import EFA.Signal.Data (Data(Data),
 import EFA.Signal.Base (BSum, BProd)
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
+
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (formatStructureEdge)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import EFA.Report.Typ (TDisp, getDisplayTypName)
 import EFA.Report.Base (DispStorage1)
---import EFA.Report.FormatValue(FormatValue,formatValue)
---import EFA.Report.Format as Format(literal)
 
 import Text.Printf (PrintfArg)
 import qualified Test.QuickCheck as QC
 import System.Random (Random)
 
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+import qualified Data.Map as Map ; import Data.Map (Map)
+import qualified Data.Set as Set ; import Data.Set (Set)
 import qualified Data.List as List
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as ListHT
@@ -67,9 +69,6 @@ import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Data.Ord.HT (inRange)
-import Data.Map (Map)
-import EFA.Utility.Map (checkedLookup)
-import EFA.Utility (myShowList)
 
 import qualified Prelude as P; import Prelude hiding (map)
 
@@ -109,6 +108,23 @@ type DistRecord n v d = Record FDistrib FDistrib (Typ UT UT UT) (Typ A F Tt) (Id
 -- data DistRecord n v d = DistRecord (UTDistr v ([S.Class d], [S.SignalIdx])) (Map (Idx.PPos n) (FDistr v d))
 
 
+class (Ord id) => Index id where
+   formatIndex :: id -> String
+
+instance Index SigId where
+   formatIndex (SigId str) = str
+
+instance Node.C node => Index (Idx.PPos node) where
+   formatIndex (Idx.PPos se) =
+      Format.unUnicode $
+      formatStructureEdge (Format.literal "ppos") se
+
+formatIndexSet :: (Index id) => Set id -> String
+formatIndexSet =
+   Fold.foldMap (\i -> formatIndex i ++ "\n")
+
+
+
 newtype Name = Name String
 
 newtype DeltaName = DeltaName String
@@ -122,7 +138,7 @@ map ::
 map f (Record t ma) = Record t (Map.map f ma)
 
 mapKeys ::
-   (Ord id2) =>
+   (Index id2) =>
    (id1 -> id2) ->
    Record s1 s2 t1 t2 id1 v d1 d2 -> Record s1 s2 t1 t2 id2 v d1 d2
 mapKeys f (Record t ma) = Record t (Map.mapKeys f ma)
@@ -134,14 +150,6 @@ mapWithKey ::
    Record s s0 t t0 id v d1 d2 ->
    Record s s1 t t1 id v d1 d2
 mapWithKey f (Record t ma) = Record t (Map.mapWithKey f ma)
------------------------------------------------------------------------------------
--- | Indice Record Number
-
-data Idx = Idx Int | NoIdx
-
-instance Show Idx where
-  show (Idx x) = "Rec" ++ show x
-  show NoIdx = ""
 
 
 
@@ -151,9 +159,14 @@ getTime (Record time _) = time
 
 -- | Signal Access Function -- not for Distributions
 getSig ::
-   (Show (v d), Ord id, Show id) =>
-   Record s1 s2 t1 t2 id v d d -> id -> TC s2 t2 (Data (v :> Nil) d)
-getSig (Record _ sigMap) key = checkedLookup "getSig" sigMap key
+   (Show (v d2), Index id) =>
+   Record s1 s2 t1 t2 id v d1 d2 -> id -> TC s2 t2 (Data (v :> Nil) d2)
+getSig (Record _ sigMap) key =
+   Map.findWithDefault
+      (error $
+         "Record.getSig: unknown key " ++ formatIndex key ++ "\n" ++
+         "available keys " ++ formatIndexSet (Map.keysSet sigMap))
+      key sigMap
 
 -- | Get Start and End time
 {- Wollen wir wirklich (Typ A T Tt) vorschreiben?
@@ -212,19 +225,19 @@ hardShrinkage threshold x =
 
 -- | Generate a new Record with selected signals
 extract ::
-   (Ord id, Show id) =>
+   (Index id) =>
    [id] -> Record s1 s2 t1 t2 id v d1 d2 -> Record s1 s2 t1 t2 id v d1 d2
 extract xs rec = extractLogSignals rec $ List.map (flip (,) id) xs
 {-
 extract ::
-   (Show (v a), Ord id, Show id) =>
+   (Show (v a), Index id) =>
 extract xs rec@(Record time _) =
    Record time $ mapFromSet (getSig rec) $ Set.fromList xs
 -}
 
 -- | Split SignalRecord in even chunks
 split ::
-   (Ord id) =>
+   (Index id) =>
    Int -> Record s1 s2 t1 t2 id v d1 d2 -> [Record s1 s2 t1 t2 id v d1 d2]
 split n (Record time pMap) =
    List.map (Record time . Map.fromList) $
@@ -246,7 +259,7 @@ sortSigList = Key.sort (S.sum . snd)
 
 -- | create a Record of selected, and sign corrected signals
 extractLogSignals ::
-   (Ord id, Show id) =>
+   (Index id) =>
    Record s1 s2 t1 t2 id v d1 d2 ->
    [(id, TC s2 t2 (Data (v :> Nil) d2) -> TC s2 t2 (Data (v :> Nil) d2))] ->
    Record s1 s2 t1 t2 id v d1 d2
@@ -255,8 +268,11 @@ extractLogSignals (Record time sMap) idList =
        notFound = Set.difference (Map.keysSet idMap) (Map.keysSet sMap)
    in  if Set.null notFound
          then Record time $ Map.intersectionWith ($) idMap sMap
-         else error $ "extractLogSignals: signals not found in record: " ++ show notFound ++
-              "\n" ++ "Available Keys in Map : \n" ++ (myShowList $ Map.keys sMap)
+         else error $
+                 "extractLogSignals: signals not found in record: " ++
+                 formatIndexSet notFound ++ "\n" ++
+                 "Available Keys in Map : \n" ++
+                 (formatIndexSet $ Map.keysSet sMap)
 
 
 genPowerRecord ::
@@ -275,10 +291,7 @@ genPowerRecord time =
 
 
 addSignals ::
-   (Ord id,
-    V.Len (v d1),
-    V.Len (v d2),
-    Show id) =>
+   (Index id, V.Len (v d1), V.Len (v d2)) =>
    [(id, TC s2 t2 (Data (v :> Nil) d2))]  ->
    Record s1 s2 t1 t2 id v d1 d2 -> Record s1 s2 t1 t2 id v d1 d2
 addSignals list (Record time m) =  (Record time (foldl f m list))
@@ -286,12 +299,12 @@ addSignals list (Record time m) =  (Record time (foldl f m list))
           if S.len time == S.len sig
              then Map.insert ident sig ma
              else error $ "Error in addSignals - signal length differs: "
-                          ++ show ident
+                          ++ formatIndex ident
 
 
 -- | adding signals of two records with same time vector by using Data.Map.union
 union ::
-   (Eq (v d1), Ord id, Show id) =>
+   (Eq (v d1), Index id) =>
    Record s1 s2 t1 t2 id v d1 d2 ->
    Record s1 s2 t1 t2 id v d1 d2 ->
    Record s1 s2 t1 t2 id v d1 d2
@@ -305,9 +318,8 @@ union (Record timeA mA) (Record timeB mB) =
 {-
 -- Wegen newTimeBase ist der Typ nicht so algemein wie bei "union" oben. Schade.
 unionWithNewTime ::
-  ( Eq (v d), Show d,Show (v d),
-    Ord id,
-    Show id,
+  ( Eq (v d), Show d, Show (v d),
+    Index id,
     Fractional d,
     Ord d,
     V.Filter v,
@@ -363,7 +375,7 @@ modifySigId f = mapKeys (\(SigId str) -> SigId (f str))
 
 -- | Modify specified signals with function
 modifySignals ::
-   (Ord id) =>
+   (Index id) =>
    ToModify id ->
    (TC s2 t2 (Data (v :> Nil) d2) ->
     TC s2 t2 (Data (v :> Nil) d2)) ->
@@ -378,16 +390,15 @@ modifySignals idList f (Record time ma) =
 
 -- | Get maximum signal range for all signals specified
 maxRange ::
-  ( Ord d2, V.Storage v d2, V.Singleton v,
-    Ord id, Show (v d2), Show id) =>
+  ( Ord d2, V.Storage v d2, Show (v d2), V.Singleton v, Index id) =>
   RangeFrom id ->
   Record s1 s2 t1 t2 id v d1 d2 ->
   (TC Scalar t2 (Data Nil d2), TC Scalar t2 (Data Nil d2))
-maxRange list (Record _ m) =
+maxRange list rec@(Record _ m) =
   (S.toScalar $ minimum lmin, S.toScalar $ maximum lmax)
   where (lmin, lmax) =
            unzip $
-           List.map (S.fromScalar . S.minmax . checkedLookup "Signal.maxRange" m) $
+           List.map (S.fromScalar . S.minmax . getSig rec) $
            case list of
               RangeFromAll -> Map.keys m
               RangeFrom w -> w
@@ -397,8 +408,7 @@ maxRange list (Record _ m) =
 data RangeFrom id = RangeFrom [id] | RangeFromAll
 data ToModify id = ToModify [id] | ModifyAll
 
-normSignals2Range :: (Show id,
-                      Ord id,
+normSignals2Range :: (Index id,
                       Num d2,
                       Ord d2,
                       Show (v d2),
@@ -413,8 +423,7 @@ normSignals2Range (listM,listN) record = modifySignals listN f record
   where (TC (Data minx),TC (Data maxx)) = maxRange listM record
         f = S.map (\y -> y * (maxx - minx) + minx) . S.norm
 
-normSignals2Max75 :: (Show id,
-                      Ord id,
+normSignals2Max75 :: (Index id,
                       Num d2,
                       Ord d2,
                       Show (v d2),
@@ -523,7 +532,7 @@ instance
     V.Storage v d1,
     V.Storage v d2,
     QC.Arbitrary id,
-    Ord id) =>
+    Index id) =>
       QC.Arbitrary (Record s1 s2 t1 t2 id v d1 d2) where
    arbitrary = do
       xs <- QC.listOf arbitrarySample
@@ -564,7 +573,7 @@ instance
     Ord d1,
     Fractional d1,
     PrintfArg d1,
-    Show id,
+    Index id,
     Ord d2,
     Fractional d2,
     PrintfArg d2,
@@ -584,7 +593,7 @@ instance
 
       where sigList = Map.toList sigs
             t = tvcat $ S.toTable os ("Time",time) !:
-                        concatMap (toTable os . mapFst show) sigList
+                        concatMap (toTable os . mapFst formatIndex) sigList
 
 
 ------------------------------------
@@ -651,7 +660,7 @@ powerToSignalWithFunct ::
 powerToSignalWithFunct funct rec = map S.untype $ mapKeys funct rec
 
 -- | Combine a power and a signal record together in a signal record (plotting)
-combinePowerAndSignal :: (Eq (v d),Show id) => PowerRecord id v d -> SignalRecord v d -> SignalRecord v d
+combinePowerAndSignal :: (Eq (v d), Show id) => PowerRecord id v d -> SignalRecord v d -> SignalRecord v d
 combinePowerAndSignal pr sr = union (powerToSignal pr) sr
 
 -- | Combine a power and a signal record together in a signal record (plotting)
@@ -690,8 +699,7 @@ distribution :: (V.FromList v,
                  V.Lookup v,
                  BSum d,
                  V.Find v,
-                 Ord n,
-                 Show n,
+                 Node.C n,
                  Show (v d)) => FlowRecord n v d -> [Idx.PPos n] -> d -> d -> DistRecord n v d
 distribution rec@(Record _ pMap) xs interval offset = Record classification energyDistribution
   where classification =

@@ -48,8 +48,8 @@ cumulatedEnergyFlow ::
   Topo.DirSeqFlowGraph node ->
   Env.Complete node (Result a) (Result v) ->
   ( EnergyMap node (Result a), EnergyMap node (Result a) )
-cumulatedEnergyFlow topo seqTopo env =
-   mapPair (cum, cum) $ unzip $ mapMaybe f $ Graph.edges seqTopo
+cumulatedEnergyFlow topo flowGraph env =
+   mapPair (cum, cum) $ unzip $ mapMaybe f $ Graph.edges flowGraph
   where cum = Map.unionsWith (liftA2 (~+))
         em = Env.energyMap $ Env.signal env
         f e =
@@ -87,7 +87,7 @@ cumulate ::
   Env.Complete node (Result a) (Result v) ->
   ( ( Topo.Topology node, EnergyMap node (Result a) ),
     ( Topo.Topology node, EnergyMap node (Result a) ) )
-cumulate topo (_rngs, seqTopo) env =
+cumulate topo (_rngs, flowGraph) env =
   ( (topo, withDirEnv), (Graph.reverse topo, againstDirEnv) )
   where (withDirEnv, againstDirEnv) =
-           cumulatedEnergyFlow topo (Topo.dirFromFlowGraph seqTopo) env
+           cumulatedEnergyFlow topo (Topo.dirFromFlowGraph flowGraph) env

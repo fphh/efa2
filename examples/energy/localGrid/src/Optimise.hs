@@ -371,7 +371,7 @@ main = do
          (a ~ EqArith.Scalar v, Eq a, EqArith.Constant a,
          Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
          EqSys.EquationSystemIgnore Node s a v
-       eqs = EqSys.fromGraph True (Topo.dirFromFlowGraph (snd System.seqTopoOpt))
+       eqs = EqSys.fromGraph True (Topo.dirFromFlowGraph (snd System.flowGraphOpt))
 
        plotwaterpng n pic =
          PlotIO.surfaceWithOpts "Optimal Water Power"
@@ -462,7 +462,7 @@ main = do
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
      envsCharge =
        sweepGetData $
-       doubleSweep (Optimisation.solveCharge System.seqTopoOpt)
+       doubleSweep (Optimisation.solveCharge System.flowGraphOpt)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      envsDischarge ::
@@ -470,7 +470,7 @@ main = do
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
      envsDischarge =
        sweepGetData $
-       doubleSweep (Optimisation.solveDischarge System.seqTopoOpt)
+       doubleSweep (Optimisation.solveDischarge System.flowGraphOpt)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      socDrive = 0.0
@@ -621,7 +621,7 @@ main = do
 -}
 
      -- | Build Sequenceflow graph for simulation
-     seqTopoSim =
+     flowGraphSim =
         SeqFlow.graphFromPlain $
         SeqFlowPlain.sequenceGraph $
         Sequ.fromList [System.flowState4]
@@ -631,7 +631,7 @@ main = do
      eqs :: EqSys.EquationSystemIgnore Node s (Data Nil Double) (Data ([] :> Nil) Double)
      eqs = Optimisation.givenSimulate etaAssign etaFunc $ Sequ.fromList [rec]
 
-     envSim = EqSys.solve seqTopoSim eqs
+     envSim = EqSys.solve flowGraphSim eqs
 
 
      -- | extract power record from simulation env to allow subsequent EFA
@@ -672,11 +672,11 @@ main = do
 
  {-
    concurrentlyMany_ [
-     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv System.seqTopoOpt
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv System.flowGraphOpt
                   (fromJust (Sig.getSample2D envsChargeOpt (Sig.SignalIdx 0, Sig.SignalIdx 0))),
 
 
-     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv System.seqTopoOpt
+     Draw.xterm $ Draw.seqFlowGraphAbsWithEnv System.flowGraphOpt
                   (Sig.getSample2D (Sig.getSample2D envsDischarge (Sig.SignalIdx 1, Sig.SignalIdx 1)) (Sig.SignalIdx 1, Sig.SignalIdx 1)) ]
 
 -}
@@ -694,7 +694,7 @@ main = do
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
 -}
-     Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault System.seqTopoOpt,
+     Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault System.flowGraphOpt,
 
      PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts varRestPower varLocalPower etaSysMax,
 

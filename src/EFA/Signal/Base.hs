@@ -1,5 +1,4 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module EFA.Signal.Base where
@@ -8,13 +7,12 @@ module EFA.Signal.Base where
 
 ----------------------------------------------------------
 -- | 1. Data types
-type Val = Double -- or Ratio Integer
 
 class DArith0 d where
       neg :: d -> d
       rec :: d -> d
 
-instance DArith0 Val where
+instance DArith0 Double where
          neg = negate
          rec = recip
 
@@ -26,12 +24,12 @@ class BProd d1 d2 where
    (..*) :: d1 -> d2 -> d1
    (../) :: d1 -> d2 -> d1
 
-instance BProd Val Val where
+instance BProd Double Double where
    (..*) x y = x*y
    (../) 0 0 = 0
    (../) x y = x/y
 
-instance BProd Val Bool where
+instance BProd Double Bool where
    (..*) x True = x
    (..*) _ False = 0
    (../) _ False = 0
@@ -51,7 +49,7 @@ class BSum d1 where
    (..+) :: d1 -> d1 -> d1
    (..-) :: d1 -> d1 -> d1
 
-instance BSum Val where
+instance BSum Double where
    (..+) x y = x+y
    (..-) x y = x-y
 
@@ -65,8 +63,8 @@ class DEq d1 where
    (..>) ::  d1 -> d1 -> Equal d1
    (..<) ::  d1 -> d1 -> Equal d1
 
-instance DEq Val where
-   type Equal Val = Bool
+instance DEq Double where
+   type Equal Double = Bool
    (..==)  x y = x == y
    (../=)  x y = x /= y
    (..>=)  x y = x >= y
@@ -99,4 +97,4 @@ sign x =
       LT -> NSign
 -}
 
-data ZeroCrossing = ZeroCrossing Val | NoCrossing deriving (Show, Eq)
+data ZeroCrossing = ZeroCrossing Double | NoCrossing deriving (Show, Eq)

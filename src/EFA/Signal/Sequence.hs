@@ -162,7 +162,7 @@ instance
     Ord d1,
     V.Storage v d1,
     PrintfArg d1,
-    Show id,
+    Record.Index id,
     S.DispApp s1,
     S.DispApp s2,
     TDisp t1,

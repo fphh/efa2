@@ -11,7 +11,6 @@ import EFA.Signal.Signal (PSig, TSig, Scal, FFSig)
 import EFA.Utility.Async (concurrentlyMany_)
 
 import EFA.Signal.Typ (Typ, A, D, P, N, Tt)
-import EFA.Signal.Base (Val)
 
 import qualified Graphics.Gnuplot.Advanced as GnuPlot
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
@@ -27,7 +26,7 @@ import Data.Monoid ((<>))
 
 
 -- Generate objects to work with
-offset :: Scal (Typ D P Tt) Val
+offset :: Scal (Typ D P Tt) Double
 offset = S.toScalar 0
 
 -- Time Vector
@@ -35,7 +34,7 @@ time :: TSig
 time = S.fromList ([0,0.1..pi]++[pi])
 
 -- constant efficiency
-n1 :: Scal (Typ A N Tt) Val
+n1 :: Scal (Typ A N Tt) Double
 n1 = S.toScalar 0.8
 
 -- Generate two Power Signals
@@ -43,7 +42,7 @@ pSig1, pSig2 :: PSig
 pSig1 =
    ((S.changeType (S.map sin time)) .- offset)
    .*
-   (S.toScalar 1000 :: Scal (Typ A N Tt) Val)
+   (S.toScalar 1000 :: Scal (Typ A N Tt) Double)
 pSig2 = pSig1 .* n1
 
 -- Make Time-Step-Integration to get 1D energy flow signals
@@ -51,7 +50,7 @@ fSig1, fSig2 :: FFSig
 fSig1 = S.partIntegrate time pSig1
 fSig2 = S.partIntegrate time pSig2
 
-nVal2 :: Scal (Typ A N Tt) Val
+nVal2 :: Scal (Typ A N Tt) Double
 nVal2 = S.sum fSig2 ./ S.sum fSig1
 
 

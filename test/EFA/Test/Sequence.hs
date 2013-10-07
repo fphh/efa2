@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module EFA.Test.Sequence where
 
@@ -7,7 +6,8 @@ import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Chop as Chop
 import qualified EFA.Signal.Signal as Signal
 import EFA.Signal.Record (PowerRecord, Record(Record))
-import EFA.Signal.Base (Val)
+
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as ListHT
@@ -15,8 +15,10 @@ import qualified Data.List.HT as ListHT
 -- import Test.QuickCheck (Property, (==>))
 import Test.QuickCheck.All (quickCheckAll)
 
+type Node = Node.Int
 
-failing_prop_genSequ :: (Ord node) => PowerRecord node [] Val -> Bool
+
+failing_prop_genSequ :: PowerRecord Node [] Double -> Bool
 failing_prop_genSequ prec =
    Chop.approxSequPwrRecord (1e-8)
       (Chop.genSequ prec)
@@ -25,10 +27,9 @@ failing_prop_genSequ prec =
 
 
 prop_chopMatchingCutsApprox ::
-  forall node. (Ord node) =>
-  PowerRecord node [] Val -> Bool
+   PowerRecord Node [] Double -> Bool
 prop_chopMatchingCutsApprox prec =
-   case Chop.chopAtZeroCrossingsPowerRecord prec :: Sequ.List (PowerRecord node [] Val) of
+   case Chop.chopAtZeroCrossingsPowerRecord prec :: Sequ.List (PowerRecord Node [] Double) of
        xs ->
           eqAdjacent
              (\(Record xt xm)
@@ -40,9 +41,9 @@ prop_chopMatchingCutsApprox prec =
 
 
 prop_chopProjectiveApprox ::
-  forall node. (Ord node) => PowerRecord node [] Val -> Bool
+   PowerRecord Node [] Double -> Bool
 prop_chopProjectiveApprox prec =
-   let secs :: Sequ.List (PowerRecord node [] Val)
+   let secs :: Sequ.List (PowerRecord Node [] Double)
        secs = Chop.chopAtZeroCrossingsPowerRecord prec
    in  Chop.approxSequPwrRecord (1e-8)
           secs
@@ -50,10 +51,10 @@ prop_chopProjectiveApprox prec =
            Chop.concatPowerRecords secs)
 
 prop_chopMatchingCutsExact ::
-  forall node. (Ord node) => PowerRecord node [] Rational -> Bool
+   PowerRecord Node [] Rational -> Bool
 prop_chopMatchingCutsExact prec =
    case Chop.chopAtZeroCrossingsPowerRecord prec
-         :: Sequ.List (PowerRecord node [] Rational) of
+         :: Sequ.List (PowerRecord Node [] Rational) of
       xs ->
          eqAdjacent
             (\(Record xt xm)
@@ -64,9 +65,9 @@ prop_chopMatchingCutsExact prec =
             xs
 
 prop_chopProjectiveExact ::
-  forall node. (Ord node) => PowerRecord node [] Rational -> Bool
+   PowerRecord Node [] Rational -> Bool
 prop_chopProjectiveExact prec =
-   let secs :: Sequ.List (PowerRecord node [] Rational)
+   let secs :: Sequ.List (PowerRecord Node [] Rational)
        secs = Chop.chopAtZeroCrossingsPowerRecord prec
    in  secs
        ==

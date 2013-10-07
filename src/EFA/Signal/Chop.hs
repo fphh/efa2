@@ -15,7 +15,7 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.Record (Record(Record), PowerRecord, FlowRecord)
 
 import EFA.Signal.Base
-          (Val, Sign(PSign, NSign, ZSign),
+          (Sign(PSign, NSign, ZSign),
            ZeroCrossing(NoCrossing, ZeroCrossing))
 import EFA.Signal.Signal
           (TC(TC), TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
@@ -53,7 +53,7 @@ import Data.Maybe.HT (toMaybe)
 data StepType = LeavesZeroStep
               | BecomesZeroStep
               | ZeroCrossingStep
-              | NoStep deriving (Eq, Show,Ord)
+              | NoStep deriving (Eq, Ord, Show)
 
 data EventType = LeftEvent
                | RightEvent
@@ -104,9 +104,9 @@ separateUncleanSections  (xs, ys, zs) =
 
 
 makeSequence ::
-   (Show node, Ord node) =>
-   PowerRecord node [] Val ->
-   Sequ.List (FlowRecord node [] Val)
+   (Ord node) =>
+   PowerRecord node [] Double ->
+   Sequ.List (FlowRecord node [] Double)
 makeSequence =
     genSeqFlow . genSequ . addZeroCrossings
 
@@ -119,8 +119,8 @@ must correctly handle the last section.
 -- | Function to Generate Time Sequence
 genSequ ::
    Ord node =>
-   PowerRecord node [] Val ->
-   Sequ.List (PowerRecord node [] Val)
+   PowerRecord node [] Double ->
+   Sequ.List (PowerRecord node [] Double)
 genSequ pRec =
    removeNilSections $ Sequ.fromRangeList $ zip (sequ++[lastSec]) pRecs
   where rSig = record2RSig pRec
@@ -205,7 +205,7 @@ stepX p1 p2
    | otherwise = toSample NoStep  -- nostep
 
 
---addZeroCrossings ::(Ord node) => PowerRecord node [] Val -> PowerRecord node [] Val
+--addZeroCrossings ::(Ord node) => PowerRecord node [] Double -> PowerRecord node [] Double
 
 --addZeroCrossings ::
 --  Record t0 t1 (Typ A T Tt) (Typ A P Tt) id0 [] Double Double ->

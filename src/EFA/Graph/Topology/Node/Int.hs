@@ -9,6 +9,8 @@ module EFA.Graph.Topology.Node.Int (
    NoRestriction(..),
    ) where
 
+import qualified Test.QuickCheck as QC
+
 import Data.Word (Word)
 
 
@@ -53,6 +55,39 @@ instance Enum DeadNode where
 instance Enum NoRestriction where
    toEnum = NoRestriction . toEnumGen
    fromEnum (NoRestriction n) = fromEnumGen n
+
+
+instance QC.Arbitrary Storage where
+   arbitrary = fmap Storage QC.arbitrary
+   shrink (Storage n) = map Storage $ QC.shrink n
+
+instance QC.Arbitrary Sink where
+   arbitrary = fmap Sink QC.arbitrary
+   shrink (Sink n) = map Sink $ QC.shrink n
+
+instance QC.Arbitrary AlwaysSink where
+   arbitrary = fmap AlwaysSink QC.arbitrary
+   shrink (AlwaysSink n) = map AlwaysSink $ QC.shrink n
+
+instance QC.Arbitrary Source where
+   arbitrary = fmap Source QC.arbitrary
+   shrink (Source n) = map Source $ QC.shrink n
+
+instance QC.Arbitrary AlwaysSource where
+   arbitrary = fmap AlwaysSource QC.arbitrary
+   shrink (AlwaysSource n) = map AlwaysSource $ QC.shrink n
+
+instance QC.Arbitrary Crossing where
+   arbitrary = fmap Crossing QC.arbitrary
+   shrink (Crossing n) = map Crossing $ QC.shrink n
+
+instance QC.Arbitrary DeadNode where
+   arbitrary = fmap DeadNode QC.arbitrary
+   shrink (DeadNode n) = map DeadNode $ QC.shrink n
+
+instance QC.Arbitrary NoRestriction where
+   arbitrary = fmap NoRestriction QC.arbitrary
+   shrink (NoRestriction n) = map NoRestriction $ QC.shrink n
 
 
 

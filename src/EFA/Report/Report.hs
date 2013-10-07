@@ -1,7 +1,5 @@
 module EFA.Report.Report where
 
-import EFA.Signal.Base (Val)
-
 import qualified Text.PrettyPrint as PP
 
 import qualified Data.List as List
@@ -9,7 +7,7 @@ import qualified Data.NonEmpty as NonEmpty
 
 
 -- | Report Options
-data ROpt = RVertical | RAll | RTimeMask Val Val | RIndexMask [Int] deriving (Show,Eq)
+data ROpt = RVertical | RAll | RTimeMask Double Double | RIndexMask [Int] deriving (Show,Eq)
 type ROpts = [ROpt]
 
 {- geht nicht

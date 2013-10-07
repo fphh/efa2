@@ -130,9 +130,9 @@ flowState4 =
       [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork,
        dirEdge Network Water]
 
-seqTopoOpt ::
+flowGraphOpt ::
    SeqFlow.Graph Node (Result (Data Nil Double)) (Result (Data Nil Double))
-seqTopoOpt =
+flowGraphOpt =
    SeqFlow.graphFromPlain $
    SeqFlowPlain.sequenceGraph $
    Sequ.fromList [flowState4, flowState0]

@@ -365,13 +365,13 @@ recordLineSpec =
    LineSpec.deflt
 
 record ::
-   (Show id, Ord id, TDisp typ0, TDisp typ1,
+   (Ord id, TDisp typ1, TDisp typ2,
     SV.Walker v, SV.FromList v,
     SV.Storage v d1, Fractional d1, Atom.C d1, Tuple.C d1,
     SV.Storage v d2, Fractional d2, Atom.C d2, Tuple.C d2) =>
    (id -> String) ->
    (LineSpec.T -> LineSpec.T) ->
-   Record s1 s2 typ0 typ1 id v d1 d2 -> Plot2D.T d1 d2
+   Record s1 s2 typ1 typ2 id v d1 d2 -> Plot2D.T d1 d2
 record showKey opts (Record time pMap) =
    Fold.fold $
    Map.mapWithKey
@@ -385,24 +385,14 @@ record showKey opts (Record time pMap) =
    Colour.adorn pMap
 
 recordList ::
-   (Ord id,
-    Show id,
-    SV.Walker v,
-    SV.FromList v,
-    TDisp t2,
-    TDisp t1,
-    Fractional d2,
-    Fractional d1,
-    SV.Storage v d2,
-    SV.Storage v d1,
-    Atom.C d2,
-    Atom.C d1,
-    Tuple.C d2,
-    Tuple.C d1) =>
+   (Ord id, TDisp typ1, TDisp typ2,
+    SV.Walker v, SV.FromList v,
+    SV.Storage v d1, Fractional d1, Atom.C d1, Tuple.C d1,
+    SV.Storage v d2, Fractional d2, Atom.C d2, Tuple.C d2) =>
    (id -> String) ->
    (LineSpec.T -> LineSpec.T) ->
    (Int -> LineSpec.T -> LineSpec.T) ->
-   [(Record.Name, Record s1 s2 t1 t2 id v d1 d2)] -> Plot2D.T d1 d2
+   [(Record.Name, Record s1 s2 typ1 typ2 id v d1 d2)] -> Plot2D.T d1 d2
 recordList showKey opts varOpts xs =
     Fold.fold $ zipWith (\(Record.Name name,x) k -> record (\ key -> name ++ "-" ++ showKey key) ((varOpts k). opts) x) xs [0..]
 
@@ -410,7 +400,7 @@ recordList showKey opts varOpts xs =
 
 
 sequence :: (Fractional d2, Fractional d1, Ord id,
-             Show id, SV.Walker v, SV.Storage v d2,
+             SV.Walker v, SV.Storage v d2,
              SV.Storage v d1, SV.FromList v, TDisp typ1,
              TDisp typ2, Atom.C d2, Atom.C d1, Tuple.C d2,
              Tuple.C d1) =>
@@ -440,18 +430,15 @@ stackFrameAttr title var =
       Opts.deflt
 
 stackLineSpec ::
-   (FormatValue term, Show term) =>
+   (FormatValue term) =>
    term -> Colour.Name -> Plot2D.T x y -> Plot2D.T x y
 stackLineSpec term colour =
    fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term)
           (lineColour colour $ LineSpec.deflt)))
 
 stack ::
-   (FormatValue term, Num d, Ord d,
-    Show term,
-    Ord term,
-    Atom.C d,
-    Tuple.C d) =>
+   (FormatValue term, Ord term,
+    Num d, Ord d, Atom.C d, Tuple.C d) =>
    Map term d -> Plot2D.T Int d
 stack =
    foldMap
@@ -475,13 +462,8 @@ stacksFrameAttr title vars =
       Opts.deflt
 
 stacks ::
-   (Ord term,
-    Atom.C d,
-    Tuple.C d,
-    Ord d,
-    Num d,
-    FormatValue term,
-    Show term) =>
+   (FormatValue term, Ord term,
+    Num d, Ord d, Atom.C d, Tuple.C d) =>
    Map term [d] -> Plot2D.T Int d
 stacks =
    foldMap

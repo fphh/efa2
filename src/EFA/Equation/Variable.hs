@@ -60,7 +60,7 @@ instance ScalarIndex idx => Index (Idx.ForNode idx) where
    index = Idx.liftForNode scalarIndex
 
 
-class SignalIndex t where
+class FormatSignalIndex t => SignalIndex t where
    signalIndex :: t a -> Signal a
 
 instance SignalIndex Idx.Energy where signalIndex = Energy
@@ -71,7 +71,7 @@ instance SignalIndex Idx.X      where signalIndex = X
 instance SignalIndex Idx.Sum    where signalIndex = Sum
 
 
-class ScalarIndex t where
+class FormatScalarIndex t => ScalarIndex t where
    type ScalarPart t :: *
    scalarIndex :: t a -> Scalar (ScalarPart t) a
 
@@ -83,19 +83,19 @@ instance ScalarIndex Idx.Storage where
    type ScalarPart Idx.Storage = Idx.Section
    scalarIndex = Storage
 
-instance ScalarIndex (Idx.StEnergy part) where
+instance (Format.Part part) => ScalarIndex (Idx.StEnergy part) where
    type ScalarPart (Idx.StEnergy part) = part
    scalarIndex = StEnergy
 
-instance ScalarIndex (Idx.StX part) where
+instance (Format.Part part) => ScalarIndex (Idx.StX part) where
    type ScalarPart (Idx.StX part) = part
    scalarIndex = StX
 
-instance ScalarIndex (Idx.StInSum part) where
+instance (Format.Part part) => ScalarIndex (Idx.StInSum part) where
    type ScalarPart (Idx.StInSum part) = part
    scalarIndex = StInSum
 
-instance ScalarIndex (Idx.StOutSum part) where
+instance (Format.Part part) => ScalarIndex (Idx.StOutSum part) where
    type ScalarPart (Idx.StOutSum part) = part
    scalarIndex = StOutSum
 
