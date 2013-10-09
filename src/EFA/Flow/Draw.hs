@@ -152,12 +152,12 @@ dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
 
 dotFromStorageGraphs ::
    (Node.C node, FormatValue a, Ord (edge node), Graph.Edge edge) =>
-   Map node ((a,a), Map Idx.Boundary a) ->
+   Map node (Map Idx.Boundary a) ->
    Map Idx.Section (Graph node edge (FlowQuant.Sums a v) edgeLabel) ->
    ([DotSubGraph T.Text], [DotEdge T.Text])
 dotFromStorageGraphs storages sequence =
    (Map.elems $ Map.mapWithKey dotFromStorageGraph $
-    fmap (fmap formatValue) $ MapU.flip $ fmap snd storages,
+    fmap (fmap formatValue) $ MapU.flip storages,
     (\(last, inner) ->
        dotFromContentEdge Nothing Idx.initSection
           (fmap (const $ Just Topo.In) storages) ++
@@ -664,8 +664,7 @@ seqFlowGraph opts gr =
       (if optStorage opts
          then
             dotFromStorageGraphs
-               (fmap (\(initExit, contents, _) -> (initExit, contents)) $
-                SeqFlowQuant.storages gr)
+               (fmap snd3 $ SeqFlowQuant.storages gr)
                (fmap (snd . snd) $ SeqFlowQuant.sequence gr)
          else ([], []))
       (Map.mapWithKey
