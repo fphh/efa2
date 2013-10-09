@@ -138,6 +138,28 @@ instance
    integrate = Expr.fromRule2 . Sys.assignment2 $ integrate
 
 
+
+class Integrate v => Scale v where
+   scale :: Scalar v -> v -> v
+
+instance Scale Float where
+   scale = (*)
+
+instance Scale Double where
+   scale = (*)
+
+instance (Integral a) => Scale (Ratio a) where
+   scale = (*)
+
+instance (Constant a) => Scale [a] where
+   scale = map . (~*)
+
+instance
+   (Sys.Value t v, Sys.Value t (Scalar v), Scale v) =>
+      Scale (Expr.T t s v) where
+   scale = Expr.fromRule3 . Sys.assignment3 $ scale
+
+
 {- |
 Construct a zero that is compatible with the argument.
 E.g. for a signal argument it creates

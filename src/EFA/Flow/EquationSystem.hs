@@ -16,7 +16,8 @@ import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
            Constant, zero,
-           Integrate, Scalar, integrate)
+           Integrate, Scalar, integrate,
+           Scale, scale)
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
@@ -321,6 +322,9 @@ instance (Constant x) => Constant (Context mode vars s x) where
 instance (Integrate x) => Integrate (Context mode vars s x) where
    type Scalar (Context mode vars s x) = Context mode vars s (Scalar x)
    integrate = fmap integrate
+
+instance (Scale x) => Scale (Context mode vars s x) where
+   scale = liftA2 scale
 
 
 
