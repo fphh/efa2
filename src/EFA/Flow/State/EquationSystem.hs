@@ -8,7 +8,7 @@ module EFA.Flow.State.EquationSystem (
 
    EqSys.Options, EqSys.optionsDefault,
    EqSys.equalInOutSums, EqSys.independentInOutSums,
-   EqSys.integrateStInOutSums, EqSys.equalStInOutSums, EqSys.spreadStInOutSums,
+   EqSys.integrateStInOutSums, EqSys.equalStInOutSums,
 
    constant,
    constantRecord,

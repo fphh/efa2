@@ -5,7 +5,7 @@ module EFA.Flow.State.Absolute (
    module EFA.Flow.State.Absolute,
    EqSys.optionsDefault,
    EqSys.equalInOutSums, EqSys.independentInOutSums,
-   EqSys.integrateStInOutSums, EqSys.equalStInOutSums, EqSys.spreadStInOutSums,
+   EqSys.integrateStInOutSums, EqSys.equalStInOutSums,
    (=.=),
    ) where
 

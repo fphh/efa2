@@ -119,7 +119,6 @@ data Options mode rec s a v =
          Expr mode rec s v ->
          System mode s,
       optStInOutSums ::
-         Expr mode rec s v ->
          Quant.Sum (Expr mode rec s a) (Expr mode rec s v) ->
          System mode s
    }
@@ -132,7 +131,7 @@ optionsDefault ::
 optionsDefault =
    Options {
       optInOutSums = (=&=),
-      optStInOutSums = const integrateSum
+      optStInOutSums = integrateSum
    }
 
 
@@ -161,7 +160,7 @@ integrateStInOutSums ::
    Options mode rec s a v ->
    Options mode rec s a v
 integrateStInOutSums opts =
-   opts { optStInOutSums = const integrateSum }
+   opts { optStInOutSums = integrateSum }
 
 {- |
 This option means that the sum of blue edges and the one of red edges must be equal.
@@ -174,29 +173,8 @@ equalStInOutSums ::
    Options mode rec s a a
 equalStInOutSums opts =
    opts {
-      optStInOutSums = const $ \ sums ->
+      optStInOutSums = \ sums ->
          Quant.flowSum sums =&= Quant.carrySum sums
-   }
-
-{- |
-This option means that the sum of blue edges is integrated
-in order to get the sum of red edges
-and in reverse direction the sum of the red edges
-is spread over a signal with constant power over time.
--}
-{-# WARNING spreadStInOutSums "This will lead to inconsistencies for determined non-constant signals." #-}
-spreadStInOutSums ::
-   (Verify.LocalVar mode a, Product a, a ~ Scalar v,
-    Verify.LocalVar mode v, Sum v, Scale v,
-    Record rec) =>
-   Options mode rec s a v ->
-   Options mode rec s a v
-spreadStInOutSums opts =
-   opts {
-      optStInOutSums = \dtime sums ->
-         integrateSum sums
-         <>
-         spreadSum dtime sums
    }
 
 
@@ -214,7 +192,7 @@ fromTopology ::
 fromTopology opts dtime topo =
    foldMap (fromEdge dtime) (Graph.edgeLabels topo)
    <>
-   foldMap (fromSums opts dtime) (Graph.nodeLabels topo)
+   foldMap (fromSums opts) (Graph.nodeLabels topo)
    <>
    foldMap
       (\(ins,ss,outs) ->
@@ -252,17 +230,16 @@ fromSums ::
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
    Options mode rec s a v ->
-   rv ->
    Quant.Sums ra rv ->
    System mode s
-fromSums opts dtime s =
+fromSums opts s =
    let sumIn  = Quant.sumIn s
        sumOut = Quant.sumOut s
    in  (fold $ liftA2 (compose2 (optInOutSums opts) Quant.flowSum) sumIn sumOut)
        <>
-       foldMap (optStInOutSums opts dtime) sumIn
+       foldMap (optStInOutSums opts) sumIn
        <>
-       foldMap (optStInOutSums opts dtime) sumOut
+       foldMap (optStInOutSums opts) sumOut
 
 integrateSum ::
    (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
