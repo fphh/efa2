@@ -37,7 +37,6 @@ import Control.Monad.Trans.Reader (ReaderT)
 import Control.Monad.Trans.Writer (WriterT, tell)
 
 import Control.Monad.ST (ST)
-import Control.Monad (guard)
 
 import Control.Applicative (Applicative, pure, liftA, liftA2)
 
@@ -47,6 +46,7 @@ import qualified Data.NonEmpty as NonEmpty
 import Data.Traversable (Traversable, sequenceA, for)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend)
+import Data.Function.HT (compose2)
 
 import qualified Prelude as P
 import Prelude hiding (sqrt)
@@ -112,20 +112,109 @@ withLocalVar f = System $ do
       System act -> act
 
 
+data Options mode rec s a v =
+   Options {
+      optInOutSums ::
+         Expr mode rec s v ->
+         Expr mode rec s v ->
+         System mode s,
+      optStInOutSums ::
+         Expr mode rec s v ->
+         Quant.Sum (Expr mode rec s a) (Expr mode rec s v) ->
+         System mode s
+   }
+
+optionsDefault ::
+   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
+    Verify.LocalVar mode v, Integrate v,
+    Record rec) =>
+   Options mode rec s a v
+optionsDefault =
+   Options {
+      optInOutSums = (=&=),
+      optStInOutSums = const integrateSum
+   }
+
+
+equalInOutSums ::
+   (Verify.LocalVar mode v, Record rec) =>
+   Options mode rec s a v ->
+   Options mode rec s a v
+equalInOutSums opts =
+   opts { optInOutSums = (=&=) }
+
+independentInOutSums ::
+   Options mode rec s a v ->
+   Options mode rec s a v
+independentInOutSums opts =
+   opts { optInOutSums = const $ const mempty }
+
+
+{- |
+This option means that the sum of blue edges is integrated
+in order to get the sum of red edges.
+-}
+integrateStInOutSums ::
+   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
+    Verify.LocalVar mode v, Integrate v,
+    Record rec) =>
+   Options mode rec s a v ->
+   Options mode rec s a v
+integrateStInOutSums opts =
+   opts { optStInOutSums = const integrateSum }
+
+{- |
+This option means that the sum of blue edges and the one of red edges must be equal.
+This works only for values of the same type,
+which are currently certainly only scalar types.
+-}
+equalStInOutSums ::
+   (Verify.LocalVar mode a, Product a, Record rec) =>
+   Options mode rec s a a ->
+   Options mode rec s a a
+equalStInOutSums opts =
+   opts {
+      optStInOutSums = const $ \ sums ->
+         Quant.flowSum sums =&= Quant.carrySum sums
+   }
+
+{- |
+This option means that the sum of blue edges is integrated
+in order to get the sum of red edges
+and in reverse direction the sum of the red edges
+is spread over a signal with constant power over time.
+-}
+{-# WARNING spreadStInOutSums "This will lead to inconsistencies for determined non-constant signals." #-}
+spreadStInOutSums ::
+   (Verify.LocalVar mode a, Product a, a ~ Scalar v,
+    Verify.LocalVar mode v, Sum v, Scale v,
+    Record rec) =>
+   Options mode rec s a v ->
+   Options mode rec s a v
+spreadStInOutSums opts =
+   opts {
+      optStInOutSums = \dtime sums ->
+         integrateSum sums
+         <>
+         spreadSum dtime sums
+   }
+
+
+
 fromTopology ::
    (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
     Verify.LocalVar mode v, Integrate v, Product v,
     Record rec, Node.C node) =>
-   Bool ->
+   Options mode rec s a v ->
    Expr mode rec s v ->
    Quant.DirTopology node
       (Expr mode rec s a)
       (Expr mode rec s v) ->
    System mode s
-fromTopology equalInOutSums dtime topo =
+fromTopology opts dtime topo =
    foldMap (fromEdge dtime) (Graph.edgeLabels topo)
    <>
-   foldMap (fromSums equalInOutSums) (Graph.nodeLabels topo)
+   foldMap (fromSums opts dtime) (Graph.nodeLabels topo)
    <>
    foldMap
       (\(ins,ss,outs) ->
@@ -162,43 +251,44 @@ fromSums ::
     Record rec,
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
-   Bool ->
+   Options mode rec s a v ->
+   rv ->
    Quant.Sums ra rv ->
    System mode s
-fromSums equalInOutSums s =
+fromSums opts dtime s =
    let sumIn  = Quant.sumIn s
        sumOut = Quant.sumOut s
-   in  (fold $
-          guard equalInOutSums
-          >>
-          liftA2 equalSums sumIn sumOut)
+   in  (fold $ liftA2 (compose2 (optInOutSums opts) Quant.flowSum) sumIn sumOut)
        <>
-       fromSum sumIn
+       foldMap (optStInOutSums opts dtime) sumIn
        <>
-       fromSum sumOut
+       foldMap (optStInOutSums opts dtime) sumOut
 
-equalSums ::
-   (Sys.Value mode a, Sys.Value mode v, Record rec,
-    ra ~ Expr mode rec s a,
-    rv ~ Expr mode rec s v) =>
-   Quant.Sum ra rv ->
-   Quant.Sum ra rv ->
-   System mode s
-equalSums x y =
-   (Quant.flowSum x =&= Quant.flowSum y)
-   <>
-   (Quant.carrySum x =&= Quant.carrySum y)
-
-fromSum ::
+integrateSum ::
    (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
     Verify.LocalVar mode v, Integrate v,
     Record rec,
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
-   Maybe (Quant.Sum ra rv) ->
+   Quant.Sum ra rv ->
    System mode s
-fromSum =
-   foldMap $ \s -> Quant.carrySum s =&= Arith.integrate (Quant.flowSum s)
+integrateSum s =
+   Quant.carrySum s =&= Arith.integrate (Quant.flowSum s)
+
+spreadSum ::
+   (Verify.LocalVar mode a, Product a, a ~ Scalar v,
+    Verify.LocalVar mode v, Sum v, Scale v,
+    Record rec,
+    ra ~ Expr mode rec s a,
+    rv ~ Expr mode rec s v) =>
+   rv ->
+   Quant.Sum ra rv ->
+   System mode s
+spreadSum dtime s =
+   Arith.scale (Quant.carrySum s ~/ Arith.integrate dtime) dtime
+   =&=
+   Quant.flowSum s
+
 
 splitStructEqs ::
    (Verify.LocalVar mode x, Product x, Record rec,

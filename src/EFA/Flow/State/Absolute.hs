@@ -3,6 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Flow.State.Absolute (
    module EFA.Flow.State.Absolute,
+   EqSys.optionsDefault,
+   EqSys.equalInOutSums, EqSys.independentInOutSums,
+   EqSys.integrateStInOutSums, EqSys.equalStInOutSums, EqSys.spreadStInOutSums,
    (=.=),
    ) where
 
@@ -36,6 +39,10 @@ type
    Expression mode node s a v x =
       EqSys.Expression mode Record.Absolute node s a v x
 
+type
+   Options mode s a v =
+      EqSys.Options mode Record.Absolute s a v
+
 
 type
    EquationSystemIgnore node s a v =
@@ -56,6 +63,19 @@ solve ::
 solve graph sys =
    StateFlow.mapGraph Record.unAbsolute Record.unAbsolute $
    EqSys.solve (StateFlow.mapGraph Record.Absolute Record.Absolute graph) sys
+
+solveOpts ::
+   (Arith.Constant a, a ~ Arith.Scalar v,
+    Arith.Product v, Arith.Integrate v,
+    Node.C node) =>
+   (forall s. Options Verify.Ignore s a v) ->
+   StateFlow.Graph node (Result a) (Result v) ->
+   (forall s. EquationSystem Verify.Ignore node s a v) ->
+   StateFlow.Graph node (Result a) (Result v)
+solveOpts opts graph sys =
+   StateFlow.mapGraph Record.unAbsolute Record.unAbsolute $
+   EqSys.solveOpts opts
+      (StateFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a Idx.Absolute Var.ForNodeStateScalar node,

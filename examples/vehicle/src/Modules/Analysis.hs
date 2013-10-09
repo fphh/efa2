@@ -122,7 +122,8 @@ external ::
    SeqFlow.Graph System.Node (Result (Data Nil a)) (Result (Data (c :> Nil) a)) ->
    SeqFlow.Graph System.Node (Result a) (Result a)
 external sequenceFlowGraph =
-   EqAbs.solveFromMeasurement
+   EqAbs.solveOpts
+      (EqAbs.independentInOutSums EqAbs.optionsDefault)
       (SeqFlow.mapGraph
          (fmap getData)
          (fmap (getData . Arith.integrate))
