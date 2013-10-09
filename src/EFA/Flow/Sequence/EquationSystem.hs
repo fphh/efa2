@@ -4,7 +4,11 @@
 module EFA.Flow.Sequence.EquationSystem (
    EquationSystem, Expression, RecordExpression,
 
-   solve, solveFromMeasurement, solveTracked,
+   solve, solveOpts, solveTracked,
+
+   EqSys.Options, EqSys.optionsDefault,
+   EqSys.equalInOutSums, EqSys.independentInOutSums,
+   EqSys.integrateStInOutSums, EqSys.equalStInOutSums, EqSys.spreadStInOutSums,
 
    constant,
    constantRecord,
@@ -186,12 +190,12 @@ fromGraph ::
    (Verify.LocalVar mode a, Constant a, a ~ Scalar v,
     Verify.LocalVar mode v, Product v, Integrate v,
     Record rec, Node.C node) =>
-   Bool ->
+   EqSys.Options mode rec s a v ->
    SeqFlow.Graph node
       (SysRecord.Variable mode rec s a)
       (SysRecord.Variable mode rec s v) ->
    EqSys.System mode s
-fromGraph equalInOutSums gv =
+fromGraph opts gv =
    case
       SeqFlow.mapGraph
          (Wrap . fmap Expr.fromVariable)
@@ -199,7 +203,7 @@ fromGraph equalInOutSums gv =
       g ->
          mconcat $
             foldMap
-               (uncurry (fromTopology equalInOutSums) .
+               (uncurry (fromTopology opts) .
                 mapSnd Quant.dirFromFlowGraph . snd)
                (SeqFlow.sequence g) :
             fromStorageSequences g :
@@ -341,7 +345,7 @@ setup ::
     Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   Bool ->
+   EqSys.Options mode rec s a v ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EquationSystem mode rec node s a v ->
    ST s
@@ -349,25 +353,25 @@ setup ::
          (SysRecord.Variable mode rec s a)
          (SysRecord.Variable mode rec s v),
        Sys.T mode s ())
-setup equalInOutSums gr given = do
+setup opts gr given = do
    (vars, System eqs) <-
       runWriterT $ do
          vars <- variables gr
-         EqSys.runSystem $ fromGraph equalInOutSums vars
+         EqSys.runSystem $ fromGraph opts vars
          runReaderT (EqSys.runVariableSystem given) vars
          return vars
    return (vars, eqs)
 
-solveGen ::
+solveOpts ::
    (Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   Bool ->
+   (forall s. EqSys.Options Verify.Ignore rec s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v))
-solveGen equalInOutSums gr sys = runST $ do
-   (vars, eqs) <- setup equalInOutSums gr sys
+solveOpts opts gr sys = runST $ do
+   (vars, eqs) <- setup opts gr sys
    Verify.runIgnorant $ Sys.solve eqs
    query vars
 
@@ -378,16 +382,7 @@ solve ::
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v))
-solve = solveGen True
-
-solveFromMeasurement ::
-   (Constant a, a ~ Scalar v,
-    Product v, Integrate v,
-    Record rec, Node.C node) =>
-   SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
-   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
-   SeqFlow.Graph node (rec (Result a)) (rec (Result v))
-solveFromMeasurement = solveGen False
+solve = solveOpts EqSys.optionsDefault
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForNodeSectionScalar node,
@@ -402,7 +397,7 @@ solveTracked ::
       (SeqFlow.Graph node (rec (Result a)) (rec (Result v))),
     Verify.Assigns output)
 solveTracked gr sys = runST $ do
-   (vars, eqs) <- setup True gr sys
+   (vars, eqs) <- setup EqSys.optionsDefault gr sys
    runWriterT $ ME.runExceptionalT $ Verify.runTrack $ do
       Sys.solveBreadthFirst eqs
       MT.lift $ query vars

@@ -88,7 +88,8 @@ external ::
    SeqFlow.Graph System.Node (Result (Data Nil a)) (Result (Data (c :> Nil) a)) ->
    SeqFlow.Graph System.Node (Result a) (Result a)
 external sequenceFlowGraph =
-   EqAbs.solveFromMeasurement
+   EqAbs.solveOpts
+      (EqAbs.independentInOutSums EqAbs.optionsDefault)
       (SeqFlow.mapGraph
          (fmap getData)
          (fmap (getData . Arith.integrate))
@@ -105,7 +106,9 @@ external2 ::
       (Result (Data Nil a))
       (Result (Data (v :> Nil) a))
 external2 sequenceFlowGraph =
-   EqAbs.solveFromMeasurement sequenceFlowGraph
+   EqAbs.solveOpts
+      (EqAbs.independentInOutSums EqAbs.optionsDefault)
+      sequenceFlowGraph
       (SeqIdx.storage Idx.initial System.Water  .=  Data initStorage)
 
 external3 ::
@@ -117,5 +120,7 @@ external3 ::
       (Result (Data Nil a))
       (Result (Data Nil a))
 external3 sequenceFlowGraph =
-   EqAbs.solveFromMeasurement sequenceFlowGraph
+   EqAbs.solveOpts
+      (EqAbs.independentInOutSums EqAbs.optionsDefault)
+      sequenceFlowGraph
       (SeqIdx.storage Idx.initial System.Water  .=  Data initStorage)

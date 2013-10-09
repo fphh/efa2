@@ -3,6 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Flow.Sequence.Absolute (
    module EFA.Flow.Sequence.Absolute,
+   EqSys.optionsDefault,
+   EqSys.equalInOutSums, EqSys.independentInOutSums,
+   EqSys.integrateStInOutSums, EqSys.equalStInOutSums, EqSys.spreadStInOutSums,
    (=.=),
    ) where
 
@@ -43,6 +46,10 @@ type
    Expression mode node s a v x =
       EqSys.Expression mode Record.Absolute node s a v x
 
+type
+   Options mode s a v =
+      EqSys.Options mode Record.Absolute s a v
+
 
 type
    EquationSystemIgnore node s a v =
@@ -64,16 +71,17 @@ solve graph sys =
    SeqFlow.mapGraph Record.unAbsolute Record.unAbsolute $
    EqSys.solve (SeqFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
-solveFromMeasurement ::
+solveOpts ::
    (Arith.Constant a, a ~ Arith.Scalar v,
     Arith.Product v, Arith.Integrate v,
     Node.C node) =>
+   (forall s. Options Verify.Ignore s a v) ->
    SeqFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem Verify.Ignore node s a v) ->
    SeqFlow.Graph node (Result a) (Result v)
-solveFromMeasurement graph sys =
+solveOpts opts graph sys =
    SeqFlow.mapGraph Record.unAbsolute Record.unAbsolute $
-   EqSys.solveFromMeasurement
+   EqSys.solveOpts opts
       (SeqFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveTracked ::

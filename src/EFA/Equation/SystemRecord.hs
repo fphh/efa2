@@ -10,7 +10,8 @@ import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
            Constant, zero,
-           Integrate, Scalar, integrate)
+           Integrate, Scalar, integrate,
+           Scale, scale)
 
 import EFA.Utility ((>>!))
 
@@ -167,6 +168,11 @@ instance
       Integrate (Wrap rec v) where
    type Scalar (Wrap rec v) = Wrap rec (Scalar v)
    integrate = lift1 integrate
+
+instance
+   (Record rec, Scale v, Sum (Scalar v), Sum v) =>
+      Scale (Wrap rec v) where
+   scale = lift2 scale
 
 
 equalResult ::
