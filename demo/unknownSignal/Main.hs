@@ -14,6 +14,7 @@ import EFA.Signal.Data (Data, (:>), Nil)
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.Absolute ((.=), (=.=))
 
@@ -127,7 +128,7 @@ main =
                              <>
                              Map.singleton (Idx.PPos $ Idx.flip se)
                                 (SeqFlow.flowEnergyIn flow)) $
-                Graph.edgeLabels $ snd $ snd $
+                Graph.edgeLabels $ FlowTopo.topology $ snd $
                 flip (checkedLookup "rec") sec0 $
                 SeqFlow.sequence $ EqSys.solve flowGraph given
 

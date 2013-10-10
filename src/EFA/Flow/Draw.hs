@@ -26,6 +26,8 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Quantity as FlowQuant
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
 
 import qualified EFA.Report.Format as Format
@@ -666,7 +668,7 @@ seqFlowGraph opts gr =
          then
             dotFromStorageGraphs
                (fmap snd3 $ SeqFlowQuant.storages gr)
-               (fmap (snd . snd) $ SeqFlowQuant.sequence gr)
+               (fmap (FlowTopo.topology . snd) $ SeqFlowQuant.sequence gr)
          else ([], []))
       (Map.mapWithKey
           (\node (partMap, _bnds, edges) ->
@@ -677,7 +679,7 @@ seqFlowGraph opts gr =
        SeqFlowQuant.storages gr)
       (snd $
        Map.mapAccumWithKey
-          (\before sec (rng, (dt,topo)) ->
+          (\before sec (rng, FlowTopoPlain.Section dt topo) ->
              (,) (Idx.afterSection sec) $
              (show sec ++
               " / Range " ++ formatRange rng ++
@@ -766,7 +768,7 @@ stateFlowGraph opts gr =
                 else Map.empty)) $
        StateFlowQuant.storages gr)
       (Map.mapWithKey
-          (\state (dt,topo) ->
+          (\state (FlowTopoPlain.Section dt topo) ->
              (show state ++ " / Time " ++ unUnicode (formatValue dt),
               Graph.mapNodeWithKey
                  (\node _sums ->

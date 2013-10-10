@@ -53,10 +53,12 @@ import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State as StateFlow
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.State (states, storages)
-import EFA.Flow.Quantity (Sums(..), Flow(..), mapSums, traverseSums)
+import EFA.Flow.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
@@ -149,11 +151,7 @@ mapStates ::
    (v0 -> v1) ->
    States node v0 -> States node v1
 mapStates f =
-   fmap
-      (\(dt, gr) ->
-         (f dt,
-          Graph.mapNode (mapSums f) $
-          Graph.mapEdge (fmap $ fmap f) gr))
+   fmap (FlowTopo.mapSection f)
 
 mapStorages ::
    (a0 -> a1) ->
@@ -180,10 +178,7 @@ traverseStates ::
    (v0 -> f v1) ->
    States node v0 -> f (States node v1)
 traverseStates f =
-   traverse
-      (\(dt, gr) ->
-         liftA2 (,) (f dt)
-            (Graph.traverse (traverseSums f) (traverse $ traverse f) gr))
+   traverse (FlowTopo.traverseSection f)
 
 traverseStorages ::
    (Applicative f, Ord node) =>
@@ -249,16 +244,14 @@ fromSequenceFlowGen integrate add zero allStEdges gr =
    let sq = SeqFlowQuant.sequence gr
        secMap =
           stateMaps $
-          fmap (Graph.mapEdge (const ()) . Graph.mapNode (const ()) . snd . snd) sq
+          fmap (Graph.mapEdge (const ()) .
+                Graph.mapNode (const ()) .
+                FlowTopo.topology . snd) sq
        sts =
           flip cumulateSequence secMap
-             (\(dtime0, gr0) (dtime1, gr1) ->
-                (add dtime0 dtime1,
-                 Graph.checkedZipWith "StateFlow.fromSequenceFlow"
-                    (addSums add)
-                    (liftA2 (liftA2 add))
-                    gr0 gr1)) $
-          fmap ((mapSnd $ Graph.mapEdge $ fmap cumFromFlow) . snd) $
+             (FlowTopoPlain.checkedZipWith "StateFlow.fromSequenceFlow"
+                 add (addSums add) (liftA2 (liftA2 add))) $
+          fmap (FlowTopoPlain.mapEdge (fmap cumFromFlow) . snd) $
           SeqFlowQuant.mapSequence integrate sq
    in  StateFlow.Graph {
           storages =
@@ -296,7 +289,7 @@ sumsMap ::
    Map Idx.State (Sums v)
 sumsMap node =
    fmap (fromMaybe (error "node not in sequence") .
-         Graph.lookupNode node . snd)
+         Graph.lookupNode node . FlowTopo.topology)
 
 allStorageEdges ::
    Map Idx.State (Sums a) -> [Idx.StorageEdge Idx.State node]
@@ -352,7 +345,7 @@ flowGraphFromCumResult gr =
          fmap (mapSnd (fmap carryResultFromResult)) $
          StateFlow.storages gr,
       StateFlow.states =
-         fmap (mapSnd (Graph.mapEdge (fmap flowResultFromCumResult))) $
+         fmap (FlowTopoPlain.mapEdge (fmap flowResultFromCumResult)) $
          StateFlow.states gr
    }
 
@@ -454,12 +447,12 @@ withTopology ::
    Graph node a v ->
    Maybe r
 withTopology f (Idx.InPart state idx) g =
-   f idx . snd =<< seqLookup state g
+   f idx . FlowTopo.topology =<< seqLookup state g
 
 
 lookupDTime :: StateIdx.DTime node -> Graph node a v -> Maybe v
 lookupDTime (Idx.InPart state Idx.DTime) =
-   fmap fst . seqLookup state
+   fmap FlowTopo.label . seqLookup state
 
 
 lookupStEnergy ::
@@ -503,10 +496,10 @@ lookupSums ::
    (Ord node) =>
    Idx.StateNode node -> Graph node a v -> Maybe (Sums v)
 lookupSums (Idx.PartNode state node) =
-   Graph.lookupNode node . snd <=< seqLookup state
+   Graph.lookupNode node . FlowTopo.topology <=< seqLookup state
 
 seqLookup ::
-   Idx.State -> Graph node a v -> Maybe (v, FlowTopology node v)
+   Idx.State -> Graph node a v -> Maybe (FlowTopo.Section node v)
 seqLookup state = Map.lookup state . states
 
 
@@ -644,4 +637,4 @@ mapStatesWithVar ::
    States node v0 ->
    States node v1
 mapStatesWithVar f =
-   Map.mapWithKey $ Quant.mapFlowTopologyWithVar f
+   Map.mapWithKey $ \state -> FlowTopo.mapSectionWithVar (f . Idx.InPart state)

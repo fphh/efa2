@@ -4,6 +4,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Flow.EquationSystem where
 
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Quantity as Quant
 
 import qualified EFA.Equation.Record as Record
@@ -181,12 +183,9 @@ fromTopology ::
     Verify.LocalVar mode v, Integrate v, Product v,
     Record rec, Node.C node) =>
    Options mode rec s a v ->
-   Expr mode rec s v ->
-   Quant.DirTopology node
-      (Expr mode rec s a)
-      (Expr mode rec s v) ->
+   FlowTopo.DirSection node (Expr mode rec s v) ->
    System mode s
-fromTopology opts dtime topo =
+fromTopology opts (FlowTopoPlain.Section dtime topo) =
    foldMap (fromEdge dtime) (Graph.edgeLabels topo)
    <>
    foldMap (fromSums opts) (Graph.nodeLabels topo)

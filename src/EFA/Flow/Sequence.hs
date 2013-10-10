@@ -1,6 +1,7 @@
 module EFA.Flow.Sequence where
 
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.PartMap (PartMap)
 
@@ -34,7 +35,7 @@ type
 type
    Sequence node structEdge sectionLabel nodeLabel structLabel =
       Sequ.Map
-         (sectionLabel, Graph.Graph node structEdge nodeLabel structLabel)
+         (FlowTopo.Section node structEdge sectionLabel nodeLabel structLabel)
 
 data
    Graph node structEdge
@@ -69,7 +70,7 @@ sequenceGraph sd =
                 (storageMapFromList (Fold.toList $ Sequ.mapWithSection const sq) .
                  Flow.storageEdges . Map.mapMaybe id) $
              Flow.getStorageSequences sq,
-          sequence = Sequ.toMap $ fmap ((,) ()) sq
+          sequence = Sequ.toMap $ fmap (FlowTopo.Section ()) sq
        }
 
 flatten ::
@@ -79,7 +80,8 @@ flatten (Graph tracks sq) =
    (,) (fmap fst sq) $
    Flow.insEdges (fmap (Map.keys . thd3) tracks) $
    Flow.insNodes (Map.keys tracks) $
-   Fold.fold $ Map.mapWithKey Flow.sectionFromClassTopo $ fmap (snd . snd) sq
+   Fold.fold $ Map.mapWithKey Flow.sectionFromClassTopo $
+   fmap (FlowTopo.topology . snd) sq
 
 {-
 Init and Exit sections must be present.
@@ -95,22 +97,22 @@ structure (rngs, g) =
           storages = fmap (storageMapFromList (Map.keys nodes)) storeEdges,
           sequence =
              Map.intersectionWith (,) rngs $
-             fmap ((,) ()) $
+             fmap (FlowTopo.Section ()) $
              Map.intersectionWith
                 (\ns es -> Graph.fromList ns $ map (flip (,) ()) es)
                 nodes structEdges
        }
 
 storageMapFromList ::
-   (Ord e) =>
+   (Ord edge) =>
    [Idx.Section] ->
-   [e] ->
-   (PartMap Idx.Section (), Map Idx.Boundary (), Map e ())
+   [edge] ->
+   (PartMap Idx.Section (), Map Idx.Boundary (), Map edge ())
 storageMapFromList secs =
    (,,)
       (PartMap.constant () secs)
       (Map.fromList $ map (flip (,) () . Idx.Following) $
-       Idx.Init : map Idx.NoInit secs).
+       Idx.Init : map Idx.NoInit secs) .
    Map.fromListWith (error "duplicate storage edge") .
    map (flip (,) ())
 

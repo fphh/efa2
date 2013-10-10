@@ -26,6 +26,8 @@ module EFA.Flow.Cumulated.Quantity (
 import qualified EFA.Flow.Cumulated.Variable as CumVar
 import qualified EFA.Flow.Cumulated.Index as CumIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Quantity as Quant
 import EFA.Flow.Quantity (Sums(..))
 
@@ -124,10 +126,10 @@ cumFromFlow time flow =
 
 cumFromFlowGraph ::
    (Ord node) =>
-   a -> SeqFlow.Topology node a -> CumGraph node a
-cumFromFlowGraph time =
-   Graph.mapEdge (cumFromFlow time) .
-   Quant.dirFromFlowGraph
+   FlowTopo.Section node a -> CumGraph node a
+cumFromFlowGraph (FlowTopoPlain.Section time topo) =
+   Graph.mapEdge (cumFromFlow time) $
+   Quant.dirFromFlowGraph topo
 
 flowResultFromCum :: Cum a -> Flow (Result a)
 flowResultFromCum =
@@ -150,7 +152,7 @@ fromSequenceFlowGen ::
    CumGraph node a
 fromSequenceFlowGen integrate add =
    foldl1 (addCumGraph add) . Map.elems .
-   fmap (uncurry cumFromFlowGraph . snd) .
+   fmap (cumFromFlowGraph . snd) .
    SeqFlow.mapSequence integrate
 
 addCumGraph ::

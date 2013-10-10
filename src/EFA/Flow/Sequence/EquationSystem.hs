@@ -26,8 +26,7 @@ module EFA.Flow.Sequence.EquationSystem (
    ) where
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-
-import qualified EFA.Flow.Quantity as Quant
+import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.PartMap (PartMap)
@@ -73,7 +72,7 @@ import Data.Map (Map)
 import Data.Traversable (Traversable, traverse)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mconcat)
-import Data.Tuple.HT (mapFst, mapSnd)
+import Data.Tuple.HT (mapFst)
 
 import qualified Prelude as P
 import Prelude hiding (lookup, init)
@@ -205,8 +204,7 @@ fromGraph opts gv =
       g ->
          mconcat $
             foldMap
-               (uncurry (fromTopology opts) .
-                mapSnd Quant.dirFromFlowGraph . snd)
+               (fromTopology opts . FlowTopoPlain.dirFromFlowGraph . snd)
                (SeqFlow.sequence g) :
             fromStorageSequences opts g :
             []

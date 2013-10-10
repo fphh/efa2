@@ -4,6 +4,8 @@ module EFA.Flow.Sequence.Record where
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence as SeqFlowPlain
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.PartMap (PartMap)
 
@@ -31,7 +33,7 @@ import Control.Applicative (pure)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map ; import Data.Map (Map)
-import Data.Tuple.HT (mapPair, mapSnd)
+import Data.Tuple.HT (mapSnd)
 
 
 {-
@@ -49,7 +51,11 @@ instance Functor Flow where
    fmap f (Flow o i) = Flow (f o) (f i)
 
 type Section node v a =
-        (Signal.TSignal v a, SignalTopology node v a)
+        FlowTopoPlain.Section
+           node Graph.EitherEdge
+           (Signal.TSignal v a)
+           (Node.Type ())
+           (Maybe (Flow (Signal.FFSignal v a)))
 
 flowTopologyFromRecord ::
    (Ord node, Show node,
@@ -59,7 +65,7 @@ flowTopologyFromRecord ::
    FlowRecord node v a ->
    Section node v a
 flowTopologyFromRecord topo (Record time fs) =
-   (,) time $
+   FlowTopoPlain.Section time $
    Graph.fromMap (Graph.nodeLabels topo) $
    Map.unionsWith (error "flowTopologyFromRecord: duplicate edges") $
    Map.elems $
@@ -97,22 +103,35 @@ fromGraphFromSequence ::
    Sequ.List (Section node v a) ->
    SeqFlow.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
 fromGraphFromSequence sd =
-   let sq = fmap (mapSnd SeqFlow.unknownTopologyNodes) sd
+   let sq =
+          fmap
+             (\(FlowTopoPlain.Section lab topo) ->
+                FlowTopoPlain.Section lab $
+                SeqFlow.unknownTopologyNodes topo) sd
    in  SeqFlowPlain.Graph {
           SeqFlow.storages =
              fmap
                 (storageMapFromList
                     (Fold.toList $ Sequ.mapWithSection const sq) .
                  storageEdges) $
-             getStorageSequences $ fmap snd sq,
+             getStorageSequences $ fmap FlowTopo.topology sq,
           SeqFlow.sequence =
-             fmap (mapSnd (mapPair
-                (Determined . Signal.unpack . Signal.delta,
-                 Graph.mapEdge (fmap
-                    (fullFlow . fmap (Determined . Signal.unpack)))))) $
-             Sequ.toMap sq
+             fmap (mapSnd fromSection) $ Sequ.toMap sq
        }
 
+fromSection ::
+   (BSum a, SV.Zipper v, SV.Walker v, SV.Singleton v, SV.Storage v a,
+    Node.C node) =>
+   FlowTopoPlain.Section node Graph.EitherEdge
+      (Signal.TSignal v a) (FlowTopo.Sums (Result (Data (v :> Nil) a)))
+      (Maybe (Flow (Signal.FFSignal v a))) ->
+   FlowTopo.Section node (Result (Data (v :> Nil) a))
+fromSection (FlowTopoPlain.Section dtime topo) =
+   FlowTopoPlain.Section
+      (Determined . Signal.unpack . Signal.delta $ dtime)
+      (Graph.mapEdge
+         (fmap (fullFlow . fmap (Determined . Signal.unpack)))
+         topo)
 
 storageMapFromList ::
    (Ord edge,
@@ -163,7 +182,7 @@ flowGraphToPowerRecords ::
    Sequ.Map (Record.PowerRecord node v a)
 flowGraphToPowerRecords =
    fmap
-      (mapSnd $ \(time, topo) ->
+      (mapSnd $ \(FlowTopoPlain.Section time topo) ->
          Record.Record (Signal.TC time) $
          Map.unionsWith (error "envToPowerRecord: duplicate edges") $
          Map.elems $

@@ -112,24 +112,6 @@ traverseSums f (Sums i o) =
       (traverse f o)
 
 
-mapFlowTopologyWithVar ::
-   (Format.Part part, Ord node) =>
-   (Var.InPartSignal part node -> v0 -> v1) ->
-   part ->
-   (v0, Graph node Graph.EitherEdge (Sums v0) (Maybe (Flow v0))) ->
-   (v1, Graph node Graph.EitherEdge (Sums v1) (Maybe (Flow v1)))
-mapFlowTopologyWithVar f part (dtime, gr) =
-   (f (part <~> Idx.DTime) dtime,
-    Graph.mapNodeWithKey
-       (\n (Sums {sumIn = sin, sumOut = sout}) ->
-          Sums {
-             sumIn =
-                flip fmap sin $ f (part <~> Idx.Sum Idx.In n),
-             sumOut =
-                flip fmap sout $ f (part <~> Idx.Sum Idx.Out n)
-          }) $
-    Graph.mapEdgeWithKey (liftEdgeFlow $ mapFlowWithVar f part) gr)
-
 liftEdgeFlow ::
    (Graph.DirEdge node -> flow0 -> flow1) ->
    Graph.EitherEdge node -> Maybe flow0 -> Maybe flow1

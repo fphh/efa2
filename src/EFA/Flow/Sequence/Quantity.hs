@@ -70,12 +70,12 @@ import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.Quantity as Quant
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
-import EFA.Flow.Quantity
-          (Topology, Sums(..), Flow(..),
-           mapSums, zipWithSums, traverseSums, (<#>))
+import EFA.Flow.Quantity (Topology, Sums(..), Flow(..), (<#>))
 
 import qualified EFA.Signal.Sequence as Sequ
 
@@ -106,6 +106,7 @@ import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid)
 import Data.Maybe.HT (toMaybe)
+import Data.Tuple.HT (mapSnd)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -169,12 +170,7 @@ mapSequence ::
    (v0 -> v1) ->
    Sequence node v0 -> Sequence node v1
 mapSequence f =
-   fmap
-      (\(rng, (dt, gr)) ->
-         (rng,
-          (f dt,
-           Graph.mapNode (mapSums f) $
-           Graph.mapEdge (fmap $ fmap f) gr)))
+   fmap (mapSnd $ FlowTopo.mapSection f)
 
 mapStorages ::
    (a0 -> a1) ->
@@ -210,14 +206,11 @@ checkedZipWithSequence ::
    Sequence node v2
 checkedZipWithSequence caller f =
    MapU.checkedZipWith (caller++".checkedZipWithSequence")
-      (\(rng0, (dt0, gr0)) (rng1, (dt1, gr1)) ->
+      (\(rng0, gr0) (rng1, gr1) ->
          (if rng0==rng1 then rng0 else error (caller++".equalRange"),
-          (f dt0 dt1,
-           Graph.checkedZipWith
-              (caller++".checkedZipWithSequence.section")
-              (zipWithSums f)
-              (liftA2 $ liftA2 f)
-              gr0 gr1)))
+          FlowTopo.checkedZipWithSection
+             (caller++".checkedZipWithSequence.section")
+             f gr0 gr1))
 
 checkedZipWithStorages ::
    (Ord node) =>
@@ -254,10 +247,7 @@ traverseSequence ::
    Sequence node v0 -> f (Sequence node v1)
 traverseSequence f =
    traverse
-      (\(rng, (dt, gr)) ->
-         fmap ((,) rng) $
-         liftA2 (,) (f dt)
-            (Graph.traverse (traverseSums f) (traverse $ traverse f) gr))
+      (\(rng, gr) -> fmap ((,) rng) $ FlowTopo.traverseSection f gr)
 
 traverseStorages ::
    (Applicative f, Ord node) =>
@@ -462,12 +452,12 @@ withTopology ::
    Graph node a v ->
    Maybe r
 withTopology f (Idx.InPart sec idx) g =
-   f idx . snd =<< seqLookup sec g
+   f idx . FlowTopo.topology =<< seqLookup sec g
 
 
 lookupDTime :: SeqIdx.DTime node -> Graph node a v -> Maybe v
 lookupDTime (Idx.InPart sec Idx.DTime) =
-   fmap fst . seqLookup sec
+   fmap FlowTopo.label . seqLookup sec
 
 
 lookupStorage ::
@@ -523,10 +513,10 @@ lookupSums ::
    (Ord node) =>
    Idx.SecNode node -> Graph node a v -> Maybe (Sums v)
 lookupSums (Idx.PartNode sec node) =
-   Graph.lookupNode node . snd <=< seqLookup sec
+   Graph.lookupNode node . FlowTopo.topology <=< seqLookup sec
 
 seqLookup ::
-   Idx.Section -> Graph node a v -> Maybe (v, Topology node v)
+   Idx.Section -> Graph node a v -> Maybe (FlowTopo.Section node v)
 seqLookup sec = Sequ.lookup sec . sequence
 
 
@@ -643,15 +633,15 @@ sequenceFromPlain ::
       (Node.Type (Maybe Topo.StoreDir)) () ->
    Sequence node v
 sequenceFromPlain =
-   Map.map $ \(rng, ((), gr)) ->
+   Map.map $ \(rng, FlowTopoPlain.Section () gr) ->
       (,) rng $
-      (unknown,
-       unknownTopologyNodes $
-       Graph.mapEdgeWithKey
-          (\ee _ ->
-             case ee of
-                Graph.EUnDirEdge _ -> Nothing
-                Graph.EDirEdge _ -> Just $ pure unknown) gr)
+      FlowTopoPlain.Section unknown $
+      unknownTopologyNodes $
+      Graph.mapEdgeWithKey
+         (\ee _ ->
+            case ee of
+               Graph.EUnDirEdge _ -> Nothing
+               Graph.EDirEdge _ -> Just $ pure unknown) gr
 
 unknownTopologyNodes ::
    (Ord node, Unknown v) =>
@@ -712,8 +702,8 @@ mapSequenceWithVar ::
    Sequence node v0 ->
    Sequence node v1
 mapSequenceWithVar f =
-   Map.mapWithKey $ \sec (rng, timeGr) ->
-      (rng, Quant.mapFlowTopologyWithVar f sec timeGr)
+   Map.mapWithKey $ \sec ->
+      mapSnd $ FlowTopo.mapSectionWithVar (f . Idx.InPart sec)
 
 
 formatAssigns ::

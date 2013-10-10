@@ -14,6 +14,7 @@ import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -175,5 +176,5 @@ lookupEnergyStacksNew e =
    Map.mapMaybe Result.toMaybe .
    fmap (maybe (error $ "lookupEnergyStacksNew" ++ Format.unUnicode (formatValue e)) id .
          SeqFlow.lookupEnergyTopology e .
-         snd . snd) .
+         FlowTopo.topology . snd) .
    SeqFlow.sequence
