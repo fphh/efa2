@@ -673,11 +673,7 @@ seqFlowGraph opts gr =
                (fmap (FlowTopo.topology . snd) $ SeqFlowQuant.sequence gr)
          else ([], []))
       (Map.mapWithKey
-          (\node (StorageGraph partMap edges, _bnds) ->
-             (stateInitExitShow node partMap,
-              if optStorageEdge opts
-                then Map.mapWithKey (storageEdgeSeqShow opts node) edges
-                else Map.empty)) $
+          (\node -> storageGraphShow storageEdgeSeqShow opts node . fst) $
        SeqFlowQuant.storages gr)
       (snd $
        Map.mapAccumWithKey
@@ -762,12 +758,7 @@ stateFlowGraph ::
 stateFlowGraph opts gr =
    dotFromFlowGraph
       ([], [])
-      (Map.mapWithKey
-          (\node (StorageGraph partMap edges) ->
-             (stateInitExitShow node partMap,
-              if optStorageEdge opts
-                then Map.mapWithKey (storageEdgeStateShow opts node) edges
-                else Map.empty)) $
+      (Map.mapWithKey (storageGraphShow storageEdgeStateShow opts) $
        StateFlowQuant.storages gr)
       (Map.mapWithKey
           (\state (FlowTopoPlain.Section dt topo) ->
@@ -786,13 +777,19 @@ stateFlowGraph opts gr =
                  topo)) $
        StateFlowQuant.states gr)
 
-
-stateInitExitShow ::
-   (Node.C node, FormatValue a, Format output) =>
-   node -> PartMap.PartMap part a -> (output, output)
-stateInitExitShow node partMap =
-   (stateNodeShow node $ Just $ PartMap.init partMap,
-    stateNodeShow node $ Just $ PartMap.exit partMap)
+storageGraphShow ::
+   (Format output, Node.C node, FormatValue a) =>
+   (Options output -> node -> Idx.StorageEdge part node -> el -> outputs) ->
+   Options output ->
+   node ->
+   StorageGraph part node a el ->
+   ((output, output), Map (Idx.StorageEdge part node) outputs)
+storageGraphShow storageEdgeShow opts node (StorageGraph partMap edges) =
+   ((stateNodeShow node $ Just $ PartMap.init partMap,
+     stateNodeShow node $ Just $ PartMap.exit partMap),
+    if optStorageEdge opts
+      then Map.mapWithKey (storageEdgeShow opts node) edges
+      else Map.empty)
 
 stateNodeShow ::
    (Node.C node, FormatValue a, Format output) =>
