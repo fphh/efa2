@@ -15,6 +15,8 @@ module EFA.Flow.Topology.Quantity (
 
    mapSectionWithVar,
    mapTopologyWithVar,
+
+   lookupEnergy,
    ) where
 
 import qualified EFA.Flow.Topology as FlowTopo
@@ -32,6 +34,7 @@ import qualified EFA.Graph as Graph
 
 import EFA.Utility.Map (Caller)
 
+import Control.Monad (mplus)
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
 import Data.Traversable (Traversable, traverse)
@@ -107,6 +110,24 @@ traverseTopology ::
 traverseTopology f =
    Graph.traverse (traverseSums f) (traverse $ traverse f)
 
+
+lookupEnergy ::
+   (Ord node) => Idx.Energy node -> Section node v -> Maybe v
+lookupEnergy =
+   lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
+
+lookupStruct ::
+   Ord node =>
+   (Flow v -> v) ->
+   (Flow v -> v) ->
+   (idx -> Idx.StructureEdge node) ->
+   idx -> Section node v -> Maybe v
+lookupStruct fieldOut fieldIn unpackIdx idx (FlowTopo.Section _lab topo) =
+   case unpackIdx idx of
+      se ->
+         mplus
+            (Quant.lookupEdge fieldOut se topo)
+            (Quant.lookupEdge fieldIn (Idx.flip se) topo)
 
 mapSectionWithVar ::
    (Ord node) =>

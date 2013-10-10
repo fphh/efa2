@@ -175,6 +175,5 @@ lookupEnergyStacksNew e =
    fmap (Stack.assignDeltaMap . Arith.integrate) .
    Map.mapMaybe Result.toMaybe .
    fmap (maybe (error $ "lookupEnergyStacksNew" ++ Format.unUnicode (formatValue e)) id .
-         SeqFlow.lookupEnergyTopology e .
-         FlowTopo.topology . snd) .
+         FlowTopo.lookupEnergy e . snd) .
    SeqFlow.sequence

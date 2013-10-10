@@ -56,8 +56,6 @@ module EFA.Flow.Sequence.Quantity (
    lookupStOutSum,
    lookupSums,
 
-   lookupEnergyTopology,
-
    Lookup, lookup,
    LookupScalar, lookupScalar,
    LookupSignal, lookupSignal,
@@ -394,11 +392,6 @@ lookupEnergy ::
    (Ord node) => SeqIdx.Energy node -> Graph node a v -> Maybe v
 lookupEnergy =
    lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
-
-lookupEnergyTopology ::
-   (Ord node) => Idx.Energy node -> Topology node v -> Maybe v
-lookupEnergyTopology =
-   lookupStructTopology flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
 
 lookupX ::
    (Ord node) => SeqIdx.X node -> Graph node a v -> Maybe v
