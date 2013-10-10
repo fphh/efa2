@@ -28,6 +28,7 @@ module EFA.Flow.State.EquationSystem (
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
+import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
@@ -48,8 +49,6 @@ import EFA.Equation.Arithmetic
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-
-import qualified EFA.Utility.Map as MapU
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
@@ -226,21 +225,11 @@ fromStorageSequences opts g =
        f node (StorageGraph partMap edges) =
           connectCarryFlow opts g node partMap
           <>
-          (fold $
-           Map.mapWithKey
-              (\sec outs ->
-                 EqSys.fromInStorages (stoutsum sec node) (Map.elems outs)) $
-           MapU.curry "EquationSystem.fromStorageSequences.fromInStorages"
-              (\(Idx.StorageEdge from to) -> (from, to))
-              edges)
+          StorageGraph.foldInStorages
+             (\sec -> EqSys.fromInStorages (stoutsum sec node)) edges
           <>
-          (fold $
-           Map.mapWithKey
-              (\sec ins ->
-                 EqSys.fromOutStorages (stinsum sec node) (Map.elems ins)) $
-           MapU.curry "EquationSystem.fromStorageSequences.fromOutStorages"
-              (\(Idx.StorageEdge from to) -> (to, from))
-              edges)
+          StorageGraph.foldOutStorages
+             (\sec -> EqSys.fromOutStorages (stinsum sec node)) edges
    in  fold $ Map.mapWithKey f $ StateFlow.storages g
 
 connectCarryFlow ::

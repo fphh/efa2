@@ -10,7 +10,10 @@ import EFA.Utility.Map (Caller)
 
 import qualified Data.Traversable as Trav
 import qualified Data.Map as Map ; import Data.Map (Map)
+
 import Control.Applicative (Applicative, liftA2)
+import Data.Foldable (Foldable, fold)
+import Data.Monoid (Monoid)
 
 
 {- |
@@ -78,3 +81,22 @@ checkedZipWith name f g
    StorageGraph
       (PartMap.checkedZipWith (name++".partMap") f partMap0 partMap1)
       (MapU.checkedZipWith (name++".edges") g edges0 edges1)
+
+
+foldInStorages ::
+   (Ord part, Monoid m) =>
+   (Idx.Init part -> [a] -> m) -> Map (Idx.StorageEdge part node) a -> m
+foldInStorages f =
+   fold .
+   Map.mapWithKey (\sec outs -> f sec (Map.elems outs)) .
+   MapU.curry "foldInStorages"
+      (\(Idx.StorageEdge from to) -> (from, to))
+
+foldOutStorages ::
+   (Ord part, Monoid m) =>
+   (Idx.Exit part -> [a] -> m) -> Map (Idx.StorageEdge part node) a -> m
+foldOutStorages f =
+   fold .
+   Map.mapWithKey (\sec ins -> f sec (Map.elems ins)) .
+   MapU.curry "foldOutStorages"
+      (\(Idx.StorageEdge from to) -> (to, from))
