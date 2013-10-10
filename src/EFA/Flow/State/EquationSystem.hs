@@ -29,6 +29,7 @@ import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
 import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join, fromTopology,
@@ -222,7 +223,7 @@ fromStorageSequences opts g =
        stinsum sec node =
           checkedLookup "fromStorageSequences outStorages"
              StateFlow.lookupStInSum (Idx.ForNode (Idx.StInSum sec) node) g
-       f node (partMap, edges) =
+       f node (StorageGraph partMap edges) =
           connectCarryFlow opts g node partMap
           <>
           (fold $

@@ -72,7 +72,9 @@ import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
+import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
 import EFA.Flow.Quantity (Topology, Sums(..), Flow(..), (<#>))
@@ -97,7 +99,7 @@ import EFA.Utility.Map (Caller)
 
 import qualified Control.Monad.Trans.Writer as MW
 import Control.Monad (mplus, (<=<))
-import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$>), (<$))
+import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>), (<$))
 
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
@@ -106,7 +108,7 @@ import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid)
 import Data.Maybe.HT (toMaybe)
-import Data.Tuple.HT (mapSnd)
+import Data.Tuple.HT (mapPair, mapSnd)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -177,10 +179,10 @@ mapStorages ::
    Storages node a0 -> Storages node a1
 mapStorages f =
    fmap
-      (\(partMap, storage, edges) ->
-         (fmap f partMap,
-          fmap f storage,
-          fmap (fmap f) edges))
+      (mapPair
+         (StorageGraph.mapNode f .
+          StorageGraph.mapEdge (fmap f),
+           fmap f))
 
 
 checkedZipWithGraph ::
@@ -222,13 +224,10 @@ checkedZipWithStorages ::
 checkedZipWithStorages caller f =
    let name = caller++".checkedZipWithStorages"
    in  MapU.checkedZipWith name
-          (\(partMap0, storage0, edges0)
-            (partMap1, storage1, edges1) ->
-             (PartMap.checkedZipWith (name++".partMap") f partMap0 partMap1,
-              MapU.checkedZipWith (name++".storage")
-                 f storage0 storage1,
-              MapU.checkedZipWith(name++".edges")
-                 (liftA2 f) edges0 edges1))
+          (\(graph0, storage0)
+            (graph1, storage1) ->
+               (StorageGraph.checkedZipWith name f (liftA2 f) graph0 graph1,
+                MapU.checkedZipWith (name++".storage") f storage0 storage1))
 
 
 traverseGraph ::
@@ -255,11 +254,8 @@ traverseStorages ::
    Storages node a0 -> f (Storages node a1)
 traverseStorages f =
    traverse
-      (\(partMap, storage, edges) ->
-         liftA3 (,,)
-            (traverse f partMap)
-            (traverse f storage)
-            (traverse (traverse f) edges))
+      (uncurry (liftA2 (,)) .
+       mapPair (StorageGraph.traverse f (traverse f), traverse f))
 
 
 {-
@@ -463,28 +459,28 @@ lookupDTime (Idx.InPart sec Idx.DTime) =
 lookupStorage ::
    (Ord node) => SeqIdx.Storage node -> Graph node a v -> Maybe a
 lookupStorage (Idx.ForNode (Idx.Storage bnd) node) g = do
-   (_,stores,_) <- Map.lookup node $ storages g
+   (_,stores) <- Map.lookup node $ storages g
    Map.lookup bnd stores
 
 lookupMaxEnergy ::
    (Ord node) => SeqIdx.MaxEnergy node -> Graph node a v -> Maybe a
 lookupMaxEnergy (Idx.ForNode (Idx.MaxEnergy se) node) g = do
-   (_,_,edges) <- Map.lookup node $ storages g
-   fmap carryMaxEnergy $ Map.lookup se edges
+   (sgr,_) <- Map.lookup node $ storages g
+   fmap carryMaxEnergy $ StorageGraph.lookupEdge se sgr
 
 lookupStEnergy ::
    (Ord node) => SeqIdx.StEnergy node -> Graph node a v -> Maybe a
 lookupStEnergy (Idx.ForNode (Idx.StEnergy se) node) g = do
-   (_,_,edges) <- Map.lookup node $ storages g
-   fmap carryEnergy $ Map.lookup se edges
+   (sgr,_) <- Map.lookup node $ storages g
+   fmap carryEnergy $ StorageGraph.lookupEdge se sgr
 
 lookupStX ::
    (Ord node) => SeqIdx.StX node -> Graph node a v -> Maybe a
 lookupStX (Idx.ForNode (Idx.StX se) node) g = do
-   (_,_,edges) <- Map.lookup node $ storages g
+   (sgr,_) <- Map.lookup node $ storages g
    Idx.withStorageEdgeFromTrans
-      (fmap carryXIn  . flip Map.lookup edges)
-      (fmap carryXOut . flip Map.lookup edges)
+      (fmap carryXIn  . flip StorageGraph.lookupEdge sgr)
+      (fmap carryXOut . flip StorageGraph.lookupEdge sgr)
       se
 
 {- |
@@ -493,7 +489,7 @@ It is an unchecked error if you lookup StInSum where is only an StOutSum.
 lookupStInSum ::
    (Ord node) => SeqIdx.StInSum node -> Graph node a v -> Maybe a
 lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g = do
-   (partMap,_,_) <- Map.lookup node $ storages g
+   (StorageGraph partMap _, _) <- Map.lookup node $ storages g
    case aug of
       Idx.Exit -> return $ PartMap.exit partMap
       Idx.NoExit sec -> Map.lookup sec $ PartMap.parts partMap
@@ -504,7 +500,7 @@ It is an unchecked error if you lookup StOutSum where is only an StInSum.
 lookupStOutSum ::
    (Ord node) => SeqIdx.StOutSum node -> Graph node a v -> Maybe a
 lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g = do
-   (partMap,_,_) <- Map.lookup node $ storages g
+   (StorageGraph partMap _, _) <- Map.lookup node $ storages g
    case aug of
       Idx.Init -> return $ PartMap.init partMap
       Idx.NoInit sec -> Map.lookup sec $ PartMap.parts partMap
@@ -621,10 +617,10 @@ storagesFromPlain ::
    Storages node a
 storagesFromPlain =
    Map.map $
-      \(stores, bnds, edges) ->
-         (unknown <$ stores,
-          unknown <$ bnds,
-          pure unknown <$ edges)
+      mapPair
+         (StorageGraph.mapNode (const unknown) .
+          StorageGraph.mapEdge (const $ pure unknown),
+          (unknown <$))
 
 
 sequenceFromPlain ::
@@ -673,12 +669,13 @@ mapStoragesWithVar ::
    Storages node a1
 mapStoragesWithVar f gr =
    Map.mapWithKey
-      (\node (partMap, bnds, edges) ->
-         (Quant.mapPartMapWithVar (flip lookupSums gr) f node partMap,
+      (\node (StorageGraph partMap edges, bnds) ->
+         (StorageGraph
+            (Quant.mapPartMapWithVar (flip lookupSums gr) f node partMap)
+            (Map.mapWithKey (mapCarryWithVar f node) edges),
           Map.mapWithKey
              (\bnd a -> f (Idx.Storage bnd <#> node) a)
-             bnds,
-          Map.mapWithKey (mapCarryWithVar f node) edges)) $
+             bnds)) $
    storages gr
 
 mapCarryWithVar ::

@@ -53,9 +53,11 @@ import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State as StateFlow
+import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.State (states, storages)
 import EFA.Flow.Quantity (Sums(..), Flow(..))
@@ -86,7 +88,6 @@ import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
 import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
-import Data.Tuple.HT (mapSnd)
 import Data.Maybe (isJust, fromMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
@@ -157,10 +158,7 @@ mapStorages ::
    (a0 -> a1) ->
    Storages node a0 -> Storages node a1
 mapStorages f =
-   fmap
-      (\(partMap, edges) ->
-         (fmap f partMap,
-          fmap (fmap f) edges))
+   fmap (StorageGraph.mapNode f . StorageGraph.mapEdge (fmap f))
 
 
 traverseGraph ::
@@ -185,11 +183,7 @@ traverseStorages ::
    (a0 -> f a1) ->
    Storages node a0 -> f (Storages node a1)
 traverseStorages f =
-   traverse
-      (\(partMap, edges) ->
-         liftA2 (,)
-            (traverse f partMap)
-            (traverse (traverse f) edges))
+   traverse (StorageGraph.traverse f (traverse f))
 
 
 
@@ -256,16 +250,17 @@ fromSequenceFlowGen integrate add zero allStEdges gr =
    in  StateFlow.Graph {
           storages =
              Map.mapWithKey
-                (\node (initExit, _, edges) ->
-                   (cumulateSums add secMap initExit,
-                    Map.union
-                       (if allStEdges
-                          then Map.fromList $
-                               map (flip (,) zero) $
-                               allStorageEdges (sumsMap node sts)
-                          else Map.empty) $
-                    cumulateStorageEdges add secMap $
-                    fmap SeqFlowQuant.carryEnergy edges)) $
+                (\node (StorageGraph initExit edges, _) ->
+                   StorageGraph
+                      (cumulateSums add secMap initExit)
+                      (Map.union
+                          (if allStEdges
+                             then Map.fromList $
+                                  map (flip (,) zero) $
+                                  allStorageEdges (sumsMap node sts)
+                             else Map.empty) $
+                       cumulateStorageEdges add secMap $
+                       fmap SeqFlowQuant.carryEnergy edges)) $
              SeqFlowQuant.storages gr,
           states = sts
        }
@@ -342,7 +337,7 @@ flowGraphFromCumResult ::
 flowGraphFromCumResult gr =
    StateFlow.Graph {
       StateFlow.storages =
-         fmap (mapSnd (fmap carryResultFromResult)) $
+         fmap (StorageGraph.mapEdge carryResultFromResult) $
          StateFlow.storages gr,
       StateFlow.states =
          fmap (FlowTopoPlain.mapEdge (fmap flowResultFromCumResult)) $
@@ -458,16 +453,16 @@ lookupDTime (Idx.InPart state Idx.DTime) =
 lookupStEnergy ::
    (Ord node) => StateIdx.StEnergy node -> Graph node a v -> Maybe a
 lookupStEnergy (Idx.ForNode (Idx.StEnergy se) node) g = do
-   (_,edges) <- Map.lookup node $ storages g
-   fmap carryEnergy $ Map.lookup se edges
+   sgr <- Map.lookup node $ storages g
+   fmap carryEnergy $ StorageGraph.lookupEdge se sgr
 
 lookupStX ::
    (Ord node) => StateIdx.StX node -> Graph node a v -> Maybe a
 lookupStX (Idx.ForNode (Idx.StX se) node) g = do
-   (_,edges) <- Map.lookup node $ storages g
+   sgr <- Map.lookup node $ storages g
    Idx.withStorageEdgeFromTrans
-      (fmap carryXIn  . flip Map.lookup edges)
-      (fmap carryXOut . flip Map.lookup edges)
+      (fmap carryXIn  . flip StorageGraph.lookupEdge sgr)
+      (fmap carryXOut . flip StorageGraph.lookupEdge sgr)
       se
 
 {- |
@@ -476,7 +471,7 @@ It is an unchecked error if you lookup StInSum where is only an StOutSum.
 lookupStInSum ::
    (Ord node) => StateIdx.StInSum node -> Graph node a v -> Maybe a
 lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g = do
-   (partMap,_) <- Map.lookup node $ storages g
+   (StorageGraph partMap _) <- Map.lookup node $ storages g
    case aug of
       Idx.Exit -> return $ PartMap.exit partMap
       Idx.NoExit sec -> Map.lookup sec $ PartMap.parts partMap
@@ -487,7 +482,7 @@ It is an unchecked error if you lookup StOutSum where is only an StInSum.
 lookupStOutSum ::
    (Ord node) => StateIdx.StOutSum node -> Graph node a v -> Maybe a
 lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g = do
-   (partMap,_) <- Map.lookup node $ storages g
+   (StorageGraph partMap _) <- Map.lookup node $ storages g
    case aug of
       Idx.Init -> return $ PartMap.init partMap
       Idx.NoInit sec -> Map.lookup sec $ PartMap.parts partMap
@@ -609,9 +604,10 @@ mapStoragesWithVar ::
    Storages node a1
 mapStoragesWithVar f gr =
    Map.mapWithKey
-      (\node (partMap, edges) ->
-         (Quant.mapPartMapWithVar (flip lookupSums gr) f node partMap,
-          Map.mapWithKey (mapCarryWithVar f node) edges)) $
+      (\node (StorageGraph partMap edges) ->
+         StorageGraph
+            (Quant.mapPartMapWithVar (flip lookupSums gr) f node partMap)
+            (Map.mapWithKey (mapCarryWithVar f node) edges)) $
    storages gr
 
 mapCarryWithVar ::

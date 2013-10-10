@@ -7,7 +7,7 @@ import qualified EFA.Flow.Sequence as SeqFlowPlain
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.PartMap (PartMap)
+import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -134,18 +134,17 @@ fromSection (FlowTopoPlain.Section dtime topo) =
          topo)
 
 storageMapFromList ::
-   (Ord edge,
-    SeqFlow.Unknown a) =>
+   (Ord node, SeqFlow.Unknown a) =>
    [Idx.Section] ->
-   [edge] ->
-   (PartMap Idx.Section a, Map Idx.Boundary a, Map edge (SeqFlow.Carry a))
-storageMapFromList secs =
-   (,,)
+   [XIdx.StorageEdge node] ->
+   (StorageGraph Idx.Section node a (SeqFlow.Carry a), Map Idx.Boundary a)
+storageMapFromList secs edges =
+   (StorageGraph
       (PartMap.constant SeqFlow.unknown secs)
-      (Map.fromList $ map (flip (,) SeqFlow.unknown . Idx.Following) $
-       Idx.Init : map Idx.NoInit secs) .
-   Map.fromListWith (error "duplicate storage edge") .
-   map (flip (,) $ pure SeqFlow.unknown)
+      (Map.fromListWith (error "duplicate storage edge") $
+       map (flip (,) (pure SeqFlow.unknown)) edges),
+    Map.fromList $ map (flip (,) SeqFlow.unknown . Idx.Following) $
+    Idx.Init : map Idx.NoInit secs)
 
 storageEdges ::
    Map Idx.Section (SeqFlow.Sums v) -> [Idx.StorageEdge Idx.Section node]

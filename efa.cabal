@@ -118,6 +118,7 @@ Library
     EFA.Equation.Pair
     EFA.Equation.Verify
     EFA.Flow.PartMap
+    EFA.Flow.StorageGraph
     EFA.Flow.Topology
     EFA.Flow.Topology.Quantity
     EFA.Flow.Sequence

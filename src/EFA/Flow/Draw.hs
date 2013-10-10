@@ -26,9 +26,11 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Quantity as FlowQuant
+import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
@@ -77,7 +79,7 @@ import qualified Data.List as List
 import Data.Map (Map)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Maybe (maybeToList)
-import Data.Tuple.HT (mapFst, mapFst3, snd3)
+import Data.Tuple.HT (mapFst, mapFst3)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
@@ -667,11 +669,11 @@ seqFlowGraph opts gr =
       (if optStorage opts
          then
             dotFromStorageGraphs
-               (fmap snd3 $ SeqFlowQuant.storages gr)
+               (fmap snd $ SeqFlowQuant.storages gr)
                (fmap (FlowTopo.topology . snd) $ SeqFlowQuant.sequence gr)
          else ([], []))
       (Map.mapWithKey
-          (\node (partMap, _bnds, edges) ->
+          (\node (StorageGraph partMap edges, _bnds) ->
              (stateInitExitShow node partMap,
               if optStorageEdge opts
                 then Map.mapWithKey (storageEdgeSeqShow opts node) edges
@@ -686,7 +688,7 @@ seqFlowGraph opts gr =
               " / Time " ++ unUnicode (formatValue dt),
               Graph.mapNodeWithKey
                  (\node sums ->
-                    let (partMap, stores, _) =
+                    let (StorageGraph partMap _, stores) =
                            maybe (error "missing node") id $
                            Map.lookup node $
                            SeqFlowQuant.storages gr
@@ -761,7 +763,7 @@ stateFlowGraph opts gr =
    dotFromFlowGraph
       ([], [])
       (Map.mapWithKey
-          (\node (partMap, edges) ->
+          (\node (StorageGraph partMap edges) ->
              (stateInitExitShow node partMap,
               if optStorageEdge opts
                 then Map.mapWithKey (storageEdgeStateShow opts node) edges
@@ -773,7 +775,8 @@ stateFlowGraph opts gr =
               Graph.mapNodeWithKey
                  (\node _sums ->
                     stateNodeShow node $ PartMap.lookup state $
-                    maybe (error "Draw.stateFlowGraph") fst $ Map.lookup node $
+                    maybe (error "Draw.stateFlowGraph") StorageGraph.nodes $
+                    Map.lookup node $
                     StateFlowQuant.storages gr) $
               Graph.mapEdgeWithKey
                  (\edge ->

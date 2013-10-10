@@ -2,8 +2,9 @@ module EFA.Flow.Sequence where
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Topology as FlowTopo
+import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.PartMap (PartMap)
+import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
 import qualified EFA.Graph.Flow as Flow
 
@@ -19,7 +20,7 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as ListHT
 
-import Data.Tuple.HT (mapPair, thd3)
+import Data.Tuple.HT (mapPair)
 import Data.Maybe (mapMaybe)
 
 import Prelude hiding (sequence)
@@ -28,9 +29,8 @@ import Prelude hiding (sequence)
 type
    Storages node storageLabel boundaryLabel storageEdgeLabel =
       Map node
-         (PartMap Idx.Section storageLabel,
-          Map Idx.Boundary boundaryLabel,
-          Map (XIdx.StorageEdge node) storageEdgeLabel)
+         (StorageGraph Idx.Section node storageLabel storageEdgeLabel,
+          Map Idx.Boundary boundaryLabel)
 
 type
    Sequence node structEdge sectionLabel nodeLabel structLabel =
@@ -78,7 +78,7 @@ flatten ::
    RangeGraph node -> Flow.RangeGraph node
 flatten (Graph tracks sq) =
    (,) (fmap fst sq) $
-   Flow.insEdges (fmap (Map.keys . thd3) tracks) $
+   Flow.insEdges (fmap (Map.keys . StorageGraph.edges . fst) tracks) $
    Flow.insNodes (Map.keys tracks) $
    Fold.fold $ Map.mapWithKey Flow.sectionFromClassTopo $
    fmap (FlowTopo.topology . snd) sq
@@ -104,17 +104,17 @@ structure (rngs, g) =
        }
 
 storageMapFromList ::
-   (Ord edge) =>
+   (Ord node) =>
    [Idx.Section] ->
-   [edge] ->
-   (PartMap Idx.Section (), Map Idx.Boundary (), Map edge ())
-storageMapFromList secs =
-   (,,)
+   [XIdx.StorageEdge node] ->
+   (StorageGraph Idx.Section node () (), Map Idx.Boundary ())
+storageMapFromList secs edges =
+   (StorageGraph
       (PartMap.constant () secs)
-      (Map.fromList $ map (flip (,) () . Idx.Following) $
-       Idx.Init : map Idx.NoInit secs) .
-   Map.fromListWith (error "duplicate storage edge") .
-   map (flip (,) ())
+      (Map.fromListWith (error "duplicate storage edge") $
+       map (flip (,) ()) edges),
+    Map.fromList $ map (flip (,) () . Idx.Following) $
+    Idx.Init : map Idx.NoInit secs)
 
 groupEdges ::
    (Ord part, Ord node) =>
