@@ -46,7 +46,6 @@ import qualified Data.NonEmpty as NonEmpty
 import Data.Traversable (Traversable, sequenceA, for)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend)
-import Data.Function.HT (compose2)
 
 import qualified Prelude as P
 import Prelude hiding (sqrt)
@@ -119,7 +118,8 @@ data Options mode rec s a v =
          Expr mode rec s v ->
          System mode s,
       optStInOutSums ::
-         Quant.Sum (Expr mode rec s a) (Expr mode rec s v) ->
+         Expr mode rec s a ->
+         Expr mode rec s v ->
          System mode s
    }
 
@@ -172,10 +172,7 @@ equalStInOutSums ::
    Options mode rec s a a ->
    Options mode rec s a a
 equalStInOutSums opts =
-   opts {
-      optStInOutSums = \ sums ->
-         Quant.flowSum sums =&= Quant.carrySum sums
-   }
+   opts { optStInOutSums = (=&=) }
 
 
 
@@ -197,11 +194,11 @@ fromTopology opts dtime topo =
    foldMap
       (\(ins,ss,outs) ->
          (flip foldMap (Quant.sumIn ss) $ \s ->
-            splitStructEqs dtime (Quant.flowSum s)
+            splitStructEqs dtime s
                Quant.flowEnergyIn Quant.flowXIn $ Map.elems ins)
          <>
          (flip foldMap (Quant.sumOut ss) $ \s ->
-            splitStructEqs dtime (Quant.flowSum s)
+            splitStructEqs dtime s
                Quant.flowEnergyOut Quant.flowXOut $ Map.elems outs))
       (Graph.graphMap topo)
 
@@ -223,6 +220,20 @@ fromEdge dtime
    (pin  =&= eta ~* pout)
 
 
+fromStorageSums ::
+   (Verify.LocalVar mode a,
+    Verify.LocalVar mode v,
+    Record rec,
+    ra ~ Expr mode rec s a,
+    rv ~ Expr mode rec s v) =>
+   Options mode rec s a v ->
+   Quant.Sums (ra, rv) ->
+   System mode s
+fromStorageSums opts sums =
+   foldMap (uncurry $ optStInOutSums opts) (Quant.sumIn sums)
+   <>
+   foldMap (uncurry $ optStInOutSums opts) (Quant.sumOut sums)
+
 fromSums ::
    (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
     Verify.LocalVar mode v, Integrate v,
@@ -230,16 +241,10 @@ fromSums ::
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
    Options mode rec s a v ->
-   Quant.Sums ra rv ->
+   Quant.Sums rv ->
    System mode s
 fromSums opts s =
-   let sumIn  = Quant.sumIn s
-       sumOut = Quant.sumOut s
-   in  (fold $ liftA2 (compose2 (optInOutSums opts) Quant.flowSum) sumIn sumOut)
-       <>
-       foldMap (optStInOutSums opts) sumIn
-       <>
-       foldMap (optStInOutSums opts) sumOut
+   fold $ liftA2 (optInOutSums opts) (Quant.sumIn s) (Quant.sumOut s)
 
 integrateSum ::
    (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
@@ -247,10 +252,11 @@ integrateSum ::
     Record rec,
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
-   Quant.Sum ra rv ->
+   ra ->
+   rv ->
    System mode s
-integrateSum s =
-   Quant.carrySum s =&= Arith.integrate (Quant.flowSum s)
+integrateSum carrySum flowSum =
+   carrySum =&= Arith.integrate flowSum
 
 spreadSum ::
    (Verify.LocalVar mode a, Product a, a ~ Scalar v,
@@ -259,12 +265,13 @@ spreadSum ::
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
    rv ->
-   Quant.Sum ra rv ->
+   ra ->
+   rv ->
    System mode s
-spreadSum dtime s =
-   Arith.scale (Quant.carrySum s ~/ Arith.integrate dtime) dtime
+spreadSum dtime carrySum flowSum =
+   Arith.scale (carrySum ~/ Arith.integrate dtime) dtime
    =&=
-   Quant.flowSum s
+   flowSum
 
 
 splitStructEqs ::

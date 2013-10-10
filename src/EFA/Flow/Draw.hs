@@ -26,6 +26,7 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Quantity as FlowQuant
+import qualified EFA.Flow.PartMap as PartMap
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
@@ -78,7 +79,7 @@ import Data.Tuple.HT (mapFst, mapFst3, snd3)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
-import Control.Monad (void, mplus)
+import Control.Monad (void)
 
 import Prelude hiding (sin, reverse, init, last, sequence, (.))
 
@@ -153,7 +154,7 @@ dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
 dotFromStorageGraphs ::
    (Node.C node, FormatValue a, Ord (edge node), Graph.Edge edge) =>
    Map node (Map Idx.Boundary a) ->
-   Map Idx.Section (Graph node edge (FlowQuant.Sums a v) edgeLabel) ->
+   Map Idx.Section (Graph node edge (FlowQuant.Sums v) edgeLabel) ->
    ([DotSubGraph T.Text], [DotEdge T.Text])
 dotFromStorageGraphs storages sequence =
    (Map.elems $ Map.mapWithKey dotFromStorageGraph $
@@ -668,9 +669,8 @@ seqFlowGraph opts gr =
                (fmap (snd . snd) $ SeqFlowQuant.sequence gr)
          else ([], []))
       (Map.mapWithKey
-          (\node ((init,exit), _bnds, edges) ->
-             ((stateNodeShow node (Just init),
-               stateNodeShow node (Just exit)),
+          (\node (partMap, _bnds, edges) ->
+             (stateInitExitShow node partMap,
               if optStorageEdge opts
                 then Map.mapWithKey (storageEdgeSeqShow opts node) edges
                 else Map.empty)) $
@@ -684,18 +684,19 @@ seqFlowGraph opts gr =
               " / Time " ++ unUnicode (formatValue dt),
               Graph.mapNodeWithKey
                  (\node sums ->
-                    formatNodeStorage opts node
-                       (let content bnd =
-                               Map.findWithDefault (error "no storage content") bnd $
-                               maybe (error "missing node") snd3 $
-                               Map.lookup node $
-                               SeqFlowQuant.storages gr
-                        in  (content before,
-                             content $ Idx.afterSection sec))
-                       (fmap SeqFlowQuant.carrySum $
-                        SeqFlowQuant.sumIn sums)
-                       (fmap SeqFlowQuant.carrySum $
-                        SeqFlowQuant.sumOut sums)) $
+                    let (partMap, stores, _) =
+                           maybe (error "missing node") id $
+                           Map.lookup node $
+                           SeqFlowQuant.storages gr
+                    in  formatNodeStorage opts node
+                           (let content bnd =
+                                   Map.findWithDefault
+                                      (error "no storage content") bnd stores
+                            in  (content before,
+                                 content $ Idx.afterSection sec))
+                           (fmap (maybe (error "missing section") (flip (,)) $
+                                  PartMap.lookup sec partMap) $
+                            FlowQuant.dirFromSums sums)) $
               Graph.mapEdgeWithKey
                  (\edge ->
                     if optEtaNode opts
@@ -714,8 +715,8 @@ formatNodeStorage ::
    (FormatValue a, Format output, Node.C node) =>
    Options output ->
    node ->
-   (a, a) -> Maybe a -> Maybe a -> output
-formatNodeStorage opts node beforeAfter sin sout =
+   (a, a) -> Maybe (Topo.StoreDir, a) -> output
+formatNodeStorage opts node beforeAfter sinout =
    case Node.typ node of
       ty ->
          Format.lines $
@@ -724,34 +725,29 @@ formatNodeStorage opts node beforeAfter sin sout =
             case ty of
                Node.Storage _ ->
                   if optStorage opts
-                    then formatStorageUpdate sin sout
-                    else formatStorageEquation beforeAfter sin sout
+                    then formatStorageUpdate sinout
+                    else formatStorageEquation beforeAfter sinout
                _ -> []
 
 
 formatStorageUpdate ::
    (FormatValue a, Format output) =>
-   Maybe a -> Maybe a -> [output]
-formatStorageUpdate sin sout =
-   case (sin, sout) of
-      (Just a,  Nothing) -> [formatValue a]
-      (Nothing, Just a)  -> [formatValue a]
-      (Nothing, Nothing) -> []
-      (Just _,  Just _)  ->
-         error "formatStorageUpdate: storage cannot be both input and output"
+   Maybe (Topo.StoreDir, a) -> [output]
+formatStorageUpdate sinout =
+   case sinout of
+      Just (_, s)  -> [formatValue s]
+      Nothing -> []
 
 
 formatStorageEquation ::
    (FormatValue a, Format output) =>
-   (a, a) -> Maybe a -> Maybe a -> [output]
-formatStorageEquation (before, after) sin sout =
+   (a, a) -> Maybe (Topo.StoreDir, a) -> [output]
+formatStorageEquation (before, after) sinout =
    formatValue before :
-   (case (sin, sout) of
-      (Just a,  Nothing) -> [Format.plus  Format.empty $ formatValue a]
-      (Nothing, Just a)  -> [Format.minus Format.empty $ formatValue a]
-      (Nothing, Nothing) -> []
-      (Just _,  Just _)  ->
-         error "formatStorageEquation: storage cannot be both input and output") ++
+   (case sinout of
+      Just (Topo.In,  s) -> [Format.plus  Format.empty $ formatValue s]
+      Just (Topo.Out, s) -> [Format.minus Format.empty $ formatValue s]
+      Nothing -> []) ++
    Format.assign Format.empty (formatValue after) :
    []
 
@@ -763,9 +759,8 @@ stateFlowGraph opts gr =
    dotFromFlowGraph
       ([], [])
       (Map.mapWithKey
-          (\node ((init,exit), edges) ->
-             ((stateNodeShow node (Just init),
-               stateNodeShow node (Just exit)),
+          (\node (partMap, edges) ->
+             (stateInitExitShow node partMap,
               if optStorageEdge opts
                 then Map.mapWithKey (storageEdgeStateShow opts node) edges
                 else Map.empty)) $
@@ -774,12 +769,10 @@ stateFlowGraph opts gr =
           (\state (dt,topo) ->
              (show state ++ " / Time " ++ unUnicode (formatValue dt),
               Graph.mapNodeWithKey
-                 (\node sums ->
-                    stateNodeShow node $
-                    fmap StateFlowQuant.carrySum $
-                    mplus
-                       (StateFlowQuant.sumOut sums)
-                       (StateFlowQuant.sumIn sums)) $
+                 (\node _sums ->
+                    stateNodeShow node $ PartMap.lookup state $
+                    maybe (error "Draw.stateFlowGraph") fst $ Map.lookup node $
+                    StateFlowQuant.storages gr) $
               Graph.mapEdgeWithKey
                  (\edge ->
                     if optEtaNode opts
@@ -787,6 +780,14 @@ stateFlowGraph opts gr =
                       else HideEtaNode . structureEdgeShow opts state edge)
                  topo)) $
        StateFlowQuant.states gr)
+
+
+stateInitExitShow ::
+   (Node.C node, FormatValue a, Format output) =>
+   node -> PartMap.PartMap part a -> (output, output)
+stateInitExitShow node partMap =
+   (stateNodeShow node $ Just $ PartMap.init partMap,
+    stateNodeShow node $ Just $ PartMap.exit partMap)
 
 stateNodeShow ::
    (Node.C node, FormatValue a, Format output) =>

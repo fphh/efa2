@@ -29,6 +29,8 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 
 import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.EquationSystem as EqSys
+import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join, fromTopology,
            splitScalarEqs, withLocalVar, (=&=), (=%=), (=.=))
@@ -206,24 +208,26 @@ fromGraph opts gv =
                (uncurry (fromTopology opts) .
                 mapSnd Quant.dirFromFlowGraph . snd)
                (SeqFlow.sequence g) :
-            fromStorageSequences g :
+            fromStorageSequences opts g :
             []
 
 fromStorageSequences ::
-   (Verify.LocalVar mode a, Constant a, Record rec, Node.C node) =>
+   (Verify.LocalVar mode a, Constant a,
+    Verify.LocalVar mode v, Record rec, Node.C node) =>
+   EqSys.Options mode rec s a v ->
    SeqFlow.Graph node
       (SysRecord.Expr mode rec s a)
       (SysRecord.Expr mode rec s v) ->
    EqSys.System mode s
-fromStorageSequences g =
+fromStorageSequences opts g =
    let stoutsum sec node =
           checkedLookup "fromStorageSequences inStorages"
              SeqFlow.lookupStOutSum (Idx.ForNode (Idx.StOutSum sec) node) g
        stinsum sec node =
           checkedLookup "fromStorageSequences outStorages"
              SeqFlow.lookupStInSum (Idx.ForNode (Idx.StInSum sec) node) g
-       f node (initExit, storageMap, edges) =
-          fromStorageSequence g node initExit storageMap
+       f node (partMap, storageMap, edges) =
+          fromStorageSequence opts g node partMap storageMap
           <>
           (fold $
            Map.mapWithKey
@@ -243,44 +247,54 @@ fromStorageSequences g =
    in  fold $ Map.mapWithKey f $ SeqFlow.storages g
 
 fromStorageSequence ::
-   (Sys.Value mode a, Sum a, Record rec, Node.C node,
-    ra ~ SysRecord.Expr mode rec s a,
-    rv ~ SysRecord.Expr mode rec s v) =>
+   (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
+    Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
+    Sum a, Record rec, Node.C node) =>
+   EqSys.Options mode rec s a v ->
    SeqFlow.Graph node ra rv ->
    node ->
-   (ra, ra) ->
+   PartMap Idx.Section ra ->
    Map Idx.Boundary ra ->
    EqSys.System mode s
-fromStorageSequence g node (init,exit) storageMap =
+fromStorageSequence opts g node partMap storageMap =
    let storages = Map.toList storageMap
    in  mconcat $
        zipWith
-          (charge g node)
-          (init : map snd storages)
+          (charge opts g node partMap)
+          (PartMap.init partMap : map snd storages)
           (map (mapFst Idx.sectionFromBoundary) storages
            ++
-           [(Nothing, exit)])
+           [(Nothing, PartMap.exit partMap)])
 
 charge ::
-   (Sys.Value mode a, Sum a, Record rec, Node.C node,
-    ra ~ SysRecord.Expr mode rec s a) =>
+   (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
+    Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
+    Sum a, Record rec, Node.C node) =>
+   EqSys.Options mode rec s a v ->
    SeqFlow.Graph node ra rv ->
    node ->
+   PartMap Idx.Section ra ->
    ra -> (Maybe Idx.Section, ra) ->
    EqSys.System mode s
-charge g node old (aug, now) =
-   let sums =
+charge opts g node partMap old (aug, now) =
+   let carrySum sec =
+          maybe (error "charge: missing section") id $
+          PartMap.lookup sec partMap
+       sums =
           case aug of
              Nothing -> SeqFlow.Sums Nothing Nothing
              Just sec ->
-                maybe (error "missing sum") id $
+                fmap ((,) (carrySum sec)) $
+                maybe (error "charge: missing sum") id $
                 SeqFlow.lookupSums (Idx.secNode sec node) g
-   in  condSum now (SeqFlow.sumOut sums)
-       =&=
-       condSum old (SeqFlow.sumIn  sums)
+   in  EqSys.fromStorageSums opts sums
+       <>
+       (condSum now (SeqFlow.sumOut sums)
+        =&=
+        condSum old (SeqFlow.sumIn  sums))
 
-condSum :: (Sum a) => a -> Maybe (SeqFlow.Sum a v) -> a
-condSum x = maybe x (\s -> x ~+ SeqFlow.carrySum s)
+condSum :: (Sum a) => a -> Maybe (a,v) -> a
+condSum x = maybe x (\(s,_) -> x ~+ s)
 
 
 fromInStorages ::

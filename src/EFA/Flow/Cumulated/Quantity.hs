@@ -27,6 +27,7 @@ import qualified EFA.Flow.Cumulated.Variable as CumVar
 import qualified EFA.Flow.Cumulated.Index as CumIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Quantity as Quant
+import EFA.Flow.Quantity (Sums(..))
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
@@ -51,9 +52,6 @@ type
    Graph node a =
       Graph.Graph node Graph.DirEdge (Sums a) (Flow a)
 
-data Sums a =
-   Sums { sumIn, sumOut :: Maybe a }
-
 data Flow a =
    Flow {
       flowDTime,
@@ -61,20 +59,6 @@ data Flow a =
       flowEta,
       flowXIn, flowEnergyIn, flowPowerIn :: a
    }
-
-
-instance Functor Sums where
-   fmap f (Sums i o) = Sums (fmap f i) (fmap f o)
-
-instance Foldable Sums where
-   foldMap = foldMapDefault
-
-instance Traversable Sums where
-   traverse f (Sums i o) = liftA2 Sums (traverse f i) (traverse f o)
-
-instance Applicative Sums where
-   pure a = Sums (Just a) (Just a)
-   (Sums fi fo) <*> (Sums i o) = Sums (fi <*> i) (fo <*> o)
 
 
 instance Functor Flow where
@@ -140,11 +124,8 @@ cumFromFlow time flow =
 
 cumFromFlowGraph ::
    (Ord node) =>
-   a -> SeqFlow.Topology node a a -> CumGraph node a
+   a -> SeqFlow.Topology node a -> CumGraph node a
 cumFromFlowGraph time =
-   Graph.mapNode
-      (\(SeqFlow.Sums i o) ->
-         Sums (fmap SeqFlow.flowSum i) (fmap SeqFlow.flowSum o)) .
    Graph.mapEdge (cumFromFlow time) .
    Quant.dirFromFlowGraph
 
@@ -165,12 +146,12 @@ fromSequenceFlowGen ::
    (Ord node) =>
    (v -> a) ->
    (a -> a -> a) ->
-   SeqFlow.Sequence node a v ->
+   SeqFlow.Sequence node v ->
    CumGraph node a
 fromSequenceFlowGen integrate add =
    foldl1 (addCumGraph add) . Map.elems .
    fmap (uncurry cumFromFlowGraph . snd) .
-   SeqFlow.mapSequence id integrate
+   SeqFlow.mapSequence integrate
 
 addCumGraph ::
    (Ord node) =>
@@ -271,14 +252,14 @@ instance Lookup CumIdx.Sum where
 
 fromSequenceFlow ::
    (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
-   SeqFlow.Sequence node a v ->
+   SeqFlow.Sequence node v ->
    CumGraph node a
 fromSequenceFlow =
    fromSequenceFlowGen Arith.integrate (~+)
 
 fromSequenceFlowResult ::
    (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
-   SeqFlow.Sequence node (Result a) (Result v) ->
+   SeqFlow.Sequence node (Result v) ->
    CumGraph node (Result a)
 fromSequenceFlowResult =
    fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+))

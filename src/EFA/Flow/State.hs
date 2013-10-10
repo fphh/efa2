@@ -1,6 +1,7 @@
 module EFA.Flow.State where
 
 import qualified EFA.Flow.State.Index as XIdx
+import EFA.Flow.PartMap (PartMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph as Graph
@@ -9,10 +10,10 @@ import Data.Map (Map)
 
 
 type
-   Storages node initLabel exitLabel storageLabel =
+   Storages node storageLabel storageEdgeLabel =
       Map node
-         ((initLabel, exitLabel),
-          Map (XIdx.StorageEdge node) storageLabel)
+         (PartMap Idx.State storageLabel,
+          Map (XIdx.StorageEdge node) storageEdgeLabel)
 
 type
    States node structEdge stateLabel nodeLabel structLabel =
@@ -21,9 +22,9 @@ type
 
 data
    Graph node structEdge
-         stateLabel nodeLabel initLabel exitLabel
-         structLabel storageLabel =
+         stateLabel nodeLabel storageLabel
+         structLabel storageEdgeLabel =
       Graph {
-         storages :: Storages node initLabel exitLabel storageLabel,
+         storages :: Storages node storageLabel storageEdgeLabel,
          states :: States node structEdge stateLabel nodeLabel structLabel
       }

@@ -29,6 +29,8 @@ import qualified EFA.Flow.State.Quantity as StateFlow
 
 import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.EquationSystem as EqSys
+import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join, fromTopology,
            (=%=), (=.=))
@@ -204,23 +206,28 @@ fromGraph opts gv =
                (uncurry (fromTopology opts) .
                 mapSnd Quant.dirFromFlowGraph)
                (StateFlow.states g) :
-            fromStorageSequences g :
+            fromStorageSequences opts g :
             []
 
 fromStorageSequences ::
-   (Verify.LocalVar mode a, Constant a, Record rec, Node.C node) =>
+   (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
+    Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
+    Constant a, Record rec, Node.C node) =>
+   EqSys.Options mode rec s a v ->
    StateFlow.Graph node
       (SysRecord.Expr mode rec s a)
       (SysRecord.Expr mode rec s v) ->
    EqSys.System mode s
-fromStorageSequences g =
+fromStorageSequences opts g =
    let stoutsum sec node =
           checkedLookup "fromStorageSequences inStorages"
              StateFlow.lookupStOutSum (Idx.ForNode (Idx.StOutSum sec) node) g
        stinsum sec node =
           checkedLookup "fromStorageSequences outStorages"
              StateFlow.lookupStInSum (Idx.ForNode (Idx.StInSum sec) node) g
-       f node (_initExit, edges) =
+       f node (partMap, edges) =
+          connectCarryFlow opts g node partMap
+          <>
           (fold $
            Map.mapWithKey
               (\sec outs ->
@@ -237,6 +244,25 @@ fromStorageSequences g =
               (\(Idx.StorageEdge from to) -> (to, from))
               edges)
    in  fold $ Map.mapWithKey f $ StateFlow.storages g
+
+connectCarryFlow ::
+   (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
+    Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
+    Record rec, Node.C node) =>
+   EqSys.Options mode rec s a v ->
+   StateFlow.Graph node ra rv ->
+   node ->
+   PartMap Idx.State ra ->
+   EqSys.System mode s
+connectCarryFlow opts g node partMap =
+   fold $
+   Map.mapWithKey
+      (\state carrySum ->
+         EqSys.fromStorageSums opts $
+         fmap ((,) carrySum) $
+         maybe (error "charge: missing sum") id $
+         StateFlow.lookupSums (Idx.stateNode state node) g) $
+   PartMap.parts partMap
 
 
 variables ::

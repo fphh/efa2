@@ -1,6 +1,8 @@
 module EFA.Flow.Sequence where
 
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.PartMap (PartMap)
 
 import qualified EFA.Graph.Flow as Flow
 
@@ -23,11 +25,11 @@ import Prelude hiding (sequence)
 
 
 type
-   Storages node initLabel exitLabel boundaryLabel storageLabel =
+   Storages node storageLabel boundaryLabel storageEdgeLabel =
       Map node
-         ((initLabel, exitLabel),
+         (PartMap Idx.Section storageLabel,
           Map Idx.Boundary boundaryLabel,
-          Map (XIdx.StorageEdge node) storageLabel)
+          Map (XIdx.StorageEdge node) storageEdgeLabel)
 
 type
    Sequence node structEdge sectionLabel nodeLabel structLabel =
@@ -36,10 +38,10 @@ type
 
 data
    Graph node structEdge
-         sectionLabel nodeLabel initLabel exitLabel boundaryLabel
-         structLabel storageLabel =
+         sectionLabel nodeLabel storageLabel boundaryLabel
+         structLabel storageEdgeLabel =
       Graph {
-         storages :: Storages node initLabel exitLabel boundaryLabel storageLabel,
+         storages :: Storages node storageLabel boundaryLabel storageEdgeLabel,
          sequence :: Sequence node structEdge sectionLabel nodeLabel structLabel
       }
    deriving (Eq)
@@ -49,10 +51,7 @@ type
       Graph
          node Graph.EitherEdge ()
          (Node.Type (Maybe Topo.StoreDir))
-         InitIn ExitOut () () ()
-
-data InitIn  = InitIn
-data ExitOut = ExitOut
+         () () () ()
 
 {-
 Alle Storages sollen in die initiale Sektion,
@@ -106,10 +105,10 @@ storageMapFromList ::
    (Ord e) =>
    [Idx.Section] ->
    [e] ->
-   ((InitIn, ExitOut), Map Idx.Boundary (), Map e ())
+   (PartMap Idx.Section (), Map Idx.Boundary (), Map e ())
 storageMapFromList secs =
    (,,)
-      (InitIn, ExitOut)
+      (PartMap.constant () secs)
       (Map.fromList $ map (flip (,) () . Idx.Following) $
        Idx.Init : map Idx.NoInit secs).
    Map.fromListWith (error "duplicate storage edge") .

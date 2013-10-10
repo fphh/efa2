@@ -22,7 +22,7 @@ import Data.Foldable (Foldable, foldMap)
 etaSys ::
    (Node.C n, Graph.Edge e, Ord (e n), Arith.Constant v,
     Functor f, Foldable f) =>
-   f (Graph.Graph n e (Quant.Sums a (Result v)) el) -> Result v
+   f (Graph.Graph n e (Quant.Sums (Result v)) el) -> Result v
 etaSys sq =
    let nodes = fmap Graph.nodeLabels sq
        sinks =
@@ -34,7 +34,6 @@ etaSys sq =
              (Map.mapMaybe Quant.sumOut .
               Map.filterWithKey (\node _ -> Node.isSource $ Node.typ node)) nodes
        sumRes =
-          foldl (liftA2 (~+)) (Determined Arith.zero) .
-          map Quant.flowSum . foldMap Map.elems
+          foldl (liftA2 (~+)) (Determined Arith.zero) . foldMap Map.elems
 
    in  liftA2 (~/) (sumRes sinks) (sumRes sources)

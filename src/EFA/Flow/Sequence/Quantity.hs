@@ -3,7 +3,7 @@
 module EFA.Flow.Sequence.Quantity (
    Graph, SeqFlow.sequence, SeqFlow.storages,
    Topology, Sequence, Storages,
-   Sums(..), Sum(..), Carry(..), Flow(..),
+   Sums(..), Carry(..), Flow(..),
 
    mapGraph,
    mapStorages,
@@ -20,7 +20,9 @@ module EFA.Flow.Sequence.Quantity (
    foldMap,
    fold,
 
+{-
    envFromGraph,
+-}
    graphFromEnv,
    toAssignMap,
 
@@ -68,10 +70,11 @@ import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.Quantity as Quant
+import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
 import EFA.Flow.Quantity
-          (Topology, Sums(..), Sum(..), Flow(..),
+          (Topology, Sums(..), Flow(..),
            mapSums, zipWithSums, traverseSums, (<#>))
 
 import qualified EFA.Signal.Sequence as Sequ
@@ -96,28 +99,28 @@ import qualified Control.Monad.Trans.Writer as MW
 import Control.Monad (mplus, (<=<))
 import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$>), (<$))
 
-import qualified Data.Map as Map ; import Data.Map (Map)
+import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
 
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
-import Data.Monoid (Monoid, mempty, (<>))
+import Data.Monoid (Monoid)
 import Data.Maybe.HT (toMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
 
 type
-   Storages node a = SeqFlow.Storages node a a a (Carry a)
+   Storages node a = SeqFlow.Storages node a a (Carry a)
 
 type
-   Sequence node a v =
-      SeqFlow.Sequence node Graph.EitherEdge v (Sums a v) (Maybe (Flow v))
+   Sequence node v =
+      SeqFlow.Sequence node Graph.EitherEdge v (Sums v) (Maybe (Flow v))
 
 type
    Graph node a v =
       SeqFlow.Graph node Graph.EitherEdge
-         v (Sums a v) a a a (Maybe (Flow v)) (Carry a)
+         v (Sums v) a a (Maybe (Flow v)) (Carry a)
 
 data Carry a =
    Carry {
@@ -158,29 +161,28 @@ mapGraph ::
    Graph node a0 v0 -> Graph node a1 v1
 mapGraph f g gr =
    SeqFlow.Graph {
-      sequence = mapSequence f g $ sequence gr,
-      storages = mapStorages f   $ storages gr
+      sequence = mapSequence g $ sequence gr,
+      storages = mapStorages f $ storages gr
    }
 
 mapSequence ::
-   (a0 -> a1) ->
    (v0 -> v1) ->
-   Sequence node a0 v0 -> Sequence node a1 v1
-mapSequence f g =
+   Sequence node v0 -> Sequence node v1
+mapSequence f =
    fmap
       (\(rng, (dt, gr)) ->
          (rng,
-          (g dt,
-           Graph.mapNode (mapSums f g) $
-           Graph.mapEdge (fmap $ fmap g) gr)))
+          (f dt,
+           Graph.mapNode (mapSums f) $
+           Graph.mapEdge (fmap $ fmap f) gr)))
 
 mapStorages ::
    (a0 -> a1) ->
    Storages node a0 -> Storages node a1
 mapStorages f =
    fmap
-      (\((init, exit), storage, edges) ->
-         ((f init, f exit),
+      (\(partMap, storage, edges) ->
+         (fmap f partMap,
           fmap f storage,
           fmap (fmap f) edges))
 
@@ -195,27 +197,26 @@ checkedZipWithGraph ::
    Graph node a2 v2
 checkedZipWithGraph caller f g gr0 gr1 =
    SeqFlow.Graph {
-      sequence = checkedZipWithSequence caller f g (sequence gr0) (sequence gr1),
-      storages = checkedZipWithStorages caller f   (storages gr0) (storages gr1)
+      sequence = checkedZipWithSequence caller g (sequence gr0) (sequence gr1),
+      storages = checkedZipWithStorages caller f (storages gr0) (storages gr1)
    }
 
 checkedZipWithSequence ::
    (Ord node) =>
    Caller ->
-   (a0 -> a1 -> a2) ->
    (v0 -> v1 -> v2) ->
-   Sequence node a0 v0 ->
-   Sequence node a1 v1 ->
-   Sequence node a2 v2
-checkedZipWithSequence caller f g =
+   Sequence node v0 ->
+   Sequence node v1 ->
+   Sequence node v2
+checkedZipWithSequence caller f =
    MapU.checkedZipWith (caller++".checkedZipWithSequence")
       (\(rng0, (dt0, gr0)) (rng1, (dt1, gr1)) ->
          (if rng0==rng1 then rng0 else error (caller++".equalRange"),
-          (g dt0 dt1,
+          (f dt0 dt1,
            Graph.checkedZipWith
               (caller++".checkedZipWithSequence.section")
-              (zipWithSums f g)
-              (liftA2 $ liftA2 g)
+              (zipWithSums f)
+              (liftA2 $ liftA2 f)
               gr0 gr1)))
 
 checkedZipWithStorages ::
@@ -226,14 +227,15 @@ checkedZipWithStorages ::
    Storages node a1 ->
    Storages node a2
 checkedZipWithStorages caller f =
-   MapU.checkedZipWith (caller++".checkedZipWithStorages")
-      (\((init0, exit0), storage0, edges0)
-        ((init1, exit1), storage1, edges1) ->
-         ((f init0 init1, f exit0 exit1),
-          MapU.checkedZipWith (caller++".checkedZipWithStorages.storage")
-             f storage0 storage1,
-          MapU.checkedZipWith(caller++".checkedZipWithStorages.edges")
-             (liftA2 f) edges0 edges1))
+   let name = caller++".checkedZipWithStorages"
+   in  MapU.checkedZipWith name
+          (\(partMap0, storage0, edges0)
+            (partMap1, storage1, edges1) ->
+             (PartMap.checkedZipWith (name++".partMap") f partMap0 partMap1,
+              MapU.checkedZipWith (name++".storage")
+                 f storage0 storage1,
+              MapU.checkedZipWith(name++".edges")
+                 (liftA2 f) edges0 edges1))
 
 
 traverseGraph ::
@@ -243,20 +245,19 @@ traverseGraph ::
    Graph node a0 v0 -> f (Graph node a1 v1)
 traverseGraph f g (SeqFlow.Graph sts seq) =
    liftA2 SeqFlow.Graph
-      (traverseStorages f   $ sts)
-      (traverseSequence f g $ seq)
+      (traverseStorages f $ sts)
+      (traverseSequence g $ seq)
 
 traverseSequence ::
    (Applicative f, Ord node) =>
-   (a0 -> f a1) ->
    (v0 -> f v1) ->
-   Sequence node a0 v0 -> f (Sequence node a1 v1)
-traverseSequence f g =
+   Sequence node v0 -> f (Sequence node v1)
+traverseSequence f =
    traverse
       (\(rng, (dt, gr)) ->
          fmap ((,) rng) $
-         liftA2 (,) (g dt)
-            (Graph.traverse (traverseSums f g) (traverse $ traverse g) gr))
+         liftA2 (,) (f dt)
+            (Graph.traverse (traverseSums f) (traverse $ traverse f) gr))
 
 traverseStorages ::
    (Applicative f, Ord node) =>
@@ -264,13 +265,14 @@ traverseStorages ::
    Storages node a0 -> f (Storages node a1)
 traverseStorages f =
    traverse
-      (\((init, exit), storage, edges) ->
+      (\(partMap, storage, edges) ->
          liftA3 (,,)
-            (liftA2 (,) (f init) (f exit))
+            (traverse f partMap)
             (traverse f storage)
             (traverse (traverse f) edges))
 
 
+{-
 envFromGraph ::
    (Ord node) =>
    Graph node a v -> Env.Complete node a v
@@ -371,6 +373,7 @@ edgeMap ::
 edgeMap sec f =
    Map.mapKeys
       (Idx.InPart sec . f . Topo.structureEdgeFromDirEdge)
+-}
 
 
 graphFromEnv ::
@@ -407,7 +410,7 @@ lookupEnergy =
    lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
 
 lookupEnergyTopology ::
-   (Ord node) => Idx.Energy node -> Topology node a v -> Maybe v
+   (Ord node) => Idx.Energy node -> Topology node v -> Maybe v
 lookupEnergyTopology =
    lookupStructTopology flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
 
@@ -430,7 +433,7 @@ lookupStructTopology ::
    (Flow v -> v) ->
    (Flow v -> v) ->
    (idx -> Idx.StructureEdge node) ->
-   idx -> Topology node a v -> Maybe v
+   idx -> Topology node v -> Maybe v
 lookupStructTopology fieldOut fieldIn unpackIdx =
    \idx topo ->
       case unpackIdx idx of
@@ -448,14 +451,13 @@ lookupSum :: (Ord node) => SeqIdx.Sum node -> Graph node a v -> Maybe v
 lookupSum =
    withTopology $ \(Idx.Sum dir node) topo -> do
       sums <- Graph.lookupNode node topo
-      fmap flowSum $
-         case dir of
-            Idx.In  -> sumIn sums
-            Idx.Out -> sumOut sums
+      case dir of
+         Idx.In  -> sumIn sums
+         Idx.Out -> sumOut sums
 
 
 withTopology ::
-   (idx node -> Topology node a v -> Maybe r) ->
+   (idx node -> Topology node v -> Maybe r) ->
    Idx.InSection idx node ->
    Graph node a v ->
    Maybe r
@@ -495,34 +497,36 @@ lookupStX (Idx.ForNode (Idx.StX se) node) g = do
       (fmap carryXOut . flip Map.lookup edges)
       se
 
+{- |
+It is an unchecked error if you lookup StInSum where is only an StOutSum.
+-}
 lookupStInSum ::
    (Ord node) => SeqIdx.StInSum node -> Graph node a v -> Maybe a
-lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g =
+lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g = do
+   (partMap,_,_) <- Map.lookup node $ storages g
    case aug of
-      Idx.Exit -> do
-         ((_,exit),_,_) <- Map.lookup node $ storages g
-         return exit
-      Idx.NoExit sec ->
-         fmap carrySum . sumOut =<< lookupSums (Idx.secNode sec node) g
+      Idx.Exit -> return $ PartMap.exit partMap
+      Idx.NoExit sec -> Map.lookup sec $ PartMap.parts partMap
 
+{- |
+It is an unchecked error if you lookup StOutSum where is only an StInSum.
+-}
 lookupStOutSum ::
    (Ord node) => SeqIdx.StOutSum node -> Graph node a v -> Maybe a
-lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g =
+lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g = do
+   (partMap,_,_) <- Map.lookup node $ storages g
    case aug of
-      Idx.Init -> do
-         ((init,_),_,_) <- Map.lookup node $ storages g
-         return init
-      Idx.NoInit sec ->
-         fmap carrySum . sumIn =<< lookupSums (Idx.secNode sec node) g
+      Idx.Init -> return $ PartMap.init partMap
+      Idx.NoInit sec -> Map.lookup sec $ PartMap.parts partMap
 
 lookupSums ::
    (Ord node) =>
-   Idx.SecNode node -> Graph node a v -> Maybe (Sums a v)
+   Idx.SecNode node -> Graph node a v -> Maybe (Sums v)
 lookupSums (Idx.PartNode sec node) =
    Graph.lookupNode node . snd <=< seqLookup sec
 
 seqLookup ::
-   Idx.Section -> Graph node a v -> Maybe (v, Topology node a v)
+   Idx.Section -> Graph node a v -> Maybe (v, Topology node v)
 seqLookup sec = Sequ.lookup sec . sequence
 
 
@@ -623,21 +627,21 @@ graphFromPlain g =
 
 storagesFromPlain ::
    (Ord node, Unknown a) =>
-   SeqFlow.Storages node SeqFlow.InitIn SeqFlow.ExitOut () () ->
+   SeqFlow.Storages node () () () ->
    Storages node a
 storagesFromPlain =
    Map.map $
-      \(_initExit, bnds, edges) ->
-         ((unknown, unknown),
+      \(stores, bnds, edges) ->
+         (unknown <$ stores,
           unknown <$ bnds,
           pure unknown <$ edges)
 
 
 sequenceFromPlain ::
-   (Ord node, Unknown a, Unknown v) =>
+   (Ord node, Unknown v) =>
    SeqFlow.Sequence node Graph.EitherEdge ()
       (Node.Type (Maybe Topo.StoreDir)) () ->
-   Sequence node a v
+   Sequence node v
 sequenceFromPlain =
    Map.map $ \(rng, ((), gr)) ->
       (,) rng $
@@ -650,15 +654,14 @@ sequenceFromPlain =
                 Graph.EDirEdge _ -> Just $ pure unknown) gr)
 
 unknownTopologyNodes ::
-   (Ord node, Unknown a, Unknown v) =>
+   (Ord node, Unknown v) =>
    Graph.Graph node Graph.EitherEdge nl el ->
-   Graph.Graph node Graph.EitherEdge (Sums a v) el
+   Graph.Graph node Graph.EitherEdge (Sums v) el
 unknownTopologyNodes =
    Graph.mapNodeWithInOut
       (\(pre, _, suc) ->
          let maybeDir es =
-                toMaybe (any (Topo.isActive . fst) es) $
-                Sum unknown unknown
+                toMaybe (any (Topo.isActive . fst) es) unknown
          in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc})
 
 mapGraphWithVar ::
@@ -669,23 +672,24 @@ mapGraphWithVar ::
    Graph node a1 v1
 mapGraphWithVar f g gr =
    SeqFlow.Graph {
-      storages = mapStoragesWithVar f $ storages gr,
-      sequence = mapSequenceWithVar f g $ sequence gr
+      storages = mapStoragesWithVar f gr,
+      sequence = mapSequenceWithVar g $ sequence gr
    }
 
 mapStoragesWithVar ::
    (Ord node) =>
    (Var.ForNodeSectionScalar node -> a0 -> a1) ->
-   Storages node a0 ->
+   Graph node a0 v0 ->
    Storages node a1
-mapStoragesWithVar f =
-   Map.mapWithKey $ \node ((init, exit), bnds, edges) ->
-      ((f (Idx.StOutSum Idx.Init <#> node) init,
-        f (Idx.StInSum  Idx.Exit <#> node) exit),
-       Map.mapWithKey
-          (\bnd a -> f (Idx.Storage bnd <#> node) a)
-          bnds,
-       Map.mapWithKey (mapCarryWithVar f node) edges)
+mapStoragesWithVar f gr =
+   Map.mapWithKey
+      (\node (partMap, bnds, edges) ->
+         (Quant.mapPartMapWithVar (flip lookupSums gr) f node partMap,
+          Map.mapWithKey
+             (\bnd a -> f (Idx.Storage bnd <#> node) a)
+             bnds,
+          Map.mapWithKey (mapCarryWithVar f node) edges)) $
+   storages gr
 
 mapCarryWithVar ::
    (Var.ForNodeSectionScalar node -> a0 -> a1) ->
@@ -704,13 +708,12 @@ carryVars =
 
 mapSequenceWithVar ::
    (Ord node) =>
-   (Var.ForNodeSectionScalar node -> a0 -> a1) ->
    (Var.InSectionSignal node -> v0 -> v1) ->
-   Sequence node a0 v0 ->
-   Sequence node a1 v1
-mapSequenceWithVar f g =
+   Sequence node v0 ->
+   Sequence node v1
+mapSequenceWithVar f =
    Map.mapWithKey $ \sec (rng, timeGr) ->
-      (rng, Quant.mapFlowTopologyWithVar f g sec timeGr)
+      (rng, Quant.mapFlowTopologyWithVar f sec timeGr)
 
 
 formatAssigns ::

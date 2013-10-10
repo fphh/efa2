@@ -4,6 +4,8 @@ module EFA.Flow.Sequence.Record where
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence as SeqFlowPlain
+import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.PartMap (PartMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -114,20 +116,20 @@ fromGraphFromSequence sd =
 
 storageMapFromList ::
    (Ord edge,
-    SeqFlow.Unknown sum, SeqFlow.Unknown storage, SeqFlow.Unknown edgeRecord) =>
+    SeqFlow.Unknown a) =>
    [Idx.Section] ->
    [edge] ->
-   ((sum, sum), Map Idx.Boundary storage, Map edge (SeqFlow.Carry edgeRecord))
+   (PartMap Idx.Section a, Map Idx.Boundary a, Map edge (SeqFlow.Carry a))
 storageMapFromList secs =
    (,,)
-      (SeqFlow.unknown, SeqFlow.unknown)
+      (PartMap.constant SeqFlow.unknown secs)
       (Map.fromList $ map (flip (,) SeqFlow.unknown . Idx.Following) $
        Idx.Init : map Idx.NoInit secs) .
    Map.fromListWith (error "duplicate storage edge") .
    map (flip (,) $ pure SeqFlow.unknown)
 
 storageEdges ::
-   Map Idx.Section (SeqFlow.Sums a v) -> [Idx.StorageEdge Idx.Section node]
+   Map Idx.Section (SeqFlow.Sums v) -> [Idx.StorageEdge Idx.Section node]
 storageEdges stores = do
    let ins  = Map.mapMaybe SeqFlow.sumIn stores
    let outs = Map.mapMaybe SeqFlow.sumOut stores
@@ -141,8 +143,8 @@ storageEdges stores = do
 
 getStorageSequences ::
    (Node.C node) =>
-   Sequ.List (Graph node Graph.EitherEdge (SeqFlow.Sums a v) edgeLabel) ->
-   Map node (Map Idx.Section (SeqFlow.Sums a v))
+   Sequ.List (Graph node Graph.EitherEdge (SeqFlow.Sums v) edgeLabel) ->
+   Map node (Map Idx.Section (SeqFlow.Sums v))
 getStorageSequences =
    Map.unionsWith (Map.unionWith (error "duplicate section for node"))
    .
