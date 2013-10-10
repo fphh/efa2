@@ -697,12 +697,7 @@ seqFlowGraph opts gr =
                            (fmap (maybe (error "missing section") (flip (,)) $
                                   PartMap.lookup sec partMap) $
                             FlowQuant.dirFromSums sums)) $
-              Graph.mapEdgeWithKey
-                 (\edge ->
-                    if optEtaNode opts
-                      then ShowEtaNode . structureEdgeShowEta opts sec edge
-                      else HideEtaNode . structureEdgeShow opts sec edge)
-                 topo))
+              Graph.mapEdgeWithKey (structureEdgeShow opts sec) topo))
           Idx.initial $
        SeqFlowQuant.sequence gr)
 
@@ -769,12 +764,7 @@ stateFlowGraph opts gr =
                     maybe (error "Draw.stateFlowGraph") StorageGraph.nodes $
                     Map.lookup node $
                     StateFlowQuant.storages gr) $
-              Graph.mapEdgeWithKey
-                 (\edge ->
-                    if optEtaNode opts
-                      then ShowEtaNode . structureEdgeShowEta opts state edge
-                      else HideEtaNode . structureEdgeShow opts state edge)
-                 topo)) $
+              Graph.mapEdgeWithKey (structureEdgeShow opts state) topo)) $
        StateFlowQuant.states gr)
 
 storageGraphShow ::
@@ -837,12 +827,23 @@ storageEdgeStateShow opts node edge carry =
          StateFlowQuant.carryXIn labels :
          []
 
+
 structureEdgeShow ::
+   (Node.C node, Ord part, FormatValue a, Format.Part part) =>
+   Options Unicode ->
+   part -> Graph.EitherEdge node ->
+   Maybe (FlowQuant.Flow a) -> StructureEdgeLabel
+structureEdgeShow opts part edge =
+   if optEtaNode opts
+     then ShowEtaNode . structureEdgeShowEta opts part edge
+     else HideEtaNode . structureEdgeShowCompact opts part edge
+
+structureEdgeShowCompact ::
    (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
    Options output ->
    part -> Graph.EitherEdge node ->
    Maybe (FlowQuant.Flow a) -> [output]
-structureEdgeShow opts part =
+structureEdgeShowCompact opts part =
    FlowQuant.switchEdgeFlow (const []) $ \edge flow ->
    case FlowQuant.mapFlowWithVar (formatAssignWithOpts opts) part edge flow of
       labels ->
