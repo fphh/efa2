@@ -1,5 +1,13 @@
 module EFA.Flow.PartMap where
 
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as Topo
+
+import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Variable ((<#>))
+
+import qualified EFA.Report.Format as Format
+
 import qualified EFA.Utility.Map as MapU
 import EFA.Utility.Map (Caller)
 
@@ -53,3 +61,24 @@ instance (Ord part) => Foldable (PartMap part) where
 instance (Ord part) => Traversable (PartMap part) where
    traverse f (PartMap i e ps) =
       pure PartMap <*> f i <*> f e <*> traverse f ps
+
+
+
+mapWithVar ::
+   (Format.Part sec) =>
+   (Idx.PartNode sec node -> Maybe Topo.StoreDir) ->
+   (Var.ForNodeScalar sec node -> a0 -> a1) ->
+   node ->
+   PartMap sec a0 ->
+   PartMap sec a1
+mapWithVar lookupDir f node (PartMap i e ps) =
+   PartMap
+      (f (Idx.StOutSum Idx.Init <#> node) i)
+      (f (Idx.StInSum  Idx.Exit <#> node) e)
+      (Map.mapWithKey
+          (\part a ->
+             case lookupDir (Idx.PartNode part node) of
+                Nothing -> error "PartMap.mapWithVar: inactive"
+                Just Topo.In  -> f (Idx.StOutSum (Idx.NoInit part) <#> node) a
+                Just Topo.Out -> f (Idx.StInSum  (Idx.NoExit part) <#> node) a)
+          ps)

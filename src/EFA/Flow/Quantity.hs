@@ -1,21 +1,15 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Flow.Quantity where
 
-import EFA.Flow.PartMap (PartMap(PartMap))
-
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Variable ((<#>))
-
-import qualified EFA.Report.Format as Format
 
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
 
 import qualified Data.Foldable as Fold
-import qualified Data.Map as Map
 
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
@@ -149,28 +143,6 @@ flowVars =
       flowXIn = Var.signalIndex . Idx.X . Idx.flip,
       flowEta = Var.signalIndex . Idx.Eta
    }
-
-
-mapPartMapWithVar ::
-   (Format.Part sec) =>
-   (Idx.PartNode sec node -> Maybe (Sums v)) ->
-   (Var.ForNodeScalar sec node -> a0 -> a1) ->
-   node ->
-   PartMap sec a0 ->
-   PartMap sec a1
-mapPartMapWithVar lookupSums f node (PartMap init exit ps) =
-   PartMap
-      (f (Idx.StOutSum Idx.Init <#> node) init)
-      (f (Idx.StInSum  Idx.Exit <#> node) exit)
-      (Map.mapWithKey
-          (\part a ->
-             case dirFromSums $
-                  maybe (error "mapStoragesWithVar") id $
-                  lookupSums (Idx.PartNode part node) of
-                Nothing -> error "mapStoragesWithVar: inactive"
-                Just Topo.In  -> f (Idx.StOutSum (Idx.NoInit part) <#> node) a
-                Just Topo.Out -> f (Idx.StInSum  (Idx.NoExit part) <#> node) a)
-          ps)
 
 
 lookupEdge ::
