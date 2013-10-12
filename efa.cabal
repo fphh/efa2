@@ -123,9 +123,11 @@ Library
     EFA.Flow.StorageGraph.Quantity
     EFA.Flow.StorageGraph.EquationSystem
     EFA.Flow.Topology
+    EFA.Flow.Topology.Index
     EFA.Flow.Topology.Variable
     EFA.Flow.Topology.Quantity
     EFA.Flow.Topology.EquationSystem
+    EFA.Flow.Topology.Absolute
     EFA.Flow.Sequence
     EFA.Flow.Sequence.Index
     EFA.Flow.Sequence.Quantity

@@ -5,6 +5,10 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.State.Index as StateIdx
+
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology as FlowTopoPlain
+
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
@@ -25,6 +29,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
 import EFA.Equation.System ((.=))
 
+import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue)
 
 import qualified EFA.Utility.Map as MapU
@@ -71,6 +76,23 @@ makePPosLabelMap :: (Ord node) => LabeledEdgeList node -> PPosLabelMap node
 makePPosLabelMap edgeList = Map.fromList $ concatMap f edgeList
   where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, l1),
                              (SeqIdx.ppos n2 n1, l2)]
+
+
+{- |
+Construct solvable topology from topology with default directions.
+-}
+quantityTopology ::
+   (Ord node, SeqFlowQuant.Unknown v) =>
+   Topo.Topology node ->
+   FlowTopo.Section node v
+quantityTopology topo =
+   FlowTopo.sectionFromPlain $
+   FlowTopoPlain.Section () $
+   Topo.classifyStorages $
+   let flowTopo = Graph.mapEdgesMaybe (Just . Graph.EDirEdge) topo
+   in  if StateAnalysis.admissibleTopology flowTopo
+         then flowTopo
+         else error "quantityTopology: topology has forbidden default edges"
 
 
 {- |
