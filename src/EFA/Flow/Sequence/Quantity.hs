@@ -70,6 +70,7 @@ import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
+import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
@@ -131,7 +132,7 @@ data Carry a =
    deriving (Eq)
 
 
-instance Quant.Carry Carry where
+instance StorageQuant.Carry Carry where
    carryEnergy = carryEnergy
    carryXOut   = carryXOut
    carryXIn    = carryXIn

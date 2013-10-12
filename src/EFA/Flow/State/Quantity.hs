@@ -53,6 +53,7 @@ import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State as StateFlow
+import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
@@ -112,7 +113,7 @@ data Carry a =
    }
 
 
-instance Quant.Carry Carry where
+instance StorageQuant.Carry Carry where
    carryEnergy = carryEnergy
    carryXOut   = carryXOut
    carryXIn    = carryXIn

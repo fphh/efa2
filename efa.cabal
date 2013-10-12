@@ -119,6 +119,7 @@ Library
     EFA.Equation.Verify
     EFA.Flow.PartMap
     EFA.Flow.StorageGraph
+    EFA.Flow.StorageGraph.Quantity
     EFA.Flow.StorageGraph.EquationSystem
     EFA.Flow.Topology
     EFA.Flow.Topology.Quantity

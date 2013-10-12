@@ -39,10 +39,6 @@ data Sums v =
    deriving (Eq)
 
 
-class Functor f => Carry f where
-   carryEnergy, carryXOut, carryXIn :: f a -> a
-
-
 instance Functor Flow where
    fmap f (Flow pout eout xout eta xin ein pin) =
       Flow (f pout) (f eout) (f xout) (f eta) (f xin) (f ein) (f pin)
