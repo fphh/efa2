@@ -33,9 +33,9 @@ import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
+import EFA.Flow.Topology.EquationSystem (fromTopology, optionsFromFlowOptions)
 import EFA.Flow.EquationSystem
-          (constant, constantRecord, join, fromTopology,
-           (=%=), (=.=))
+          (constant, constantRecord, join, (=%=), (=.=))
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
@@ -202,7 +202,8 @@ fromGraph opts gv =
       g ->
          mconcat $
             foldMap
-               (fromTopology opts . FlowTopoPlain.dirFromFlowGraph)
+               (fromTopology (optionsFromFlowOptions opts) .
+                FlowTopoPlain.dirFromFlowGraph)
                (StateFlow.states g) :
             fromStorageSequences opts g :
             []

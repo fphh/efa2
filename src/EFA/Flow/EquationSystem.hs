@@ -4,8 +4,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Flow.EquationSystem where
 
-import qualified EFA.Flow.Topology.Quantity as FlowTopo
-import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Quantity as Quant
 
 import qualified EFA.Equation.Record as Record
@@ -21,9 +19,7 @@ import EFA.Equation.Arithmetic
            Integrate, Scalar, integrate,
            Scale, scale)
 
-import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph as Graph
 
 import EFA.Report.FormatValue (FormatValue)
 
@@ -42,11 +38,10 @@ import Control.Monad.ST (ST)
 
 import Control.Applicative (Applicative, pure, liftA, liftA2)
 
-import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
 
 import Data.Traversable (Traversable, sequenceA, for)
-import Data.Foldable (foldMap, fold)
+import Data.Foldable (foldMap)
 import Data.Monoid (Monoid, (<>), mempty, mappend)
 
 import qualified Prelude as P
@@ -178,47 +173,6 @@ equalStInOutSums opts =
 
 
 
-fromTopology ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v, Product v,
-    Record rec, Node.C node) =>
-   Options mode rec s a v ->
-   FlowTopo.DirSection node (Expr mode rec s v) ->
-   System mode s
-fromTopology opts (FlowTopoPlain.Section dtime topo) =
-   foldMap (fromEdge dtime) (Graph.edgeLabels topo)
-   <>
-   foldMap (fromSums opts) (Graph.nodeLabels topo)
-   <>
-   foldMap
-      (\(ins,ss,outs) ->
-         (flip foldMap (Quant.sumIn ss) $ \s ->
-            splitStructEqs dtime s
-               Quant.flowEnergyIn Quant.flowXIn $ Map.elems ins)
-         <>
-         (flip foldMap (Quant.sumOut ss) $ \s ->
-            splitStructEqs dtime s
-               Quant.flowEnergyOut Quant.flowXOut $ Map.elems outs))
-      (Graph.graphMap topo)
-
-fromEdge ::
-   (Sys.Value mode x, Product x, Record rec) =>
-   Expr mode rec s x ->
-   Quant.Flow (Expr mode rec s x) ->
-   System mode s
-fromEdge dtime
-      (Quant.Flow {
-         Quant.flowEnergyOut = eout,
-         Quant.flowPowerOut = pout,
-         Quant.flowEnergyIn = ein,
-         Quant.flowPowerIn = pin,
-         Quant.flowEta = eta
-      }) =
-   (eout =&= dtime ~* pout) <>
-   (ein  =&= dtime ~* pin)  <>
-   (pin  =&= eta ~* pout)
-
-
 fromStorageSums ::
    (Verify.LocalVar mode a,
     Verify.LocalVar mode v,
@@ -232,18 +186,6 @@ fromStorageSums opts sums =
    foldMap (uncurry $ optStInOutSums opts) (Quant.sumIn sums)
    <>
    foldMap (uncurry $ optStInOutSums opts) (Quant.sumOut sums)
-
-fromSums ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
-    Record rec,
-    ra ~ Expr mode rec s a,
-    rv ~ Expr mode rec s v) =>
-   Options mode rec s a v ->
-   Quant.Sums rv ->
-   System mode s
-fromSums opts s =
-   fold $ liftA2 (optInOutSums opts) (Quant.sumIn s) (Quant.sumOut s)
 
 integrateSum ::
    (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
@@ -271,21 +213,6 @@ spreadSum dtime carrySum flowSum =
    Arith.scale (carrySum ~/ Arith.integrate dtime) dtime
    =&=
    flowSum
-
-
-splitStructEqs ::
-   (Verify.LocalVar mode x, Product x, Record rec,
-    rx ~ Expr mode rec s x) =>
-   rx ->
-   rx ->
-   (flow rx -> rx) ->
-   (flow rx -> rx) ->
-   [flow rx] ->
-   System mode s
-splitStructEqs dtime varsum energy xfactor =
-   foldMap (splitFactors varsum energy (Arith.constOne dtime) xfactor)
-   .
-   NonEmpty.fetch
 
 
 splitFactors ::

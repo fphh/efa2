@@ -24,6 +24,7 @@ module EFA.Flow.Cumulated.EquationSystem (
 import qualified EFA.Flow.Cumulated.Quantity as CumFlow
 import qualified EFA.Flow.Cumulated.Variable as Var
 
+import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
 import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join,
@@ -169,11 +170,11 @@ fromTopology equalInOutSums topo =
       foldMap
          (\(ins,ss,outs) ->
             (flip foldMap (CumFlow.sumIn ss) $ \s ->
-               EqSys.splitStructEqs totalTime s
+               TopoEqSys.splitFactors totalTime s
                   CumFlow.flowEnergyIn CumFlow.flowXIn $ Map.elems ins)
             <>
             (flip foldMap (CumFlow.sumOut ss) $ \s ->
-               EqSys.splitStructEqs totalTime s
+               TopoEqSys.splitFactors totalTime s
                   CumFlow.flowEnergyOut CumFlow.flowXOut $ Map.elems outs))
          (Graph.graphMap topo))
 

@@ -96,6 +96,14 @@ instance (Node.C node) => FormatValue (Idx.Eta node) where
 instance (Node.C node) => FormatValue (Idx.X node) where
    formatValue (Idx.X e) = formatStructureEdge Format.xfactor e
 
+instance (Node.C node) => FormatValue (Idx.DTime node) where
+   formatValue Idx.DTime = Format.dtime
+
+instance (Node.C node) => FormatValue (Idx.Sum node) where
+   formatValue (Idx.Sum dir node) =
+      Format.subscript Format.signalSum $
+      Format.direction dir `Format.connect` Node.subscript node
+
 
 formatStructureSecEdge ::
    (Format output, Format.Part part, Node.C node) =>
@@ -178,8 +186,8 @@ formatChar :: Format output => Char -> output
 formatChar = Format.literal . (:[])
 
 instance FormatValue a => FormatValue (Result a) where
-  formatValue Undetermined = Format.undetermined
-  formatValue (Determined a) = formatValue a
+   formatValue Undetermined = Format.undetermined
+   formatValue (Determined a) = formatValue a
 
 
 formatAssign ::

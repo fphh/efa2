@@ -16,17 +16,24 @@ module EFA.Flow.Topology.Quantity (
    mapSectionWithVar,
    mapTopologyWithVar,
 
+   lookupPower,
    lookupEnergy,
+   lookupX,
+   lookupEta,
+   lookupSum,
+   lookupDTime,
+   lookupSums,
+
+   Lookup, lookup,
    ) where
 
+import qualified EFA.Flow.Topology.Variable as Var
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.Quantity as Quant
 import EFA.Flow.Topology (label, topology)
 import EFA.Flow.Quantity
           (Topology, Sums(..), Flow(..),
            mapSums, zipWithSums, traverseSums)
-
-import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
@@ -39,7 +46,7 @@ import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
 import Data.Traversable (Traversable, traverse)
 
-import Prelude hiding (sin)
+import Prelude hiding (lookup, sin)
 
 
 type
@@ -111,10 +118,20 @@ traverseTopology f =
    Graph.traverse (traverseSums f) (traverse $ traverse f)
 
 
+lookupPower ::
+   (Ord node) => Idx.Power node -> Section node v -> Maybe v
+lookupPower =
+   lookupStruct flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
+
 lookupEnergy ::
    (Ord node) => Idx.Energy node -> Section node v -> Maybe v
 lookupEnergy =
    lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
+
+lookupX ::
+   (Ord node) => Idx.X node -> Section node v -> Maybe v
+lookupX =
+   lookupStruct flowXOut flowXIn (\(Idx.X se) -> se)
 
 lookupStruct ::
    Ord node =>
@@ -128,6 +145,46 @@ lookupStruct fieldOut fieldIn unpackIdx idx (FlowTopo.Section _lab topo) =
          mplus
             (Quant.lookupEdge fieldOut se topo)
             (Quant.lookupEdge fieldIn (Idx.flip se) topo)
+
+
+lookupEta :: (Ord node) => Idx.Eta node -> Section node v -> Maybe v
+lookupEta (Idx.Eta se) = Quant.lookupEdge flowEta se . FlowTopo.topology
+
+lookupSum :: (Ord node) => Idx.Sum node -> Section node v -> Maybe v
+lookupSum (Idx.Sum dir node) s = do
+   sums <- Graph.lookupNode node $ FlowTopo.topology s
+   case dir of
+      Idx.In  -> sumIn sums
+      Idx.Out -> sumOut sums
+
+lookupSums :: (Ord node) => node -> Section node v -> Maybe (Sums v)
+lookupSums node = Graph.lookupNode node . FlowTopo.topology
+
+lookupDTime :: Idx.DTime node -> Section node v -> Maybe v
+lookupDTime Idx.DTime = Just . FlowTopo.label
+
+
+class (Var.FormatIndex idx) => Lookup idx where
+   lookup :: (Ord node) => idx node -> Section node v -> Maybe v
+
+instance Lookup Idx.Energy where
+   lookup = lookupEnergy
+
+instance Lookup Idx.Power where
+   lookup = lookupPower
+
+instance Lookup Idx.Eta where
+   lookup = lookupEta
+
+instance Lookup Idx.DTime where
+   lookup = lookupDTime
+
+instance Lookup Idx.X where
+   lookup = lookupX
+
+instance Lookup Idx.Sum where
+   lookup = lookupSum
+
 
 mapSectionWithVar ::
    (Ord node) =>
@@ -149,8 +206,8 @@ mapTopologyWithVar f topo =
    Graph.mapNodeWithKey
       (\n (Sums {sumIn = sin, sumOut = sout}) ->
          Sums {
-            sumIn = flip fmap sin $ f (Var.signalIndex $ Idx.Sum Idx.In n),
-            sumOut = flip fmap sout $ f (Var.signalIndex $ Idx.Sum Idx.Out n)
+            sumIn = flip fmap sin $ f (Var.Sum $ Idx.Sum Idx.In n),
+            sumOut = flip fmap sout $ f (Var.Sum $ Idx.Sum Idx.Out n)
          }) $
    Graph.mapEdgeWithKey (Quant.liftEdgeFlow $ mapFlowWithVar f) topo
 
