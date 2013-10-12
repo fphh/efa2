@@ -65,10 +65,10 @@ formatBoundaryNode ::
 formatBoundaryNode (Idx.PartNode s n) =
    Format.boundary s `Format.sectionNode` Node.subscript n
 
-formatTimeNode ::
+formatPartNode ::
    (Format output, Format.Part part, Node.C node) =>
    Idx.PartNode part node -> output
-formatTimeNode (Idx.PartNode s n) =
+formatPartNode (Idx.PartNode s n) =
    Format.part s `Format.sectionNode` Node.subscript n
 
 
@@ -141,7 +141,7 @@ instance FormatSignalIndex Idx.Sum where
    formatSignalIndex (Idx.Sum dir n) s =
       Format.subscript Format.signalSum $
       Format.direction dir `Format.connect`
-         formatTimeNode (Idx.PartNode s n)
+         formatPartNode (Idx.PartNode s n)
 
 
 instance FormatScalarIndex Idx.MaxEnergy where
