@@ -8,6 +8,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Variable ((<#>))
 
 import qualified EFA.Report.Format as Format
 
@@ -209,14 +210,3 @@ dirFromSums sums =
       (Just _, Nothing) -> Just Topo.In
       (Nothing, Just _) -> Just Topo.Out
       (Just _, Just _) -> error "storage cannot be both In and Out"
-
-
-(<#>) ::
-   (Var.ScalarIndex idx, Var.ScalarPart idx ~ part) =>
-   idx node -> node -> Var.ForNodeScalar part node
-(<#>) idx node = Idx.ForNode (Var.scalarIndex idx) node
-
-(<~>) ::
-   (Var.SignalIndex idx) =>
-   part -> idx node -> Var.InPartSignal part node
-(<~>) part idx = Idx.InPart part $ Var.signalIndex idx

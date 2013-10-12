@@ -75,7 +75,7 @@ import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
-import EFA.Flow.Quantity (Topology, Sums(..), Flow(..), (<#>))
+import EFA.Flow.Quantity (Topology, Sums(..), Flow(..))
 
 import qualified EFA.Signal.Sequence as Sequ
 
@@ -83,6 +83,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Result (Result(Undetermined))
+import EFA.Equation.Variable ((<#>))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node

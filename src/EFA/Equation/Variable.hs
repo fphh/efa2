@@ -100,6 +100,17 @@ instance (Format.Part part) => ScalarIndex (Idx.StOutSum part) where
    scalarIndex = StOutSum
 
 
+(<#>) ::
+   (ScalarIndex idx, ScalarPart idx ~ part) =>
+   idx node -> node -> ForNodeScalar part node
+(<#>) idx node = Idx.ForNode (scalarIndex idx) node
+
+(<~>) ::
+   (SignalIndex idx) =>
+   part -> idx node -> InPartSignal part node
+(<~>) part idx = Idx.InPart part $ signalIndex idx
+
+
 instance
    (Format.Part part, Node.C node) =>
       FormatValue (Any part node) where
