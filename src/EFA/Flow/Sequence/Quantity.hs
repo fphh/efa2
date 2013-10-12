@@ -31,7 +31,6 @@ module EFA.Flow.Sequence.Quantity (
    graphFromPlain,
    storagesFromPlain,
    sequenceFromPlain,
-   unknownTopologyNodes,
 
    mapGraphWithVar,
    mapStoragesWithVar,
@@ -68,7 +67,6 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
-import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
@@ -105,7 +103,6 @@ import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid)
-import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (mapPair, mapSnd)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
@@ -616,26 +613,7 @@ sequenceFromPlain ::
       (Node.Type (Maybe Topo.StoreDir)) () ->
    Sequence node v
 sequenceFromPlain =
-   Map.map $ \(rng, FlowTopoPlain.Section () gr) ->
-      (,) rng $
-      FlowTopoPlain.Section unknown $
-      unknownTopologyNodes $
-      Graph.mapEdgeWithKey
-         (\ee _ ->
-            case ee of
-               Graph.EUnDirEdge _ -> Nothing
-               Graph.EDirEdge _ -> Just $ pure unknown) gr
-
-unknownTopologyNodes ::
-   (Ord node, Unknown v) =>
-   Graph.Graph node Graph.EitherEdge nl el ->
-   Graph.Graph node Graph.EitherEdge (Sums v) el
-unknownTopologyNodes =
-   Graph.mapNodeWithInOut
-      (\(pre, _, suc) ->
-         let maybeDir es =
-                toMaybe (any (Topo.isActive . fst) es) unknown
-         in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc})
+   Map.map $ mapSnd $ FlowTopo.sectionFromPlain
 
 mapGraphWithVar ::
    (Ord node) =>

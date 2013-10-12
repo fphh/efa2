@@ -107,7 +107,7 @@ fromGraphFromSequence sd =
           fmap
              (\(FlowTopoPlain.Section lab topo) ->
                 FlowTopoPlain.Section lab $
-                SeqFlow.unknownTopologyNodes topo) sd
+                FlowTopo.unknownTopologyNodes topo) sd
    in  SeqFlowPlain.Graph {
           SeqFlow.storages =
              fmap

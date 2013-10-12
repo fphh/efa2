@@ -16,6 +16,9 @@ module EFA.Flow.Topology.Quantity (
    mapSectionWithVar,
    mapTopologyWithVar,
 
+   sectionFromPlain,
+   unknownTopologyNodes,
+
    lookupPower,
    lookupEnergy,
    lookupX,
@@ -35,7 +38,10 @@ import EFA.Flow.Quantity
           (Topology, Sums(..), Flow(..),
            mapSums, zipWithSums, traverseSums)
 
+import EFA.Equation.Unknown (Unknown(unknown))
+
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
@@ -45,6 +51,7 @@ import Control.Monad (mplus)
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
 import Data.Traversable (Traversable, traverse)
+import Data.Maybe.HT (toMaybe)
 
 import Prelude hiding (lookup, sin)
 
@@ -217,3 +224,28 @@ mapFlowWithVar ::
 mapFlowWithVar f e =
    liftA2 f
       (Quant.flowVars <*> pure (Topo.structureEdgeFromDirEdge e))
+
+
+sectionFromPlain ::
+   (Ord node, Unknown v) =>
+   FlowTopo.Section node Graph.EitherEdge () (Node.Type (Maybe Topo.StoreDir)) () ->
+   Section node v
+sectionFromPlain (FlowTopo.Section () gr) =
+   FlowTopo.Section unknown $
+   unknownTopologyNodes $
+   Graph.mapEdgeWithKey
+      (\ee _ ->
+         case ee of
+            Graph.EUnDirEdge _ -> Nothing
+            Graph.EDirEdge _ -> Just $ pure unknown) gr
+
+unknownTopologyNodes ::
+   (Ord node, Unknown v) =>
+   Graph.Graph node Graph.EitherEdge nl el ->
+   Graph.Graph node Graph.EitherEdge (Sums v) el
+unknownTopologyNodes =
+   Graph.mapNodeWithInOut
+      (\(pre, _, suc) ->
+         let maybeDir es =
+                toMaybe (any (Topo.isActive . fst) es) unknown
+         in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc})
