@@ -28,6 +28,7 @@ module EFA.Flow.State.EquationSystem (
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
+import qualified EFA.Flow.StorageGraph.EquationSystem as StorageEqSys
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
@@ -226,10 +227,10 @@ fromStorageSequences opts g =
           connectCarryFlow opts g node partMap
           <>
           StorageGraph.foldInStorages
-             (\sec -> EqSys.fromInStorages (stoutsum sec node)) edges
+             (\sec -> StorageEqSys.fromInStorages (stoutsum sec node)) edges
           <>
           StorageGraph.foldOutStorages
-             (\sec -> EqSys.fromOutStorages (stinsum sec node)) edges
+             (\sec -> StorageEqSys.fromOutStorages (stinsum sec node)) edges
    in  fold $ Map.mapWithKey f $ StateFlow.storages g
 
 connectCarryFlow ::

@@ -288,38 +288,6 @@ splitStructEqs dtime varsum energy xfactor =
    NonEmpty.fetch
 
 
-fromInStorages ::
-   (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ SysRecord.Expr mode rec s x,
-    Quant.Carry carry) =>
-   rx -> [carry rx] ->
-   System mode s
-fromInStorages stoutsum outs =
-   splitScalarEqs stoutsum Quant.carryEnergy Quant.carryXOut outs
-
-fromOutStorages ::
-   (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ SysRecord.Expr mode rec s x,
-    Quant.Carry carry) =>
-   rx -> [carry rx] ->
-   System mode s
-fromOutStorages stinsum ins =
-   splitScalarEqs stinsum Quant.carryEnergy Quant.carryXIn ins
-
-splitScalarEqs ::
-   (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ Expr mode rec s x) =>
-   rx ->
-   (carry rx -> rx) ->
-   (carry rx -> rx) ->
-   [carry rx] ->
-   System mode s
-splitScalarEqs varsum energy xfactor =
-   foldMap (splitFactors varsum energy Arith.one xfactor)
-   .
-   NonEmpty.fetch
-
-
 splitFactors ::
    (Verify.LocalVar mode x, Product x, Record rec,
     rx ~ Expr mode rec s x) =>

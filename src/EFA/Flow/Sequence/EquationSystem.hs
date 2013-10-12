@@ -28,13 +28,14 @@ module EFA.Flow.Sequence.EquationSystem (
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
+import qualified EFA.Flow.StorageGraph.EquationSystem as StorageEqSys
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join, fromTopology,
-           splitScalarEqs, withLocalVar, (=&=), (=%=), (=.=))
+           withLocalVar, (=&=), (=%=), (=.=))
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
@@ -294,7 +295,7 @@ fromInStorages stoutsum outs =
    let maxEnergies = map SeqFlow.carryMaxEnergy outs
        stEnergies  = map SeqFlow.carryEnergy outs
    in  mconcat $
-       EqSys.fromInStorages stoutsum outs :
+       StorageEqSys.fromInStorages stoutsum outs :
        zipWith (=&=) maxEnergies
           (stoutsum : zipWith (~-) maxEnergies stEnergies)
 
@@ -305,9 +306,9 @@ fromOutStorages ::
    EqSys.System mode s
 fromOutStorages stinsum ins =
    (withLocalVar $ \s ->
-      splitScalarEqs s SeqFlow.carryMaxEnergy SeqFlow.carryXIn ins)
+      StorageEqSys.splitFactors s SeqFlow.carryMaxEnergy SeqFlow.carryXIn ins)
    <>
-   EqSys.fromOutStorages stinsum ins
+   StorageEqSys.fromOutStorages stinsum ins
 
 
 variables ::
