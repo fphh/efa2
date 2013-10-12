@@ -79,10 +79,9 @@ import EFA.Flow.Quantity (Topology, Sums(..), Flow(..))
 
 import qualified EFA.Signal.Sequence as Sequ
 
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Result (Result(Undetermined))
+import EFA.Equation.Unknown (Unknown(unknown))
 import EFA.Equation.Variable ((<#>))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -583,25 +582,10 @@ instance LookupScalar (Idx.StOutSum Idx.Section) where
    lookupScalar = lookupStOutSum
 
 
-class Unknown a where
-   unknown :: a
-
 data Irrelevant = Irrelevant
 
 instance Unknown Irrelevant where
    unknown = Irrelevant
-
-instance Unknown (Result a) where
-   unknown = Undetermined
-
-instance Unknown a => Unknown (Record.Absolute a) where
-   unknown = pure unknown
-
-instance Unknown a => Unknown (Record.Delta a) where
-   unknown = pure unknown
-
-instance (Applicative rec, Unknown a) => Unknown (Record.ExtDelta rec a) where
-   unknown = pure unknown
 
 
 graphFromPlain ::
