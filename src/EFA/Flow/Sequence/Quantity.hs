@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 module EFA.Flow.Sequence.Quantity (
@@ -35,8 +36,6 @@ module EFA.Flow.Sequence.Quantity (
    mapGraphWithVar,
    mapStoragesWithVar,
    mapSequenceWithVar,
-
-   mapCarryWithVar,
 
    Quant.liftEdgeFlow,
    Quant.dirFromFlowGraph,
@@ -99,7 +98,7 @@ import EFA.Utility.Map (Caller)
 
 import qualified Control.Monad.Trans.Writer as MW
 import Control.Monad (mplus, (<=<))
-import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>), (<$))
+import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$))
 
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
@@ -136,6 +135,15 @@ instance StorageQuant.Carry Carry where
    carryEnergy = carryEnergy
    carryXOut   = carryXOut
    carryXIn    = carryXIn
+
+   type CarryPart Carry = Idx.Section
+   carryVars =
+      Carry {
+         carryMaxEnergy = Var.scalarIndex . Idx.MaxEnergy,
+         carryEnergy = Var.scalarIndex . Idx.StEnergy,
+         carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
+         carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
+      }
 
 
 instance Functor Carry where
@@ -672,26 +680,11 @@ mapStoragesWithVar f gr =
                     Quant.dirFromSums .
                 flip lookupSums gr)
                 f node partMap)
-            (Map.mapWithKey (mapCarryWithVar f node) edges),
+            (Map.mapWithKey (StorageQuant.mapCarryWithVar f node) edges),
           Map.mapWithKey
              (\bnd a -> f (Idx.Storage bnd <#> node) a)
              bnds)) $
    storages gr
-
-mapCarryWithVar ::
-   (Var.ForNodeSectionScalar node -> a0 -> a1) ->
-   node -> SeqIdx.StorageEdge node -> Carry a0 -> Carry a1
-mapCarryWithVar f node edge =
-   liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
-
-carryVars :: Carry (SeqIdx.StorageEdge node -> Var.Scalar Idx.Section node)
-carryVars =
-   Carry {
-      carryMaxEnergy = Var.scalarIndex . Idx.MaxEnergy,
-      carryEnergy = Var.scalarIndex . Idx.StEnergy,
-      carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
-      carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
-   }
 
 mapSequenceWithVar ::
    (Ord node) =>

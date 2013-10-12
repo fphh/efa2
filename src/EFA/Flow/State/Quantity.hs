@@ -19,8 +19,6 @@ module EFA.Flow.State.Quantity (
    mapStoragesWithVar,
    mapStatesWithVar,
 
-   mapCarryWithVar,
-
    fromSequenceFlow,
    fromSequenceFlowResult,
 
@@ -75,8 +73,6 @@ import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.Signal.Sequence as Sequ
 
-import qualified EFA.Report.Format as Format
-
 import qualified EFA.Utility.Map as MapU
 
 import qualified Control.Monad.Trans.State as MS
@@ -85,7 +81,7 @@ import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Set as Set
 import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
-import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
+import Control.Applicative (Applicative, pure, liftA2, (<*>))
 import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
@@ -117,6 +113,14 @@ instance StorageQuant.Carry Carry where
    carryEnergy = carryEnergy
    carryXOut   = carryXOut
    carryXIn    = carryXIn
+
+   type CarryPart Carry = Idx.State
+   carryVars =
+      Carry {
+         carryEnergy = Var.scalarIndex . Idx.StEnergy,
+         carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
+         carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
+      }
 
 
 instance Functor Carry where
@@ -613,25 +617,8 @@ mapStoragesWithVar f gr =
                     Quant.dirFromSums .
                 flip lookupSums gr)
                 f node partMap)
-            (Map.mapWithKey (mapCarryWithVar f node) edges)) $
+            (Map.mapWithKey (StorageQuant.mapCarryWithVar f node) edges)) $
    storages gr
-
-mapCarryWithVar ::
-   (Format.Part part) =>
-   (Var.ForNodeScalar part node -> a0 -> a1) ->
-   node -> Idx.StorageEdge part node -> Carry a0 -> Carry a1
-mapCarryWithVar f node edge =
-   liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
-
-carryVars ::
-   (Format.Part part) =>
-   Carry (Idx.StorageEdge part node -> Var.Scalar part node)
-carryVars =
-   Carry {
-      carryEnergy = Var.scalarIndex . Idx.StEnergy,
-      carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
-      carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
-   }
 
 mapStatesWithVar ::
    (Ord node) =>

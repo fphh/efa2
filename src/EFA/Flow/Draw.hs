@@ -26,6 +26,7 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Quantity as FlowQuant
+import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.PartMap as PartMap
@@ -72,6 +73,7 @@ import qualified Data.Accessor.Basic as Accessor
 
 import qualified Data.Text.Lazy as T
 
+import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.List as List
 
@@ -672,7 +674,7 @@ seqFlowGraph opts gr =
                (fmap (FlowTopo.topology . snd) $ SeqFlowQuant.sequence gr)
          else ([], []))
       (Map.mapWithKey
-          (\node -> storageGraphShow storageEdgeSeqShow opts node . fst) $
+          (\node -> storageGraphShow opts node . fst) $
        SeqFlowQuant.storages gr)
       (snd $
        Map.mapAccumWithKey
@@ -752,7 +754,7 @@ stateFlowGraph ::
 stateFlowGraph opts gr =
    dotFromFlowGraph
       ([], [])
-      (Map.mapWithKey (storageGraphShow storageEdgeStateShow opts) $
+      (Map.mapWithKey (storageGraphShow opts) $
        StateFlowQuant.storages gr)
       (Map.mapWithKey
           (\state (FlowTopo.Section dt topo) ->
@@ -767,13 +769,13 @@ stateFlowGraph opts gr =
        StateFlowQuant.states gr)
 
 storageGraphShow ::
-   (Format output, Node.C node, FormatValue a) =>
-   (Options output -> node -> Idx.StorageEdge part node -> el -> outputs) ->
+   (StorageQuant.Carry carry, StorageQuant.CarryPart carry ~ part,
+    Format.Part part, Format output, Node.C node, FormatValue a) =>
    Options output ->
    node ->
-   StorageGraph part node a el ->
-   ((output, output), Map (Idx.StorageEdge part node) outputs)
-storageGraphShow storageEdgeShow opts node (StorageGraph partMap edges) =
+   StorageGraph part node a (carry a) ->
+   ((output, output), Map (Idx.StorageEdge part node) [output])
+storageGraphShow opts node (StorageGraph partMap edges) =
    ((stateNodeShow node $ Just $ PartMap.init partMap,
      stateNodeShow node $ Just $ PartMap.exit partMap),
     if optStorageEdge opts
@@ -793,39 +795,17 @@ stateNodeShow node msum =
                Node.Storage _ -> maybeToList $ fmap formatValue msum
                _ -> []
 
-storageEdgeSeqShow ::
-   (Node.C node, FormatValue a, Format output) =>
+storageEdgeShow ::
+   (StorageQuant.Carry carry, StorageQuant.CarryPart carry ~ part,
+    Format.Part part, Node.C node, FormatValue a, Format output) =>
    Options output ->
    node ->
-   Idx.StorageEdge Idx.Section node ->
-   SeqFlowQuant.Carry a ->
+   Idx.StorageEdge part node ->
+   carry a ->
    [output]
-storageEdgeSeqShow opts node edge carry =
-   case SeqFlowQuant.mapCarryWithVar
-           (formatAssignWithOpts opts) node edge carry of
-      labels ->
-         SeqFlowQuant.carryMaxEnergy labels :
-         SeqFlowQuant.carryEnergy labels :
-         SeqFlowQuant.carryXOut labels :
-         SeqFlowQuant.carryXIn labels :
-         []
-
-storageEdgeStateShow ::
-   (Node.C node, FormatValue a, Format output) =>
-   Options output ->
-   node ->
-   Idx.StorageEdge Idx.State node ->
-   StateFlowQuant.Carry a ->
-   [output]
-storageEdgeStateShow opts node edge carry =
-   case StateFlowQuant.mapCarryWithVar
-           (formatAssignWithOpts opts) node edge carry of
-      labels ->
-         StateFlowQuant.carryEnergy labels :
-         StateFlowQuant.carryXOut labels :
-         StateFlowQuant.carryXIn labels :
-         []
-
+storageEdgeShow opts node edge carry =
+   Fold.toList $
+   StorageQuant.mapCarryWithVar (formatAssignWithOpts opts) node edge carry
 
 structureEdgeShow ::
    (Node.C node, Ord part, FormatValue a, Format.Part part) =>
