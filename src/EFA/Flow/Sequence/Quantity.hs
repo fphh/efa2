@@ -672,15 +672,8 @@ mapStoragesWithVar ::
    Storages node a1
 mapStoragesWithVar f gr =
    Map.mapWithKey
-      (\node (StorageGraph partMap edges, bnds) ->
-         (StorageGraph
-            (PartMap.mapWithVar
-                (maybe
-                    (error "mapStoragesWithVar: missing corresponding sum")
-                    Quant.dirFromSums .
-                flip lookupSums gr)
-                f node partMap)
-            (Map.mapWithKey (StorageQuant.mapCarryWithVar f node) edges),
+      (\node (sgr, bnds) ->
+         (StorageQuant.mapGraphWithVar (flip lookupSums gr) f node sgr,
           Map.mapWithKey
              (\bnd a -> f (Idx.Storage bnd <#> node) a)
              bnds)) $
