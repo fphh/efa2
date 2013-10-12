@@ -27,8 +27,7 @@ import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Quantity as FlowQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
-import qualified EFA.Flow.Topology.Quantity as FlowTopo
-import qualified EFA.Flow.Topology as FlowTopoPlain
+import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
@@ -677,7 +676,7 @@ seqFlowGraph opts gr =
        SeqFlowQuant.storages gr)
       (snd $
        Map.mapAccumWithKey
-          (\before sec (rng, FlowTopoPlain.Section dt topo) ->
+          (\before sec (rng, FlowTopo.Section dt topo) ->
              (,) (Idx.afterSection sec) $
              (show sec ++
               " / Range " ++ formatRange rng ++
@@ -756,7 +755,7 @@ stateFlowGraph opts gr =
       (Map.mapWithKey (storageGraphShow storageEdgeStateShow opts) $
        StateFlowQuant.storages gr)
       (Map.mapWithKey
-          (\state (FlowTopoPlain.Section dt topo) ->
+          (\state (FlowTopo.Section dt topo) ->
              (show state ++ " / Time " ++ unUnicode (formatValue dt),
               Graph.mapNodeWithKey
                  (\node _sums ->
