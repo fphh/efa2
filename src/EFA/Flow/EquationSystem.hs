@@ -278,9 +278,9 @@ splitStructEqs ::
     rx ~ Expr mode rec s x) =>
    rx ->
    rx ->
-   (Quant.Flow rx -> rx) ->
-   (Quant.Flow rx -> rx) ->
-   [Quant.Flow rx] ->
+   (flow rx -> rx) ->
+   (flow rx -> rx) ->
+   [flow rx] ->
    System mode s
 splitStructEqs dtime varsum energy xfactor =
    foldMap (splitFactors varsum energy (Arith.constOne dtime) xfactor)

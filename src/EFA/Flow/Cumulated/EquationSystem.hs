@@ -157,25 +157,25 @@ fromTopology ::
 fromTopology equalInOutSums topo =
    foldMap fromEdge (Graph.edgeLabels topo)
    <>
-   (EqSys.withLocalVar $ \totalTime ->
-      foldMap (totalTime =&=) $
-      Map.mapKeysWith (~+)
-         ((\e -> min e (Idx.flip e)) . Topo.structureEdgeFromDirEdge) $
-      fmap CumFlow.flowDTime $
-      Graph.edgeLabels topo)
-   <>
    fold (Map.mapWithKey (fromSums equalInOutSums) $ Graph.nodeLabels topo)
    <>
-   foldMap
-      (\(ins,ss,outs) ->
-         (flip foldMap (CumFlow.sumIn ss) $ \s ->
-            EqSys.splitScalarEqs s
-               CumFlow.flowEnergyIn CumFlow.flowXIn $ Map.elems ins)
-         <>
-         (flip foldMap (CumFlow.sumOut ss) $ \s ->
-            EqSys.splitScalarEqs s
-               CumFlow.flowEnergyOut CumFlow.flowXOut $ Map.elems outs))
-      (Graph.graphMap topo)
+   (EqSys.withLocalVar $ \totalTime ->
+      (foldMap (totalTime =&=) $
+       Map.mapKeysWith (~+)
+          ((\e -> min e (Idx.flip e)) . Topo.structureEdgeFromDirEdge) $
+       fmap CumFlow.flowDTime $
+       Graph.edgeLabels topo)
+      <>
+      foldMap
+         (\(ins,ss,outs) ->
+            (flip foldMap (CumFlow.sumIn ss) $ \s ->
+               EqSys.splitStructEqs totalTime s
+                  CumFlow.flowEnergyIn CumFlow.flowXIn $ Map.elems ins)
+            <>
+            (flip foldMap (CumFlow.sumOut ss) $ \s ->
+               EqSys.splitStructEqs totalTime s
+                  CumFlow.flowEnergyOut CumFlow.flowXOut $ Map.elems outs))
+         (Graph.graphMap topo))
 
 fromEdge ::
    (Sys.Value mode a, Product a, Record rec) =>
