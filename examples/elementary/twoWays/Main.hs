@@ -1,19 +1,17 @@
 
 module Main where
 
-import EFA.Application.Utility (topologyFromEdges, seqFlowGraphFromTopology)
+import EFA.Application.Utility (topologyFromEdges, quantityTopology)
 
-import qualified EFA.Flow.Sequence.Absolute as EqSys
-import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology.Absolute as EqSys
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Variable as Var
+import qualified EFA.Flow.Topology.Index as XIdx
 import qualified EFA.Flow.Draw as Draw
-import EFA.Flow.Sequence.Absolute ((.=), (=.=))
+import EFA.Flow.Topology.Absolute ((.=), (=.=))
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Result (Result)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
@@ -27,10 +25,6 @@ import EFA.Report.FormatValue (formatValue)
 import Control.Applicative (liftA2)
 
 import Data.Monoid (mconcat, (<>))
-
-
-sec0 :: Idx.Section
-sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
 {- |
@@ -64,36 +58,33 @@ topo =
        (c0, c2), (c2, c3),
        (c3, Sink)]
 
-flowGraph :: SeqFlow.Graph Node (Result Double) (Result Double)
-flowGraph = seqFlowGraphFromTopology topo
-
-given :: Double -> Double -> EqSys.EquationSystemIgnore Node s Double Double
+given :: Double -> Double -> EqSys.EquationSystemIgnore Node s Double
 given e x =
    mconcat $
-   (XIdx.dTime sec0 .= 1) :
-   (XIdx.x sec0 c0 c1 .= x) :
-   (XIdx.power sec0 Source c0 .= e) :
-   (XIdx.eta sec0 Source c0 .= 1) :
-   (XIdx.eta sec0 c1 c3 .= 1) :
-   (XIdx.eta sec0 c2 c3 .= 1) :
-   (XIdx.eta sec0 c3 Sink .= 1) : []
+   (XIdx.dTime .= 1) :
+   (XIdx.x c0 c1 .= x) :
+   (XIdx.power Source c0 .= e) :
+   (XIdx.eta Source c0 .= 1) :
+   (XIdx.eta c1 c3 .= 1) :
+   (XIdx.eta c2 c3 .= 1) :
+   (XIdx.eta c3 Sink .= 1) : []
 
 
-type Expr s a v x = EqSys.ExpressionIgnore Node s a v x
+type Expr s v x = EqSys.ExpressionIgnore Node s v x
 
-c02, c04 :: (Eq v, Arith.Sum v) => Expr s a v v
-c02 = EqSys.variable $ XIdx.power sec0 c0 c1
-c04 = EqSys.variable $ XIdx.power sec0 c0 c2
+c02, c04 :: (Eq v, Arith.Sum v) => Expr s v v
+c02 = EqSys.variable $ XIdx.power c0 c1
+c04 = EqSys.variable $ XIdx.power c0 c2
 
-n12, n14 :: (Eq v, Arith.Sum v) => Expr s a v v
-n12 = EqSys.variable $ XIdx.eta sec0 c0 c1
-n14 = EqSys.variable $ XIdx.eta sec0 c0 c2
+n12, n14 :: (Eq v, Arith.Sum v) => Expr s v v
+n12 = EqSys.variable $ XIdx.eta c0 c1
+n14 = EqSys.variable $ XIdx.eta c0 c2
 
-n1, n2 :: (Fractional x) => Expr s a v x -> Expr s a v x
+n1, n2 :: (Fractional x) => Expr s v x -> Expr s v x
 n1 p = -0.012 * (p - 12) * (p - 3) + 0.5
 n2 p = -0.021 * (p - 12) * p
 
-etas :: EqSys.EquationSystemIgnore Node s Double Double
+etas :: EqSys.EquationSystemIgnore Node s Double
 etas =
    (n12 =.= n1 c02) <>
    (n14 =.= n2 c04)
@@ -107,15 +98,15 @@ enRange = 0.01:[1..12]
 
 
 eout, ein :: XIdx.Energy Node
-eout = XIdx.energy sec0 Sink c3
-ein  = XIdx.energy sec0 Source c0
+eout = XIdx.energy Sink c3
+ein  = XIdx.energy Source c0
 
 
 solve :: Double -> Double -> String
 solve e x =
    let emap idx =
-          Var.checkedLookup "solve" SeqFlow.lookupEnergy idx $
-          EqSys.solve flowGraph (etas <> given e x)
+          Var.checkedLookup "solve" FlowTopo.lookupEnergy idx $
+          EqSys.solve (quantityTopology topo) (etas <> given e x)
    in  show e ++ " " ++ show x ++ " " ++
        Format.unUnicode (formatValue (liftA2 (/) (emap eout) (emap ein)))
 
