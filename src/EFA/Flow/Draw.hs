@@ -80,7 +80,7 @@ import qualified Data.List as List
 import Data.Map (Map)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Maybe (maybeToList)
-import Data.Tuple.HT (mapFst, mapFst3)
+import Data.Tuple.HT (mapFst)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
@@ -315,9 +315,10 @@ dotFromStructureEdge ::
    (Node.C node, Part part) =>
    part -> Graph.EitherEdge node -> [Unicode] -> DotEdge T.Text
 dotFromStructureEdge part e label =
-   let (DirEdge x y, dir, ord) = orientFlowEdge $ Idx.InPart part e
+   let (DirEdge x y, dir, ord) = orientFlowEdge e
    in  DotEdge
-          (dotIdentFromPartNode x) (dotIdentFromPartNode y)
+          (dotIdentFromPartNode part x)
+          (dotIdentFromPartNode part y)
           [labelFromLines $ order ord label,
            Viz.Dir dir, structureEdgeColour]
 
@@ -327,16 +328,16 @@ dotFromStructureEdgeEta ::
    Triple [Unicode] ->
    (DotNode T.Text, [DotEdge T.Text])
 dotFromStructureEdgeEta part e label =
-   let (DirEdge x y, dir, ord) = orientFlowEdge $ Idx.InPart part e
+   let (DirEdge x y, dir, ord) = orientFlowEdge e
        Triple pre eta suc = order ord label
-       did = dotIdentFromEtaNode x y
+       did = dotIdentFromEtaNode part x y
    in  (DotNode did [labelFromLines eta],
         [DotEdge
-            (dotIdentFromPartNode x) did
+            (dotIdentFromPartNode part x) did
             [labelFromLines pre,
              Viz.Dir dir, structureEdgeColour],
          DotEdge
-            did (dotIdentFromPartNode y)
+            did (dotIdentFromPartNode part y)
             [labelFromLines suc,
              Viz.Dir dir, structureEdgeColour]])
 
@@ -417,8 +418,8 @@ instance Part Idx.State where
 
 
 dotIdentFromPartNode ::
-   (Part part, Node.C node) => Idx.PartNode part node -> T.Text
-dotIdentFromPartNode (Idx.PartNode s n) =
+   (Part part, Node.C node) => part -> node -> T.Text
+dotIdentFromPartNode s n =
    T.pack $ "s" ++ dotIdentFromPart s ++ "n" ++ Node.dotId n
 
 dotIdentFromAugNode ::
@@ -442,8 +443,8 @@ dotIdentFromBoundary (Idx.Following a) =
 
 dotIdentFromEtaNode ::
    (Node.C node, Part part) =>
-   Idx.PartNode part node -> Idx.PartNode part node -> T.Text
-dotIdentFromEtaNode (Idx.PartNode s x) (Idx.PartNode _s y) =
+   part -> node -> node -> T.Text
+dotIdentFromEtaNode s x y =
    T.pack $
       "s" ++ dotIdentFromPart s ++
       "x" ++ Node.dotId x ++
@@ -549,10 +550,9 @@ order Reverse = reverse
 
 orientFlowEdge ::
    (Ord node) =>
-   Idx.InPart part Graph.EitherEdge node ->
-   (DirEdge (Idx.PartNode part node), Viz.DirType, Order)
-orientFlowEdge (Idx.InPart sec e) =
-   mapFst3 (fmap (Idx.PartNode sec)) $
+   Graph.EitherEdge node ->
+   (DirEdge node, Viz.DirType, Order)
+orientFlowEdge e =
    case e of
       Graph.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
       Graph.EDirEdge de -> orientDirEdge de
