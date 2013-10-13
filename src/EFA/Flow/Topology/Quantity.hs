@@ -17,6 +17,8 @@ module EFA.Flow.Topology.Quantity (
    mapTopologyWithVar,
    mapFlowWithVar,
 
+   Quant.liftEdgeFlow,
+
    sectionFromPlain,
    unknownTopologyNodes,
 
