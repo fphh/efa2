@@ -29,7 +29,6 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
 import EFA.Equation.System ((.=))
 
-import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue)
 
 import qualified EFA.Utility.Map as MapU
