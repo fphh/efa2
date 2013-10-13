@@ -4,12 +4,12 @@
 
 module EFA.Application.Optimisation where
 
+import EFA.Application.Simulation (EtaAssignMap, makeEtaFuncGiven)
+
 import qualified EFA.Application.AbsoluteState as EqGenState
-import EFA.Application.AbsoluteState ( (=.=) )
 
 import qualified EFA.Flow.State.Index as StateIdx
 
-import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil)
 
 import qualified EFA.Equation.Arithmetic as EqArith
@@ -20,7 +20,6 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
-import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Foldable (foldMap)
@@ -50,26 +49,6 @@ etaOverPowerOut ::
 etaOverPowerOut =
    Idx.liftInPart $ \(Idx.Eta e) -> Idx.Power e
 
-type EtaAssignMap node =
-  Map (StateIdx.Eta node)
-      (String, String, StateIdx.Eta node -> StateIdx.Power node)
-
-
--- | Generate given equations using efficiency curves or functions for a specified section
-makeEtaFuncGiven ::
-   (Fractional a, Ord a, Show a, EqArith.Sum a,
-    Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
-   EtaAssignMap node ->
-   Map String (a -> a) ->
-   EqGenState.EquationSystem node s x (Data c a)
-makeEtaFuncGiven etaAssign etaFunc = Fold.fold $ Map.mapWithKey f etaAssign
-  where f n (strP, strN, g) =
-          EqGenState.variable n =.= EqGenState.liftF (Data.map ef) (EqGenState.variable $ g n)
-          where ef x = if x >= 0 then fpos x else fneg x
-                fpos = maybe (err strP) id (Map.lookup strP etaFunc)
-                fneg = maybe (err strN) (\h -> recip . h . negate)
-                                        (Map.lookup strN etaFunc)
-                err str x = error ("not defined: " ++ show str ++ " for " ++ show x)
 
 -- | Takes all non-energy and non-power values from an env,
 -- | removes values in section x and generate given equations

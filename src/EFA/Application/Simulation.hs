@@ -125,7 +125,7 @@ givenSimulate stateFlowGraph etaAssign etaFunc powerRecord =
    where f (Record.Record t xs) =
            (StateIdx.dTime (Idx.State 0) EqGen..=
              (Data  $ SV.fromList $ replicate (Sig.len t) 1))
-           <> makeEtaFuncGiven etaAssign (Idx.State 0) etaFunc
+           <> makeEtaFuncGiven (etaAssign $ Idx.State 0) etaFunc
            <> Fold.fold (Map.mapWithKey g xs)
            where
              g ppos p =
@@ -136,11 +136,10 @@ givenSimulate stateFlowGraph etaAssign etaFunc powerRecord =
 makeEtaFuncGiven ::
    (Fractional a, Ord a, Show a, EqArith.Sum a,
     Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
-   (Idx.State -> EtaAssignMap node) ->
-   Idx.State ->
+   EtaAssignMap node ->
    Map String (a -> a) ->
    EqGen.EquationSystem node s x (Data c a)
-makeEtaFuncGiven etaAssign state etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign state)
+makeEtaFuncGiven etaAssign etaFunc = Fold.fold $ Map.mapWithKey f etaAssign
   where f n (strP, strN, g) =
           EqGen.variable n =.= EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
           where ef x = if x >= 0 then fpos x else fneg x
