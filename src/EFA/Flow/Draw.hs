@@ -238,20 +238,21 @@ dotFromPartGraph current (subtitle, gr) =
                 let eo = orientFlowEdge e
                 in  case labels of
                        ShowEtaNode l ->
-                          mapFst (:[]) $ dotFromStructureEdgeEta current eo l
+                          mapFst (:[]) $ dotFromStructureEdgeEta eo l
                        HideEtaNode l ->
-                          ([], [dotFromStructureEdgeCompact current eo l])) $
+                          ([], [dotFromStructureEdgeCompact eo l])) $
           Graph.edgeLabels gr
    in  DotSG True (Just $ Str $ T.pack $ dotIdentFromPart current) $
        DotStmts
           [GraphAttrs [labelFromString subtitle]]
           []
-          ((Map.elems $
-            Map.mapWithKey (dotFromAugNode (Idx.augment current)) $
-            Graph.nodeLabels gr)
-           ++
-           etaNodes)
-          edges
+          (map (dotNodeInPart current) $
+              (Map.elems $
+               Map.mapWithKey dotFromSubNode $
+               Graph.nodeLabels gr)
+              ++
+              etaNodes)
+          (map (dotEdgeInPart current) edges)
 
 
 graphStatementsAcc ::
@@ -295,6 +296,14 @@ xterm :: DotGraph T.Text -> IO ()
 xterm g = void $ VizCmd.runGraphvizCanvas VizCmd.Dot g VizCmd.Xlib
 
 
+dotFromSubNode ::
+   (Node.C node) =>
+   node -> Unicode -> DotNode T.Text
+dotFromSubNode n label =
+   DotNode
+      (dotIdentFromSubNode n)
+      (nodeAttrs (Node.typ n) $ labelFromUnicode label)
+
 dotFromAugNode ::
    (Part part, Node.C node) =>
    Idx.Augmented part -> node -> Unicode -> DotNode T.Text
@@ -313,31 +322,31 @@ dotFromBndNode n label =
        labelFromUnicode label)
 
 dotFromStructureEdgeCompact ::
-   (Node.C node, Part part) =>
-   part -> (DirEdge node, Viz.DirType, Order) ->
+   (Node.C node) =>
+   (DirEdge node, Viz.DirType, Order) ->
    [Unicode] -> DotEdge T.Text
-dotFromStructureEdgeCompact part (DirEdge x y, dir, ord) label =
+dotFromStructureEdgeCompact (DirEdge x y, dir, ord) label =
    DotEdge
-      (dotIdentFromPartNode part x)
-      (dotIdentFromPartNode part y)
+      (dotIdentFromSubNode x)
+      (dotIdentFromSubNode y)
       [labelFromLines $ order ord label,
        Viz.Dir dir, structureEdgeColour]
 
 dotFromStructureEdgeEta ::
-   (Node.C node, Part part) =>
-   part -> (DirEdge node, Viz.DirType, Order) ->
+   (Node.C node) =>
+   (DirEdge node, Viz.DirType, Order) ->
    Triple [Unicode] ->
    (DotNode T.Text, [DotEdge T.Text])
-dotFromStructureEdgeEta part (DirEdge x y, dir, ord) label =
+dotFromStructureEdgeEta (DirEdge x y, dir, ord) label =
    let Triple pre eta suc = order ord label
-       did = dotIdentFromEtaNode part x y
+       did = dotIdentFromEtaNode x y
    in  (DotNode did [labelFromLines eta],
         [DotEdge
-            (dotIdentFromPartNode part x) did
+            (dotIdentFromSubNode x) did
             [labelFromLines pre,
              Viz.Dir dir, structureEdgeColour],
          DotEdge
-            did (dotIdentFromPartNode part y)
+            did (dotIdentFromSubNode y)
             [labelFromLines suc,
              Viz.Dir dir, structureEdgeColour]])
 
@@ -417,10 +426,28 @@ instance Part Idx.State where
    dotIdentFromPart (Idx.State s) = show s
 
 
-dotIdentFromPartNode ::
-   (Part part, Node.C node) => part -> node -> T.Text
-dotIdentFromPartNode s n =
-   T.pack $ "s" ++ dotIdentFromPart s ++ "n" ++ Node.dotId n
+dotNodeInPart ::
+   Part part =>
+   part -> DotNode T.Text -> DotNode T.Text
+dotNodeInPart part (DotNode x attrs) =
+   DotNode (dotIdentInPart part x) attrs
+
+dotEdgeInPart ::
+   Part part =>
+   part -> DotEdge T.Text -> DotEdge T.Text
+dotEdgeInPart part (DotEdge x y attrs) =
+   DotEdge (dotIdentInPart part x) (dotIdentInPart part y) attrs
+
+dotIdentInPart ::
+   (Part part) => part -> T.Text -> T.Text
+dotIdentInPart s =
+   T.append (T.pack $ "s" ++ dotIdentFromPart s)
+
+dotIdentFromSubNode ::
+   (Node.C node) => node -> T.Text
+dotIdentFromSubNode n =
+   T.pack $ "n" ++ Node.dotId n
+
 
 dotIdentFromAugNode ::
    (Part part, Node.C node) => Idx.AugNode part node -> T.Text
@@ -442,11 +469,10 @@ dotIdentFromBoundary (Idx.Following a) =
       Idx.NoInit s -> dotIdentFromPart s
 
 dotIdentFromEtaNode ::
-   (Node.C node, Part part) =>
-   part -> node -> node -> T.Text
-dotIdentFromEtaNode s x y =
+   (Node.C node) =>
+   node -> node -> T.Text
+dotIdentFromEtaNode x y =
    T.pack $
-      "s" ++ dotIdentFromPart s ++
       "x" ++ Node.dotId x ++
       "y" ++ Node.dotId y
 
