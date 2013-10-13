@@ -4,7 +4,10 @@
 module EFA.Flow.Cumulated.EquationSystem (
    EquationSystem, Expression, RecordExpression,
 
-   solve, solveFromMeasurement, solveTracked,
+   solve, solveOpts, solveTracked,
+
+   Options, optionsDefault,
+   equalInOutSums, independentInOutSums,
 
    constant,
    constantRecord,
@@ -24,6 +27,7 @@ module EFA.Flow.Cumulated.EquationSystem (
 import qualified EFA.Flow.Cumulated.Quantity as CumFlow
 import qualified EFA.Flow.Cumulated.Variable as Var
 
+import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
 import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join,
@@ -64,7 +68,7 @@ import qualified Data.Map as Map
 
 import Data.Traversable (Traversable, traverse)
 import Data.Foldable (foldMap, fold)
-import Data.Monoid ((<>))
+import Data.Monoid (mempty, (<>))
 
 import qualified Prelude as P
 import Prelude hiding (lookup, init)
@@ -140,42 +144,71 @@ variable (Idx.Record recIdx idx) =
    variableRecord idx
 
 
+data Options mode rec s a =
+   Options {
+      optInOutSums ::
+         SysRecord.Expr mode rec s a ->
+         SysRecord.Expr mode rec s a ->
+         EqSys.System mode s
+   }
+
+optionsDefault ::
+   (Verify.LocalVar mode a, Record rec) =>
+   Options mode rec s a
+optionsDefault =
+   Options { optInOutSums = (=&=) }
+
+
+equalInOutSums ::
+   (Verify.LocalVar mode a, Record rec) =>
+   Options mode rec s a ->
+   Options mode rec s a
+equalInOutSums opts =
+   opts { optInOutSums = (=&=) }
+
+independentInOutSums ::
+   Options mode rec s a ->
+   Options mode rec s a
+independentInOutSums opts =
+   opts { optInOutSums = const $ const mempty }
+
+
 fromGraph ::
    (Verify.LocalVar mode a, Constant a, Record rec, Node.C node) =>
-   Bool ->
+   Options mode rec s a ->
    CumFlow.Graph node (SysRecord.Variable mode rec s a) ->
    EqSys.System mode s
-fromGraph equalInOutSums =
-   fromTopology equalInOutSums .
+fromGraph opts =
+   fromTopology opts .
    CumFlow.mapGraph (Wrap . fmap Expr.fromVariable)
 
 fromTopology ::
    (Verify.LocalVar mode a, Constant a, Record rec, Node.C node) =>
-   Bool ->
+   Options mode rec s a ->
    CumFlow.Graph node (SysRecord.Expr mode rec s a) ->
    EqSys.System mode s
-fromTopology equalInOutSums topo =
+fromTopology opts topo =
    foldMap fromEdge (Graph.edgeLabels topo)
    <>
+   fold (Map.mapWithKey (fromSums opts) $ Graph.nodeLabels topo)
+   <>
    (EqSys.withLocalVar $ \totalTime ->
-      foldMap (totalTime =&=) $
-      Map.mapKeysWith (~+)
-         ((\e -> min e (Idx.flip e)) . Topo.structureEdgeFromDirEdge) $
-      fmap CumFlow.flowDTime $
-      Graph.edgeLabels topo)
-   <>
-   fold (Map.mapWithKey (fromSums equalInOutSums) $ Graph.nodeLabels topo)
-   <>
-   foldMap
-      (\(ins,ss,outs) ->
-         (flip foldMap (CumFlow.sumIn ss) $ \s ->
-            EqSys.splitScalarEqs s
-               CumFlow.flowEnergyIn CumFlow.flowXIn $ Map.elems ins)
-         <>
-         (flip foldMap (CumFlow.sumOut ss) $ \s ->
-            EqSys.splitScalarEqs s
-               CumFlow.flowEnergyOut CumFlow.flowXOut $ Map.elems outs))
-      (Graph.graphMap topo)
+      (foldMap (totalTime =&=) $
+       Map.mapKeysWith (~+)
+          ((\e -> min e (Idx.flip e)) . Topo.structureEdgeFromDirEdge) $
+       fmap CumFlow.flowDTime $
+       Graph.edgeLabels topo)
+      <>
+      foldMap
+         (\(ins,ss,outs) ->
+            (flip foldMap (CumFlow.sumIn ss) $ \s ->
+               TopoEqSys.splitFactors totalTime s
+                  CumFlow.flowEnergyIn CumFlow.flowXIn $ Map.elems ins)
+            <>
+            (flip foldMap (CumFlow.sumOut ss) $ \s ->
+               TopoEqSys.splitFactors totalTime s
+                  CumFlow.flowEnergyOut CumFlow.flowXOut $ Map.elems outs))
+         (Graph.graphMap topo))
 
 fromEdge ::
    (Sys.Value mode a, Product a, Record rec) =>
@@ -197,17 +230,17 @@ fromEdge
 
 fromSums ::
    (Node.C node, Verify.LocalVar mode a, Sum a, Record rec) =>
-   Bool ->
+   Options mode rec s a ->
    node ->
    CumFlow.Sums (SysRecord.Expr mode rec s a) ->
    EqSys.System mode s
-fromSums equalInOutSums node s =
+fromSums opts node s =
    let sumIn  = CumFlow.sumIn s
        sumOut = CumFlow.sumOut s
    in  fold $
-          guard (equalInOutSums && Node.typ node /= Node.Storage ())
+          guard (Node.typ node /= Node.Storage ())
           >>
-          liftA2 (=&=) sumIn sumOut
+          liftA2 (optInOutSums opts) sumIn sumOut
 
 
 variables ::
@@ -232,29 +265,29 @@ query =
 setup ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.Any node,
     Constant a, Record rec, Node.C node) =>
-   Bool ->
+   Options mode rec s a ->
    CumFlow.Graph node (rec (Result a)) ->
    EquationSystem mode rec node s a ->
    ST s
       (CumFlow.Graph node (SysRecord.Variable mode rec s a),
        Sys.T mode s ())
-setup equalInOutSums gr given = do
+setup opts gr given = do
    (vars, System eqs) <-
       runWriterT $ do
          vars <- variables gr
-         EqSys.runSystem $ fromGraph equalInOutSums vars
+         EqSys.runSystem $ fromGraph opts vars
          runReaderT (EqSys.runVariableSystem given) vars
          return vars
    return (vars, eqs)
 
-solveGen ::
+solveOpts ::
    (Constant a, Record rec, Node.C node) =>
-   Bool ->
+   (forall s. Options Verify.Ignore rec s a) ->
    CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a) ->
    CumFlow.Graph node (rec (Result a))
-solveGen equalInOutSums gr sys = runST $ do
-   (vars, eqs) <- setup equalInOutSums gr sys
+solveOpts opts gr sys = runST $ do
+   (vars, eqs) <- setup opts gr sys
    Verify.runIgnorant $ Sys.solve eqs
    query vars
 
@@ -263,14 +296,7 @@ solve ::
    CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a) ->
    CumFlow.Graph node (rec (Result a))
-solve = solveGen True
-
-solveFromMeasurement ::
-   (Constant a, Record rec, Node.C node) =>
-   CumFlow.Graph node (rec (Result a)) ->
-   (forall s. EquationSystem Verify.Ignore rec node s a) ->
-   CumFlow.Graph node (rec (Result a))
-solveFromMeasurement = solveGen False
+solve = solveOpts optionsDefault
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a recIdx Var.Any node, Constant a,
@@ -282,7 +308,7 @@ solveTracked ::
       (CumFlow.Graph node (rec (Result a))),
     Verify.Assigns output)
 solveTracked gr sys = runST $ do
-   (vars, eqs) <- setup True gr sys
+   (vars, eqs) <- setup optionsDefault gr sys
    runWriterT $ ME.runExceptionalT $ Verify.runTrack $ do
       Sys.solveBreadthFirst eqs
       MT.lift $ query vars

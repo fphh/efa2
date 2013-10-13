@@ -5,6 +5,7 @@ import EFA.Application.Utility (checkDetermined)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.SystemEta as SystemEta
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
 
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -21,7 +22,7 @@ etaSys ::
    (Node.C node, Arith.Constant v) =>
    SeqFlow.Graph node a (Result v) -> Result v
 etaSys =
-   SystemEta.etaSys . fmap (snd . snd) . SeqFlow.sequence
+   SystemEta.etaSys . fmap (FlowTopo.topology . snd) . SeqFlow.sequence
 
 
 detEtaSys ::

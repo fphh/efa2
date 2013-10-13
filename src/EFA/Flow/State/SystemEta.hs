@@ -5,6 +5,7 @@ import EFA.Application.Utility (checkDetermined)
 
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.SystemEta as SystemEta
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
 
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -21,7 +22,7 @@ etaSys ::
    (Node.C node, Arith.Constant v) =>
    StateFlow.Graph node a (Result v) -> Result v
 etaSys =
-   SystemEta.etaSys . fmap snd . StateFlow.states
+   SystemEta.etaSys . fmap FlowTopo.topology . StateFlow.states
 
 
 detEtaSys ::

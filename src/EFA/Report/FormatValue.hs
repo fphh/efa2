@@ -38,16 +38,6 @@ instance
       Format.record r $ formatValue idx
 
 
-instance FormatValue Idx.Absolute where
-   formatValue Idx.Absolute = Format.empty
-
-instance FormatValue Idx.Delta where
-   formatValue d = Format.recordDelta d Format.empty
-
-instance FormatValue rec => FormatValue (Idx.ExtDelta rec) where
-   formatValue (Idx.ExtDelta d r) = Format.recordDelta d $ formatValue r
-
-
 instance
    (FormatSignalIndex idx, Format.Part part, Node.C node) =>
       FormatValue (Idx.InPart part idx node) where
@@ -75,10 +65,10 @@ formatBoundaryNode ::
 formatBoundaryNode (Idx.PartNode s n) =
    Format.boundary s `Format.sectionNode` Node.subscript n
 
-formatTimeNode ::
+formatPartNode ::
    (Format output, Format.Part part, Node.C node) =>
    Idx.PartNode part node -> output
-formatTimeNode (Idx.PartNode s n) =
+formatPartNode (Idx.PartNode s n) =
    Format.part s `Format.sectionNode` Node.subscript n
 
 
@@ -105,6 +95,14 @@ instance (Node.C node) => FormatValue (Idx.Eta node) where
 
 instance (Node.C node) => FormatValue (Idx.X node) where
    formatValue (Idx.X e) = formatStructureEdge Format.xfactor e
+
+instance (Node.C node) => FormatValue (Idx.DTime node) where
+   formatValue Idx.DTime = Format.dtime
+
+instance (Node.C node) => FormatValue (Idx.Sum node) where
+   formatValue (Idx.Sum dir node) =
+      Format.subscript Format.signalSum $
+      Format.direction dir `Format.connect` Node.subscript node
 
 
 formatStructureSecEdge ::
@@ -151,7 +149,7 @@ instance FormatSignalIndex Idx.Sum where
    formatSignalIndex (Idx.Sum dir n) s =
       Format.subscript Format.signalSum $
       Format.direction dir `Format.connect`
-         formatTimeNode (Idx.PartNode s n)
+         formatPartNode (Idx.PartNode s n)
 
 
 instance FormatScalarIndex Idx.MaxEnergy where
@@ -188,8 +186,8 @@ formatChar :: Format output => Char -> output
 formatChar = Format.literal . (:[])
 
 instance FormatValue a => FormatValue (Result a) where
-  formatValue Undetermined = Format.undetermined
-  formatValue (Determined a) = formatValue a
+   formatValue Undetermined = Format.undetermined
+   formatValue (Determined a) = formatValue a
 
 
 formatAssign ::

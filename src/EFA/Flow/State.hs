@@ -1,29 +1,28 @@
 module EFA.Flow.State where
 
-import qualified EFA.Flow.State.Index as XIdx
+import qualified EFA.Flow.Topology as FlowTopo
+import EFA.Flow.StorageGraph (StorageGraph)
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph as Graph
 
 import Data.Map (Map)
 
 
 type
-   Storages node initLabel exitLabel storageLabel =
+   Storages node storageLabel storageEdgeLabel =
       Map node
-         ((initLabel, exitLabel),
-          Map (XIdx.StorageEdge node) storageLabel)
+         (StorageGraph Idx.State node storageLabel storageEdgeLabel)
 
 type
    States node structEdge stateLabel nodeLabel structLabel =
       Map Idx.State
-         (stateLabel, Graph.Graph node structEdge nodeLabel structLabel)
+         (FlowTopo.Section node structEdge stateLabel nodeLabel structLabel)
 
 data
    Graph node structEdge
-         stateLabel nodeLabel initLabel exitLabel
-         structLabel storageLabel =
+         stateLabel nodeLabel storageLabel
+         structLabel storageEdgeLabel =
       Graph {
-         storages :: Storages node initLabel exitLabel storageLabel,
+         storages :: Storages node storageLabel storageEdgeLabel,
          states :: States node structEdge stateLabel nodeLabel structLabel
       }

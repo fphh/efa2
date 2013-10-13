@@ -7,8 +7,6 @@ import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Report.Format as Format
-
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
 
 import qualified Data.Foldable as Fold
@@ -20,14 +18,6 @@ import Data.Maybe (fromMaybe)
 import Prelude hiding (lookup, init, sin, sum)
 
 
-type
-   DirTopology node a v =
-      Graph node Graph.DirEdge (Sums a v) (Flow v)
-
-type
-   Topology node a v =
-      Graph node Graph.EitherEdge (Sums a v) (Maybe (Flow v))
-
 data Flow v =
    Flow {
       flowPowerOut, flowEnergyOut, flowXOut,
@@ -36,17 +26,9 @@ data Flow v =
    }
    deriving (Eq)
 
-data Sums a v =
-   Sums { sumIn, sumOut :: Maybe (Sum a v) }
+data Sums v =
+   Sums { sumIn, sumOut :: Maybe v }
    deriving (Eq)
-
-data Sum a v =
-   Sum { carrySum :: a, flowSum :: v }
-   deriving (Eq)
-
-
-class Functor f => Carry f where
-   carryEnergy, carryXOut, carryXIn :: f a -> a
 
 
 instance Functor Flow where
@@ -69,92 +51,49 @@ instance Applicative Flow where
          (feta eta) (fxin xin) (fein ein) (fpin pin)
 
 
+instance Functor Sums where
+   fmap f (Sums i o) = Sums (fmap f i) (fmap f o)
+
+instance Foldable Sums where
+   foldMap = foldMapDefault
+
+instance Traversable Sums where
+   traverse f (Sums i o) = liftA2 Sums (traverse f i) (traverse f o)
+
+instance Applicative Sums where
+   pure a = Sums (Just a) (Just a)
+   (Sums fi fo) <*> (Sums i o) = Sums (fi <*> i) (fo <*> o)
+
 
 mapSums ::
-   (a0 -> a1) ->
    (v0 -> v1) ->
-   Sums a0 v0 -> Sums a1 v1
-mapSums f g s =
+   Sums v0 -> Sums v1
+mapSums f s =
    Sums {
-      sumIn  = fmap (mapSum f g) $ sumIn  s,
-      sumOut = fmap (mapSum f g) $ sumOut s
-   }
-
-mapSum ::
-   (a0 -> a1) ->
-   (v0 -> v1) ->
-   Sum a0 v0 -> Sum a1 v1
-mapSum f g s =
-   Sum {
-      carrySum = f $ carrySum s,
-      flowSum  = g $ flowSum  s
+      sumIn  = fmap f $ sumIn  s,
+      sumOut = fmap f $ sumOut s
    }
 
 
 zipWithSums ::
-   (a0 -> a1 -> a2) ->
    (v0 -> v1 -> v2) ->
-   Sums a0 v0 -> Sums a1 v1 -> Sums a2 v2
-zipWithSums f g s0 s1 =
+   Sums v0 -> Sums v1 -> Sums v2
+zipWithSums f s0 s1 =
    Sums {
-      sumIn  = liftA2 (zipWithSum f g) (sumIn  s0) (sumIn  s1),
-      sumOut = liftA2 (zipWithSum f g) (sumOut s0) (sumOut s1)
-   }
-
-zipWithSum ::
-   (a0 -> a1 -> a2) ->
-   (v0 -> v1 -> v2) ->
-   Sum a0 v0 -> Sum a1 v1 -> Sum a2 v2
-zipWithSum f g s0 s1 =
-   Sum {
-      carrySum = f (carrySum s0) (carrySum s1),
-      flowSum  = g (flowSum  s0) (flowSum  s1)
+      sumIn  = liftA2 f (sumIn  s0) (sumIn  s1),
+      sumOut = liftA2 f (sumOut s0) (sumOut s1)
    }
 
 
 traverseSums ::
    (Applicative f) =>
-   (a0 -> f a1) ->
    (v0 -> f v1) ->
-   Sums a0 v0 -> f (Sums a1 v1)
-traverseSums f g (Sums i o) =
+   Sums v0 -> f (Sums v1)
+traverseSums f (Sums i o) =
    liftA2 Sums
-      (traverse (traverseSum f g) i)
-      (traverse (traverseSum f g) o)
+      (traverse f i)
+      (traverse f o)
 
-traverseSum ::
-   (Applicative f) =>
-   (a0 -> f a1) ->
-   (v0 -> f v1) ->
-   Sum a0 v0 -> f (Sum a1 v1)
-traverseSum f g (Sum cs fs) =
-   liftA2 Sum (f cs) (g fs)
-
-
-mapFlowTopologyWithVar ::
-   (Format.Part part, Ord node) =>
-   (Var.ForNodeScalar part node -> a0 -> a1) ->
-   (Var.InPartSignal part node -> v0 -> v1) ->
-   part ->
-   (v0, Graph node Graph.EitherEdge (Sums a0 v0) (Maybe (Flow v0))) ->
-   (v1, Graph node Graph.EitherEdge (Sums a1 v1) (Maybe (Flow v1)))
-mapFlowTopologyWithVar f g part (dtime, gr) =
-   (g (part <~> Idx.DTime) dtime,
-    Graph.mapNodeWithKey
-       (\n (Sums {sumIn = sin, sumOut = sout}) ->
-          Sums {
-             sumIn =
-                flip fmap sin $ \(Sum {carrySum = cs, flowSum = fs}) ->
-                   Sum
-                      (f (Idx.StOutSum (Idx.NoInit part) <#> n) cs)
-                      (g (part <~> Idx.Sum Idx.In n) fs),
-             sumOut =
-                flip fmap sout $ \(Sum {carrySum = cs, flowSum = fs}) ->
-                   Sum
-                      (f (Idx.StInSum (Idx.NoExit part) <#> n) cs)
-                      (g (part <~> Idx.Sum Idx.Out n) fs)
-          }) $
-    Graph.mapEdgeWithKey (liftEdgeFlow $ mapFlowWithVar g part) gr)
 
 liftEdgeFlow ::
    (Graph.DirEdge node -> flow0 -> flow1) ->
@@ -224,21 +163,10 @@ dirFromFlowGraph =
    dirFromGraph
 
 
-dirFromSums :: Sums a v -> Maybe Topo.StoreDir
+dirFromSums :: Sums v -> Maybe Topo.StoreDir
 dirFromSums sums =
    case (sumIn sums, sumOut sums) of
       (Nothing, Nothing) -> Nothing
       (Just _, Nothing) -> Just Topo.In
       (Nothing, Just _) -> Just Topo.Out
       (Just _, Just _) -> error "storage cannot be both In and Out"
-
-
-(<#>) ::
-   (Var.ScalarIndex idx, Var.ScalarPart idx ~ part) =>
-   idx node -> node -> Var.ForNodeScalar part node
-(<#>) idx node = Idx.ForNode (Var.scalarIndex idx) node
-
-(<~>) ::
-   (Var.SignalIndex idx) =>
-   part -> idx node -> Var.InPartSignal part node
-(<~>) part idx = Idx.InPart part $ Var.signalIndex idx

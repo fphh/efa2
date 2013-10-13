@@ -109,6 +109,7 @@ Library
     EFA.Graph.StateFlow.EquationSystem
     EFA.Equation.System
     EFA.Equation.Result
+    EFA.Equation.Unknown
     EFA.Equation.Environment
     EFA.Equation.Record
     EFA.Equation.Variable
@@ -117,6 +118,17 @@ Library
     EFA.Equation.Stack
     EFA.Equation.Pair
     EFA.Equation.Verify
+    EFA.Flow.PartMap
+    EFA.Flow.StorageGraph
+    EFA.Flow.StorageGraph.Quantity
+    EFA.Flow.StorageGraph.EquationSystem
+    EFA.Flow.Topology
+    EFA.Flow.Topology.Index
+    EFA.Flow.Topology.Variable
+    EFA.Flow.Topology.Quantity
+    EFA.Flow.Topology.EquationSystem
+    EFA.Flow.Topology.Absolute
+    EFA.Flow.SequenceState.EquationSystem
     EFA.Flow.Sequence
     EFA.Flow.Sequence.Index
     EFA.Flow.Sequence.Quantity
@@ -659,6 +671,17 @@ Executable demo-state-flow
   If flag(buildDemos)
     Build-Depends:
       efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-distribution
+  Main-Is: demo/distribution/Main.hs
+  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      containers,
       base
   Else
     Buildable: False

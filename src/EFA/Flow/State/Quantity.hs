@@ -4,7 +4,7 @@
 module EFA.Flow.State.Quantity (
    Graph, StateFlow.states, StateFlow.storages,
    Topology, States, Storages,
-   Sums(..), Sum(..), Carry(..), Flow(..),
+   Sums(..), Carry(..), Flow(..),
    CumGraph, Cum(..),
 
    mapGraph,
@@ -18,8 +18,6 @@ module EFA.Flow.State.Quantity (
    mapGraphWithVar,
    mapStoragesWithVar,
    mapStatesWithVar,
-
-   mapCarryWithVar,
 
    fromSequenceFlow,
    fromSequenceFlowResult,
@@ -53,9 +51,15 @@ import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State as StateFlow
+import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
+import qualified EFA.Flow.StorageGraph as StorageGraph
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology as FlowTopoPlain
+import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
+import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.State (states, storages)
-import EFA.Flow.Quantity
-          (Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
+import EFA.Flow.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
@@ -69,8 +73,6 @@ import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.Signal.Sequence as Sequ
 
-import qualified EFA.Report.Format as Format
-
 import qualified EFA.Utility.Map as MapU
 
 import qualified Control.Monad.Trans.State as MS
@@ -79,11 +81,10 @@ import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Set as Set
 import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
-import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
+import Control.Applicative (Applicative, pure, liftA2, (<*>))
 import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
-import Data.Tuple.HT (mapSnd)
 import Data.Maybe (isJust, fromMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
@@ -91,16 +92,16 @@ import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
 
 type
-   Storages node a = StateFlow.Storages node a a (Carry a)
+   Storages node a = StateFlow.Storages node a (Carry a)
 
 type
-   States node a v =
-      StateFlow.States node Graph.EitherEdge v (Sums a v) (Maybe (Flow v))
+   States node v =
+      StateFlow.States node Graph.EitherEdge v (Sums v) (Maybe (Flow v))
 
 type
    Graph node a v =
       StateFlow.Graph node Graph.EitherEdge
-         v (Sums a v) a a (Maybe (Flow v)) (Carry a)
+         v (Sums v) a (Maybe (Flow v)) (Carry a)
 
 data Carry a =
    Carry {
@@ -108,10 +109,18 @@ data Carry a =
    }
 
 
-instance Quant.Carry Carry where
+instance StorageQuant.Carry Carry where
    carryEnergy = carryEnergy
    carryXOut   = carryXOut
    carryXIn    = carryXIn
+
+   type CarryPart Carry = Idx.State
+   carryVars =
+      Carry {
+         carryEnergy = Var.scalarIndex . Idx.StEnergy,
+         carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
+         carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
+      }
 
 
 instance Functor Carry where
@@ -140,29 +149,21 @@ mapGraph ::
    Graph node a0 v0 -> Graph node a1 v1
 mapGraph f g gr =
    StateFlow.Graph {
-      states   = mapStates   f g $ states gr,
-      storages = mapStorages f   $ storages gr
+      states   = mapStates   g $ states gr,
+      storages = mapStorages f $ storages gr
    }
 
 mapStates ::
-   (a0 -> a1) ->
    (v0 -> v1) ->
-   States node a0 v0 -> States node a1 v1
-mapStates f g =
-   fmap
-      (\(dt, gr) ->
-         (g dt,
-          Graph.mapNode (mapSums f g) $
-          Graph.mapEdge (fmap $ fmap g) gr))
+   States node v0 -> States node v1
+mapStates f =
+   fmap (FlowTopo.mapSection f)
 
 mapStorages ::
    (a0 -> a1) ->
    Storages node a0 -> Storages node a1
 mapStorages f =
-   fmap
-      (\((init, exit), edges) ->
-         ((f init, f exit),
-          fmap (fmap f) edges))
+   fmap (StorageGraph.mapNode f . StorageGraph.mapEdge (fmap f))
 
 
 traverseGraph ::
@@ -172,30 +173,22 @@ traverseGraph ::
    Graph node a0 v0 -> f (Graph node a1 v1)
 traverseGraph f g (StateFlow.Graph sts seq) =
    liftA2 StateFlow.Graph
-      (traverseStorages f   $ sts)
-      (traverseStates   f g $ seq)
+      (traverseStorages f sts)
+      (traverseStates   g seq)
 
 traverseStates ::
    (Applicative f, Ord node) =>
-   (a0 -> f a1) ->
    (v0 -> f v1) ->
-   States node a0 v0 -> f (States node a1 v1)
-traverseStates f g =
-   traverse
-      (\(dt, gr) ->
-         liftA2 (,) (g dt)
-            (Graph.traverse (traverseSums f g) (traverse $ traverse g) gr))
+   States node v0 -> f (States node v1)
+traverseStates f =
+   traverse (FlowTopo.traverseSection f)
 
 traverseStorages ::
    (Applicative f, Ord node) =>
    (a0 -> f a1) ->
    Storages node a0 -> f (Storages node a1)
 traverseStorages f =
-   traverse
-      (\((init, exit), edges) ->
-         liftA2 (,)
-            (liftA2 (,) (f init) (f exit))
-            (traverse (traverse f) edges))
+   traverse (StorageGraph.traverse f (traverse f))
 
 
 
@@ -235,7 +228,7 @@ stateMaps =
 
 type
    CumGraph node a =
-      StateFlow.Graph node Graph.EitherEdge a (Sums a a) a a (Maybe (Cum a)) a
+      StateFlow.Graph node Graph.EitherEdge a (Sums a) a (Maybe (Cum a)) a
 
 
 fromSequenceFlowGen ::
@@ -250,30 +243,29 @@ fromSequenceFlowGen integrate add zero allStEdges gr =
    let sq = SeqFlowQuant.sequence gr
        secMap =
           stateMaps $
-          fmap (Graph.mapEdge (const ()) . Graph.mapNode (const ()) . snd . snd) sq
+          fmap (Graph.mapEdge (const ()) .
+                Graph.mapNode (const ()) .
+                FlowTopo.topology . snd) sq
        sts =
           flip cumulateSequence secMap
-             (\(dtime0, gr0) (dtime1, gr1) ->
-                (add dtime0 dtime1,
-                 Graph.checkedZipWith "StateFlow.fromSequenceFlow"
-                    (addSums add)
-                    (liftA2 (liftA2 add))
-                    gr0 gr1)) $
-          fmap ((mapSnd $ Graph.mapEdge $ fmap cumFromFlow) . snd) $
-          SeqFlowQuant.mapSequence id integrate sq
+             (FlowTopoPlain.checkedZipWith "StateFlow.fromSequenceFlow"
+                 add (addSums add) (liftA2 (liftA2 add))) $
+          fmap (FlowTopoPlain.mapEdge (fmap cumFromFlow) . snd) $
+          SeqFlowQuant.mapSequence integrate sq
    in  StateFlow.Graph {
           storages =
              Map.mapWithKey
-                (\node (initExit, _, edges) ->
-                   (initExit,
-                    Map.union
-                       (if allStEdges
-                          then Map.fromList $
-                               map (flip (,) zero) $
-                               allStorageEdges (sumsMap node sts)
-                          else Map.empty) $
-                    cumulateStorageEdges add secMap $
-                    fmap SeqFlowQuant.carryEnergy edges)) $
+                (\node (StorageGraph initExit edges, _) ->
+                   StorageGraph
+                      (cumulateSums add secMap initExit)
+                      (Map.union
+                          (if allStEdges
+                             then Map.fromList $
+                                  map (flip (,) zero) $
+                                  allStorageEdges (sumsMap node sts)
+                             else Map.empty) $
+                       cumulateStorageEdges add secMap $
+                       fmap SeqFlowQuant.carryEnergy edges)) $
              SeqFlowQuant.storages gr,
           states = sts
        }
@@ -293,14 +285,14 @@ cumulateStorageEdges add secMap =
 sumsMap ::
    (Ord node) =>
    node ->
-   StateFlow.States node Graph.EitherEdge v (Sums a v) (Maybe (Cum v)) ->
-   Map Idx.State (Sums a v)
+   StateFlow.States node Graph.EitherEdge v (Sums v) (Maybe (Cum v)) ->
+   Map Idx.State (Sums v)
 sumsMap node =
    fmap (fromMaybe (error "node not in sequence") .
-         Graph.lookupNode node . snd)
+         Graph.lookupNode node . FlowTopo.topology)
 
 allStorageEdges ::
-   Map Idx.State (Sums a a) -> [Idx.StorageEdge Idx.State node]
+   Map Idx.State (Sums a) -> [Idx.StorageEdge Idx.State node]
 allStorageEdges stores =
    case Map.partition (isJust . sumIn) stores of
       (ins, outs) ->
@@ -350,25 +342,24 @@ flowGraphFromCumResult ::
 flowGraphFromCumResult gr =
    StateFlow.Graph {
       StateFlow.storages =
-         fmap (mapSnd (fmap carryResultFromResult)) $
+         fmap (StorageGraph.mapEdge carryResultFromResult) $
          StateFlow.storages gr,
       StateFlow.states =
-         fmap (mapSnd (Graph.mapEdge (fmap flowResultFromCumResult))) $
+         fmap (FlowTopoPlain.mapEdge (fmap flowResultFromCumResult)) $
          StateFlow.states gr
    }
 
 
 addSums ::
    (a -> a -> a) ->
-   Sums a a -> Sums a a -> Sums a a
+   Sums a -> Sums a -> Sums a
 addSums add (Sums sin0 sout0) (Sums sin1 sout1) =
    Sums (addSum add sin0 sin1) (addSum add sout0 sout1)
 
 addSum ::
    (a -> a -> a) ->
-   Maybe (Sum a a) -> Maybe (Sum a a) -> Maybe (Sum a a)
-addSum add (Just (Sum cs0 fs0)) (Just (Sum cs1 fs1)) =
-   Just (Sum (add cs0 cs1) (add fs0 fs1))
+   Maybe a -> Maybe a -> Maybe a
+addSum add (Just fs0) (Just fs1) = Just (add fs0 fs1)
 addSum _ Nothing Nothing = Nothing
 addSum _ _ _ = error "addSum: inconsistent Maybes"
 
@@ -381,6 +372,15 @@ cumulateSequence ::
 cumulateSequence add secMap =
    Map.mapKeysWith add
       (MapU.checkedLookup "cumulateSequence" secMap)
+
+cumulateSums ::
+   (a -> a -> a) ->
+   Map Idx.Section Idx.State ->
+   PartMap Idx.Section a ->
+   PartMap Idx.State a
+cumulateSums add secMap =
+   PartMap.mapKeysWith add
+      (MapU.checkedLookup "cumulateSums" secMap)
 
 
 
@@ -433,72 +433,73 @@ lookupSum :: (Ord node) => StateIdx.Sum node -> Graph node a v -> Maybe v
 lookupSum =
    withTopology $ \(Idx.Sum dir node) topo -> do
       sums <- Graph.lookupNode node topo
-      fmap flowSum $
-         case dir of
-            Idx.In  -> sumIn sums
-            Idx.Out -> sumOut sums
+      case dir of
+         Idx.In  -> sumIn sums
+         Idx.Out -> sumOut sums
 
 
-type FlowTopology node a v =
-        Graph.Graph node Graph.EitherEdge (Sums a v) (Maybe (Flow v))
+type FlowTopology node v =
+        Graph.Graph node Graph.EitherEdge (Sums v) (Maybe (Flow v))
 
 withTopology ::
-   (idx node -> FlowTopology node a v -> Maybe r) ->
+   (idx node -> FlowTopology node v -> Maybe r) ->
    Idx.InState idx node ->
    Graph node a v ->
    Maybe r
 withTopology f (Idx.InPart state idx) g =
-   f idx . snd =<< seqLookup state g
+   f idx . FlowTopo.topology =<< seqLookup state g
 
 
 lookupDTime :: StateIdx.DTime node -> Graph node a v -> Maybe v
 lookupDTime (Idx.InPart state Idx.DTime) =
-   fmap fst . seqLookup state
+   fmap FlowTopo.label . seqLookup state
 
 
 lookupStEnergy ::
    (Ord node) => StateIdx.StEnergy node -> Graph node a v -> Maybe a
 lookupStEnergy (Idx.ForNode (Idx.StEnergy se) node) g = do
-   (_,edges) <- Map.lookup node $ storages g
-   fmap carryEnergy $ Map.lookup se edges
+   sgr <- Map.lookup node $ storages g
+   fmap carryEnergy $ StorageGraph.lookupEdge se sgr
 
 lookupStX ::
    (Ord node) => StateIdx.StX node -> Graph node a v -> Maybe a
 lookupStX (Idx.ForNode (Idx.StX se) node) g = do
-   (_,edges) <- Map.lookup node $ storages g
+   sgr <- Map.lookup node $ storages g
    Idx.withStorageEdgeFromTrans
-      (fmap carryXIn  . flip Map.lookup edges)
-      (fmap carryXOut . flip Map.lookup edges)
+      (fmap carryXIn  . flip StorageGraph.lookupEdge sgr)
+      (fmap carryXOut . flip StorageGraph.lookupEdge sgr)
       se
 
+{- |
+It is an unchecked error if you lookup StInSum where is only an StOutSum.
+-}
 lookupStInSum ::
    (Ord node) => StateIdx.StInSum node -> Graph node a v -> Maybe a
-lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g =
+lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g = do
+   (StorageGraph partMap _) <- Map.lookup node $ storages g
    case aug of
-      Idx.Exit -> do
-         ((_,exit),_) <- Map.lookup node $ storages g
-         return exit
-      Idx.NoExit state ->
-         fmap carrySum . sumOut =<< lookupSums (Idx.stateNode state node) g
+      Idx.Exit -> return $ PartMap.exit partMap
+      Idx.NoExit sec -> Map.lookup sec $ PartMap.parts partMap
 
+{- |
+It is an unchecked error if you lookup StOutSum where is only an StInSum.
+-}
 lookupStOutSum ::
    (Ord node) => StateIdx.StOutSum node -> Graph node a v -> Maybe a
-lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g =
+lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g = do
+   (StorageGraph partMap _) <- Map.lookup node $ storages g
    case aug of
-      Idx.Init -> do
-         ((init,_),_) <- Map.lookup node $ storages g
-         return init
-      Idx.NoInit state ->
-         fmap carrySum . sumIn =<< lookupSums (Idx.stateNode state node) g
+      Idx.Init -> return $ PartMap.init partMap
+      Idx.NoInit sec -> Map.lookup sec $ PartMap.parts partMap
 
 lookupSums ::
    (Ord node) =>
-   Idx.StateNode node -> Graph node a v -> Maybe (Sums a v)
+   Idx.StateNode node -> Graph node a v -> Maybe (Sums v)
 lookupSums (Idx.PartNode state node) =
-   Graph.lookupNode node . snd <=< seqLookup state
+   Graph.lookupNode node . FlowTopo.topology <=< seqLookup state
 
 seqLookup ::
-   Idx.State -> Graph node a v -> Maybe (v, FlowTopology node a v)
+   Idx.State -> Graph node a v -> Maybe (FlowTopo.Section node v)
 seqLookup state = Map.lookup state . states
 
 
@@ -597,43 +598,23 @@ mapGraphWithVar ::
    Graph node a1 v1
 mapGraphWithVar f g gr =
    StateFlow.Graph {
-      storages = mapStoragesWithVar f $ storages gr,
-      states   = mapStatesWithVar f g $ states gr
+      storages = mapStoragesWithVar f gr,
+      states   = mapStatesWithVar g $ states gr
    }
 
 mapStoragesWithVar ::
    (Ord node) =>
    (Var.ForNodeStateScalar node -> a0 -> a1) ->
-   Storages node a0 ->
+   Graph node a0 v0 ->
    Storages node a1
-mapStoragesWithVar f =
-   Map.mapWithKey $ \node ((init, exit), edges) ->
-      ((f (Idx.StOutSum Idx.Init <#> node) init,
-        f (Idx.StInSum  Idx.Exit <#> node) exit),
-       Map.mapWithKey (mapCarryWithVar f node) edges)
-
-mapCarryWithVar ::
-   (Format.Part part) =>
-   (Var.ForNodeScalar part node -> a0 -> a1) ->
-   node -> Idx.StorageEdge part node -> Carry a0 -> Carry a1
-mapCarryWithVar f node edge =
-   liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
-
-carryVars ::
-   (Format.Part part) =>
-   Carry (Idx.StorageEdge part node -> Var.Scalar part node)
-carryVars =
-   Carry {
-      carryEnergy = Var.scalarIndex . Idx.StEnergy,
-      carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
-      carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
-   }
+mapStoragesWithVar f gr =
+   Map.mapWithKey (StorageQuant.mapGraphWithVar (flip lookupSums gr) f) $
+   storages gr
 
 mapStatesWithVar ::
    (Ord node) =>
-   (Var.ForNodeStateScalar node -> a0 -> a1) ->
    (Var.InStateSignal node -> v0 -> v1) ->
-   States node a0 v0 ->
-   States node a1 v1
-mapStatesWithVar f g =
-   Map.mapWithKey $ Quant.mapFlowTopologyWithVar f g
+   States node v0 ->
+   States node v1
+mapStatesWithVar f =
+   Map.mapWithKey $ \state -> FlowTopo.mapSectionWithVar (f . Idx.InPart state)

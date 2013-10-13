@@ -19,6 +19,7 @@ module EFA.Flow.Draw (
 
    topologyWithEdgeLabels,
    topology,
+   flowTopology,
    flowTopologies,
    ) where
 
@@ -26,6 +27,12 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Quantity as FlowQuant
+import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
+import qualified EFA.Flow.StorageGraph as StorageGraph
+import qualified EFA.Flow.Topology.Quantity as FlowTopoQuant
+import qualified EFA.Flow.Topology as FlowTopo
+import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
@@ -43,6 +50,8 @@ import EFA.Graph.Topology (FlowTopology)
 import EFA.Graph (DirEdge(DirEdge))
 
 import qualified EFA.Utility.Map as MapU
+import EFA.Utility ((>>!))
+
 import Data.GraphViz (
           GraphID(Int, Str),
           GlobalAttributes(GraphAttrs),
@@ -68,17 +77,18 @@ import qualified Data.Accessor.Basic as Accessor
 
 import qualified Data.Text.Lazy as T
 
+import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.List as List
 
 import Data.Map (Map)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Maybe (maybeToList)
-import Data.Tuple.HT (mapFst, mapFst3, snd3)
+import Data.Tuple.HT (mapFst)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
-import Control.Monad (void, mplus)
+import Control.Monad (void, guard)
 
 import Prelude hiding (sin, reverse, init, last, sequence, (.))
 
@@ -152,12 +162,12 @@ dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
 
 dotFromStorageGraphs ::
    (Node.C node, FormatValue a, Ord (edge node), Graph.Edge edge) =>
-   Map node ((a,a), Map Idx.Boundary a) ->
-   Map Idx.Section (Graph node edge (FlowQuant.Sums a v) edgeLabel) ->
+   Map node (Map Idx.Boundary a) ->
+   Map Idx.Section (Graph node edge (FlowQuant.Sums v) edgeLabel) ->
    ([DotSubGraph T.Text], [DotEdge T.Text])
 dotFromStorageGraphs storages sequence =
    (Map.elems $ Map.mapWithKey dotFromStorageGraph $
-    fmap (fmap formatValue) $ MapU.flip $ fmap snd storages,
+    fmap (fmap formatValue) $ MapU.flip storages,
     (\(last, inner) ->
        dotFromContentEdge Nothing Idx.initSection
           (fmap (const $ Just Topo.In) storages) ++
@@ -225,26 +235,36 @@ dotFromPartGraph ::
     Graph node Graph.EitherEdge Unicode StructureEdgeLabel) ->
    DotSubGraph T.Text
 dotFromPartGraph current (subtitle, gr) =
+   DotSG True (Just $ Str $ T.pack $ dotIdentFromPart current) $
+   let (nodes, edges) = dotNodesEdgesFromPartGraph gr
+   in  DotStmts
+          [GraphAttrs [labelFromString subtitle]]
+          []
+          (map (dotNodeInPart current) nodes)
+          (map (dotEdgeInPart current) edges)
+
+dotNodesEdgesFromPartGraph ::
+   Node.C node =>
+   Graph node Graph.EitherEdge Unicode StructureEdgeLabel ->
+   ([DotNode T.Text], [DotEdge T.Text])
+dotNodesEdgesFromPartGraph gr =
    let (etaNodes,edges) =
           fold $
           Map.mapWithKey
              (\e labels ->
-                case labels of
-                   ShowEtaNode l ->
-                      mapFst (:[]) $ dotFromStructureEdgeEta current e l
-                   HideEtaNode l ->
-                      ([], [dotFromStructureEdge current e l])) $
+                let eo = orientFlowEdge e
+                in  case labels of
+                       ShowEtaNode l ->
+                          mapFst (:[]) $ dotFromStructureEdgeEta eo l
+                       HideEtaNode l ->
+                          ([], [dotFromStructureEdgeCompact eo l])) $
           Graph.edgeLabels gr
-   in  DotSG True (Just $ Str $ T.pack $ dotIdentFromPart current) $
-       DotStmts
-          [GraphAttrs [labelFromString subtitle]]
-          []
-          ((Map.elems $
-            Map.mapWithKey (dotFromAugNode (Idx.augment current)) $
-            Graph.nodeLabels gr)
-           ++
-           etaNodes)
-          edges
+   in  ((Map.elems $
+         Map.mapWithKey dotFromNode $
+         Graph.nodeLabels gr)
+          ++
+          etaNodes,
+        edges)
 
 
 graphStatementsAcc ::
@@ -288,6 +308,14 @@ xterm :: DotGraph T.Text -> IO ()
 xterm g = void $ VizCmd.runGraphvizCanvas VizCmd.Dot g VizCmd.Xlib
 
 
+dotFromNode ::
+   (Node.C node) =>
+   node -> Unicode -> DotNode T.Text
+dotFromNode node label =
+   DotNode
+      (dotIdentFromNode node)
+      (nodeAttrs (Node.typ node) $ labelFromUnicode label)
+
 dotFromAugNode ::
    (Part part, Node.C node) =>
    Idx.Augmented part -> node -> Unicode -> DotNode T.Text
@@ -305,32 +333,32 @@ dotFromBndNode n label =
       (nodeAttrs (Node.Storage ()) $
        labelFromUnicode label)
 
-dotFromStructureEdge ::
-   (Node.C node, Part part) =>
-   part -> Graph.EitherEdge node -> [Unicode] -> DotEdge T.Text
-dotFromStructureEdge part e label =
-   let (DirEdge x y, dir, ord) = orientFlowEdge $ Idx.InPart part e
-   in  DotEdge
-          (dotIdentFromPartNode x) (dotIdentFromPartNode y)
-          [labelFromLines $ order ord label,
-           Viz.Dir dir, structureEdgeColour]
+dotFromStructureEdgeCompact ::
+   (Node.C node) =>
+   (DirEdge node, Viz.DirType, Order) ->
+   [Unicode] -> DotEdge T.Text
+dotFromStructureEdgeCompact (DirEdge x y, dir, ord) label =
+   DotEdge
+      (dotIdentFromNode x)
+      (dotIdentFromNode y)
+      [labelFromLines $ order ord label,
+       Viz.Dir dir, structureEdgeColour]
 
 dotFromStructureEdgeEta ::
-   (Node.C node, Part part) =>
-   part -> Graph.EitherEdge node ->
+   (Node.C node) =>
+   (DirEdge node, Viz.DirType, Order) ->
    Triple [Unicode] ->
    (DotNode T.Text, [DotEdge T.Text])
-dotFromStructureEdgeEta part e label =
-   let (DirEdge x y, dir, ord) = orientFlowEdge $ Idx.InPart part e
-       Triple pre eta suc = order ord label
+dotFromStructureEdgeEta (DirEdge x y, dir, ord) label =
+   let Triple pre eta suc = order ord label
        did = dotIdentFromEtaNode x y
    in  (DotNode did [labelFromLines eta],
         [DotEdge
-            (dotIdentFromPartNode x) did
+            (dotIdentFromNode x) did
             [labelFromLines pre,
              Viz.Dir dir, structureEdgeColour],
          DotEdge
-            did (dotIdentFromPartNode y)
+            did (dotIdentFromNode y)
             [labelFromLines suc,
              Viz.Dir dir, structureEdgeColour]])
 
@@ -410,10 +438,28 @@ instance Part Idx.State where
    dotIdentFromPart (Idx.State s) = show s
 
 
-dotIdentFromPartNode ::
-   (Part part, Node.C node) => Idx.PartNode part node -> T.Text
-dotIdentFromPartNode (Idx.PartNode s n) =
-   T.pack $ "s" ++ dotIdentFromPart s ++ "n" ++ Node.dotId n
+dotNodeInPart ::
+   Part part =>
+   part -> DotNode T.Text -> DotNode T.Text
+dotNodeInPart part (DotNode x attrs) =
+   DotNode (dotIdentInPart part x) attrs
+
+dotEdgeInPart ::
+   Part part =>
+   part -> DotEdge T.Text -> DotEdge T.Text
+dotEdgeInPart part (DotEdge x y attrs) =
+   DotEdge (dotIdentInPart part x) (dotIdentInPart part y) attrs
+
+dotIdentInPart ::
+   (Part part) => part -> T.Text -> T.Text
+dotIdentInPart s =
+   T.append (T.pack $ "s" ++ dotIdentFromPart s)
+
+dotIdentFromNode ::
+   (Node.C node) => node -> T.Text
+dotIdentFromNode n =
+   T.pack $ "n" ++ Node.dotId n
+
 
 dotIdentFromAugNode ::
    (Part part, Node.C node) => Idx.AugNode part node -> T.Text
@@ -435,16 +481,12 @@ dotIdentFromBoundary (Idx.Following a) =
       Idx.NoInit s -> dotIdentFromPart s
 
 dotIdentFromEtaNode ::
-   (Node.C node, Part part) =>
-   Idx.PartNode part node -> Idx.PartNode part node -> T.Text
-dotIdentFromEtaNode (Idx.PartNode s x) (Idx.PartNode _s y) =
+   (Node.C node) =>
+   node -> node -> T.Text
+dotIdentFromEtaNode x y =
    T.pack $
-      "s" ++ dotIdentFromPart s ++
       "x" ++ Node.dotId x ++
       "y" ++ Node.dotId y
-
-dotIdentFromNode :: (Node.C node) => node -> T.Text
-dotIdentFromNode n = T.pack $ Node.dotId n
 
 
 topology :: (Node.C node) => Topo.Topology node -> DotGraph T.Text
@@ -543,10 +585,9 @@ order Reverse = reverse
 
 orientFlowEdge ::
    (Ord node) =>
-   Idx.InPart part Graph.EitherEdge node ->
-   (DirEdge (Idx.PartNode part node), Viz.DirType, Order)
-orientFlowEdge (Idx.InPart sec e) =
-   mapFst3 (fmap (Idx.PartNode sec)) $
+   Graph.EitherEdge node ->
+   (DirEdge node, Viz.DirType, Order)
+orientFlowEdge e =
    case e of
       Graph.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
       Graph.EDirEdge de -> orientDirEdge de
@@ -656,6 +697,25 @@ hideEtaNode opts = opts { optEtaNode = False }
 
 
 
+flowTopology ::
+   (FormatValue v, Node.C node) =>
+   Options Unicode -> FlowTopoQuant.Topology node v -> DotGraph T.Text
+flowTopology opts =
+   dotDirGraph .
+   uncurry (DotStmts [] []) .
+   dotNodesEdgesFromPartGraph .
+   Graph.mapNodeWithKey
+      (\node sums ->
+         stateNodeShow node $
+         guard False >>! FlowTopoQuant.sumIn sums) .
+   Graph.mapEdgeWithKey
+      (\edge flow ->
+         structureEdgeShow opts $
+         FlowQuant.liftEdgeFlow
+            (FlowTopoQuant.mapFlowWithVar (formatAssignSidesWithOpts opts))
+            edge flow)
+
+
 seqFlowGraph ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Options Unicode -> SeqFlowQuant.Graph node a v -> DotGraph T.Text
@@ -664,45 +724,35 @@ seqFlowGraph opts gr =
       (if optStorage opts
          then
             dotFromStorageGraphs
-               (fmap (\(initExit, contents, _) -> (initExit, contents)) $
-                SeqFlowQuant.storages gr)
-               (fmap (snd . snd) $ SeqFlowQuant.sequence gr)
+               (fmap snd $ SeqFlowQuant.storages gr)
+               (fmap (FlowTopo.topology . snd) $ SeqFlowQuant.sequence gr)
          else ([], []))
       (Map.mapWithKey
-          (\node ((init,exit), _bnds, edges) ->
-             ((stateNodeShow node (Just init),
-               stateNodeShow node (Just exit)),
-              if optStorageEdge opts
-                then Map.mapWithKey (storageEdgeSeqShow opts node) edges
-                else Map.empty)) $
+          (\node -> storageGraphShow opts node . fst) $
        SeqFlowQuant.storages gr)
       (snd $
        Map.mapAccumWithKey
-          (\before sec (rng, (dt,topo)) ->
+          (\before sec (rng, FlowTopo.Section dt topo) ->
              (,) (Idx.afterSection sec) $
              (show sec ++
               " / Range " ++ formatRange rng ++
               " / Time " ++ unUnicode (formatValue dt),
               Graph.mapNodeWithKey
                  (\node sums ->
-                    formatNodeStorage opts node
-                       (let content bnd =
-                               Map.findWithDefault (error "no storage content") bnd $
-                               maybe (error "missing node") snd3 $
-                               Map.lookup node $
-                               SeqFlowQuant.storages gr
-                        in  (content before,
-                             content $ Idx.afterSection sec))
-                       (fmap SeqFlowQuant.carrySum $
-                        SeqFlowQuant.sumIn sums)
-                       (fmap SeqFlowQuant.carrySum $
-                        SeqFlowQuant.sumOut sums)) $
-              Graph.mapEdgeWithKey
-                 (\edge ->
-                    if optEtaNode opts
-                      then ShowEtaNode . structureEdgeShowEta opts sec edge
-                      else HideEtaNode . structureEdgeShow opts sec edge)
-                 topo))
+                    let (StorageGraph partMap _, stores) =
+                           maybe (error "missing node") id $
+                           Map.lookup node $
+                           SeqFlowQuant.storages gr
+                    in  formatNodeStorage opts node
+                           (let content bnd =
+                                   Map.findWithDefault
+                                      (error "no storage content") bnd stores
+                            in  (content before,
+                                 content $ Idx.afterSection sec))
+                           (fmap (maybe (error "missing section") (flip (,)) $
+                                  PartMap.lookup sec partMap) $
+                            FlowQuant.dirFromSums sums)) $
+              Graph.mapEdgeWithKey (structureSeqStateEdgeShow opts sec) topo))
           Idx.initial $
        SeqFlowQuant.sequence gr)
 
@@ -715,8 +765,8 @@ formatNodeStorage ::
    (FormatValue a, Format output, Node.C node) =>
    Options output ->
    node ->
-   (a, a) -> Maybe a -> Maybe a -> output
-formatNodeStorage opts node beforeAfter sin sout =
+   (a, a) -> Maybe (Topo.StoreDir, a) -> output
+formatNodeStorage opts node beforeAfter sinout =
    case Node.typ node of
       ty ->
          Format.lines $
@@ -725,34 +775,29 @@ formatNodeStorage opts node beforeAfter sin sout =
             case ty of
                Node.Storage _ ->
                   if optStorage opts
-                    then formatStorageUpdate sin sout
-                    else formatStorageEquation beforeAfter sin sout
+                    then formatStorageUpdate sinout
+                    else formatStorageEquation beforeAfter sinout
                _ -> []
 
 
 formatStorageUpdate ::
    (FormatValue a, Format output) =>
-   Maybe a -> Maybe a -> [output]
-formatStorageUpdate sin sout =
-   case (sin, sout) of
-      (Just a,  Nothing) -> [formatValue a]
-      (Nothing, Just a)  -> [formatValue a]
-      (Nothing, Nothing) -> []
-      (Just _,  Just _)  ->
-         error "formatStorageUpdate: storage cannot be both input and output"
+   Maybe (Topo.StoreDir, a) -> [output]
+formatStorageUpdate sinout =
+   case sinout of
+      Just (_, s)  -> [formatValue s]
+      Nothing -> []
 
 
 formatStorageEquation ::
    (FormatValue a, Format output) =>
-   (a, a) -> Maybe a -> Maybe a -> [output]
-formatStorageEquation (before, after) sin sout =
+   (a, a) -> Maybe (Topo.StoreDir, a) -> [output]
+formatStorageEquation (before, after) sinout =
    formatValue before :
-   (case (sin, sout) of
-      (Just a,  Nothing) -> [Format.plus  Format.empty $ formatValue a]
-      (Nothing, Just a)  -> [Format.minus Format.empty $ formatValue a]
-      (Nothing, Nothing) -> []
-      (Just _,  Just _)  ->
-         error "formatStorageEquation: storage cannot be both input and output") ++
+   (case sinout of
+      Just (Topo.In,  s) -> [Format.plus  Format.empty $ formatValue s]
+      Just (Topo.Out, s) -> [Format.minus Format.empty $ formatValue s]
+      Nothing -> []) ++
    Format.assign Format.empty (formatValue after) :
    []
 
@@ -763,31 +808,33 @@ stateFlowGraph ::
 stateFlowGraph opts gr =
    dotFromFlowGraph
       ([], [])
-      (Map.mapWithKey
-          (\node ((init,exit), edges) ->
-             ((stateNodeShow node (Just init),
-               stateNodeShow node (Just exit)),
-              if optStorageEdge opts
-                then Map.mapWithKey (storageEdgeStateShow opts node) edges
-                else Map.empty)) $
+      (Map.mapWithKey (storageGraphShow opts) $
        StateFlowQuant.storages gr)
       (Map.mapWithKey
-          (\state (dt,topo) ->
+          (\state (FlowTopo.Section dt topo) ->
              (show state ++ " / Time " ++ unUnicode (formatValue dt),
               Graph.mapNodeWithKey
-                 (\node sums ->
-                    stateNodeShow node $
-                    fmap StateFlowQuant.carrySum $
-                    mplus
-                       (StateFlowQuant.sumOut sums)
-                       (StateFlowQuant.sumIn sums)) $
-              Graph.mapEdgeWithKey
-                 (\edge ->
-                    if optEtaNode opts
-                      then ShowEtaNode . structureEdgeShowEta opts state edge
-                      else HideEtaNode . structureEdgeShow opts state edge)
-                 topo)) $
+                 (\node _sums ->
+                    stateNodeShow node $ PartMap.lookup state $
+                    maybe (error "Draw.stateFlowGraph") StorageGraph.nodes $
+                    Map.lookup node $
+                    StateFlowQuant.storages gr) $
+              Graph.mapEdgeWithKey (structureSeqStateEdgeShow opts state) topo)) $
        StateFlowQuant.states gr)
+
+storageGraphShow ::
+   (StorageQuant.Carry carry, StorageQuant.CarryPart carry ~ part,
+    Format.Part part, Format output, Node.C node, FormatValue a) =>
+   Options output ->
+   node ->
+   StorageGraph part node a (carry a) ->
+   ((output, output), Map (Idx.StorageEdge part node) [output])
+storageGraphShow opts node (StorageGraph partMap edges) =
+   ((stateNodeShow node $ Just $ PartMap.init partMap,
+     stateNodeShow node $ Just $ PartMap.exit partMap),
+    if optStorageEdge opts
+      then Map.mapWithKey (storageEdgeShow opts node) edges
+      else Map.empty)
 
 stateNodeShow ::
    (Node.C node, FormatValue a, Format output) =>
@@ -802,48 +849,47 @@ stateNodeShow node msum =
                Node.Storage _ -> maybeToList $ fmap formatValue msum
                _ -> []
 
-storageEdgeSeqShow ::
-   (Node.C node, FormatValue a, Format output) =>
+storageEdgeShow ::
+   (StorageQuant.Carry carry, StorageQuant.CarryPart carry ~ part,
+    Format.Part part, Node.C node, FormatValue a, Format output) =>
    Options output ->
    node ->
-   Idx.StorageEdge Idx.Section node ->
-   SeqFlowQuant.Carry a ->
+   Idx.StorageEdge part node ->
+   carry a ->
    [output]
-storageEdgeSeqShow opts node edge carry =
-   case SeqFlowQuant.mapCarryWithVar
-           (formatAssignWithOpts opts) node edge carry of
-      labels ->
-         SeqFlowQuant.carryMaxEnergy labels :
-         SeqFlowQuant.carryEnergy labels :
-         SeqFlowQuant.carryXOut labels :
-         SeqFlowQuant.carryXIn labels :
-         []
+storageEdgeShow opts node edge carry =
+   Fold.toList $
+   StorageQuant.mapCarryWithVar (formatAssignWithOpts opts) node edge carry
 
-storageEdgeStateShow ::
-   (Node.C node, FormatValue a, Format output) =>
-   Options output ->
-   node ->
-   Idx.StorageEdge Idx.State node ->
-   StateFlowQuant.Carry a ->
-   [output]
-storageEdgeStateShow opts node edge carry =
-   case StateFlowQuant.mapCarryWithVar
-           (formatAssignWithOpts opts) node edge carry of
-      labels ->
-         StateFlowQuant.carryEnergy labels :
-         StateFlowQuant.carryXOut labels :
-         StateFlowQuant.carryXIn labels :
-         []
+
+structureSeqStateEdgeShow ::
+   (Format.Part part, Node.C node, FormatValue a) =>
+   Options Unicode ->
+   part ->
+   Graph.EitherEdge node ->
+   Maybe (FlowQuant.Flow a) ->
+   StructureEdgeLabel
+structureSeqStateEdgeShow opts part edge flow =
+   structureEdgeShow opts $
+   FlowQuant.liftEdgeFlow
+      (FlowQuant.mapFlowWithVar (formatAssignSidesWithOpts opts) part)
+      edge flow
 
 structureEdgeShow ::
-   (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
-   Options output ->
-   part -> Graph.EitherEdge node ->
-   Maybe (FlowQuant.Flow a) -> [output]
-structureEdgeShow opts part =
-   FlowQuant.switchEdgeFlow (const []) $ \edge flow ->
-   case FlowQuant.mapFlowWithVar (formatAssignWithOpts opts) part edge flow of
-      labels ->
+   Options Unicode ->
+   Maybe (FlowQuant.Flow (Unicode, Unicode)) -> StructureEdgeLabel
+structureEdgeShow opts =
+   if optEtaNode opts
+     then ShowEtaNode . structureEdgeShowEta
+     else HideEtaNode . structureEdgeShowCompact
+
+structureEdgeShowCompact ::
+   (Format output) =>
+   Maybe (FlowQuant.Flow (output, output)) -> [output]
+structureEdgeShowCompact mlabels =
+   case fmap (fmap (uncurry Format.assign)) mlabels of
+      Nothing -> []
+      Just labels ->
          FlowQuant.flowEnergyOut labels :
          FlowQuant.flowXOut labels :
          FlowQuant.flowEta labels :
@@ -852,23 +898,23 @@ structureEdgeShow opts part =
          []
 
 structureEdgeShowEta ::
-   (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
-   Options output ->
-   part -> Graph.EitherEdge node ->
-   Maybe (FlowQuant.Flow a) -> Triple [output]
-structureEdgeShowEta opts part =
-   FlowQuant.switchEdgeFlow (const $ Triple [] [] []) $ \edge flow ->
-   case FlowQuant.mapFlowWithVar (formatAssignWithOpts opts) part edge flow of
-      labels ->
-         Triple
-            (FlowQuant.flowEnergyOut labels :
-             FlowQuant.flowXOut labels :
-             [])
-            (formatValue (FlowQuant.flowEta flow) :
-             [])
-            (FlowQuant.flowXIn labels :
-             FlowQuant.flowEnergyIn labels :
-             [])
+   (Format output) =>
+   Maybe (FlowQuant.Flow (output, output)) -> Triple [output]
+structureEdgeShowEta mlabels =
+   case mlabels of
+      Nothing -> Triple [] [] []
+      Just flow ->
+         case fmap (uncurry Format.assign) flow of
+            labels ->
+               Triple
+                  (FlowQuant.flowEnergyOut labels :
+                   FlowQuant.flowXOut labels :
+                   [])
+                  (snd (FlowQuant.flowEta flow) :
+                   [])
+                  (FlowQuant.flowXIn labels :
+                   FlowQuant.flowEnergyIn labels :
+                   [])
 
 
 cumulatedFlow ::
@@ -941,9 +987,15 @@ formatAssignWithOpts ::
     FormatValue a, Format output) =>
    Options output -> idx node -> a -> output
 formatAssignWithOpts opts idx val =
-   Format.assign
-      (optRecordIndex opts $
-       if optVariableIndex opts
-         then Var.formatIndex idx
-         else Format.edgeIdent idx)
-      (formatValue val)
+   uncurry Format.assign $ formatAssignSidesWithOpts opts idx val
+
+formatAssignSidesWithOpts ::
+   (Node.C node, Var.FormatIndex idx, Format.EdgeIdx idx,
+    FormatValue a, Format output) =>
+   Options output -> idx node -> a -> (output, output)
+formatAssignSidesWithOpts opts idx val =
+   (optRecordIndex opts $
+    if optVariableIndex opts
+      then Var.formatIndex idx
+      else Format.edgeIdent idx,
+    formatValue val)

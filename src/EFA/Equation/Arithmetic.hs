@@ -72,38 +72,38 @@ instance Integral a => Constant (Ratio a) where
 
 
 ruleAdd ::
-   (Sys.C t, Sys.Value t a, Sum a) =>
+   (Sys.Value t a, Sum a) =>
    Sys.Variable t s a -> Sys.Variable t s a -> Sys.Variable t s a -> Sys.T t s ()
 ruleAdd = Rule.generic3 (flip (~-)) (~-) (~+)
 
 ruleNegate ::
-   (Sys.C t, Sys.Value t a, Sum a) =>
+   (Sys.Value t a, Sum a) =>
    Sys.Variable t s a -> Sys.Variable t s a -> Sys.T t s ()
 ruleNegate = Rule.generic2 negate negate
 
 ruleMul ::
-   (Sys.C t, Sys.Value t a, Product a) =>
+   (Sys.Value t a, Product a) =>
    Sys.Variable t s a -> Sys.Variable t s a -> Sys.Variable t s a -> Sys.T t s ()
 ruleMul = Rule.generic3 (flip (~/)) (~/) (~*)
 
 ruleRecip ::
-   (Sys.C t, Sys.Value t a, Product a) =>
+   (Sys.Value t a, Product a) =>
    Sys.Variable t s a -> Sys.Variable t s a -> Sys.T t s ()
 ruleRecip = Rule.generic2 recip recip
 
 
-instance (Sys.C t, Sys.Value t a, Sum a) => Sum (Expr.T t s a) where
+instance (Sys.Value t a, Sum a) => Sum (Expr.T t s a) where
    (~+) = Expr.fromRule3 ruleAdd
    (~-) = Expr.fromRule3 (\z x y -> ruleAdd x y z)
    negate = Expr.fromRule2 ruleNegate
 
-instance (Sys.C t, Sys.Value t a, Product a) => Product (Expr.T t s a) where
+instance (Sys.Value t a, Product a) => Product (Expr.T t s a) where
    (~*) = Expr.fromRule3 ruleMul
    (~/) = Expr.fromRule3 (\z x y -> ruleMul x y z)
    recip = Expr.fromRule2 ruleRecip
    constOne = Expr.fromRule2 $ Sys.assignment2 constOne
 
-instance (Sys.C t, Sys.Value t a, Constant a) => Constant (Expr.T t s a) where
+instance (Sys.Value t a, Constant a) => Constant (Expr.T t s a) where
    zero = Expr.constant zero
    fromInteger  = Expr.constant . fromInteger
    fromRational = Expr.constant . fromRational
@@ -132,10 +132,32 @@ instance (Constant a) => Integrate [a] where
    integrate = foldl (~+) zero
 
 instance
-   (Sys.C t, Sys.Value t (Scalar v), Integrate v) =>
+   (Sys.Value t (Scalar v), Integrate v) =>
       Integrate (Expr.T t s v) where
    type Scalar (Expr.T t s v) = Expr.T t s (Scalar v)
    integrate = Expr.fromRule2 . Sys.assignment2 $ integrate
+
+
+
+class Integrate v => Scale v where
+   scale :: Scalar v -> v -> v
+
+instance Scale Float where
+   scale = (*)
+
+instance Scale Double where
+   scale = (*)
+
+instance (Integral a) => Scale (Ratio a) where
+   scale = (*)
+
+instance (Constant a) => Scale [a] where
+   scale = map . (~*)
+
+instance
+   (Sys.Value t v, Sys.Value t (Scalar v), Scale v) =>
+      Scale (Expr.T t s v) where
+   scale = Expr.fromRule3 . Sys.assignment3 $ scale
 
 
 {- |

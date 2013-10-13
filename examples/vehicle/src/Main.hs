@@ -277,7 +277,8 @@ main = do
   let externalSignalEnvX =
          map
             (\flowTopos ->
-               EqAbs.solveFromMeasurement
+               EqAbs.solveOpts
+                  (EqAbs.independentInOutSums EqAbs.optionsDefault)
                   (RecSeq.fromGraphFromSequence flowTopos) mempty)
             flowToposX
 

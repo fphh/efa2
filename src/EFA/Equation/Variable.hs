@@ -100,6 +100,17 @@ instance (Format.Part part) => ScalarIndex (Idx.StOutSum part) where
    scalarIndex = StOutSum
 
 
+(<#>) ::
+   (ScalarIndex idx, ScalarPart idx ~ part) =>
+   idx node -> node -> ForNodeScalar part node
+(<#>) idx node = Idx.ForNode (scalarIndex idx) node
+
+(<~>) ::
+   (SignalIndex idx) =>
+   part -> idx node -> InPartSignal part node
+(<~>) part idx = Idx.InPart part $ signalIndex idx
+
+
 instance
    (Format.Part part, Node.C node) =>
       FormatValue (Any part node) where
@@ -150,15 +161,36 @@ instance (Format.Part part) => FormatScalarIndex (Scalar part) where
    formatScalarIndex edge node = formatScalarValue (Idx.ForNode edge node)
 
 
-instance Format.StructureIdx Signal where
-   structureIdent (Idx.InPart _part var) =
+instance FormatIndex Signal where
+   formatIndex = formatValue
+
+signalIdent :: Format output => Signal node -> output
+signalIdent var =
+   case var of
+      Energy _idx -> Format.energy
+      Power _idx -> Format.power
+      Eta _idx -> Format.eta
+      X _idx -> Format.xfactor
+      DTime _idx -> Format.dtime
+      Sum _idx -> Format.signalSum
+
+instance Format.EdgeIdx Signal where
+   edgeIdent = signalIdent
+
+
+instance (Node.C node) => FormatValue (Signal node) where
+   formatValue var =
       case var of
-         Energy _idx -> Format.energy
-         Power _idx -> Format.power
-         Eta _idx -> Format.eta
-         X _idx -> Format.xfactor
-         DTime _idx -> Format.dtime
-         Sum _idx -> Format.signalSum
+         Energy idx -> formatValue idx
+         Power idx -> formatValue idx
+         Eta idx -> formatValue idx
+         X idx -> formatValue idx
+         DTime idx -> formatValue idx
+         Sum idx -> formatValue idx
+
+
+instance Format.StructureIdx Signal where
+   structureIdent (Idx.InPart _part var) = signalIdent var
 
 instance Format.StorageIdx (Scalar part) where
    storageIdent (Idx.ForNode var _node) =
