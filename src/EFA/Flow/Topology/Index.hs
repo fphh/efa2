@@ -14,9 +14,6 @@ type Sum node       = Idx.Sum node
 
 type PPos = Idx.PPos
 
-type StorageEdge  = Idx.StorageEdge  Idx.Section
-type StorageTrans = Idx.StorageTrans Idx.Section
-
 
 energy :: node -> node -> Energy node
 power :: node -> node -> Power node
