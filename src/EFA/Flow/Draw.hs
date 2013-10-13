@@ -19,6 +19,7 @@ module EFA.Flow.Draw (
 
    topologyWithEdgeLabels,
    topology,
+   flowTopology,
    flowTopologies,
    ) where
 
@@ -28,6 +29,7 @@ import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Quantity as FlowQuant
 import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
+import qualified EFA.Flow.Topology.Quantity as FlowTopoQuant
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
@@ -48,6 +50,8 @@ import EFA.Graph.Topology (FlowTopology)
 import EFA.Graph (DirEdge(DirEdge))
 
 import qualified EFA.Utility.Map as MapU
+import EFA.Utility ((>>!))
+
 import Data.GraphViz (
           GraphID(Int, Str),
           GlobalAttributes(GraphAttrs),
@@ -84,7 +88,7 @@ import Data.Tuple.HT (mapFst)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
-import Control.Monad (void)
+import Control.Monad (void, guard)
 
 import Prelude hiding (sin, reverse, init, last, sequence, (.))
 
@@ -691,6 +695,25 @@ hideStorage opts = opts { optStorage = False }
 showEtaNode opts = opts { optEtaNode = True }
 hideEtaNode opts = opts { optEtaNode = False }
 
+
+
+flowTopology ::
+   (FormatValue v, Node.C node) =>
+   Options Unicode -> FlowTopoQuant.Topology node v -> DotGraph T.Text
+flowTopology opts =
+   dotDirGraph .
+   uncurry (DotStmts [] []) .
+   dotNodesEdgesFromPartGraph .
+   Graph.mapNodeWithKey
+      (\node sums ->
+         stateNodeShow node $
+         guard False >>! FlowTopoQuant.sumIn sums) .
+   Graph.mapEdgeWithKey
+      (\edge flow ->
+         structureEdgeShow opts $
+         FlowQuant.liftEdgeFlow
+            (FlowTopoQuant.mapFlowWithVar (formatAssignSidesWithOpts opts))
+            edge flow)
 
 
 seqFlowGraph ::

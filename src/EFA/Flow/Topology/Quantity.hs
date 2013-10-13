@@ -15,6 +15,7 @@ module EFA.Flow.Topology.Quantity (
 
    mapSectionWithVar,
    mapTopologyWithVar,
+   mapFlowWithVar,
 
    sectionFromPlain,
    unknownTopologyNodes,
