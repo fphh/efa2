@@ -11,12 +11,6 @@ import qualified EFA.Flow.Topology.Index as XIdx
 import EFA.Flow.Topology.Absolute ((.=), (=.=))
 
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Result (Result)
-
-import qualified EFA.Graph.Topology.Index as Idx
-
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
