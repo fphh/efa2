@@ -59,11 +59,10 @@ type EtaAssignMap node =
 makeEtaFuncGiven ::
    (Fractional a, Ord a, Show a, EqArith.Sum a,
     Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
-   (Idx.State -> EtaAssignMap node) ->
-   Idx.State ->
+   EtaAssignMap node ->
    Map String (a -> a) ->
    EqGenState.EquationSystem node s x (Data c a)
-makeEtaFuncGiven etaAssign state etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign state)
+makeEtaFuncGiven etaAssign etaFunc = Fold.fold $ Map.mapWithKey f etaAssign
   where f n (strP, strN, g) =
           EqGenState.variable n =.= EqGenState.liftF (Data.map ef) (EqGenState.variable $ g n)
           where ef x = if x >= 0 then fpos x else fneg x
@@ -111,7 +110,7 @@ givenForOptimisation ::
   Ord a, Show a, EqArith.Sum a, Ord node) =>
   Topo.StateFlowGraph node ->
   EqEnvState.Complete node (Data Nil a) (Data Nil a)  ->
-  (Idx.State -> EtaAssignMap node) ->
+  EtaAssignMap node ->
   Map String (a -> a) ->
   Idx.State ->
   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
@@ -122,7 +121,7 @@ givenForOptimisation ::
 givenForOptimisation stateFlowGraph env etaAssign etaFunc state commonGiven givenLoad givenDOF =
   commonGiven <>
   EqGenState.fromGraph True (Topo.dirFromFlowGraph stateFlowGraph) <>
-  makeEtaFuncGiven etaAssign state etaFunc <>
+  makeEtaFuncGiven etaAssign etaFunc <>
   givenAverageWithoutStateX state env <>
   givenLoad <>
   givenDOF

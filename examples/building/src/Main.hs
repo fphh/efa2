@@ -188,7 +188,7 @@ optimalEtasWithPowers params forceFactor env =
                       newEnv = 
                         Optimisation.solve
                              stateFlowGraph
-                             System.etaAssignState
+                             (System.etaAssignState state)
                              etaMap
                              env
                              state

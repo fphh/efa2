@@ -57,7 +57,7 @@ type Param2x2 = Sweep.Pair Param2 Param2
 solve ::
   (Ord a, Fractional a, Show a, EqArith.Sum a, EqArith.Constant a) =>
   Topo.StateFlowGraph System.Node ->
-  (Idx.State -> EtaAssignMap System.Node) ->
+  EtaAssignMap System.Node ->
   Map String (a -> a) ->
   Env a ->
   Idx.State ->
