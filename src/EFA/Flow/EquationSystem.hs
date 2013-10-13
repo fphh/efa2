@@ -1,10 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Flow.EquationSystem where
-
-import qualified EFA.Flow.Quantity as Quant
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
@@ -106,113 +103,6 @@ withLocalVar f = System $ do
    v <- localVariable
    case f $ Wrap $ fmap Expr.fromVariable v of
       System act -> act
-
-
-data Options mode rec s a v =
-   Options {
-      optInOutSums ::
-         Expr mode rec s v ->
-         Expr mode rec s v ->
-         System mode s,
-      optStInOutSums ::
-         Expr mode rec s a ->
-         Expr mode rec s v ->
-         System mode s
-   }
-
-optionsDefault ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
-    Record rec) =>
-   Options mode rec s a v
-optionsDefault =
-   Options {
-      optInOutSums = (=&=),
-      optStInOutSums = integrateSum
-   }
-
-
-equalInOutSums ::
-   (Verify.LocalVar mode v, Record rec) =>
-   Options mode rec s a v ->
-   Options mode rec s a v
-equalInOutSums opts =
-   opts { optInOutSums = (=&=) }
-
-independentInOutSums ::
-   Options mode rec s a v ->
-   Options mode rec s a v
-independentInOutSums opts =
-   opts { optInOutSums = const $ const mempty }
-
-
-{- |
-This option means that the sum of blue edges is integrated
-in order to get the sum of red edges.
--}
-integrateStInOutSums ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
-    Record rec) =>
-   Options mode rec s a v ->
-   Options mode rec s a v
-integrateStInOutSums opts =
-   opts { optStInOutSums = integrateSum }
-
-{- |
-This option means that the sum of blue edges and the one of red edges must be equal.
-This works only for values of the same type,
-which are currently certainly only scalar types.
--}
-equalStInOutSums ::
-   (Verify.LocalVar mode a, Product a, Record rec) =>
-   Options mode rec s a a ->
-   Options mode rec s a a
-equalStInOutSums opts =
-   opts { optStInOutSums = (=&=) }
-
-
-
-fromStorageSums ::
-   (Verify.LocalVar mode a,
-    Verify.LocalVar mode v,
-    Record rec,
-    ra ~ Expr mode rec s a,
-    rv ~ Expr mode rec s v) =>
-   Options mode rec s a v ->
-   Quant.Sums (ra, rv) ->
-   System mode s
-fromStorageSums opts sums =
-   foldMap (uncurry $ optStInOutSums opts) (Quant.sumIn sums)
-   <>
-   foldMap (uncurry $ optStInOutSums opts) (Quant.sumOut sums)
-
-integrateSum ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
-    Record rec,
-    ra ~ Expr mode rec s a,
-    rv ~ Expr mode rec s v) =>
-   ra ->
-   rv ->
-   System mode s
-integrateSum carrySum flowSum =
-   carrySum =&= Arith.integrate flowSum
-
-spreadSum ::
-   (Verify.LocalVar mode a, Product a, a ~ Scalar v,
-    Verify.LocalVar mode v, Sum v, Scale v,
-    Record rec,
-    ra ~ Expr mode rec s a,
-    rv ~ Expr mode rec s v) =>
-   rv ->
-   ra ->
-   rv ->
-   System mode s
-spreadSum dtime carrySum flowSum =
-   Arith.scale (carrySum ~/ Arith.integrate dtime) dtime
-   =&=
-   flowSum
 
 
 splitFactors ::

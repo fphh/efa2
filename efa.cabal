@@ -128,6 +128,7 @@ Library
     EFA.Flow.Topology.Quantity
     EFA.Flow.Topology.EquationSystem
     EFA.Flow.Topology.Absolute
+    EFA.Flow.SequenceState.EquationSystem
     EFA.Flow.Sequence
     EFA.Flow.Sequence.Index
     EFA.Flow.Sequence.Quantity

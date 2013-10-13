@@ -8,7 +8,7 @@ module EFA.Flow.Topology.EquationSystem (
 
    Options, optionsDefault,
    equalInOutSums, independentInOutSums,
-   fromTopology, optionsFromFlowOptions,
+   fromTopology,
 
    splitFactors,
 
@@ -178,11 +178,6 @@ optionsDefault ::
    Options mode rec s v
 optionsDefault =
    Options { optInOutSums = (=&=) }
-
-optionsFromFlowOptions ::
-   EqSys.Options mode rec s a v -> Options mode rec s v
-optionsFromFlowOptions opts =
-   Options { optInOutSums = EqSys.optInOutSums opts }
 
 
 equalInOutSums ::

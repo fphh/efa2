@@ -6,9 +6,9 @@ module EFA.Flow.Sequence.EquationSystem (
 
    solve, solveOpts, solveTracked,
 
-   EqSys.Options, EqSys.optionsDefault,
-   EqSys.equalInOutSums, EqSys.independentInOutSums,
-   EqSys.integrateStInOutSums, EqSys.equalStInOutSums,
+   SeqStateEqSys.Options, SeqStateEqSys.optionsDefault,
+   SeqStateEqSys.equalInOutSums, SeqStateEqSys.independentInOutSums,
+   SeqStateEqSys.integrateStInOutSums, SeqStateEqSys.equalStInOutSums,
 
    constant,
    constantRecord,
@@ -25,6 +25,7 @@ module EFA.Flow.Sequence.EquationSystem (
 
    ) where
 
+import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
@@ -33,7 +34,7 @@ import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
-import EFA.Flow.Topology.EquationSystem (fromTopology, optionsFromFlowOptions)
+import EFA.Flow.Topology.EquationSystem (fromTopology)
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join,
            withLocalVar, (=&=), (=%=), (=.=))
@@ -193,7 +194,7 @@ fromGraph ::
    (Verify.LocalVar mode a, Constant a, a ~ Scalar v,
     Verify.LocalVar mode v, Product v, Integrate v,
     Record rec, Node.C node) =>
-   EqSys.Options mode rec s a v ->
+   SeqStateEqSys.Options mode rec s a v ->
    SeqFlow.Graph node
       (SysRecord.Variable mode rec s a)
       (SysRecord.Variable mode rec s v) ->
@@ -206,7 +207,7 @@ fromGraph opts gv =
       g ->
          mconcat $
             foldMap
-               (fromTopology (optionsFromFlowOptions opts) .
+               (fromTopology (SeqStateEqSys.optTopology opts) .
                 FlowTopoPlain.dirFromFlowGraph . snd)
                (SeqFlow.sequence g) :
             fromStorageSequences opts g :
@@ -215,7 +216,7 @@ fromGraph opts gv =
 fromStorageSequences ::
    (Verify.LocalVar mode a, Constant a,
     Verify.LocalVar mode v, Record rec, Node.C node) =>
-   EqSys.Options mode rec s a v ->
+   SeqStateEqSys.Options mode rec s a v ->
    SeqFlow.Graph node
       (SysRecord.Expr mode rec s a)
       (SysRecord.Expr mode rec s v) ->
@@ -241,7 +242,7 @@ fromStorageSequence ::
    (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
     Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
     Sum a, Record rec, Node.C node) =>
-   EqSys.Options mode rec s a v ->
+   SeqStateEqSys.Options mode rec s a v ->
    SeqFlow.Graph node ra rv ->
    node ->
    PartMap Idx.Section ra ->
@@ -261,7 +262,7 @@ charge ::
    (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
     Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
     Sum a, Record rec, Node.C node) =>
-   EqSys.Options mode rec s a v ->
+   SeqStateEqSys.Options mode rec s a v ->
    SeqFlow.Graph node ra rv ->
    node ->
    PartMap Idx.Section ra ->
@@ -278,7 +279,7 @@ charge opts g node partMap old (aug, now) =
                 fmap ((,) (carrySum sec)) $
                 maybe (error "charge: missing sum") id $
                 SeqFlow.lookupSums (Idx.secNode sec node) g
-   in  EqSys.fromStorageSums opts sums
+   in  SeqStateEqSys.fromStorageSums opts sums
        <>
        (condSum now (SeqFlow.sumOut sums)
         =&=
@@ -350,7 +351,7 @@ setup ::
     Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   EqSys.Options mode rec s a v ->
+   SeqStateEqSys.Options mode rec s a v ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EquationSystem mode rec node s a v ->
    ST s
@@ -371,7 +372,7 @@ solveOpts ::
    (Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   (forall s. EqSys.Options Verify.Ignore rec s a v) ->
+   (forall s. SeqStateEqSys.Options Verify.Ignore rec s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v))
@@ -387,7 +388,7 @@ solve ::
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v))
-solve = solveOpts EqSys.optionsDefault
+solve = solveOpts SeqStateEqSys.optionsDefault
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForNodeSectionScalar node,
@@ -402,7 +403,7 @@ solveTracked ::
       (SeqFlow.Graph node (rec (Result a)) (rec (Result v))),
     Verify.Assigns output)
 solveTracked gr sys = runST $ do
-   (vars, eqs) <- setup EqSys.optionsDefault gr sys
+   (vars, eqs) <- setup SeqStateEqSys.optionsDefault gr sys
    runWriterT $ ME.runExceptionalT $ Verify.runTrack $ do
       Sys.solveBreadthFirst eqs
       MT.lift $ query vars
