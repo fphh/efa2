@@ -4,53 +4,42 @@ module Main where
 
 import qualified EFA.Example.Topology.LinearOne as LinearOne
 import EFA.Example.Topology.LinearOne (Node(Sink, Source))
-import EFA.Application.Utility (seqFlowGraphFromTopology, checkDetermined)
+import EFA.Application.Utility (quantityTopology, checkDetermined)
 
-import qualified EFA.Flow.Sequence.Absolute as EqSys
-import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology.Absolute as EqSys
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Variable as Var
+import qualified EFA.Flow.Topology.Index as XIdx
 import qualified EFA.Flow.Draw as Draw
-import EFA.Flow.Sequence.Absolute ((.=), (=.=))
+import EFA.Flow.Topology.Absolute ((.=), (=.=))
 
-import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Result (Result)
-
-import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
 
 import Data.Ratio ((%))
 
 import Data.Monoid (mconcat, (<>))
 
 
-sec0 :: Idx.Section
-sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
-
-
-flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = seqFlowGraphFromTopology LinearOne.topology
-
 enRange :: [Rational]
 enRange = (1%100):[1%2, 1 .. 9]
 
 
-type Expr s a x = EqSys.ExpressionIgnore Node s a a x
+type Expr s a x = EqSys.ExpressionIgnore Node s a x
 
 c :: XIdx.Power Node
-c = XIdx.power sec0 Source Sink
+c = XIdx.power Source Sink
 
 eta :: XIdx.Eta Node
-eta = XIdx.eta sec0 Source Sink
+eta = XIdx.eta Source Sink
 
 
 functionEta :: (Fractional x) => Expr s a x -> Expr s a x
 functionEta p = 0.2 * p
 
-given :: Rational -> EqSys.EquationSystemIgnore Node s Rational Rational
+given :: Rational -> EqSys.EquationSystemIgnore Node s Rational
 given p =
    mconcat $
-   (XIdx.dTime sec0 .= 1) :
+   (XIdx.dTime .= 1) :
    (c .= p) :
    []
 
@@ -59,17 +48,18 @@ solve :: Rational -> String
 solve p =
    show p ++ "\t" ++
    show (checkDetermined (show eta) $
-         Var.checkedLookup "solve" SeqFlow.lookupEta eta $ solveGraph p)
+         Var.checkedLookup "solve" FlowTopo.lookupEta eta $ solveGraph p)
 
 solveGraph ::
-   Rational ->
-   SeqFlow.Graph Node (Result Rational) (Result Rational)
+   Rational -> FlowTopo.Section Node (Result Rational)
 solveGraph p =
-   EqSys.solve flowGraph
+   EqSys.solve
+      (quantityTopology LinearOne.topology)
       ((EqSys.variable eta =.= functionEta (EqSys.variable c)) <> given p)
 
 main :: IO ()
 main = do
    putStrLn $ unlines $ map solve enRange
 
-   Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault $ solveGraph 0.5
+   Draw.xterm $ Draw.flowTopology Draw.optionsDefault $
+      FlowTopo.topology $ solveGraph 0.5
