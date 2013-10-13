@@ -66,9 +66,8 @@ solve stateFlowGraph etaAssign etaFunc env state
   (Sweep.Pair
     (NonEmpty.Cons pLocal (NonEmpty.Cons pRest Empty.Cons))
     (NonEmpty.Cons pWater (NonEmpty.Cons pGas  Empty.Cons))) =
-  envGetData $ EqGen.solveSimple $
+  envGetData $ EqGen.solve stateFlowGraph $
     AppOpt.givenForOptimisation
-      stateFlowGraph
       env
       etaAssign
       etaFunc

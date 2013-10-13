@@ -87,7 +87,6 @@ givenAverageWithoutState _stateToRemove (EqEnvState.Complete scalar signal) =
 givenForOptimisation ::
   (EqArith.Constant a, Node.C node, Fractional a,
   Ord a, Show a, EqArith.Sum a, Ord node) =>
-  Topo.StateFlowGraph node ->
   EqEnvState.Complete node (Data Nil a) (Data Nil a)  ->
   EtaAssignMap node ->
   Map String (a -> a) ->
@@ -97,9 +96,8 @@ givenForOptimisation ::
   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a)
 
-givenForOptimisation stateFlowGraph env etaAssign etaFunc state commonGiven givenLoad givenDOF =
+givenForOptimisation env etaAssign etaFunc state commonGiven givenLoad givenDOF =
   commonGiven <>
-  EqGenState.fromGraph True (Topo.dirFromFlowGraph stateFlowGraph) <>
   makeEtaFuncGiven etaAssign etaFunc <>
   givenAverageWithoutStateX state env <>
   givenLoad <>
