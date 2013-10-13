@@ -161,6 +161,10 @@ instance (Format.Part part) => FormatScalarIndex (Scalar part) where
    formatScalarIndex edge node = formatScalarValue (Idx.ForNode edge node)
 
 
+instance FormatIndex Idx.Eta where
+   formatIndex = formatValue
+
+
 instance (Node.C node) => FormatValue (Signal node) where
    formatValue var =
       case var of
