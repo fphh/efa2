@@ -6,6 +6,8 @@ module EFA.Flow.Topology.Variable (
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
+
+import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
           (FormatValue, formatValue)
@@ -35,3 +37,13 @@ instance FormatIndex Idx.Sum where
 
 index :: (Var.SignalIndex idx) => idx node -> Var.Signal node
 index = Var.signalIndex
+
+
+checkedLookup ::
+   (Node.C node, FormatIndex idx) =>
+   String -> (idx node -> t -> Maybe b) -> idx node -> t -> b
+checkedLookup name lk idx =
+   maybe (error $
+             "Topology." ++ name ++
+             " " ++ Format.unUnicode (formatIndex idx)) id .
+   lk idx

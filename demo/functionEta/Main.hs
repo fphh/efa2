@@ -7,10 +7,9 @@ import EFA.Application.Utility (quantityTopology)
 
 import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Variable as Var
 import qualified EFA.Flow.Topology.Index as XIdx
 import EFA.Flow.Topology.Absolute ((.=), (=.=))
-
-import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)

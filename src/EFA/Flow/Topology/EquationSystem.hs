@@ -52,8 +52,6 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 
-import qualified EFA.Report.Format as Format
-
 import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
 
@@ -139,11 +137,8 @@ evar ?= val  =
 checkedLookup ::
    (Node.C node, Var.FormatIndex idx) =>
    String -> (idx node -> t -> Maybe b) -> idx node -> t -> b
-checkedLookup name lk idx =
-   maybe (error $
-             "Topology.EquationSystem." ++ name ++
-             " " ++ Format.unUnicode (Var.formatIndex idx)) id .
-   lk idx
+checkedLookup name =
+   Var.checkedLookup $ "EquationSystem." ++ name
 
 
 variableRecord ::
