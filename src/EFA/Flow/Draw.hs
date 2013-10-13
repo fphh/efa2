@@ -235,11 +235,12 @@ dotFromPartGraph current (subtitle, gr) =
           fold $
           Map.mapWithKey
              (\e labels ->
-                case labels of
-                   ShowEtaNode l ->
-                      mapFst (:[]) $ dotFromStructureEdgeEta current e l
-                   HideEtaNode l ->
-                      ([], [dotFromStructureEdge current e l])) $
+                let eo = orientFlowEdge e
+                in  case labels of
+                       ShowEtaNode l ->
+                          mapFst (:[]) $ dotFromStructureEdgeEta current eo l
+                       HideEtaNode l ->
+                          ([], [dotFromStructureEdgeCompact current eo l])) $
           Graph.edgeLabels gr
    in  DotSG True (Just $ Str $ T.pack $ dotIdentFromPart current) $
        DotStmts
@@ -311,25 +312,24 @@ dotFromBndNode n label =
       (nodeAttrs (Node.Storage ()) $
        labelFromUnicode label)
 
-dotFromStructureEdge ::
+dotFromStructureEdgeCompact ::
    (Node.C node, Part part) =>
-   part -> Graph.EitherEdge node -> [Unicode] -> DotEdge T.Text
-dotFromStructureEdge part e label =
-   let (DirEdge x y, dir, ord) = orientFlowEdge e
-   in  DotEdge
-          (dotIdentFromPartNode part x)
-          (dotIdentFromPartNode part y)
-          [labelFromLines $ order ord label,
-           Viz.Dir dir, structureEdgeColour]
+   part -> (DirEdge node, Viz.DirType, Order) ->
+   [Unicode] -> DotEdge T.Text
+dotFromStructureEdgeCompact part (DirEdge x y, dir, ord) label =
+   DotEdge
+      (dotIdentFromPartNode part x)
+      (dotIdentFromPartNode part y)
+      [labelFromLines $ order ord label,
+       Viz.Dir dir, structureEdgeColour]
 
 dotFromStructureEdgeEta ::
    (Node.C node, Part part) =>
-   part -> Graph.EitherEdge node ->
+   part -> (DirEdge node, Viz.DirType, Order) ->
    Triple [Unicode] ->
    (DotNode T.Text, [DotEdge T.Text])
-dotFromStructureEdgeEta part e label =
-   let (DirEdge x y, dir, ord) = orientFlowEdge e
-       Triple pre eta suc = order ord label
+dotFromStructureEdgeEta part (DirEdge x y, dir, ord) label =
+   let Triple pre eta suc = order ord label
        did = dotIdentFromEtaNode part x y
    in  (DotNode did [labelFromLines eta],
         [DotEdge
