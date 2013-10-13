@@ -256,7 +256,7 @@ dotNodesEdgesFromPartGraph gr =
                           ([], [dotFromStructureEdgeCompact eo l])) $
           Graph.edgeLabels gr
    in  ((Map.elems $
-         Map.mapWithKey dotFromSubNode $
+         Map.mapWithKey dotFromNode $
          Graph.nodeLabels gr)
           ++
           etaNodes,
@@ -304,13 +304,13 @@ xterm :: DotGraph T.Text -> IO ()
 xterm g = void $ VizCmd.runGraphvizCanvas VizCmd.Dot g VizCmd.Xlib
 
 
-dotFromSubNode ::
+dotFromNode ::
    (Node.C node) =>
    node -> Unicode -> DotNode T.Text
-dotFromSubNode n label =
+dotFromNode node label =
    DotNode
-      (dotIdentFromSubNode n)
-      (nodeAttrs (Node.typ n) $ labelFromUnicode label)
+      (dotIdentFromNode node)
+      (nodeAttrs (Node.typ node) $ labelFromUnicode label)
 
 dotFromAugNode ::
    (Part part, Node.C node) =>
@@ -335,8 +335,8 @@ dotFromStructureEdgeCompact ::
    [Unicode] -> DotEdge T.Text
 dotFromStructureEdgeCompact (DirEdge x y, dir, ord) label =
    DotEdge
-      (dotIdentFromSubNode x)
-      (dotIdentFromSubNode y)
+      (dotIdentFromNode x)
+      (dotIdentFromNode y)
       [labelFromLines $ order ord label,
        Viz.Dir dir, structureEdgeColour]
 
@@ -350,11 +350,11 @@ dotFromStructureEdgeEta (DirEdge x y, dir, ord) label =
        did = dotIdentFromEtaNode x y
    in  (DotNode did [labelFromLines eta],
         [DotEdge
-            (dotIdentFromSubNode x) did
+            (dotIdentFromNode x) did
             [labelFromLines pre,
              Viz.Dir dir, structureEdgeColour],
          DotEdge
-            did (dotIdentFromSubNode y)
+            did (dotIdentFromNode y)
             [labelFromLines suc,
              Viz.Dir dir, structureEdgeColour]])
 
@@ -451,9 +451,9 @@ dotIdentInPart ::
 dotIdentInPart s =
    T.append (T.pack $ "s" ++ dotIdentFromPart s)
 
-dotIdentFromSubNode ::
+dotIdentFromNode ::
    (Node.C node) => node -> T.Text
-dotIdentFromSubNode n =
+dotIdentFromNode n =
    T.pack $ "n" ++ Node.dotId n
 
 
@@ -483,9 +483,6 @@ dotIdentFromEtaNode x y =
    T.pack $
       "x" ++ Node.dotId x ++
       "y" ++ Node.dotId y
-
-dotIdentFromNode :: (Node.C node) => node -> T.Text
-dotIdentFromNode n = T.pack $ Node.dotId n
 
 
 topology :: (Node.C node) => Topo.Topology node -> DotGraph T.Text
