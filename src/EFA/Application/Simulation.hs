@@ -65,8 +65,8 @@ solve :: (Node.C node,
          Record.PowerRecord node v a ->
          EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
 solve topology etaAssign etaFunc powerRecord = trace (show powerRecord)
-    EqGen.solveSimple $
-    givenSimulate stateFlowGraph etaAssign etaFunc powerRecord
+    EqGen.solve stateFlowGraph $
+    givenSimulate etaAssign etaFunc powerRecord
   where
     -- | Build Sequenceflow graph for simulation
     stateFlowGraph =
@@ -113,14 +113,12 @@ givenSimulate ::
   SV.Singleton v,
   SV.Walker v,
   SV.Storage v a) =>
-  Topo.StateFlowGraph node ->
   (Idx.State ->  EtaAssignMap node) ->
   Map String (a -> a) ->
   Record.PowerRecord node v a ->
   (forall s . EqGen.EquationSystem node s (Data Nil a) (Data (v :> Nil) a))
 
-givenSimulate stateFlowGraph etaAssign etaFunc powerRecord =
-  (EqGen.fromGraph True $ Topo.dirFromFlowGraph (stateFlowGraph)) <>
+givenSimulate etaAssign etaFunc powerRecord =
    f powerRecord
    where f (Record.Record t xs) =
            (StateIdx.dTime (Idx.State 0) EqGen..=
