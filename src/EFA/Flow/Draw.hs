@@ -698,7 +698,7 @@ seqFlowGraph opts gr =
                            (fmap (maybe (error "missing section") (flip (,)) $
                                   PartMap.lookup sec partMap) $
                             FlowQuant.dirFromSums sums)) $
-              Graph.mapEdgeWithKey (structureEdgeShow opts sec) topo))
+              Graph.mapEdgeWithKey (structureSeqStateEdgeShow opts sec) topo))
           Idx.initial $
        SeqFlowQuant.sequence gr)
 
@@ -765,7 +765,7 @@ stateFlowGraph opts gr =
                     maybe (error "Draw.stateFlowGraph") StorageGraph.nodes $
                     Map.lookup node $
                     StateFlowQuant.storages gr) $
-              Graph.mapEdgeWithKey (structureEdgeShow opts state) topo)) $
+              Graph.mapEdgeWithKey (structureSeqStateEdgeShow opts state) topo)) $
        StateFlowQuant.states gr)
 
 storageGraphShow ::
@@ -807,25 +807,35 @@ storageEdgeShow opts node edge carry =
    Fold.toList $
    StorageQuant.mapCarryWithVar (formatAssignWithOpts opts) node edge carry
 
-structureEdgeShow ::
-   (Node.C node, Ord part, FormatValue a, Format.Part part) =>
+
+structureSeqStateEdgeShow ::
+   (Format.Part part, Node.C node, FormatValue a) =>
    Options Unicode ->
-   part -> Graph.EitherEdge node ->
-   Maybe (FlowQuant.Flow a) -> StructureEdgeLabel
-structureEdgeShow opts part edge =
+   part ->
+   Graph.EitherEdge node ->
+   Maybe (FlowQuant.Flow a) ->
+   StructureEdgeLabel
+structureSeqStateEdgeShow opts part edge flow =
+   structureEdgeShow opts $
+   FlowQuant.liftEdgeFlow
+      (FlowQuant.mapFlowWithVar (formatAssignSidesWithOpts opts) part)
+      edge flow
+
+structureEdgeShow ::
+   Options Unicode ->
+   Maybe (FlowQuant.Flow (Unicode, Unicode)) -> StructureEdgeLabel
+structureEdgeShow opts =
    if optEtaNode opts
-     then ShowEtaNode . structureEdgeShowEta opts part edge
-     else HideEtaNode . structureEdgeShowCompact opts part edge
+     then ShowEtaNode . structureEdgeShowEta
+     else HideEtaNode . structureEdgeShowCompact
 
 structureEdgeShowCompact ::
-   (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
-   Options output ->
-   part -> Graph.EitherEdge node ->
-   Maybe (FlowQuant.Flow a) -> [output]
-structureEdgeShowCompact opts part =
-   FlowQuant.switchEdgeFlow (const []) $ \edge flow ->
-   case FlowQuant.mapFlowWithVar (formatAssignWithOpts opts) part edge flow of
-      labels ->
+   (Format output) =>
+   Maybe (FlowQuant.Flow (output, output)) -> [output]
+structureEdgeShowCompact mlabels =
+   case fmap (fmap (uncurry Format.assign)) mlabels of
+      Nothing -> []
+      Just labels ->
          FlowQuant.flowEnergyOut labels :
          FlowQuant.flowXOut labels :
          FlowQuant.flowEta labels :
@@ -834,23 +844,23 @@ structureEdgeShowCompact opts part =
          []
 
 structureEdgeShowEta ::
-   (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
-   Options output ->
-   part -> Graph.EitherEdge node ->
-   Maybe (FlowQuant.Flow a) -> Triple [output]
-structureEdgeShowEta opts part =
-   FlowQuant.switchEdgeFlow (const $ Triple [] [] []) $ \edge flow ->
-   case FlowQuant.mapFlowWithVar (formatAssignWithOpts opts) part edge flow of
-      labels ->
-         Triple
-            (FlowQuant.flowEnergyOut labels :
-             FlowQuant.flowXOut labels :
-             [])
-            (formatValue (FlowQuant.flowEta flow) :
-             [])
-            (FlowQuant.flowXIn labels :
-             FlowQuant.flowEnergyIn labels :
-             [])
+   (Format output) =>
+   Maybe (FlowQuant.Flow (output, output)) -> Triple [output]
+structureEdgeShowEta mlabels =
+   case mlabels of
+      Nothing -> Triple [] [] []
+      Just flow ->
+         case fmap (uncurry Format.assign) flow of
+            labels ->
+               Triple
+                  (FlowQuant.flowEnergyOut labels :
+                   FlowQuant.flowXOut labels :
+                   [])
+                  (snd (FlowQuant.flowEta flow) :
+                   [])
+                  (FlowQuant.flowXIn labels :
+                   FlowQuant.flowEnergyIn labels :
+                   [])
 
 
 cumulatedFlow ::
@@ -923,9 +933,15 @@ formatAssignWithOpts ::
     FormatValue a, Format output) =>
    Options output -> idx node -> a -> output
 formatAssignWithOpts opts idx val =
-   Format.assign
-      (optRecordIndex opts $
-       if optVariableIndex opts
-         then Var.formatIndex idx
-         else Format.edgeIdent idx)
-      (formatValue val)
+   uncurry Format.assign $ formatAssignSidesWithOpts opts idx val
+
+formatAssignSidesWithOpts ::
+   (Node.C node, Var.FormatIndex idx, Format.EdgeIdx idx,
+    FormatValue a, Format output) =>
+   Options output -> idx node -> a -> (output, output)
+formatAssignSidesWithOpts opts idx val =
+   (optRecordIndex opts $
+    if optVariableIndex opts
+      then Var.formatIndex idx
+      else Format.edgeIdent idx,
+    formatValue val)
