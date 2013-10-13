@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module EFA.Flow.Topology.Quantity (
    Section, DirSection, FlowTopo.label, FlowTopo.topology,
-   Topology, Sums(..), Flow(..),
+   Topology, DirTopology, Sums(..), Flow(..),
 
    mapSection,
    mapTopology,
@@ -35,7 +35,7 @@ import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.Quantity as Quant
 import EFA.Flow.Topology (label, topology)
 import EFA.Flow.Quantity
-          (Topology, Sums(..), Flow(..),
+          (Sums(..), Flow(..),
            mapSums, zipWithSums, traverseSums)
 
 import EFA.Equation.Unknown (Unknown(unknown))
@@ -63,6 +63,14 @@ type
 type
    DirSection node v =
       FlowTopo.Section node Graph.DirEdge v (Sums v) (Flow v)
+
+type
+   Topology node v =
+      Graph.Graph node Graph.EitherEdge (Sums v) (Maybe (Flow v))
+
+type
+   DirTopology node a v =
+      Graph.Graph node Graph.DirEdge (Sums v) (Flow v)
 
 
 mapSection ::

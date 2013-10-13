@@ -18,14 +18,6 @@ import Data.Maybe (fromMaybe)
 import Prelude hiding (lookup, init, sin, sum)
 
 
-type
-   DirTopology node a v =
-      Graph node Graph.DirEdge (Sums v) (Flow v)
-
-type
-   Topology node v =
-      Graph node Graph.EitherEdge (Sums v) (Maybe (Flow v))
-
 data Flow v =
    Flow {
       flowPowerOut, flowEnergyOut, flowXOut,

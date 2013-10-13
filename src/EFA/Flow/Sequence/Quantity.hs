@@ -70,10 +70,11 @@ import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
+import EFA.Flow.Topology.Quantity (Topology)
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
-import EFA.Flow.Quantity (Topology, Sums(..), Flow(..))
+import EFA.Flow.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Signal.Sequence as Sequ
 
