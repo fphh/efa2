@@ -231,6 +231,19 @@ dotFromPartGraph ::
     Graph node Graph.EitherEdge Unicode StructureEdgeLabel) ->
    DotSubGraph T.Text
 dotFromPartGraph current (subtitle, gr) =
+   DotSG True (Just $ Str $ T.pack $ dotIdentFromPart current) $
+   let (nodes, edges) = dotNodesEdgesFromPartGraph gr
+   in  DotStmts
+          [GraphAttrs [labelFromString subtitle]]
+          []
+          (map (dotNodeInPart current) nodes)
+          (map (dotEdgeInPart current) edges)
+
+dotNodesEdgesFromPartGraph ::
+   Node.C node =>
+   Graph node Graph.EitherEdge Unicode StructureEdgeLabel ->
+   ([DotNode T.Text], [DotEdge T.Text])
+dotNodesEdgesFromPartGraph gr =
    let (etaNodes,edges) =
           fold $
           Map.mapWithKey
@@ -242,17 +255,12 @@ dotFromPartGraph current (subtitle, gr) =
                        HideEtaNode l ->
                           ([], [dotFromStructureEdgeCompact eo l])) $
           Graph.edgeLabels gr
-   in  DotSG True (Just $ Str $ T.pack $ dotIdentFromPart current) $
-       DotStmts
-          [GraphAttrs [labelFromString subtitle]]
-          []
-          (map (dotNodeInPart current) $
-              (Map.elems $
-               Map.mapWithKey dotFromSubNode $
-               Graph.nodeLabels gr)
-              ++
-              etaNodes)
-          (map (dotEdgeInPart current) edges)
+   in  ((Map.elems $
+         Map.mapWithKey dotFromSubNode $
+         Graph.nodeLabels gr)
+          ++
+          etaNodes,
+        edges)
 
 
 graphStatementsAcc ::
