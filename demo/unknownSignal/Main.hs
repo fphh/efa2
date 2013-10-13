@@ -1,22 +1,20 @@
 {-# LANGUAGE TypeOperators #-}
 
-
-module Main where
+module Main (main) where
 
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility ( topologyFromEdges, seqFlowGraphFromTopology )
+import EFA.Application.Utility ( topologyFromEdges, quantityTopology )
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Rec
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data, (:>), Nil)
 
-import qualified EFA.Flow.Sequence.Absolute as EqSys
-import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.Index as XIdx
-import qualified EFA.Flow.Topology as FlowTopo
+import qualified EFA.Flow.Topology.Absolute as EqSys
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Index as XIdx
 import qualified EFA.Flow.Draw as Draw
-import EFA.Flow.Sequence.Absolute ((.=), (=.=))
+import EFA.Flow.Topology.Absolute ((.=), (=.=))
 
 import qualified EFA.Equation.Result as Result
 
@@ -27,16 +25,12 @@ import qualified EFA.Graph as Graph
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import EFA.Utility.Async (concurrentlyMany_)
-import EFA.Utility.Map (checkedLookup)
 
 import qualified Data.Map as Map
 
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (mconcat, (<>))
 
-
-sec0 :: Idx.Section
-sec0 = Idx.Section 0
 
 node0, node1, node2, node3 :: Node.Int
 node0 = Node.intNoRestriction 0
@@ -87,21 +81,21 @@ eta13 x = if x < 0 then 1/n else n
 
 given ::
    EqSys.EquationSystemIgnore Node.Int s
-      (Data Nil Double) (Data ([] :> Nil) Double)
+      (Data ([] :> Nil) Double)
 given =
    mconcat $
-   (XIdx.dTime sec0 .= Data.map (const 1) sig0) :
-   (XIdx.power sec0 node0 node1 .= sig0) :
-   (XIdx.power sec0 node2 node1 .= sig2) :
+   (XIdx.dTime .= Data.map (const 1) sig0) :
+   (XIdx.power node0 node1 .= sig0) :
+   (XIdx.power node2 node1 .= sig2) :
 
-   ((EqSys.variable $ XIdx.eta sec0 node0 node1) =.=
-     EqSys.liftF (Data.map eta01) (EqSys.variable $ XIdx.power sec0 node0 node1)) :
+   ((EqSys.variable $ XIdx.eta node0 node1) =.=
+     EqSys.liftF (Data.map eta01) (EqSys.variable $ XIdx.power node0 node1)) :
 
-   ((EqSys.variable $ XIdx.eta sec0 node1 node2) =.=
-     EqSys.liftF (Data.map eta12) (EqSys.variable $ XIdx.power sec0 node2 node1)) :
+   ((EqSys.variable $ XIdx.eta node1 node2) =.=
+     EqSys.liftF (Data.map eta12) (EqSys.variable $ XIdx.power node2 node1)) :
 
-   ((EqSys.variable $ XIdx.eta sec0 node1 node3) =.=
-     EqSys.liftF (Data.map eta13) (EqSys.variable $ XIdx.power sec0 node1 node3)) :
+   ((EqSys.variable $ XIdx.eta node1 node3) =.=
+     EqSys.liftF (Data.map eta13) (EqSys.variable $ XIdx.power node1 node3)) :
 
    []
    where sig0 = Sig.unpack node0Sig
@@ -110,8 +104,8 @@ given =
 
 main :: IO ()
 main =
-   case seqFlowGraphFromTopology topoTripod of
-      flowGraph -> do
+   case quantityTopology topoTripod of
+      flowTopo -> do
 
          let rec :: Rec.PowerRecord Node.Int [] Double
              rec =
@@ -119,18 +113,17 @@ main =
                 Map.mapMaybe (fmap Sig.TC . Result.toMaybe) $
                 foldMap fold $
                 Map.mapWithKey
-                   (SeqFlow.liftEdgeFlow $
+                   (FlowTopo.liftEdgeFlow $
                     \e flow ->
                        case Topo.structureEdgeFromDirEdge e of
                           se ->
                              Map.singleton (Idx.PPos se)
-                                (SeqFlow.flowEnergyOut flow)
+                                (FlowTopo.flowEnergyOut flow)
                              <>
                              Map.singleton (Idx.PPos $ Idx.flip se)
-                                (SeqFlow.flowEnergyIn flow)) $
-                Graph.edgeLabels $ FlowTopo.topology $ snd $
-                flip (checkedLookup "rec") sec0 $
-                SeqFlow.sequence $ EqSys.solve flowGraph given
+                                (FlowTopo.flowEnergyIn flow)) $
+                Graph.edgeLabels $ FlowTopo.topology $
+                EqSys.solve flowTopo given
 
          concurrentlyMany_ [
             PlotIO.record "Power Signals" DefaultTerm.cons show id rec,
@@ -140,4 +133,5 @@ main =
                  XIdx.ppos node1 node2,
                  XIdx.ppos node1 node3 ],
 
-            Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault flowGraph ]
+            Draw.xterm $ Draw.flowTopology Draw.optionsDefault $
+               FlowTopo.topology flowTopo ]
