@@ -1,5 +1,8 @@
 {-# LANGUAGE TypeOperators #-}
-module EFA.Flow.Sequence.Record where
+module EFA.Flow.Sequence.Record (
+   fromGraphFromSequence,
+   flowGraphToPowerRecords,
+   ) where
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
