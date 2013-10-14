@@ -9,9 +9,10 @@ import qualified Modules.Signals as Signals
 
 import qualified EFA.Flow.Sequence.Absolute as EqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.Record as RecSeq
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import EFA.Flow.Sequence.Absolute ((.=))
+
+import qualified EFA.Flow.Topology.Record as TopoRecord
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
@@ -40,7 +41,7 @@ pre ::
    Sig.Scal (Typ A F Tt) Double ->
    SignalRecord [] Double ->
    (Sequ.List (PowerRecord System.Node [] Double),
-    Sequ.List (RecSeq.Section System.Node [] Double),
+    Sequ.List (TopoRecord.Section System.Node [] Double),
     PowerRecord System.Node [] Double,
     SignalRecord [] Double)
 
@@ -74,7 +75,7 @@ pre topology epsZero epsT epsE rawSignals =
       fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
     signalTopos =
-      fmap (RecSeq.flowTopologyFromRecord topology) sequenceFlowsFilt
+      fmap (TopoRecord.flowTopologyFromRecord topology) sequenceFlowsFilt
 
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow

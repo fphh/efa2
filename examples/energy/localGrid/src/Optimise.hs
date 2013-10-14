@@ -28,6 +28,8 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence as SeqFlowPlain
 import qualified EFA.Flow.Draw as Draw
 
+import qualified EFA.Flow.Topology.Record as TopoRecord
+
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Arithmetic as EqArith
@@ -661,7 +663,7 @@ main = do
            (Result (Data ([] :> Nil) Double))
      sequenceFlowTopologySim =
         RecSeq.fromGraphFromSequence $
-        fmap (RecSeq.flowTopologyFromRecord System.topologyOpt) $
+        fmap (TopoRecord.flowTopologyFromRecord System.topologyOpt) $
         Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime) $
         fmap Record.partIntegrate sequencePowers
 
