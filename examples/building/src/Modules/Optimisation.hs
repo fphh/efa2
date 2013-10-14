@@ -53,17 +53,14 @@ type Param2 = NonEmpty.T (NonEmpty.T Empty.T)
 type Param2x2 = Sweep.Pair Param2 Param2
 
 solve ::
-  (Ord a, Fractional a, Show a, EqArith.Sum a, EqArith.Constant a) =>
+  (Ord a, Fractional a, Show a, EqArith.Constant a) =>
   Topo.StateFlowGraph System.Node ->
   EtaAssignMap System.Node ->
   Map String (a -> a) ->
   Env a ->
   Idx.State ->
   Param2x2 a -> EnvResult a
-solve stateFlowGraph etaAssign etaFunc env state
-  (Sweep.Pair
-    (NonEmpty.Cons pLocal (NonEmpty.Cons pRest Empty.Cons))
-    (NonEmpty.Cons pWater (NonEmpty.Cons pGas  Empty.Cons))) =
+solve stateFlowGraph etaAssign etaFunc env state (Sweep.Pair load dof) =
   envGetData $ EqGen.solve stateFlowGraph $
     AppOpt.givenForOptimisation
       env
@@ -71,25 +68,23 @@ solve stateFlowGraph etaAssign etaFunc env state
       etaFunc
       state
       (commonGiven
-        <> givenSecLoad state (Data pLocal) (Data pRest)
-        <> givenSecDOF state (Data pWater) (Data pGas))
+        <> givenSecLoad state (fmap Data load)
+        <> givenSecDOF state (fmap Data dof))
 
-givenSecLoad :: (Eq a, EqArith.Sum a) =>
-                Idx.State ->
-                Data Nil a ->
-                Data Nil a ->
-                EqSystemData a
-givenSecLoad state pLocal pRest =  mconcat $
+givenSecLoad ::
+   (EqArith.Sum a, Eq a) =>
+   Idx.State -> Param2 (Data Nil a) -> EqSystemData a
+givenSecLoad state (NonEmpty.Cons pLocal (NonEmpty.Cons pRest Empty.Cons)) =
+   mconcat $
    (XIdx.power state System.LocalRest System.LocalNetwork .= pLocal) :
    (XIdx.power state System.Rest System.Network .= pRest) :
    []
 
-givenSecDOF :: (Eq a, EqArith.Sum a) =>
-                Idx.State ->
-               Data Nil a ->
-               Data Nil a ->
-               EqSystemData a
-givenSecDOF state pWater pGas =  mconcat $
+givenSecDOF ::
+   (EqArith.Sum a, Eq a) =>
+   Idx.State -> Param2 (Data Nil a) -> EqSystemData a
+givenSecDOF state (NonEmpty.Cons pWater (NonEmpty.Cons pGas Empty.Cons)) =
+   mconcat $
    (XIdx.power state System.Network System.Water .= pWater) :
    (XIdx.power state System.LocalNetwork System.Gas .= pGas) :
    []
