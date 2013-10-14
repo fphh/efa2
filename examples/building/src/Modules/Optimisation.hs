@@ -72,9 +72,9 @@ solve stateFlowGraph etaAssign etaFunc env state
       etaAssign
       etaFunc
       state
-      commonGiven
-      (givenSecLoad state (Data pLocal) (Data pRest))
-      (givenSecDOF state (Data pWater) (Data pGas))
+      (commonGiven
+        <> givenSecLoad state (Data pLocal) (Data pRest)
+        <> givenSecDOF state (Data pWater) (Data pGas))
 
 givenSecLoad :: (Eq a, EqArith.Sum a) =>
                 Idx.State ->

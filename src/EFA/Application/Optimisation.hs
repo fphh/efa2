@@ -92,16 +92,12 @@ givenForOptimisation ::
   Map String (a -> a) ->
   Idx.State ->
   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
-  EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
-  EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a)
 
-givenForOptimisation env etaAssign etaFunc state commonGiven givenLoad givenDOF =
-  commonGiven <>
+givenForOptimisation env etaAssign etaFunc state given =
+  given <>
   makeEtaFuncGiven etaAssign etaFunc <>
-  givenAverageWithoutStateX state env <>
-  givenLoad <>
-  givenDOF
+  givenAverageWithoutStateX state env
 
 
 initialEnv ::
