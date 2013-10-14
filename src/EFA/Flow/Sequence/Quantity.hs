@@ -36,9 +36,6 @@ module EFA.Flow.Sequence.Quantity (
    mapStoragesWithVar,
    mapSequenceWithVar,
 
-   Quant.liftEdgeFlow,
-   Quant.dirFromFlowGraph,
-
    lookupPower,
    lookupEnergy,
    lookupX,
@@ -65,16 +62,15 @@ module EFA.Flow.Sequence.Quantity (
 import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
-import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.Topology.Quantity (Topology)
+import EFA.Flow.Topology.Quantity (Topology, Sums(..), Flow(..))
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
-import EFA.Flow.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Signal.Sequence as Sequ
 
@@ -321,7 +317,7 @@ envFromSequence =
    Map.mapWithKey
       (\sec (_rng, (dtime, topo)) ->
          let nls = Graph.nodeLabels topo
-             els = Graph.edgeLabels $ Quant.dirFromFlowGraph topo
+             els = Graph.edgeLabels $ FlowTopoPlain.dirFromFlowGraph topo
              sumOutMap = Map.mapMaybe sumOut nls
              sumInMap  = Map.mapMaybe sumIn nls
          in  ((Map.mapKeys (Idx.ForNode $ Idx.StInSum $ Idx.NoExit sec) $
@@ -425,13 +421,13 @@ lookupStructTopology fieldOut fieldIn unpackIdx =
       case unpackIdx idx of
          se ->
             mplus
-               (Quant.lookupEdge fieldOut se topo)
-               (Quant.lookupEdge fieldIn (Idx.flip se) topo)
+               (FlowTopoPlain.lookupEdge fieldOut se topo)
+               (FlowTopoPlain.lookupEdge fieldIn (Idx.flip se) topo)
 
 
 lookupEta :: (Ord node) => SeqIdx.Eta node -> Graph node a v -> Maybe v
 lookupEta =
-   withTopology $ \(Idx.Eta se) -> Quant.lookupEdge flowEta se
+   withTopology $ \(Idx.Eta se) -> FlowTopoPlain.lookupEdge flowEta se
 
 lookupSum :: (Ord node) => SeqIdx.Sum node -> Graph node a v -> Maybe v
 lookupSum =

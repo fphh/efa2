@@ -47,7 +47,6 @@ module EFA.Flow.State.Quantity (
    Environment, Element, Env.switchPart,
    ) where
 
-import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State as StateFlow
@@ -59,7 +58,7 @@ import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.State (states, storages)
-import EFA.Flow.Quantity (Sums(..), Flow(..))
+import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
@@ -85,7 +84,7 @@ import Control.Applicative (Applicative, pure, liftA2, (<*>))
 import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
-import Data.Maybe (isJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -262,7 +261,7 @@ fromSequenceFlowGen integrate add zero allStEdges gr =
                           (if allStEdges
                              then Map.fromList $
                                   map (flip (,) zero) $
-                                  allStorageEdges (sumsMap node sts)
+                                  StorageQuant.allEdgesFromSums (sumsMap node sts)
                              else Map.empty) $
                        cumulateStorageEdges add secMap $
                        fmap SeqFlowQuant.carryEnergy edges)) $
@@ -290,15 +289,6 @@ sumsMap ::
 sumsMap node =
    fmap (fromMaybe (error "node not in sequence") .
          Graph.lookupNode node . FlowTopo.topology)
-
-allStorageEdges ::
-   Map Idx.State (Sums a) -> [Idx.StorageEdge Idx.State node]
-allStorageEdges stores =
-   case Map.partition (isJust . sumIn) stores of
-      (ins, outs) ->
-         liftA2 Idx.StorageEdge
-            (Idx.Init : map Idx.NoInit (Map.keys ins))
-            (Idx.Exit : map Idx.NoExit (Map.keys outs))
 
 
 data Cum v =
@@ -420,13 +410,13 @@ lookupStruct fieldOut fieldIn unpackIdx =
       case unpackIdx idx of
          se ->
             mplus
-               (Quant.lookupEdge fieldOut se topo)
-               (Quant.lookupEdge fieldIn (Idx.flip se) topo)
+               (FlowTopoPlain.lookupEdge fieldOut se topo)
+               (FlowTopoPlain.lookupEdge fieldIn (Idx.flip se) topo)
 
 
 lookupEta :: (Ord node) => StateIdx.Eta node -> Graph node a v -> Maybe v
 lookupEta =
-   withTopology $ \(Idx.Eta se) -> Quant.lookupEdge flowEta se
+   withTopology $ \(Idx.Eta se) -> FlowTopoPlain.lookupEdge flowEta se
 
 
 lookupSum :: (Ord node) => StateIdx.Sum node -> Graph node a v -> Maybe v

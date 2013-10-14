@@ -1,33 +1,32 @@
 {-# LANGUAGE TypeOperators #-}
-module EFA.Flow.Sequence.Record where
+module EFA.Flow.Sequence.Record (
+   fromGraphFromSequence,
+   flowGraphToPowerRecords,
+   ) where
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence as SeqFlowPlain
+import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
+import qualified EFA.Flow.StorageGraph.Quantity as StorageGraph
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
-import EFA.Graph.Topology (Topology)
-import EFA.Graph (Graph, DirEdge(DirEdge), unDirEdge)
+import EFA.Graph (Graph)
 
-import qualified EFA.Signal.Signal as Signal
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
-import EFA.Signal.Record (Record(Record), FlowRecord)
-import EFA.Signal.Signal (fromScalar)
 import EFA.Signal.Data (Data, Nil, (:>))
-import EFA.Signal.Base (Sign(PSign, NSign, ZSign), BSum, DArith0)
+import EFA.Signal.Base (BSum)
 
-import EFA.Equation.Result (Result(Determined, Undetermined))
-
-import qualified EFA.Utility.Map as MapU
+import EFA.Equation.Result (Result)
 
 import Control.Applicative (pure)
 
@@ -36,71 +35,10 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 import Data.Tuple.HT (mapSnd)
 
 
-{-
-UnDirEdge must have Nothing as edge lebel
-DirEdge must have Just as edge label
--}
-type SignalTopology node v a =
-        Graph node Graph.EitherEdge
-           (Node.Type ())
-           (Maybe (Flow (Signal.FFSignal v a)))
-
-data Flow a = Flow {flowOut, flowIn :: a}
-
-instance Functor Flow where
-   fmap f (Flow o i) = Flow (f o) (f i)
-
-type Section node v a =
-        FlowTopoPlain.Section
-           node Graph.EitherEdge
-           (Signal.TSignal v a)
-           (Node.Type ())
-           (Maybe (Flow (Signal.FFSignal v a)))
-
-flowTopologyFromRecord ::
-   (Ord node, Show node,
-    Fractional a, Ord a, BSum a, DArith0 a,
-    SV.Walker v, SV.Storage v a) =>
-   Topology node ->
-   FlowRecord node v a ->
-   Section node v a
-flowTopologyFromRecord topo (Record time fs) =
-   FlowTopoPlain.Section time $
-   Graph.fromMap (Graph.nodeLabels topo) $
-   Map.unionsWith (error "flowTopologyFromRecord: duplicate edges") $
-   Map.elems $
-   Map.mapWithKey
-      (\(DirEdge idx1 idx2) () ->
-         let look = MapU.checkedLookup "Flow.flowTopologyFromRecord" fs
-             normal   = look $ XIdx.ppos idx1 idx2
-             opposite = look $ XIdx.ppos idx2 idx1
-         in  case fromScalar $ Signal.sign $ Signal.sum normal of
-                PSign ->
-                   Map.singleton
-                      (Graph.EDirEdge $ DirEdge idx1 idx2)
-                      (Just $ Flow {flowOut = normal, flowIn = opposite})
-                NSign ->
-                   Map.singleton
-                      (Graph.EDirEdge $ DirEdge idx2 idx1)
-                      (Just $ Flow {flowOut = Signal.neg opposite, flowIn = Signal.neg normal})
-                ZSign ->
-                   Map.singleton
-                      (Graph.EUnDirEdge $ unDirEdge idx1 idx2)
-                      Nothing) $
-   Graph.edgeLabels topo
-
-
-fullFlow :: Flow (Result a) -> SeqFlow.Flow (Result a)
-fullFlow flow =
-   (pure Undetermined) {
-      SeqFlow.flowEnergyOut = flowOut flow,
-      SeqFlow.flowEnergyIn = flowIn flow
-   }
-
 fromGraphFromSequence ::
    (BSum a, SV.Zipper v, SV.Walker v, SV.Singleton v, SV.Storage v a,
     Node.C node) =>
-   Sequ.List (Section node v a) ->
+   Sequ.List (TopoRecord.Section node v a) ->
    SeqFlow.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
 fromGraphFromSequence sd =
    let sq =
@@ -113,25 +51,11 @@ fromGraphFromSequence sd =
              fmap
                 (storageMapFromList
                     (Fold.toList $ Sequ.mapWithSection const sq) .
-                 storageEdges) $
-             getStorageSequences $ fmap FlowTopo.topology sq,
+                 StorageGraph.forwardEdgesFromSums) $
+             storageSequences $ fmap FlowTopo.topology sq,
           SeqFlow.sequence =
-             fmap (mapSnd fromSection) $ Sequ.toMap sq
+             fmap (mapSnd TopoRecord.fromSection) $ Sequ.toMap sq
        }
-
-fromSection ::
-   (BSum a, SV.Zipper v, SV.Walker v, SV.Singleton v, SV.Storage v a,
-    Node.C node) =>
-   FlowTopoPlain.Section node Graph.EitherEdge
-      (Signal.TSignal v a) (FlowTopo.Sums (Result (Data (v :> Nil) a)))
-      (Maybe (Flow (Signal.FFSignal v a))) ->
-   FlowTopo.Section node (Result (Data (v :> Nil) a))
-fromSection (FlowTopoPlain.Section dtime topo) =
-   FlowTopoPlain.Section
-      (Determined . Signal.unpack . Signal.delta $ dtime)
-      (Graph.mapEdge
-         (fmap (fullFlow . fmap (Determined . Signal.unpack)))
-         topo)
 
 storageMapFromList ::
    (Ord node, SeqFlow.Unknown a) =>
@@ -146,24 +70,11 @@ storageMapFromList secs edges =
     Map.fromList $ map (flip (,) SeqFlow.unknown . Idx.Following) $
     Idx.Init : map Idx.NoInit secs)
 
-storageEdges ::
-   Map Idx.Section (SeqFlow.Sums v) -> [Idx.StorageEdge Idx.Section node]
-storageEdges stores = do
-   let ins  = Map.mapMaybe SeqFlow.sumIn stores
-   let outs = Map.mapMaybe SeqFlow.sumOut stores
-   secin <- Idx.Init : map Idx.NoInit (Map.keys ins)
-   secout <-
-      (++[Idx.Exit]) $ map Idx.NoExit $ Map.keys $
-      case secin of
-         Idx.Init -> outs
-         Idx.NoInit s -> snd $ Map.split s outs
-   return $ Idx.StorageEdge secin secout
-
-getStorageSequences ::
+storageSequences ::
    (Node.C node) =>
    Sequ.List (Graph node Graph.EitherEdge (SeqFlow.Sums v) edgeLabel) ->
    Map node (Map Idx.Section (SeqFlow.Sums v))
-getStorageSequences =
+storageSequences =
    Map.unionsWith (Map.unionWith (error "duplicate section for node"))
    .
    Fold.toList
@@ -180,17 +91,5 @@ flowGraphToPowerRecords ::
    SeqFlow.Graph node a0 (Data (v :> Nil) a) ->
    Sequ.Map (Record.PowerRecord node v a)
 flowGraphToPowerRecords =
-   fmap
-      (mapSnd $ \(FlowTopoPlain.Section time topo) ->
-         Record.Record (Signal.TC time) $
-         Map.unionsWith (error "envToPowerRecord: duplicate edges") $
-         Map.elems $
-         Map.mapWithKey
-            (\e flow ->
-               let se = Topo.structureEdgeFromDirEdge e
-               in  Map.fromList $
-                      (Idx.PPos se, Signal.TC $ SeqFlow.flowPowerOut flow) :
-                      (Idx.PPos $ Idx.flip se, Signal.TC $ SeqFlow.flowPowerIn flow) :
-                      []) $
-         Graph.edgeLabels $ SeqFlow.dirFromFlowGraph topo) .
+   fmap (mapSnd TopoRecord.sectionToPowerRecord) .
    SeqFlow.sequence

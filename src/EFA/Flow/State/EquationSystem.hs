@@ -204,7 +204,7 @@ fromGraph opts gv =
          mconcat $
             foldMap
                (fromTopology (SeqStateEqSys.optTopology opts) .
-                FlowTopoPlain.dirFromFlowGraph)
+                FlowTopoPlain.dirSectionFromFlowGraph)
                (StateFlow.states g) :
             fromStorageSequences opts g :
             []

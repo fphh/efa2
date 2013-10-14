@@ -47,7 +47,7 @@ type
 
 
 solve ::
-   (Eq a, Arith.Constant a, Node.C node) =>
+   (Arith.Product a, Node.C node) =>
    FlowTopo.Section node (Result a) ->
    (forall s. EquationSystem Verify.Ignore node s a) ->
    FlowTopo.Section node (Result a)
@@ -57,7 +57,7 @@ solve graph sys =
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a Idx.Absolute Var.Signal node,
-    Arith.Constant a, Node.C node) =>
+    Arith.Product a, Node.C node) =>
    FlowTopo.Section node (Result a) ->
    (forall s. EquationSystem (Verify.Track output) node s a) ->
    (ME.Exceptional

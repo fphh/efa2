@@ -17,6 +17,9 @@ module EFA.Flow.Topology.Quantity (
    mapTopologyWithVar,
    mapFlowWithVar,
 
+   FlowTopo.liftEdgeFlow,
+   dirFromSums,
+
    sectionFromPlain,
    unknownTopologyNodes,
 
@@ -33,11 +36,7 @@ module EFA.Flow.Topology.Quantity (
 
 import qualified EFA.Flow.Topology.Variable as Var
 import qualified EFA.Flow.Topology as FlowTopo
-import qualified EFA.Flow.Quantity as Quant
 import EFA.Flow.Topology (label, topology)
-import EFA.Flow.Quantity
-          (Sums(..), Flow(..),
-           mapSums, zipWithSums, traverseSums)
 
 import EFA.Equation.Unknown (Unknown(unknown))
 
@@ -51,10 +50,13 @@ import EFA.Utility.Map (Caller)
 import Control.Monad (mplus)
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
-import Data.Traversable (Traversable, traverse)
+import qualified Data.Foldable as Fold
+import Data.Traversable (Traversable, traverse, foldMapDefault)
+import Data.Foldable (Foldable)
 import Data.Maybe.HT (toMaybe)
 
 import Prelude hiding (lookup, sin)
+
 
 
 type
@@ -159,12 +161,12 @@ lookupStruct fieldOut fieldIn unpackIdx idx (FlowTopo.Section _lab topo) =
    case unpackIdx idx of
       se ->
          mplus
-            (Quant.lookupEdge fieldOut se topo)
-            (Quant.lookupEdge fieldIn (Idx.flip se) topo)
+            (FlowTopo.lookupEdge fieldOut se topo)
+            (FlowTopo.lookupEdge fieldIn (Idx.flip se) topo)
 
 
 lookupEta :: (Ord node) => Idx.Eta node -> Section node v -> Maybe v
-lookupEta (Idx.Eta se) = Quant.lookupEdge flowEta se . FlowTopo.topology
+lookupEta (Idx.Eta se) = FlowTopo.lookupEdge flowEta se . FlowTopo.topology
 
 lookupSum :: (Ord node) => Idx.Sum node -> Section node v -> Maybe v
 lookupSum (Idx.Sum dir node) s = do
@@ -225,14 +227,14 @@ mapTopologyWithVar f topo =
             sumIn = flip fmap sin $ f (Var.Sum $ Idx.Sum Idx.In n),
             sumOut = flip fmap sout $ f (Var.Sum $ Idx.Sum Idx.Out n)
          }) $
-   Graph.mapEdgeWithKey (Quant.liftEdgeFlow $ mapFlowWithVar f) topo
+   Graph.mapEdgeWithKey (FlowTopo.liftEdgeFlow $ mapFlowWithVar f) topo
 
 mapFlowWithVar ::
    (Var.Signal node -> v0 -> v1) ->
    Graph.DirEdge node -> Flow v0 -> Flow v1
 mapFlowWithVar f e =
    liftA2 f
-      (Quant.flowVars <*> pure (Topo.structureEdgeFromDirEdge e))
+      (flowVars <*> pure (Topo.structureEdgeFromDirEdge e))
 
 
 sectionFromPlain ::
@@ -258,3 +260,103 @@ unknownTopologyNodes =
          let maybeDir es =
                 toMaybe (any (Topo.isActive . fst) es) unknown
          in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc})
+
+
+
+data Flow v =
+   Flow {
+      flowPowerOut, flowEnergyOut, flowXOut,
+      flowEta,
+      flowXIn, flowEnergyIn, flowPowerIn :: v
+   }
+   deriving (Eq)
+
+data Sums v =
+   Sums { sumIn, sumOut :: Maybe v }
+   deriving (Eq)
+
+
+instance Functor Flow where
+   fmap f (Flow pout eout xout eta xin ein pin) =
+      Flow (f pout) (f eout) (f xout) (f eta) (f xin) (f ein) (f pin)
+
+instance Foldable Flow where
+   foldMap = foldMapDefault
+
+instance Traversable Flow where
+   traverse f (Flow pout eout xout eta xin ein pin) =
+      pure Flow <*> f pout <*> f eout <*> f xout <*> f eta <*> f xin <*> f ein <*> f pin
+
+instance Applicative Flow where
+   pure a = Flow a a a a a a a
+   Flow fpout feout fxout feta fxin fein fpin
+         <*> Flow pout eout xout eta xin ein pin =
+      Flow
+         (fpout pout) (feout eout) (fxout xout)
+         (feta eta) (fxin xin) (fein ein) (fpin pin)
+
+
+instance Functor Sums where
+   fmap f (Sums i o) = Sums (fmap f i) (fmap f o)
+
+instance Foldable Sums where
+   foldMap = foldMapDefault
+
+instance Traversable Sums where
+   traverse f (Sums i o) = liftA2 Sums (traverse f i) (traverse f o)
+
+instance Applicative Sums where
+   pure a = Sums (Just a) (Just a)
+   (Sums fi fo) <*> (Sums i o) = Sums (fi <*> i) (fo <*> o)
+
+
+mapSums ::
+   (v0 -> v1) ->
+   Sums v0 -> Sums v1
+mapSums f s =
+   Sums {
+      sumIn  = fmap f $ sumIn  s,
+      sumOut = fmap f $ sumOut s
+   }
+
+
+zipWithSums ::
+   (v0 -> v1 -> v2) ->
+   Sums v0 -> Sums v1 -> Sums v2
+zipWithSums f s0 s1 =
+   Sums {
+      sumIn  = liftA2 f (sumIn  s0) (sumIn  s1),
+      sumOut = liftA2 f (sumOut s0) (sumOut s1)
+   }
+
+
+traverseSums ::
+   (Applicative f) =>
+   (v0 -> f v1) ->
+   Sums v0 -> f (Sums v1)
+traverseSums f (Sums i o) =
+   liftA2 Sums
+      (traverse f i)
+      (traverse f o)
+
+
+flowVars :: Flow (Idx.StructureEdge node -> Var.Signal node)
+flowVars =
+   Flow {
+      flowPowerOut = Var.index . Idx.Power,
+      flowPowerIn = Var.index . Idx.Power . Idx.flip,
+      flowEnergyOut = Var.index . Idx.Energy,
+      flowEnergyIn = Var.index . Idx.Energy . Idx.flip,
+      flowXOut = Var.index . Idx.X,
+      flowXIn = Var.index . Idx.X . Idx.flip,
+      flowEta = Var.index . Idx.Eta
+   }
+
+
+dirFromSums :: Sums v -> Maybe Topo.StoreDir
+dirFromSums sums =
+   case (sumIn sums, sumOut sums) of
+      (Nothing, Nothing) -> Nothing
+      (Just _, Nothing) -> Just Topo.In
+      (Nothing, Just _) -> Just Topo.Out
+      (Just _, Just _) -> error "storage cannot be both In and Out"

@@ -33,7 +33,6 @@ import qualified EFA.Flow.Topology as FlowTopoPlain
 import EFA.Flow.Topology.Quantity (lookup)
 
 import qualified EFA.Flow.EquationSystem as EqSys
-import qualified EFA.Flow.Quantity as Quant
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join,
            (=&=), (=%=), (=.=))
@@ -202,27 +201,27 @@ fromTopology opts (FlowTopoPlain.Section dtime topo) =
    <>
    foldMap
       (\(ins,ss,outs) ->
-         (flip foldMap (Quant.sumIn ss) $ \s ->
+         (flip foldMap (FlowTopo.sumIn ss) $ \s ->
             splitFactors dtime s
-               Quant.flowEnergyIn Quant.flowXIn $ Map.elems ins)
+               FlowTopo.flowEnergyIn FlowTopo.flowXIn $ Map.elems ins)
          <>
-         (flip foldMap (Quant.sumOut ss) $ \s ->
+         (flip foldMap (FlowTopo.sumOut ss) $ \s ->
             splitFactors dtime s
-               Quant.flowEnergyOut Quant.flowXOut $ Map.elems outs))
+               FlowTopo.flowEnergyOut FlowTopo.flowXOut $ Map.elems outs))
       (Graph.graphMap topo)
 
 fromEdge ::
    (Verify.LocalVar mode v, Product v, Record rec) =>
    Expr mode rec s v ->
-   Quant.Flow (Expr mode rec s v) ->
+   FlowTopo.Flow (Expr mode rec s v) ->
    EqSys.System mode s
 fromEdge dtime
-      (Quant.Flow {
-         Quant.flowEnergyOut = eout,
-         Quant.flowPowerOut = pout,
-         Quant.flowEnergyIn = ein,
-         Quant.flowPowerIn = pin,
-         Quant.flowEta = eta
+      (FlowTopo.Flow {
+         FlowTopo.flowEnergyOut = eout,
+         FlowTopo.flowPowerOut = pout,
+         FlowTopo.flowEnergyIn = ein,
+         FlowTopo.flowPowerIn = pin,
+         FlowTopo.flowEta = eta
       }) =
    (eout =&= dtime ~* pout) <>
    (ein  =&= dtime ~* pin)  <>
@@ -231,10 +230,10 @@ fromEdge dtime
 fromSums ::
    (Verify.LocalVar mode v, rv ~ Expr mode rec s v, Record rec) =>
    Options mode rec s v ->
-   Quant.Sums rv ->
+   FlowTopo.Sums rv ->
    EqSys.System mode s
 fromSums opts s =
-   fold $ liftA2 (optInOutSums opts) (Quant.sumIn s) (Quant.sumOut s)
+   fold $ liftA2 (optInOutSums opts) (FlowTopo.sumIn s) (FlowTopo.sumOut s)
 
 splitFactors ::
    (Verify.LocalVar mode x, Product x, Record rec,
@@ -288,7 +287,7 @@ setup opts gr given = do
       runWriterT $ do
          vars <- variables gr
          EqSys.runSystem $ fromTopology opts $
-            FlowTopoPlain.dirFromFlowGraph $
+            FlowTopoPlain.dirSectionFromFlowGraph $
             FlowTopo.mapSection (Wrap . fmap Expr.fromVariable) vars
          runReaderT (EqSys.runVariableSystem given) vars
          return vars

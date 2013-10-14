@@ -26,7 +26,6 @@ module EFA.Flow.Draw (
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
-import qualified EFA.Flow.Quantity as FlowQuant
 import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.Topology.Quantity as FlowTopoQuant
@@ -163,7 +162,7 @@ dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
 dotFromStorageGraphs ::
    (Node.C node, FormatValue a, Ord (edge node), Graph.Edge edge) =>
    Map node (Map Idx.Boundary a) ->
-   Map Idx.Section (Graph node edge (FlowQuant.Sums v) edgeLabel) ->
+   Map Idx.Section (Graph node edge (FlowTopoQuant.Sums v) edgeLabel) ->
    ([DotSubGraph T.Text], [DotEdge T.Text])
 dotFromStorageGraphs storages sequence =
    (Map.elems $ Map.mapWithKey dotFromStorageGraph $
@@ -178,7 +177,7 @@ dotFromStorageGraphs storages sequence =
        (\before current gr ->
           (Idx.afterSection current,
            dotFromContentEdge (Just before) (Idx.augment current) $
-           fmap FlowQuant.dirFromSums $
+           fmap FlowTopoQuant.dirFromSums $
            Map.filterWithKey (\node _ -> Node.typ node == Node.Storage ()) $
            Graph.nodeLabels gr))
        Idx.initial sequence)
@@ -711,7 +710,7 @@ flowTopology opts =
    Graph.mapEdgeWithKey
       (\edge flow ->
          structureEdgeShow opts $
-         FlowQuant.liftEdgeFlow
+         FlowTopoQuant.liftEdgeFlow
             (FlowTopoQuant.mapFlowWithVar (formatAssignSidesWithOpts opts))
             edge flow)
 
@@ -751,7 +750,7 @@ seqFlowGraph opts gr =
                                  content $ Idx.afterSection sec))
                            (fmap (maybe (error "missing section") (flip (,)) $
                                   PartMap.lookup sec partMap) $
-                            FlowQuant.dirFromSums sums)) $
+                            FlowTopoQuant.dirFromSums sums)) $
               Graph.mapEdgeWithKey (structureSeqStateEdgeShow opts sec) topo))
           Idx.initial $
        SeqFlowQuant.sequence gr)
@@ -867,17 +866,17 @@ structureSeqStateEdgeShow ::
    Options Unicode ->
    part ->
    Graph.EitherEdge node ->
-   Maybe (FlowQuant.Flow a) ->
+   Maybe (FlowTopoQuant.Flow a) ->
    StructureEdgeLabel
 structureSeqStateEdgeShow opts part edge flow =
    structureEdgeShow opts $
-   FlowQuant.liftEdgeFlow
-      (FlowQuant.mapFlowWithVar (formatAssignSidesWithOpts opts) part)
+   FlowTopoQuant.liftEdgeFlow
+      (FlowTopoQuant.mapFlowWithVar (formatAssignSidesWithOpts opts . Idx.InPart part))
       edge flow
 
 structureEdgeShow ::
    Options Unicode ->
-   Maybe (FlowQuant.Flow (Unicode, Unicode)) -> StructureEdgeLabel
+   Maybe (FlowTopoQuant.Flow (Unicode, Unicode)) -> StructureEdgeLabel
 structureEdgeShow opts =
    if optEtaNode opts
      then ShowEtaNode . structureEdgeShowEta
@@ -885,21 +884,21 @@ structureEdgeShow opts =
 
 structureEdgeShowCompact ::
    (Format output) =>
-   Maybe (FlowQuant.Flow (output, output)) -> [output]
+   Maybe (FlowTopoQuant.Flow (output, output)) -> [output]
 structureEdgeShowCompact mlabels =
    case fmap (fmap (uncurry Format.assign)) mlabels of
       Nothing -> []
       Just labels ->
-         FlowQuant.flowEnergyOut labels :
-         FlowQuant.flowXOut labels :
-         FlowQuant.flowEta labels :
-         FlowQuant.flowXIn labels :
-         FlowQuant.flowEnergyIn labels :
+         FlowTopoQuant.flowEnergyOut labels :
+         FlowTopoQuant.flowXOut labels :
+         FlowTopoQuant.flowEta labels :
+         FlowTopoQuant.flowXIn labels :
+         FlowTopoQuant.flowEnergyIn labels :
          []
 
 structureEdgeShowEta ::
    (Format output) =>
-   Maybe (FlowQuant.Flow (output, output)) -> Triple [output]
+   Maybe (FlowTopoQuant.Flow (output, output)) -> Triple [output]
 structureEdgeShowEta mlabels =
    case mlabels of
       Nothing -> Triple [] [] []
@@ -907,13 +906,13 @@ structureEdgeShowEta mlabels =
          case fmap (uncurry Format.assign) flow of
             labels ->
                Triple
-                  (FlowQuant.flowEnergyOut labels :
-                   FlowQuant.flowXOut labels :
+                  (FlowTopoQuant.flowEnergyOut labels :
+                   FlowTopoQuant.flowXOut labels :
                    [])
-                  (snd (FlowQuant.flowEta flow) :
+                  (snd (FlowTopoQuant.flowEta flow) :
                    [])
-                  (FlowQuant.flowXIn labels :
-                   FlowQuant.flowEnergyIn labels :
+                  (FlowTopoQuant.flowXIn labels :
+                   FlowTopoQuant.flowEnergyIn labels :
                    [])
 
 

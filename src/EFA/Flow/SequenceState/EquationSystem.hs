@@ -2,9 +2,8 @@
 module EFA.Flow.SequenceState.EquationSystem where
 
 import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import EFA.Flow.EquationSystem (System, (=&=))
-
-import qualified EFA.Flow.Quantity as Quant
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
@@ -116,9 +115,9 @@ fromStorageSums ::
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
    Options mode rec s a v ->
-   Quant.Sums (ra, rv) ->
+   FlowTopo.Sums (ra, rv) ->
    System mode s
 fromStorageSums opts sums =
-   foldMap (uncurry $ optStInOutSums opts) (Quant.sumIn sums)
+   foldMap (uncurry $ optStInOutSums opts) (FlowTopo.sumIn sums)
    <>
-   foldMap (uncurry $ optStInOutSums opts) (Quant.sumOut sums)
+   foldMap (uncurry $ optStInOutSums opts) (FlowTopo.sumOut sums)

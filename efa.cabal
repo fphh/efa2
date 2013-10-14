@@ -126,6 +126,7 @@ Library
     EFA.Flow.Topology.Index
     EFA.Flow.Topology.Variable
     EFA.Flow.Topology.Quantity
+    EFA.Flow.Topology.Record
     EFA.Flow.Topology.EquationSystem
     EFA.Flow.Topology.Absolute
     EFA.Flow.SequenceState.EquationSystem
@@ -171,7 +172,6 @@ Library
     EFA.Example.Topology.Tripod.State
   Other-Modules:
     EFA.Equation.SystemRecord
-    EFA.Flow.Quantity
     EFA.Flow.EquationSystem
 
 
