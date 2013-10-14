@@ -16,7 +16,6 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 import EFA.Graph (Graph)
 
-import qualified EFA.Signal.Signal as Signal
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
@@ -30,16 +29,6 @@ import Control.Applicative (pure)
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map ; import Data.Map (Map)
 import Data.Tuple.HT (mapSnd)
-
-
-{-
-UnDirEdge must have Nothing as edge lebel
-DirEdge must have Just as edge label
--}
-type SignalTopology node v a =
-        Graph node Graph.EitherEdge
-           (Node.Type ())
-           (Maybe (TopoRecord.Flow (Signal.FFSignal v a)))
 
 
 fromGraphFromSequence ::
