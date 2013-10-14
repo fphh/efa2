@@ -85,7 +85,7 @@ import Control.Applicative (Applicative, pure, liftA2, (<*>))
 import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
-import Data.Maybe (isJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -262,7 +262,7 @@ fromSequenceFlowGen integrate add zero allStEdges gr =
                           (if allStEdges
                              then Map.fromList $
                                   map (flip (,) zero) $
-                                  allStorageEdges (sumsMap node sts)
+                                  StorageQuant.allEdgesFromSums (sumsMap node sts)
                              else Map.empty) $
                        cumulateStorageEdges add secMap $
                        fmap SeqFlowQuant.carryEnergy edges)) $
@@ -290,15 +290,6 @@ sumsMap ::
 sumsMap node =
    fmap (fromMaybe (error "node not in sequence") .
          Graph.lookupNode node . FlowTopo.topology)
-
-allStorageEdges ::
-   Map Idx.State (Sums a) -> [Idx.StorageEdge Idx.State node]
-allStorageEdges stores =
-   case Map.partition (isJust . sumIn) stores of
-      (ins, outs) ->
-         liftA2 Idx.StorageEdge
-            (Idx.Init : map Idx.NoInit (Map.keys ins))
-            (Idx.Exit : map Idx.NoExit (Map.keys outs))
 
 
 data Cum v =

@@ -11,6 +11,7 @@ import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
+import qualified EFA.Flow.StorageGraph.Quantity as StorageGraph
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -50,7 +51,7 @@ fromGraphFromSequence sd =
              fmap
                 (storageMapFromList
                     (Fold.toList $ Sequ.mapWithSection const sq) .
-                 storageEdges) $
+                 StorageGraph.forwardEdgesFromSums) $
              storageSequences $ fmap FlowTopo.topology sq,
           SeqFlow.sequence =
              fmap (mapSnd TopoRecord.fromSection) $ Sequ.toMap sq
@@ -68,19 +69,6 @@ storageMapFromList secs edges =
        map (flip (,) (pure SeqFlow.unknown)) edges),
     Map.fromList $ map (flip (,) SeqFlow.unknown . Idx.Following) $
     Idx.Init : map Idx.NoInit secs)
-
-storageEdges ::
-   Map Idx.Section (SeqFlow.Sums v) -> [Idx.StorageEdge Idx.Section node]
-storageEdges stores = do
-   let ins  = Map.mapMaybe SeqFlow.sumIn stores
-   let outs = Map.mapMaybe SeqFlow.sumOut stores
-   secin <- Idx.Init : map Idx.NoInit (Map.keys ins)
-   secout <-
-      (++[Idx.Exit]) $ map Idx.NoExit $ Map.keys $
-      case secin of
-         Idx.Init -> outs
-         Idx.NoInit s -> snd $ Map.split s outs
-   return $ Idx.StorageEdge secin secout
 
 storageSequences ::
    (Node.C node) =>
