@@ -106,26 +106,27 @@ seqTopology = Flow.sequenceGraph flowStates
 stateFlowGraph :: Topo.StateFlowGraph Node
 stateFlowGraph = StateFlow.stateGraphAllStorageEdges flowStates
 
+
+etaAssign ::
+   Idx.State ->
+   node ->
+   node ->
+   t ->
+   [(StateIdx.Eta node, (t, t, StateIdx.Power node))]
+etaAssign state from to name =
+   let powerIdx = StateIdx.power state to from
+   in  (StateIdx.eta state from to, (name, name, powerIdx)) :
+       (StateIdx.eta state to from, (name, name, powerIdx)) :
+       []
+
 etaAssignState ::
-  Idx.State ->
-  Map (StateIdx.Eta Node) (String, String, StateIdx.Eta Node -> StateIdx.Power Node)
-etaAssignState sec = Map.fromList $
-  (StateIdx.eta sec Water Network, ( "storage", "storage", etaOverPowerIn)) :
-  (StateIdx.eta sec Network Water, ( "storage", "storage", etaOverPowerOut)) :
-
-  (StateIdx.eta sec Coal Network, ( "coal", "coal", etaOverPowerIn)) :
-  (StateIdx.eta sec Network Coal, ( "coal", "coal", etaOverPowerOut)) :
-
-  (StateIdx.eta sec Gas LocalNetwork, ( "gas", "gas", etaOverPowerIn)) :
-  (StateIdx.eta sec LocalNetwork Gas, ( "gas", "gas", etaOverPowerOut)) :
-
-  (StateIdx.eta sec Network LocalNetwork, ( "transformer", "transformer", etaOverPowerIn)) :
-  (StateIdx.eta sec LocalNetwork Network, ( "transformer", "transformer", etaOverPowerOut)) :
-
-  (StateIdx.eta sec LocalNetwork LocalRest, ( "local", "local", etaOverPowerIn)) :
-  (StateIdx.eta sec LocalRest LocalNetwork, ( "local", "local", etaOverPowerOut)) :
-
-  (StateIdx.eta sec Network Rest, ( "rest", "rest", etaOverPowerIn)) :
-  (StateIdx.eta sec Rest Network, ( "rest", "rest", etaOverPowerOut)) :
-
-  []
+   Idx.State ->
+   Map (StateIdx.Eta Node) (String, String, StateIdx.Power Node)
+etaAssignState state = Map.fromList $
+   etaAssign state Water Network "storage" ++
+   etaAssign state Coal Network "coal" ++
+   etaAssign state Gas LocalNetwork "gas" ++
+   etaAssign state Network LocalNetwork "transformer" ++
+   etaAssign state LocalNetwork LocalRest "local" ++
+   etaAssign state Network Rest "rest" ++
+   []

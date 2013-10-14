@@ -43,7 +43,8 @@ import Data.Monoid((<>))
 import Debug.Trace
 
 
-type EtaAssignMap node = Map (StateIdx.Eta node) (String, String, StateIdx.Eta node -> StateIdx.Power node)
+type EtaAssignMap node =
+        Map (StateIdx.Eta node) (String, String, StateIdx.Power node)
 
 solve :: (Node.C node,
           Eq (v a),
@@ -138,8 +139,8 @@ makeEtaFuncGiven ::
    Map String (a -> a) ->
    EqGen.EquationSystem node s x (Data c a)
 makeEtaFuncGiven etaAssign etaFunc = Fold.fold $ Map.mapWithKey f etaAssign
-  where f n (strP, strN, g) =
-          EqGen.variable n =.= EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
+  where f eta (strP, strN, power) =
+          EqGen.variable eta =.= EqGen.liftF (Data.map ef) (EqGen.variable power)
           where ef x = if x >= 0 then fpos x else fneg x
                 fpos = maybe (err strP) id (Map.lookup strP etaFunc)
                 fneg = maybe (err strN) (\h -> recip . h . negate)

@@ -12,6 +12,7 @@ import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.AbsoluteState as EqGen
 -- import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Utility as AppUt
+import EFA.Application.Simulation (EtaAssignMap)
 import EFA.Application.AbsoluteState ((.=))
 
 import qualified EFA.Equation.Arithmetic as EqArith
@@ -46,9 +47,6 @@ type EnvResult a = StateEnv.Complete System.Node (Result a) (Result a)
 
 type EqSystemData a =
   forall s. EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
-
-type EtaAssignMap node =
-  Map (XIdx.Eta node) (String, String, XIdx.Eta node -> XIdx.Power node)
 
 type Param2 = NonEmpty.T (NonEmpty.T Empty.T)
 
