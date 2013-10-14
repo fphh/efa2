@@ -52,12 +52,12 @@ etaOverPowerOut =
 
 -- | Takes all non-energy and non-power values from an env,
 -- | removes values in section x and generate given equations
-givenAverageWithoutStateX ::
-  (Eq v, EqArith.Sum v, Node.C node, Ord node,Eq a, EqArith.Sum a) =>
+givenAverageWithoutState ::
+  (EqArith.Sum a, EqArith.Sum v, Node.C node) =>
   Idx.State ->
   EqEnvState.Complete node a v  ->
   EqGenState.EquationSystem node s a v
-givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
+givenAverageWithoutState stateToRemove (EqEnvState.Complete scalar signal) =
    (EqGenState.fromMap $ EqEnvState.dtimeMap signal) <>
    (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.etaMap signal) <>
    (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.xMap signal) <>
@@ -67,21 +67,6 @@ givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
 --   (EqGenState.fromMap $ EqEnvState.stOutSumMap scalar)
    where f :: Idx.InState idx node -> v -> Bool
          f (Idx.InPart state _) _ = state /= stateToRemove
-
-
-givenAverageWithoutState ::
-  (Eq v, EqArith.Sum v, Node.C node, Ord node, Eq a, EqArith.Sum a) =>
-  Idx.State ->
-  EqEnvState.Complete node a v ->
-  EqEnvState.Complete node a v
-givenAverageWithoutState _stateToRemove (EqEnvState.Complete scalar signal) =
-  EqEnvState.Complete
-    ( mempty { EqEnvState.stXMap = EqEnvState.stXMap scalar } )
-    ( mempty { EqEnvState.etaMap = EqEnvState.etaMap signal,
-               EqEnvState.xMap   = EqEnvState.xMap signal,
-               EqEnvState.dtimeMap = EqEnvState.dtimeMap signal } )
---  where f :: Idx.InState idx node -> v -> Bool
---        f (Idx.InPart state _) _ = state /= stateToRemove
 
 
 givenForOptimisation ::
@@ -97,7 +82,7 @@ givenForOptimisation ::
 givenForOptimisation env etaAssign etaFunc state given =
   given <>
   makeEtaFuncGiven etaAssign etaFunc <>
-  givenAverageWithoutStateX state env
+  givenAverageWithoutState state env
 
 
 initialEnv ::
