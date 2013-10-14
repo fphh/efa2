@@ -172,7 +172,6 @@ Library
     EFA.Example.Topology.Tripod.State
   Other-Modules:
     EFA.Equation.SystemRecord
-    EFA.Flow.Quantity
     EFA.Flow.EquationSystem
 
 

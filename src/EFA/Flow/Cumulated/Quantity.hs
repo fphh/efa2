@@ -28,8 +28,7 @@ import qualified EFA.Flow.Cumulated.Index as CumIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
-import qualified EFA.Flow.Quantity as Quant
-import EFA.Flow.Quantity (Sums(..))
+import EFA.Flow.Topology.Quantity (Sums(..))
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
@@ -129,7 +128,7 @@ cumFromFlowGraph ::
    FlowTopo.Section node a -> CumGraph node a
 cumFromFlowGraph (FlowTopoPlain.Section time topo) =
    Graph.mapEdge (cumFromFlow time) $
-   Quant.dirFromFlowGraph topo
+   FlowTopoPlain.dirFromFlowGraph topo
 
 flowResultFromCum :: Cum a -> Flow (Result a)
 flowResultFromCum =

@@ -3,7 +3,7 @@ module EFA.Flow.StorageGraph.Quantity where
 
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
-import qualified EFA.Flow.Quantity as Quant
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.PartMap as PartMap
 
 import qualified EFA.Equation.Variable as Var
@@ -29,7 +29,7 @@ class (Applicative f, Foldable f) => Carry f where
 
 mapGraphWithVar ::
    (Ord node, Carry carry, CarryPart carry ~ part, Format.Part part) =>
-   (Idx.PartNode part node -> Maybe (Quant.Sums v)) ->
+   (Idx.PartNode part node -> Maybe (FlowTopo.Sums v)) ->
    (Var.ForNodeScalar part node -> a0 -> a1) ->
    node ->
    StorageGraph part node a0 (carry a0) ->
@@ -39,7 +39,7 @@ mapGraphWithVar lookupSums f node (StorageGraph partMap edges) =
       (PartMap.mapWithVar
           (maybe
               (error "mapStoragesWithVar: missing corresponding sum")
-              Quant.dirFromSums .
+              FlowTopo.dirFromSums .
            lookupSums)
           f node partMap)
       (Map.mapWithKey (mapCarryWithVar f node) edges)
@@ -54,10 +54,10 @@ mapCarryWithVar f node edge =
 
 forwardEdgesFromSums ::
    (Ord part) =>
-   Map part (Quant.Sums v) -> [Idx.StorageEdge part node]
+   Map part (FlowTopo.Sums v) -> [Idx.StorageEdge part node]
 forwardEdgesFromSums stores = do
-   let ins  = Map.mapMaybe Quant.sumIn stores
-   let outs = Map.mapMaybe Quant.sumOut stores
+   let ins  = Map.mapMaybe FlowTopo.sumIn stores
+   let outs = Map.mapMaybe FlowTopo.sumOut stores
    secin <- Idx.Init : map Idx.NoInit (Map.keys ins)
    secout <-
       (++[Idx.Exit]) $ map Idx.NoExit $ Map.keys $
@@ -68,8 +68,8 @@ forwardEdgesFromSums stores = do
 
 allEdgesFromSums ::
    (Ord part) =>
-   Map part (Quant.Sums a) -> [Idx.StorageEdge part node]
+   Map part (FlowTopo.Sums a) -> [Idx.StorageEdge part node]
 allEdgesFromSums stores =
    liftA2 Idx.StorageEdge
-      (Idx.Init : map Idx.NoInit (Map.keys (Map.mapMaybe Quant.sumIn stores)))
-      (Idx.Exit : map Idx.NoExit (Map.keys (Map.mapMaybe Quant.sumOut stores)))
+      (Idx.Init : map Idx.NoInit (Map.keys (Map.mapMaybe FlowTopo.sumIn stores)))
+      (Idx.Exit : map Idx.NoExit (Map.keys (Map.mapMaybe FlowTopo.sumOut stores)))

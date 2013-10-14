@@ -1,8 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 module EFA.Flow.Topology.Record where
 
-import qualified EFA.Flow.Quantity as Quant
-
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as XIdx
 import qualified EFA.Flow.Topology as FlowTopoPlain
@@ -102,15 +100,15 @@ sectionToPowerRecord (FlowTopoPlain.Section time topo) =
       (\e flow ->
          let se = Topo.structureEdgeFromDirEdge e
          in  Map.fromList $
-                (Idx.PPos se, Signal.TC $ Quant.flowPowerOut flow) :
-                (Idx.PPos $ Idx.flip se, Signal.TC $ Quant.flowPowerIn flow) :
+                (Idx.PPos se, Signal.TC $ FlowTopo.flowPowerOut flow) :
+                (Idx.PPos $ Idx.flip se, Signal.TC $ FlowTopo.flowPowerIn flow) :
                 []) $
    Graph.edgeLabels $
-   Quant.dirFromFlowGraph topo
+   FlowTopoPlain.dirFromFlowGraph topo
 
-fullFlow :: Flow (Result a) -> Quant.Flow (Result a)
+fullFlow :: Flow (Result a) -> FlowTopo.Flow (Result a)
 fullFlow flow =
    (pure Undetermined) {
-      Quant.flowEnergyOut = flowOut flow,
-      Quant.flowEnergyIn = flowIn flow
+      FlowTopo.flowEnergyOut = flowOut flow,
+      FlowTopo.flowEnergyIn = flowIn flow
    }
