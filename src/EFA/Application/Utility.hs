@@ -127,12 +127,6 @@ identifyFlowState topo givenEdges =
       [flowTopo] -> flowTopo
       _ -> error "identifyFlowState: ambiguous given edges"
 
-identifyFlowStates ::
-   (Ord node) =>
-   Topo.Topology node -> [Graph.EitherEdge node] -> [Topo.FlowTopology node]
-identifyFlowStates topo givenEdges = StateAnalysis.identify topo givenEdges
-
-
 seqFlowGraphFromStates ::
    (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
    Topo.Topology node ->

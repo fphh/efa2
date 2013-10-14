@@ -2,8 +2,7 @@ module Modules.System where
 
 import qualified EFA.Application.Utility as AppUt
 
-import EFA.Application.Utility (identifyFlowState, identifyFlowStates, dirEdge, undirEdge)
-import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
+import EFA.Application.Utility (identifyFlowState, dirEdge)
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.State.Index as StateIdx
@@ -13,7 +12,6 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.StateFlow as StateFlow
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Signal.Sequence as Sequ
 --import qualified EFA.Signal.Base as Base
@@ -84,20 +82,10 @@ powerPositonNames = Map.fromList $ concat $ map f edgeList
 
 flowStates :: Sequ.List (Topo.FlowTopology Node)
 flowStates =
-  Sequ.fromList $ concatMap (identifyFlowStates topology)
-    [ [dirEdge Water Network, dirEdge LocalNetwork Network],
-      [dirEdge Water Network, dirEdge Network LocalNetwork],
-      [dirEdge Network Water, dirEdge LocalNetwork Network],
-      [dirEdge Network Water, dirEdge Network LocalNetwork] ]
-
-
-{-
    fmap (identifyFlowState topology) $
    Sequ.fromList $
       [[dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network],
        [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water]]
--}
-
 
 seqTopology :: Flow.RangeGraph Node
 seqTopology = Flow.sequenceGraph flowStates
