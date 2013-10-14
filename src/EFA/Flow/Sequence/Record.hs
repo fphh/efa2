@@ -59,7 +59,7 @@ fromGraphFromSequence sd =
                 (storageMapFromList
                     (Fold.toList $ Sequ.mapWithSection const sq) .
                  storageEdges) $
-             getStorageSequences $ fmap FlowTopo.topology sq,
+             storageSequences $ fmap FlowTopo.topology sq,
           SeqFlow.sequence =
              fmap (mapSnd TopoRecord.fromSection) $ Sequ.toMap sq
        }
@@ -90,11 +90,11 @@ storageEdges stores = do
          Idx.NoInit s -> snd $ Map.split s outs
    return $ Idx.StorageEdge secin secout
 
-getStorageSequences ::
+storageSequences ::
    (Node.C node) =>
    Sequ.List (Graph node Graph.EitherEdge (SeqFlow.Sums v) edgeLabel) ->
    Map node (Map Idx.Section (SeqFlow.Sums v))
-getStorageSequences =
+storageSequences =
    Map.unionsWith (Map.unionWith (error "duplicate section for node"))
    .
    Fold.toList
