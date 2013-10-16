@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 module EFA.Flow.Sequence.Record (
-   fromGraphFromSequence,
+   flowGraphFromSequence,
    flowGraphToPowerRecords,
    ) where
 
@@ -35,12 +35,12 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 import Data.Tuple.HT (mapSnd)
 
 
-fromGraphFromSequence ::
+flowGraphFromSequence ::
    (BSum a, SV.Zipper v, SV.Walker v, SV.Singleton v, SV.Storage v a,
     Node.C node) =>
    Sequ.List (TopoRecord.Section node v a) ->
    SeqFlow.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
-fromGraphFromSequence sd =
+flowGraphFromSequence sd =
    let sq =
           fmap
              (\(FlowTopoPlain.Section lab topo) ->

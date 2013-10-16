@@ -124,7 +124,7 @@ process rawSignals =
           powerSignals signal
 
       sequenceFlowGraph =
-        RecSeq.fromGraphFromSequence $ sectionMapping flowToposUnmapped
+        RecSeq.flowGraphFromSequence $ sectionMapping flowToposUnmapped
 
       externalEnv =
         SeqFlow.mapGraph

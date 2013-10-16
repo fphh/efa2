@@ -272,14 +272,14 @@ main = do
                (checkDetermined "external scalar")
                (checkDetermined "external signal") .
              Analysis.external .
-             RecSeq.fromGraphFromSequence)
+             RecSeq.flowGraphFromSequence)
             flowToposX
   let externalSignalEnvX =
          map
             (\flowTopos ->
                EqAbs.solveOpts
                   (EqAbs.independentInOutSums EqAbs.optionsDefault)
-                  (RecSeq.fromGraphFromSequence flowTopos) mempty)
+                  (RecSeq.flowGraphFromSequence flowTopos) mempty)
             flowToposX
 
   ---------------------------------------------------------------------------------------
