@@ -376,22 +376,6 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
   return stateFlowEnvWithGraph
 
 
-
-
-{-
-solveAndCalibrateAvgEff ::
-  (Sig.TSignal [] Double, [Sig.PSignal [] Double]) ->
-  Map String (Double -> Double) ->
-  ( Topo.StateFlowGraph Node,
-    StateEnv.Complete Node (Data Nil Double) (Data Nil Double) ) ->
-  [(Topo.StateFlowGraph Node,
-    StateEnv.Complete Node (Data Nil Double) (Data Nil Double))]
-solveAndCalibrateAvgEff sigs etaMap envWithGraph =
-  List.iterate ( -- fmap (AppOpt.givenAverageWithoutState Optimisation.state0)
-                 solveAndCalibrateAvgEffWithGraph sigs etaMap)
-               envWithGraph
--}
-
 nestM :: (Monad m) => Int -> (a -> m a) -> a -> m a
 nestM n act = foldr (>=>) return (replicate n act)
 
