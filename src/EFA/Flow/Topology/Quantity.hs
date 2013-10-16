@@ -19,6 +19,7 @@ module EFA.Flow.Topology.Quantity (
 
    FlowTopo.liftEdgeFlow,
    dirFromSums,
+   sumsFromDir,
 
    sectionFromPlain,
    unknownTopologyNodes,
@@ -360,3 +361,10 @@ dirFromSums sums =
       (Just _, Nothing) -> Just Topo.In
       (Nothing, Just _) -> Just Topo.Out
       (Just _, Just _) -> error "storage cannot be both In and Out"
+
+sumsFromDir :: v -> Maybe Topo.StoreDir -> Sums v
+sumsFromDir x mdir =
+   case mdir of
+      Nothing       -> Sums {sumIn = Nothing, sumOut = Nothing}
+      Just Topo.In  -> Sums {sumIn = Just x,  sumOut = Nothing}
+      Just Topo.Out -> Sums {sumIn = Nothing, sumOut = Just x}
