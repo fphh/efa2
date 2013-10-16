@@ -17,9 +17,10 @@ import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.Simulation as AppSim
-import qualified EFA.Application.Absolute as AppAbs
 import qualified EFA.Application.Plot as PlotIO
 import qualified EFA.Application.Utility as AppUt
+import qualified EFA.Application.Absolute as EqAbs
+import EFA.Application.Absolute ((.=))
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.State.Index as StateIdx
@@ -44,9 +45,7 @@ import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import qualified EFA.IO.TableParser as Table
 
-import qualified EFA.Equation.System as EqGen; import EFA.Equation.System ((.=))
 import qualified EFA.Equation.Environment as EqEnv
-import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
@@ -223,18 +222,15 @@ external ::
   Vec.Walker v, Vec.Singleton v, Vec.Storage v a, Node.C node) =>
   [(node, a)] ->
   Flow.RangeGraph node ->
-  Sequ.List
-    (Record.Record Sig.Signal Sig.FSignal
-      (Typ A T Tt) (Typ A F Tt) (Idx.PPos node) v a a) ->
+  Sequ.List (Record.FlowRecord node v a) ->
   EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
 
 external initSto sfTopo sfRec =
-  EqEnv.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
-  EqGen.solveFromMeasurement sfTopo $
-  (AppAbs.fromEnvSignal $ AppAbs.envFromFlowRecord (fmap Record.diffTime sfRec))
+  EqAbs.solveFromMeasurement sfTopo $
+  (EqAbs.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sfRec))
   <> foldMap f initSto
   where f (st, val) =
-          Idx.absolute (SeqIdx.storage Idx.initial st) .= Data val
+          SeqIdx.storage Idx.initial st .= Data val
 
 varRestPower', varLocalPower' :: [[Double]]
 (varLocalPower', varRestPower') = CT.varMat local rest
