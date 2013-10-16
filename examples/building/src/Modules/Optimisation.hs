@@ -42,9 +42,9 @@ state0, state1, state2, state3 :: Idx.State
 state0 :~ state1 :~ state2 :~ state3 :~ _ = Stream.enumFrom $ Idx.State 0
 
 
-type Env a = StateEnv.Complete System.Node (Data Nil a) (Data Nil a)
---type EnvResultData a = StateEnv.Complete Node (Result (Data Nil a)) (Result (Data Nil a))
+type EnvData a = StateEnv.Complete System.Node (Data Nil a) (Data Nil a)
 type EnvResult a = StateEnv.Complete System.Node (Result a) (Result a)
+type EnvResultData a = EnvResult (Data Nil a)
 
 type EqSystemData a =
   forall s. EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
@@ -58,7 +58,7 @@ solve ::
   Topo.StateFlowGraph System.Node ->
   EtaAssignMap System.Node ->
   Map String (a -> a) ->
-  Env a ->
+  EnvData a ->
   Idx.State ->
   Param2x2 a -> EnvResult a
 solve stateFlowGraph etaAssign etaFunc env state (Sweep.Pair load dof) =
@@ -149,12 +149,12 @@ case socDrive of
 -}
 -----------------------------------------------------------------------------
 
---condition :: StateEnv.Complete Node b (Result Double) -> Bool
+--condition :: EnvResult Double -> Bool
 --condition env = True
 
 
 
-condition :: (Show b) => StateEnv.Complete System.Node b (Result Double) -> Bool
+condition :: EnvResult Double -> Bool
 condition env =
   all (>0) $ catMaybes $ takeWhile isJust $ cnlst ++ nlnlst
 --  all (>0) $ catMaybes $ filter isJust $ cnlst ++ nlnlst

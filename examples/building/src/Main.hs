@@ -8,7 +8,7 @@ import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 
 
-import Modules.Optimisation(EnvResult, Param2)
+import Modules.Optimisation(EnvData, EnvResult, Param2)
 import Modules.System (Node)
 
 -- import EFA.Utility.Async (concurrentlyMany_)
@@ -156,7 +156,7 @@ unzip3Map m = (Map.map fst3 m, Map.map snd3 m, Map.map thd3 m)
 optimalEtasWithPowers ::
   One.OptimalEnvParams Node Param2 Param2 Double ->
   One.SocDrive Double ->
-  StateEnv.Complete Node (Data Nil Double) (Data Nil Double) ->
+  EnvData Double ->
   One.OptimalEtaWithEnv Node Param2 Double
 optimalEtasWithPowers params forceFactor env =
   Map.mapWithKey f op
@@ -203,7 +203,8 @@ optimalEtasWithPowers params forceFactor env =
 -- | Warning -- only works for one section in env
 envToPowerRecord ::
   Sig.TSignal [] Double ->
-  StateEnv.Complete System.Node (Result (Data  Nil Double)) (Result (Data ([] :> Nil) Double)) ->
+  StateEnv.Complete System.Node
+    (Result (Data  Nil Double)) (Result (Data ([] :> Nil) Double)) ->
   Record.PowerRecord System.Node [] Double
 envToPowerRecord time env =
   (Chop.addZeroCrossings
@@ -290,10 +291,8 @@ solveAndCalibrateAvgEffWithGraph ::
   Sig.PSignal [] Double ->
   Sig.PSignal [] Double ->
   Map String (Double -> Double) ->
-  ( Topo.StateFlowGraph Node,
-    StateEnv.Complete Node (Data Nil Double) (Data Nil Double) ) ->
-  IO ( Topo.StateFlowGraph Node,
-    StateEnv.Complete Node (Data Nil Double) (Data Nil Double) )
+  (Topo.StateFlowGraph Node, EnvData Double) ->
+  IO (Topo.StateFlowGraph Node, EnvData Double)
 solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) = do
   let sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
       sectionFilterTime = Sig.toScalar 0
@@ -358,10 +357,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
         Sequ.unzip $
         fmap (Flow.adjustedTopology System.topology) sequenceFlowsFilt
 
-      stateFlowEnvWithGraph ::
-        ( Topo.StateFlowGraph Node,
-          StateEnv.Complete Node (Data Nil Double) (Data Nil Double) )
-
+      stateFlowEnvWithGraph :: (Topo.StateFlowGraph Node, EnvData Double)
       stateFlowEnvWithGraph =
         let envLocal = external initStorage
                            (Flow.sequenceGraph flowTopos) adjustedFlows
