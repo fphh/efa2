@@ -45,6 +45,7 @@ import qualified EFA.Flow.Topology as FlowTopo
 import EFA.Flow.Topology.AssignMap (AssignMap)
 import EFA.Flow.Topology (label, topology)
 
+import qualified EFA.Equation.Variable as EqVar
 import EFA.Equation.Unknown (Unknown(unknown))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -198,7 +199,7 @@ lookupDTime :: Idx.DTime node -> Section node v -> Maybe v
 lookupDTime Idx.DTime = Just . FlowTopo.label
 
 
-class (Var.FormatIndex idx) => Lookup idx where
+class (EqVar.SignalIndex idx, Var.FormatIndex idx) => Lookup idx where
    lookup :: (Ord node) => idx node -> Section node v -> Maybe v
 
 instance Lookup Idx.Energy where
