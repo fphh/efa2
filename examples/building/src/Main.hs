@@ -3,6 +3,7 @@
 
 module Main where
 
+import System.IO.Unsafe (unsafePerformIO)
 
 import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
@@ -70,6 +71,8 @@ import Data.Foldable (foldMap)
 import Control.Functor.HT (for)
 import Control.Monad (void, (>=>))
 
+import Debug.Trace
+
 
 frameOpts ::
   Opts.T (Graph3D.T Double Double Double) ->
@@ -121,17 +124,21 @@ water = [0.2, 0.3, 0.9, 1.9, 3]
 gas =   [0.2, 0.7, 1.1, 2.7, 3]
 -}
 
-local = [0.2, 3]
-rest =  [0.2, 3]
-water = [-0.3, 0.3, 0.7]
-gas =   [0.4, 3]
+local = [0.2, 1, 2, 3]
+rest =  [0.2, 1, 2, 3]
+water = [0.3, 0.7, 3]
+gas =   [0.4, 1, 2, 3]
 
 sweepPts :: Sweep.Points Param2 Param2 Double
 sweepPts = Sweep.Pair (local !: rest !: Empty.Cons) (water !: gas !: Empty.Cons)
 
 optimalPower :: One.OptimalPower Node
 optimalPower =
-  One.optimalPower [(Optimisation.state0, lst), (Optimisation.state1, lst)]
+  One.optimalPower $
+    (Optimisation.state0, lst) :
+    (Optimisation.state1, lst) :
+    (Optimisation.state2, lst) :
+    (Optimisation.state3, lst) : []
   where lst =
            [SeqIdx.ppos System.Network System.Water,
             SeqIdx.ppos System.LocalNetwork System.Gas]
@@ -170,13 +177,20 @@ optimalEtasWithPowers params forceFactor env =
         f state = Map.fromList . map g
           where
                 solveFunc :: Optimisation.Param2x2 Double -> EnvResult Double
-                solveFunc =
-                  Optimisation.solve
-                    stateFlowGraph
-                    (System.etaAssignState state)
-                    etaMap
-                    env
-                    state
+                solveFunc x = unsafePerformIO $ do
+                  let res = 
+                        Optimisation.solve
+                          -- stateFlowGraph
+                          System.stateFlowGraph
+                          (System.etaAssignState state)
+                          etaMap
+                          -- env
+                          (env <> initEnv)
+                          state
+                          x
+                  --print x
+                  --Draw.xterm $ Draw.stateFlowGraphWithEnv Draw.optionsDefault System.stateFlowGraph res
+                  return res
 
                 envsSweep :: Map (Param2 Double) [EnvResult Double]
                 envsSweep =
@@ -302,12 +316,12 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
           sweepPts
           optimalPower
           stateFlowGraph
-
+          
       optEtaWithPowers ::
         Map Idx.State
           (Map (Idx.PPos Node)
             (Map (Param2 Double) (Double, Double)))
-      optEtaWithPowers = optimalEtasWithPowers optParams force env
+      optEtaWithPowers = trace "blub" $ optimalEtasWithPowers optParams force env
       (_optEta, _optState, optPower) = optimalMaps optEtaWithPowers
 
       optPowerInterp ::
@@ -363,7 +377,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
               StateEnv.mapMaybe Result.toMaybe Result.toMaybe $
                 StateFlow.envFromSequenceEnvResult sm e)
 
-  Draw.xterm $ Draw.stateFlowGraph (fst stateFlowEnvWithGraph)
+  --Draw.xterm $ Draw.stateFlowGraph (fst stateFlowEnvWithGraph)
 
   PlotIO.record "Calculated Signals" DefaultTerm.cons show id recZeroCross
 
@@ -375,6 +389,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
 nestM :: (Monad m) => Int -> (a -> m a) -> a -> m a
 nestM n act = foldr (>=>) return (replicate n act)
 
+initEnv = AppOpt.initialEnv System.Water System.stateFlowGraph
 
 main :: IO()
 main = do
@@ -385,7 +400,6 @@ main = do
   tabPower <- Table.read "../maps/power.txt"
 
   let etaMap = CT.makeEtaFunctions2D scaleTableEta tabEta
-      initEnv = AppOpt.initialEnv System.Water System.stateFlowGraph
 
 
       (time,
@@ -401,6 +415,6 @@ main = do
         psolar Sig..+ Sig.makeDelta phouse Sig..+ Sig.makeDelta pindustry
 
   void $
-     nestM 4
+     nestM 10
         (solveAndCalibrateAvgEffWithGraph time prest plocal etaMap)
         (System.stateFlowGraph, initEnv)
