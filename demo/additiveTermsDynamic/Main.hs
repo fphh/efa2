@@ -5,23 +5,22 @@ import qualified EFA.Example.Topology.LinearTwo as LinearTwo
 import EFA.Example.Topology.LinearTwo (Node, node0, node1, node2)
 
 import qualified EFA.Application.AssignMap as AssignMap
-import qualified EFA.Application.Symbolic as Symbolic
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Utility (seqFlowGraphFromTopology)
+import EFA.Application.Utility (quantityTopology)
 
-import qualified EFA.Flow.Sequence.AssignMap as SeqFlowAssignMap
-import qualified EFA.Flow.Sequence.Absolute as EqSys
-import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology.Symbolic as Symbolic
+import qualified EFA.Flow.Topology.AssignMap as FlowTopoAssignMap
+import qualified EFA.Flow.Topology.Absolute as EqSys
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Variable as Var
+import qualified EFA.Flow.Topology.Index as XIdx
 import qualified EFA.Flow.Draw as Draw
-import EFA.Flow.Sequence.Absolute ((.=))
+import EFA.Flow.Topology.Absolute ((.=))
 
-import qualified EFA.Symbolic.Variable as SymVar
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Result as Result
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Stack (Stack)
 
@@ -36,52 +35,47 @@ import Data.Monoid (mempty, (<>))
 import qualified System.IO as IO
 
 
-sec0 :: Idx.Section
-sec0 = Idx.Section 0
 
-
-type SignalTerm = Symbolic.SignalTerm Idx.Delta SumProduct.Term Node
-type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node
+type Term = Symbolic.Term Idx.Delta SumProduct.Term Node
 
 
 type
    EquationSystemSymbolic s =
       EqSys.EquationSystemIgnore Node s
-         (Stack (Var.SectionAny Node) ScalarTerm)
-         (Stack (Var.SectionAny Node) SignalTerm)
+         (Stack (Var.Signal Node) Term)
 
 infixr 6 *=<>, -=<>
 
 (*=<>) ::
-   (SeqFlow.LookupSignal idx) =>
-   Idx.InSection idx Node ->
+   (FlowTopo.Lookup idx) =>
+   idx Node ->
    EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
-   (idx .= (Stack.singleton $ SymVar.varSymbol $ Idx.before idx))
+   (idx .= (Stack.singleton $ Symbolic.varSymbol $ Idx.before idx))
    <>
    eqsys
 
 (-=<>) ::
-   (SeqFlow.LookupSignal idx) =>
-   Idx.InSection idx Node -> EquationSystemSymbolic s -> EquationSystemSymbolic s
+   (FlowTopo.Lookup idx) =>
+   idx Node ->
+   EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx -=<> eqsys =
    (idx .=
       let var = Var.index idx
-      in  Stack.deltaPair
-             (Var.Signal var)
-             (SymVar.symbol (Idx.before var))
-             (SymVar.symbol (Idx.delta  var)))
+      in  Stack.deltaPair var
+             (Symbolic.symbol (Idx.before var))
+             (Symbolic.symbol (Idx.delta  var)))
    <>
    eqsys
 
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (XIdx.dTime sec0 .= Arith.fromInteger 1) <>
+   (XIdx.dTime .= Arith.fromInteger 1) <>
 
-   XIdx.energy sec0 node0 node1 -=<>
-   XIdx.eta sec0 node0 node1 -=<>
-   XIdx.eta sec0 node1 node2 -=<>
+   XIdx.energy node0 node1 -=<>
+   XIdx.eta node0 node1 -=<>
+   XIdx.eta node1 node2 -=<>
 
    mempty
 
@@ -91,41 +85,41 @@ mainSymbolic = do
 
    let solved =
           EqSys.solve
-             (seqFlowGraphFromTopology LinearTwo.topology)
+             (quantityTopology LinearTwo.topology)
              givenSymbolic
 
    putStrLn $ Format.unUnicode $ Format.lines $
-      SeqFlowAssignMap.format $ SeqFlow.toAssignMap solved
+      FlowTopoAssignMap.format $ FlowTopo.toAssignMap solved
 
-   Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault solved
+   Draw.xterm $ Draw.flowTopology Draw.optionsDefault $
+      FlowTopo.topology solved
 
 
 type
    EquationSystemNumeric s =
       EqSys.EquationSystemIgnore Node s
-         (Stack (Var.SectionAny Node) Double)
-         (Stack (Var.SectionAny Node) Double)
+         (Stack (Var.Signal Node) Double)
 
 deltaPair ::
-   (SeqFlow.LookupSignal idx) =>
-   Idx.InSection idx Node -> Double -> Double -> EquationSystemNumeric s
+   (FlowTopo.Lookup idx) =>
+   idx Node -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delta =
-   idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
+   idx .= Stack.deltaPair (Var.index idx) before delta
 
 
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (XIdx.dTime sec0 .= 1) <>
+   (XIdx.dTime .= 1) <>
 
-   deltaPair (XIdx.energy sec0 node0 node1) 4 (-0.6) <>
-   deltaPair (XIdx.eta sec0 node0 node1) 0.25 0.1 <>
-   deltaPair (XIdx.eta sec0 node1 node2) 0.85 0.05 <>
+   deltaPair (XIdx.energy node0 node1) 4 (-0.6) <>
+   deltaPair (XIdx.eta node0 node1) 0.25 0.1 <>
+   deltaPair (XIdx.eta node1 node2) 0.85 0.05 <>
 
    mempty
 
 
 eout :: XIdx.Energy Node
-eout = XIdx.energy sec0 node2 node1
+eout = XIdx.energy node2 node1
 
 
 
@@ -133,9 +127,9 @@ mainNumeric :: IO ()
 mainNumeric = do
 
    let solved =
-          EqSys.solve (seqFlowGraphFromTopology LinearTwo.topology) givenNumeric
+          EqSys.solve (quantityTopology LinearTwo.topology) givenNumeric
 
-   case SeqFlow.lookupEnergy eout solved of
+   case FlowTopo.lookupEnergy eout solved of
       Nothing -> error "undefined E_2_1"
       Just d ->
          case d of
