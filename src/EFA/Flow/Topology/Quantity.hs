@@ -24,6 +24,8 @@ module EFA.Flow.Topology.Quantity (
    sectionFromPlain,
    unknownTopologyNodes,
 
+   toAssignMap,
+
    lookupPower,
    lookupEnergy,
    lookupX,
@@ -33,10 +35,14 @@ module EFA.Flow.Topology.Quantity (
    lookupSums,
 
    Lookup, lookup,
+
+   fold, foldMap,
    ) where
 
 import qualified EFA.Flow.Topology.Variable as Var
+import qualified EFA.Flow.Topology.AssignMap as AssignMap
 import qualified EFA.Flow.Topology as FlowTopo
+import EFA.Flow.Topology.AssignMap (AssignMap)
 import EFA.Flow.Topology (label, topology)
 
 import EFA.Equation.Unknown (Unknown(unknown))
@@ -48,6 +54,7 @@ import qualified EFA.Graph as Graph
 
 import EFA.Utility.Map (Caller)
 
+import qualified Control.Monad.Trans.Writer as MW
 import Control.Monad (mplus)
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
@@ -55,6 +62,7 @@ import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
 import Data.Maybe.HT (toMaybe)
+import Data.Monoid (Monoid)
 
 import Prelude hiding (lookup, sin)
 
@@ -135,6 +143,13 @@ traverseTopology ::
    Topology node v0 -> f (Topology node v1)
 traverseTopology f =
    Graph.traverse (traverseSums f) (traverse $ traverse f)
+
+
+toAssignMap ::
+   (Node.C node) =>
+   Section node v -> AssignMap node v
+toAssignMap =
+   fold . mapSectionWithVar AssignMap.singleton
 
 
 lookupPower ::
@@ -263,7 +278,6 @@ unknownTopologyNodes =
          in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc})
 
 
-
 data Flow v =
    Flow {
       flowPowerOut, flowEnergyOut, flowXOut,
@@ -368,3 +382,14 @@ sumsFromDir x mdir =
       Nothing       -> Sums {sumIn = Nothing, sumOut = Nothing}
       Just Topo.In  -> Sums {sumIn = Just x,  sumOut = Nothing}
       Just Topo.Out -> Sums {sumIn = Nothing, sumOut = Just x}
+
+foldMap ::
+   (Node.C node, Monoid w) =>
+   (v -> w) -> Section node v -> w
+foldMap fv =
+   fold . mapSection fv
+
+fold ::
+   (Node.C node, Monoid w) =>
+   Section node w -> w
+fold = MW.execWriter . traverseSection MW.tell
