@@ -6,29 +6,29 @@ import EFA.Example.Topology.LinearTwo (Node, node0, node1, node2)
 
 import qualified EFA.Application.NestedDelta as NestedDelta
 import qualified EFA.Application.AssignMap as AssignMap
-import qualified EFA.Application.Symbolic as Symbolic
 import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.NestedDelta
           (ParameterRecord,
-           givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
-           (<&), (<&>), (&>), (&&>), (?=))
-import EFA.Application.Utility (seqFlowGraphFromTopology)
+           (<&), (<&>), (&>), (&&>))
+import EFA.Application.Utility (quantityTopology)
 
-import qualified EFA.Flow.Sequence.AssignMap as SeqFlowAssignMap
-import qualified EFA.Flow.Sequence.EquationSystem as EqSys
-import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology.Symbolic as Symbolic
+import qualified EFA.Flow.Topology.AssignMap as FlowTopoAssignMap
+import qualified EFA.Flow.Topology.EquationSystem as EqSys
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Variable as Var
+import qualified EFA.Flow.Topology.Index as XIdx
 import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Topology.NestedDelta
+          (givenParameterSymbol, givenParameterNumber, (?=))
 
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Symbolic.OperatorTree as Op
-import qualified EFA.Symbolic.Mixed as Term
 
 import qualified EFA.Graph.Topology.Index as Idx
 
@@ -44,12 +44,7 @@ import Data.Monoid (mempty, (<>))
 
 
 
-sec0 :: Idx.Section
-sec0 = Idx.Section 0
-
-
-type SignalTerm = Symbolic.SignalTerm Idx.Delta SumProduct.Term Node
-type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node
+type Term = Symbolic.Term Idx.Delta SumProduct.Term Node
 
 type IdxMultiDelta = Idx.ExtDelta (Idx.ExtDelta (Idx.ExtDelta Idx.Absolute))
 type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Absolute))
@@ -57,7 +52,7 @@ type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Ab
 type
    EquationSystemSymbolic s =
       EqSys.EquationSystem Symbolic.Ignore
-         RecMultiDelta Node s ScalarTerm SignalTerm
+         RecMultiDelta Node s Term
 
 
 
@@ -89,17 +84,17 @@ absoluteRecord = NestedDelta.absoluteRecord absolute
 
 
 eout, ein :: XIdx.Energy Node
-ein  = XIdx.energy sec0 node0 node1
-eout = XIdx.energy sec0 node2 node1
+ein  = XIdx.energy node0 node1
+eout = XIdx.energy node2 node1
 
 eta0, eta1 :: XIdx.Eta Node
-eta0 = XIdx.eta sec0 node0 node1
-eta1 = XIdx.eta sec0 node1 node2
+eta0 = XIdx.eta node0 node1
+eta1 = XIdx.eta node1 node2
 
 
 termFromIndex ::
    IdxMultiDelta ->
-   [Idx.Record Idx.Delta (Var.InSectionSignal Node)]
+   [Idx.Record Idx.Delta (Var.Signal Node)]
 termFromIndex
       (Idx.ExtDelta r2 (Idx.ExtDelta r1 (Idx.ExtDelta r0 Idx.Absolute))) =
    Idx.Record r2 (Var.index ein) :
@@ -111,7 +106,7 @@ termFromIndex
 
 _givenSymbolic :: EquationSystemSymbolic s
 _givenSymbolic =
-   (XIdx.dTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
+   (XIdx.dTime ?= absoluteRecord (Arith.fromInteger 1)) <>
 
    givenParameterSymbol ein  param2 <>
    givenParameterSymbol eta0 param1 <>
@@ -121,7 +116,7 @@ _givenSymbolic =
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (XIdx.dTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
+   (XIdx.dTime ?= absoluteRecord (Arith.fromInteger 1)) <>
 
    Fold.fold
       (NonEmpty.zipWith ($)
@@ -134,14 +129,14 @@ givenSymbolic =
    mempty
 
 
-simplify ::SignalTerm -> SignalTerm
+simplify :: Term -> Term
 simplify =
-   Term.Signal . Op.toNormalTerm .
+   Op.toNormalTerm .
    NonEmpty.sum . Op.expand .
-   Op.fromNormalTerm . Term.getSignal
+   Op.fromNormalTerm
 
 simplifiedSummands ::
-   RecMultiDelta (Result SignalTerm) -> NonEmpty.T [] (Result SignalTerm)
+   RecMultiDelta (Result Term) -> NonEmpty.T [] (Result Term)
 simplifiedSummands =
    fmap (fmap simplify) . Record.summands
 
@@ -150,29 +145,26 @@ mainSymbolic = do
 
    let solved =
           EqSys.solve
-             (seqFlowGraphFromTopology LinearTwo.topology)
+             (quantityTopology LinearTwo.topology)
              givenSymbolic
 
    putStrLn $ Format.unUnicode $ Format.lines $
-      SeqFlowAssignMap.format $ SeqFlow.toAssignMap $
-      SeqFlow.mapGraph Record.summands simplifiedSummands solved
+      FlowTopoAssignMap.format $ FlowTopo.toAssignMap $
+      FlowTopo.mapSection simplifiedSummands solved
 
-   Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault $
-      SeqFlow.mapGraph
-         (Record.Absolute . Record.summands)
-         (Record.Absolute . simplifiedSummands)
-         solved
+   Draw.xterm $ Draw.flowTopology Draw.optionsDefault $
+      FlowTopo.topology $ FlowTopo.mapSection simplifiedSummands solved
 
 
 type
    EquationSystemNumeric s =
       EqSys.EquationSystem Symbolic.Ignore
-         RecMultiDelta Node s Double Double
+         RecMultiDelta Node s Double
 
 
 _givenNumeric :: EquationSystemNumeric s
 _givenNumeric =
-   (XIdx.dTime sec0 ?= absoluteRecord 1) <>
+   (XIdx.dTime ?= absoluteRecord 1) <>
 
    givenParameterNumber ein  4.00 (-0.6) param2 <>
    givenParameterNumber eta0 0.25   0.1  param1 <>
@@ -182,7 +174,7 @@ _givenNumeric =
 
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (XIdx.dTime sec0 ?= absoluteRecord 1) <>
+   (XIdx.dTime ?= absoluteRecord 1) <>
 
    Fold.fold
       (NonEmpty.zipWith ($)
@@ -201,10 +193,10 @@ mainNumeric = do
 
    let solved =
           EqSys.solve
-             (seqFlowGraphFromTopology LinearTwo.topology)
+             (quantityTopology LinearTwo.topology)
              givenNumeric
 
-   case SeqFlow.lookupEnergy eout solved of
+   case FlowTopo.lookupEnergy eout solved of
       Nothing -> error "undefined E_2_1"
       Just x -> do
          let assigns =

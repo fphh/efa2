@@ -131,6 +131,7 @@ Library
     EFA.Flow.Topology.Symbolic
     EFA.Flow.Topology.AssignMap
     EFA.Flow.Topology.Absolute
+    EFA.Flow.Topology.NestedDelta
     EFA.Flow.SequenceState.EquationSystem
     EFA.Flow.Sequence
     EFA.Flow.Sequence.Index
