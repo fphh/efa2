@@ -4,9 +4,10 @@ module Main where
 
 import qualified EFA.Example.Topology.Tripod as Tripod
 
+import qualified EFA.Flow.Draw as Draw
+
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Graph
 
 import qualified EFA.Report.Format as Format
