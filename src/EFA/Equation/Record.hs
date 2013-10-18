@@ -2,8 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Equation.Record where
 
-import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Graph.Topology.Index as Idx
 
@@ -29,13 +27,6 @@ import Prelude hiding (lookup, (.))
 
 
 type Indexed rec = Idx.Record (ToIndex rec)
-
-lookupSignal ::
-   (C rec, Ord node) =>
-   Indexed rec (Var.InSectionSignal node) ->
-   Env.Signal node (rec a) -> Maybe a
-lookupSignal (Idx.Record r v) =
-   fmap (Accessor.get (access r)) . Env.lookupSignal v
 
 
 newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show, Eq)
