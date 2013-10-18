@@ -160,7 +160,6 @@ Library
     EFA.Application.AssignMap
     EFA.Application.Plot
     EFA.Application.Tree
-    EFA.Application.EtaSys
     EFA.Application.Balance
     EFA.Application.Optimisation
     EFA.Application.Sweep
