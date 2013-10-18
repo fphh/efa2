@@ -165,7 +165,7 @@ checkedLookup ::
    (Node.C node, Var.FormatIndex idx) =>
    String -> (idx node -> t -> Maybe b) -> idx node -> t -> b
 checkedLookup name =
-   Var.checkedLookup ("EquationSystem." ++ name)
+   Var.checkedLookup ("State.EquationSystem." ++ name)
 
 
 variableRecord ::

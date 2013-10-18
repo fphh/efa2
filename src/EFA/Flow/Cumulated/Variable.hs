@@ -83,5 +83,7 @@ checkedLookup ::
    (Node.C node, FormatIndex idx) =>
    String -> (idx node -> t -> Maybe b) -> idx node -> t -> b
 checkedLookup name lk idx gr =
-   fromMaybe (error $ name ++ " " ++ Format.unUnicode (formatIndex idx)) $
+   fromMaybe
+      (error $ "Cumulated." ++ name ++ " " ++
+               Format.unUnicode (formatIndex idx)) $
    lk idx gr

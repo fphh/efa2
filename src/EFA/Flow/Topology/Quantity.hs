@@ -19,9 +19,12 @@ module EFA.Flow.Topology.Quantity (
 
    FlowTopo.liftEdgeFlow,
    dirFromSums,
+   sumsFromDir,
 
    sectionFromPlain,
    unknownTopologyNodes,
+
+   toAssignMap,
 
    lookupPower,
    lookupEnergy,
@@ -32,12 +35,17 @@ module EFA.Flow.Topology.Quantity (
    lookupSums,
 
    Lookup, lookup,
+
+   fold, foldMap,
    ) where
 
 import qualified EFA.Flow.Topology.Variable as Var
+import qualified EFA.Flow.Topology.AssignMap as AssignMap
 import qualified EFA.Flow.Topology as FlowTopo
+import EFA.Flow.Topology.AssignMap (AssignMap)
 import EFA.Flow.Topology (label, topology)
 
+import qualified EFA.Equation.Variable as EqVar
 import EFA.Equation.Unknown (Unknown(unknown))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -47,6 +55,7 @@ import qualified EFA.Graph as Graph
 
 import EFA.Utility.Map (Caller)
 
+import qualified Control.Monad.Trans.Writer as MW
 import Control.Monad (mplus)
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
@@ -54,6 +63,7 @@ import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
 import Data.Maybe.HT (toMaybe)
+import Data.Monoid (Monoid)
 
 import Prelude hiding (lookup, sin)
 
@@ -136,6 +146,13 @@ traverseTopology f =
    Graph.traverse (traverseSums f) (traverse $ traverse f)
 
 
+toAssignMap ::
+   (Node.C node) =>
+   Section node v -> AssignMap node v
+toAssignMap =
+   fold . mapSectionWithVar AssignMap.singleton
+
+
 lookupPower ::
    (Ord node) => Idx.Power node -> Section node v -> Maybe v
 lookupPower =
@@ -182,7 +199,7 @@ lookupDTime :: Idx.DTime node -> Section node v -> Maybe v
 lookupDTime Idx.DTime = Just . FlowTopo.label
 
 
-class (Var.FormatIndex idx) => Lookup idx where
+class (EqVar.SignalIndex idx, Var.FormatIndex idx) => Lookup idx where
    lookup :: (Ord node) => idx node -> Section node v -> Maybe v
 
 instance Lookup Idx.Energy where
@@ -260,7 +277,6 @@ unknownTopologyNodes =
          let maybeDir es =
                 toMaybe (any (Topo.isActive . fst) es) unknown
          in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc})
-
 
 
 data Flow v =
@@ -360,3 +376,21 @@ dirFromSums sums =
       (Just _, Nothing) -> Just Topo.In
       (Nothing, Just _) -> Just Topo.Out
       (Just _, Just _) -> error "storage cannot be both In and Out"
+
+sumsFromDir :: v -> Maybe Topo.StoreDir -> Sums v
+sumsFromDir x mdir =
+   case mdir of
+      Nothing       -> Sums {sumIn = Nothing, sumOut = Nothing}
+      Just Topo.In  -> Sums {sumIn = Just x,  sumOut = Nothing}
+      Just Topo.Out -> Sums {sumIn = Nothing, sumOut = Just x}
+
+foldMap ::
+   (Node.C node, Monoid w) =>
+   (v -> w) -> Section node v -> w
+foldMap fv =
+   fold . mapSection fv
+
+fold ::
+   (Node.C node, Monoid w) =>
+   Section node w -> w
+fold = MW.execWriter . traverseSection MW.tell

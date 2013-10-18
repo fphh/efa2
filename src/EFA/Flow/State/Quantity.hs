@@ -27,6 +27,7 @@ module EFA.Flow.State.Quantity (
    flowResultFromCumResult,
 
    flowGraphFromCumResult,
+   flowGraphFromPlain,
 
    lookupPower,
    lookupEnergy,
@@ -63,8 +64,11 @@ import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Unknown (Unknown(unknown))
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
 import EFA.Equation.Arithmetic ((~+))
@@ -336,6 +340,22 @@ flowGraphFromCumResult gr =
          StateFlow.storages gr,
       StateFlow.states =
          fmap (FlowTopoPlain.mapEdge (fmap flowResultFromCumResult)) $
+         StateFlow.states gr
+   }
+
+flowGraphFromPlain ::
+   (Node.C node, Unknown a, Unknown v) =>
+   StateFlow.Graph node Graph.EitherEdge
+      () (Node.Type (Maybe Topo.StoreDir)) () () () ->
+   Graph node a v
+flowGraphFromPlain gr =
+   StateFlow.Graph {
+      StateFlow.storages =
+         fmap (StorageGraph.mapNode (const unknown) .
+               StorageGraph.mapEdge (const $ pure unknown)) $
+         StateFlow.storages gr,
+      StateFlow.states =
+         fmap FlowTopo.sectionFromPlain $
          StateFlow.states gr
    }
 

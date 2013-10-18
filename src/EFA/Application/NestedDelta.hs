@@ -148,10 +148,8 @@ e &&> ParameterRecord inner xs =
 
 
 parameterSymbol ::
-   (Pointed term,
+   (Pointed term, Node.C node,
     t ~ SymVar.VarTerm var Idx.Delta term node,
-    Eq t, Arith.Sum t, Arith.Constant t,
-    Node.C node,
     Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    OuterExtrusion rec t ->
@@ -163,10 +161,8 @@ parameterSymbol param idx =
       (SymVar.varSymbol $ Idx.delta  idx)
 
 absoluteSymbol ::
-   (Pointed term,
+   (Pointed term, Node.C node,
     t ~ SymVar.VarTerm var Idx.Delta term node,
-    Eq t, Arith.Sum t, Arith.Constant t,
-    Node.C node,
     Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    InnerExtrusion rec t ->
@@ -176,13 +172,11 @@ absoluteSymbol absolute idx =
    absoluteRecord absolute (SymVar.varSymbol $ Idx.before idx)
 
 parameterRecord ::
-   (Arith.Sum x) =>
    OuterExtrusion rec x ->
    x -> x -> rec (Result x)
 parameterRecord = runOuterExtrusion
 
 absoluteRecord ::
-   (Arith.Sum x) =>
    InnerExtrusion rec x ->
    x -> rec (Result x)
 absoluteRecord = runInnerExtrusion
@@ -190,13 +184,11 @@ absoluteRecord = runInnerExtrusion
 
 
 givenParameterSymbol ::
-   (Verify.GlobalVar mode t recIdx var node,
+   (Verify.LocalVar mode t,
     EqSys.Record rec, Record.ToIndex rec ~ recIdx,
-    Pointed term,
+    Pointed term, Node.C node,
     t ~ SymVar.VarTerm var Idx.Delta term node,
-    Eq t, Arith.Sum t, Arith.Constant t,
     t ~ Env.Element idx scalar signal,
-    Node.C node,
     Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    idx node ->
@@ -207,10 +199,9 @@ givenParameterSymbol idx param =
 
 
 givenParameterNumber ::
-   (Verify.GlobalVar mode x recIdx var node,
-    EqSys.Record rec, Record.ToIndex rec ~ recIdx, Var.Type idx ~ var,
-    Eq x, Arith.Sum x, x ~ Env.Element idx a v,
-    Node.C node, SeqFlow.Lookup idx) =>
+   (Verify.LocalVar mode x, x ~ Env.Element idx a v,
+    EqSys.Record rec, Node.C node, SeqFlow.Lookup idx) =>
+
    idx node -> x -> x ->
    OuterExtrusion rec x ->
    EqSys.EquationSystem mode rec node s a v

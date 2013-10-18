@@ -662,7 +662,7 @@ main = do
            (Result (Data Nil Double))
            (Result (Data ([] :> Nil) Double))
      sequenceFlowTopologySim =
-        RecSeq.fromGraphFromSequence $
+        RecSeq.flowGraphFromSequence $
         fmap (TopoRecord.flowTopologyFromRecord System.topologyOpt) $
         Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime) $
         fmap Record.partIntegrate sequencePowers
