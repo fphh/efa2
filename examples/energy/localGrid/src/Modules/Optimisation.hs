@@ -256,4 +256,4 @@ condition env = all (>0) [eCoal0, eCoal1, eTrans0, eTrans1]
 maxEta ::
   Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
   Maybe (Double, EnvDouble)
-maxEta = Sweep.optimalSolution2DNew condition (forcing NoDrive)
+maxEta = Sweep.optimalSolution2D condition (forcing NoDrive)

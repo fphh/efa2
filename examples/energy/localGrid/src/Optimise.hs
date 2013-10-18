@@ -233,12 +233,12 @@ maxOptChargeFunc, maxOptDischargeFunc ::
   (Double, EnvDouble)
 maxOptChargeFunc socDrive =
   maybe (error "maxOptChargeFunc") id .
-  Sweep.optimalSolution2DNew condition
+  Sweep.optimalSolution2D condition
     (forcing $ Optimisation.ChargeDrive socDrive)
 
 maxOptDischargeFunc socDrive =
   maybe (error "maxOptDischargeFunc") id .
-  Sweep.optimalSolution2DNew condition
+  Sweep.optimalSolution2D condition
     (forcing $ Optimisation.DischargeDrive socDrive)
 
 makePics ::

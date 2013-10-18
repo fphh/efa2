@@ -6,8 +6,6 @@
 
 module EFA.Application.Sweep where
 
-import qualified EFA.Application.EtaSys as ES
-
 import qualified EFA.Signal.Signal as Sig
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -17,13 +15,9 @@ import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.State.SystemEta as StateEta
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Flow as Flow
 
 import Control.Applicative (liftA2)
 
@@ -108,39 +102,13 @@ combineOptimalMaps state charge discharge =
   Sig.zip charge discharge
 
 optimalSolution2D ::
-  (Fractional v, Ord node, Show node, Show v, Ord v, Eq a) =>
-  ES.Condition node a v ->
-  ES.Forcing node a v ->
-  Flow.RangeGraph node ->
-  Sig.UTSignal2 V.Vector V.Vector (EqEnv.Complete node a (Result v)) ->
-  Maybe (v, EqEnv.Complete node a (Result v))
-optimalSolution2D cond forcing topo sigEnvs = liftA2 (,) etaMax env
-  where etaSys = Sig.map (ES.objectiveFunction cond forcing topo) sigEnvs
-        etaMax = Sig.fromScalar $ Sig.maximum etaSys
-        (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
-        env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
-
-optimalSolution2DNew ::
   (Node.C node, Eq a, Ord v, Arith.Constant v) =>
   SeqEta.Condition node a v ->
   SeqEta.Forcing node a v ->
   Sig.UTSignal2 V.Vector V.Vector (SeqFlow.Graph node a (Result v)) ->
   Maybe (v, SeqFlow.Graph node a (Result v))
-optimalSolution2DNew cond forcing sigEnvs = liftA2 (,) etaMax env
+optimalSolution2D cond forcing sigEnvs = liftA2 (,) etaMax env
   where etaSys = Sig.map (SeqEta.objectiveFunction cond forcing) sigEnvs
-        etaMax = Sig.fromScalar $ Sig.maximum etaSys
-        (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
-        env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
-
-optimalSolution2DState ::
-  (Fractional v, Ord node, Show node, Show v, Ord v, Eq a) =>
-  ES.ConditionState node a v ->
-  ES.ForcingState node a v ->
-  Topo.StateFlowGraph node ->
-  Sig.UTSignal2 V.Vector V.Vector (StateEnv.Complete node a (Result v)) ->
-  Maybe (v, StateEnv.Complete node a (Result v))
-optimalSolution2DState cond forcing topo sigEnvs = liftA2 (,) etaMax env
-  where etaSys = Sig.map (ES.objectiveFunctionState cond forcing topo) sigEnvs
         etaMax = Sig.fromScalar $ Sig.maximum etaSys
         (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
         env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
