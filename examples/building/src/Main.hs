@@ -248,9 +248,9 @@ varLocalPower = Sig.fromList2 varLocalPower'
 
 to2DMatrix ::
   (Vec.Storage v1 a, Vec.Storage v2 (v1 a),
-  Vec.FromList v1, Vec.FromList v2, Ord a) =>
-  Map (NonEmpty.T f a) a ->
-  TC tr (Typ x y z)  (Data (v2 :> v1 :> Nil) a)
+   Vec.FromList v1, Vec.FromList v2, Ord b) =>
+  Map (NonEmpty.T f b) a ->
+  TC tr (Typ x y z) (Data (v2 :> v1 :> Nil) a)
 to2DMatrix =
   Sig.fromList2 . Map.elems .
   Map.mapKeysWith (++) (\(NonEmpty.Cons line _) -> line) . fmap (:[])
@@ -258,7 +258,7 @@ to2DMatrix =
 optimalMaps :: (Num a, Ord a, Ord (f a), Ord node) =>
   Map Idx.State (Map (Idx.PPos node) (Map (NonEmpty.T f a) (a, a))) ->
   ( Sig.NSignal2 V.Vector V.Vector a,
-    Sig.UTSignal2 V.Vector V.Vector a,
+    Sig.UTSignal2 V.Vector V.Vector Idx.State,
     Map (Idx.PPos node) (Sig.PSignal2 V.Vector V.Vector a) )
 optimalMaps =
   (\(eta, st, power) -> (head $ Map.elems eta, head $ Map.elems st, power))
@@ -270,8 +270,7 @@ optimalMaps =
   where f st = Map.map (Map.map (g st))
         g st (eta, power) = (eta, st, power)
         h (eta, st, power) =
-          (to2DMatrix eta, to2DMatrix (Map.map unpackState st), to2DMatrix power)
-        unpackState (Idx.State s) = fromIntegral s
+          (to2DMatrix eta, to2DMatrix st, to2DMatrix power)
 
 
 givenSignals ::
