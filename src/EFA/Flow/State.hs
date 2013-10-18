@@ -8,8 +8,6 @@ import qualified EFA.Flow.StorageGraph.Quantity as StorageGraph
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
-import qualified EFA.Graph.StateFlow as StateFlow
-
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
@@ -51,7 +49,7 @@ flowGraphFromStates flowStates =
                 (storageMapFromList (map fst numFlowStates) .
                  StorageGraph.allEdgesFromSums .
                  fmap (FlowTopo.sumsFromDir ())) $
-             StateFlow.getStorageSequences $
+             storageSequencesFromClassified $
              Map.fromList numFlowStates,
           states =
              fmap (FlowTopoPlain.Section ()) $ Map.fromList numFlowStates
@@ -80,3 +78,17 @@ storageSequences =
          fmap (Map.singleton s) $
          Map.filterWithKey (const . Topo.isStorage . Node.typ) $
          Graph.nodeLabels topo)
+
+storageSequencesFromClassified ::
+   (Ord node) =>
+   Map Idx.State (Topo.ClassifiedTopology node) ->
+   Map node (Map Idx.State (Maybe Topo.StoreDir))
+storageSequencesFromClassified =
+   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
+   .
+   Map.elems
+   .
+   Map.mapWithKey
+      (\s g ->
+         fmap (Map.singleton s) $
+         Map.mapMaybe Topo.maybeStorage $ Graph.nodeLabels g)
