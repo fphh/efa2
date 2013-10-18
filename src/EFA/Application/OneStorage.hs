@@ -1,14 +1,13 @@
 {-# LANGUAGE Rank2Types #-}
 module EFA.Application.OneStorage where
 
+import qualified EFA.Application.Sweep as Sweep
+
 import qualified EFA.Flow.State.Quantity as StateFlow
 
 import qualified EFA.Graph.Topology.Index as Idx
 
 import EFA.Equation.Result (Result)
-
-
-import qualified EFA.Application.Sweep as Sweep
 
 import qualified Data.Map as Map; import Data.Map (Map)
 
