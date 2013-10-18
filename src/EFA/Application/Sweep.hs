@@ -25,15 +25,14 @@ import qualified EFA.Graph.Flow as Flow
 import Control.Applicative (liftA2)
 
 import qualified Data.Traversable as Trav
-import qualified Data.List as List
 import qualified Data.Map as Map; import Data.Map (Map)
-
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Vector as V
 import Data.Traversable (Traversable, traverse)
 import Data.Foldable (Foldable, foldMap)
-import Data.Function (on)
 import Data.Maybe (mapMaybe)
 import Data.Monoid ((<>))
+import Data.Ord (comparing)
 
 -- | Map a two dimensional load room (varX, varY) and find per load situation
 -- | the optimal solution in the 2d-solution room (two degrees of freevarOptX varOptY)
@@ -148,8 +147,7 @@ optimalSolutionState ::
   Topo.StateFlowGraph node ->
   [StateEnv.Complete node a (Result v)] ->
   Maybe (v, StateEnv.Complete node a (Result v))
-optimalSolutionState cond forcing topo envs =
-  case mapMaybe f envs of
-       [] -> Nothing
-       fs -> Just $ List.maximumBy (compare `on` fst) fs
-  where f e = fmap (flip (,) e) $ ES.objectiveFunctionState cond forcing topo e
+optimalSolutionState cond forcing topo =
+  fmap (NonEmpty.maximumBy (comparing fst)) . NonEmpty.fetch .
+  mapMaybe
+    (\e -> fmap (flip (,) e) $ ES.objectiveFunctionState cond forcing topo e)
