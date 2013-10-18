@@ -3,8 +3,8 @@ module Main where
 import qualified EFA.Example.Topology.Tripod as Tripod
 import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 
-import qualified EFA.Application.Symbolic as Symbolic
-import EFA.Application.Symbolic ((=<>), (.=))
+import qualified EFA.Flow.Sequence.Symbolic as Symbolic
+import EFA.Flow.Sequence.Symbolic ((=<>), (.=))
 import EFA.Application.Utility (seqFlowGraphFromStates, dirEdge)
 
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys

@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Application.Symbolic (
-   module EFA.Application.Symbolic,
+module EFA.Flow.Sequence.Symbolic (
+   module EFA.Flow.Sequence.Symbolic,
    (.=), (%=), (=%%=),
    Verify.Ignore,
    ) where

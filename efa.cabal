@@ -141,6 +141,7 @@ Library
     EFA.Flow.Sequence.AssignMap
     EFA.Flow.Sequence.Absolute
     EFA.Flow.Sequence.SystemEta
+    EFA.Flow.Sequence.Symbolic
     EFA.Flow.State
     EFA.Flow.State.Index
     EFA.Flow.State.Quantity
@@ -157,7 +158,6 @@ Library
     EFA.Application.Utility
     EFA.Application.Absolute
     EFA.Application.AbsoluteState
-    EFA.Application.Symbolic
     EFA.Application.NestedDelta
     EFA.Application.AssignMap
     EFA.Application.Plot

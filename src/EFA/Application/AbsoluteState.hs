@@ -8,7 +8,7 @@ module EFA.Application.AbsoluteState (
 
 -- import as  import qualified EFA.Application.AbsoluteState as AbsoluteState
 
-import qualified EFA.Application.Symbolic as Symbolic
+import qualified EFA.Flow.Sequence.Symbolic as Symbolic
 
 import qualified EFA.Equation.Record as Record
 --import qualified EFA.Equation.System as EqGen

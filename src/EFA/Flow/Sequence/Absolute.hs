@@ -9,7 +9,7 @@ module EFA.Flow.Sequence.Absolute (
    (=.=),
    ) where
 
-import qualified EFA.Application.Symbolic as Symbolic
+import qualified EFA.Flow.Sequence.Symbolic as Symbolic
 
 import qualified EFA.Symbolic.Variable as SymVar
 
