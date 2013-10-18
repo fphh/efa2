@@ -248,7 +248,6 @@ Executable example-vehicle
   Hs-Source-Dirs: examples/vehicle/src
   Main-Is: Main.hs
   Other-Modules:
-    Modules.Plots
     Modules.Signals
     Modules.System
     Modules.Analysis
