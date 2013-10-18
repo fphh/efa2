@@ -14,14 +14,11 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
 import qualified EFA.Signal.Sequence as Sequ
-import qualified EFA.Signal.Data as Data
 
-import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
 
 import qualified EFA.Utility.Map as MapU
-import EFA.Utility.Map (checkedLookup)
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -132,53 +129,5 @@ checkDetermined name rx =
    case rx of
       Undetermined -> error $ "undetermined " ++ name
       Determined x -> x
-
-
--- | Unpack scalar result values in env from Data constructor
-envGetData ::
-  (Ord node) =>
-  EqEnv.Complete node (Result (Data.Data va a)) (Result (Data.Data vv v)) ->
-  EqEnv.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
-envGetData =
-  EqEnv.completeFMap (fmap Data.getData) (fmap Data.getData)
-
-
---  @HH mit @HT klären ob lookup funktionen notwenig und sinnvoll, PG
-
-lookupAbsEnergy ::
-  (Ord node, Show node, Show t) =>
-  String ->
-  EqEnv.Complete node b (Result t) ->
-  SeqIdx.Energy node -> Result t
-lookupAbsEnergy caller env n =
-  checkedLookup caller (EqEnv.energyMap $ EqEnv.signal env) n
-
-lookupAbsPower ::
-  (Ord node, Show node, Show t) =>
-  String ->
-  EqEnv.Complete node b (Result t) ->
-  SeqIdx.Power node -> Result t
-lookupAbsPower caller env n =
-  checkedLookup caller (EqEnv.powerMap $ EqEnv.signal env) n
-
-lookupAbsEta ::
-  (Ord node, Show node, Show t) =>
-  String ->
-  EqEnv.Complete node b (Result t) ->
-  SeqIdx.Eta node -> Result t
-lookupAbsEta caller env n =
-  checkedLookup caller (EqEnv.etaMap $ EqEnv.signal env) n
-
-lookupDetPower ::(Ord node, Show d, Show node) =>
-  SeqIdx.Power node -> EqEnv.Complete node b (Result d) -> d
-lookupDetPower idx =
-  checkDetermined ("lookupDetPower (2): " ++ show idx) .
-  flip (lookupAbsPower ("lookupDetPower (1): " ++ show idx)) idx
-
-lookupDetEnergy ::(Ord node, Show d, Show node) =>
-  SeqIdx.Energy node -> EqEnv.Complete node b (Result d) -> d
-lookupDetEnergy idx =
-  checkDetermined ("lookupDetEnergy (2): " ++ show idx) .
-  flip (lookupAbsEnergy ("lookupDetEnergy (1): " ++ show idx)) idx
 
 
