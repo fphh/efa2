@@ -169,8 +169,14 @@ optimalEtasWithPowers params forceFactor env =
         f :: Idx.State ->
              [Idx.PPos Node] ->
              Map (Idx.PPos Node) (Map (Param2 Double) (Double, Double))
-        f state = Map.fromList . map g
-          where
+        f state = Map.fromList . map (\p -> (p, h p optEtaEnv))
+          where h ppos =
+                   Map.mapMaybe (fmap (fmap
+                      (AppUt.checkDetermined "optimalEtasWithPowers" .
+                       Var.checkedLookup "optimalEtasWithPowers"
+                       StateFlow.lookupPower
+                          (StateIdx.powerFromPPos state ppos))))
+
                 solveFunc :: Optimisation.Param2x2 Double -> EnvResult Double
                 solveFunc =
                   Optimisation.solve env
@@ -187,15 +193,6 @@ optimalEtasWithPowers params forceFactor env =
                     --One.nocondition
                     Optimisation.condition
                     forcing
-
-                g ppos =
-                   (ppos,
-                    Map.mapMaybe (fmap (fmap
-                      (AppUt.checkDetermined "optimalEtasWithPowers" .
-                       Var.checkedLookup "optimalEtasWithPowers"
-                       StateFlow.lookupPower
-                          (StateIdx.powerFromPPos state ppos))))
-                      optEtaEnv)
 
 ------------------------------------------------------------------------
 
