@@ -156,8 +156,6 @@ Library
     EFA.Flow.SystemEta
     EFA.Flow.Draw
     EFA.Application.Utility
-    EFA.Application.Absolute
-    EFA.Application.AbsoluteState
     EFA.Application.NestedDelta
     EFA.Application.AssignMap
     EFA.Application.Plot
