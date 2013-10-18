@@ -38,7 +38,6 @@ type EtaAssignMap node = Map (Idx.StructureEdge node) (String, String)
 
 solve :: (Node.C node,
           Eq (v a), Show (v a),
-          Fractional a,
           Ord a,
           Show a,
           Arith.Constant a,
