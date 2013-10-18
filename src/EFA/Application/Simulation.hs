@@ -40,8 +40,6 @@ import qualified Data.Foldable as Fold
 import Data.Map (Map)
 import Data.Monoid((<>))
 
-import Debug.Trace
-
 
 type EtaAssignMap node =
         Map (StateIdx.Eta node) (String, String, StateIdx.Power node)
@@ -65,7 +63,7 @@ solve :: (Node.C node,
          Map String (a -> a) ->
          Record.PowerRecord node v a ->
          EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
-solve topology etaAssign etaFunc powerRecord = trace (show powerRecord)
+solve topology etaAssign etaFunc powerRecord =
     EqGen.solve stateFlowGraph $
     givenSimulate etaAssign etaFunc powerRecord
   where
