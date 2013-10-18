@@ -4,12 +4,9 @@ module EFA.Application.Utility where
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
-import qualified EFA.Flow.State.Index as StateIdx
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
-
-import qualified EFA.Graph.StateFlow.Environment as StateEnv
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
@@ -33,7 +30,6 @@ import EFA.Report.FormatValue (FormatValue)
 
 import qualified EFA.Utility.Map as MapU
 import EFA.Utility.Map (checkedLookup)
-import EFA.Utility (myShowList)
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -224,46 +220,3 @@ lookupDetEnergy idx =
   flip (lookupAbsEnergy ("lookupDetEnergy (1): " ++ show idx)) idx
 
 
---  @HT schon wieder code-Duplication wegen Stateenv - was können wir da machen ?
-
-lookupAbsEnergyState ::
-  (Ord node, Show node, Show t) =>
-  String ->
-  StateEnv.Complete node b (Result t) ->
-  StateIdx.Energy node -> Result t
-lookupAbsEnergyState caller env n =
-  checkedLookup caller (StateEnv.energyMap $ StateEnv.signal env) n
-
-lookupAbsPowerState ::
-  (Ord node, Show node, Show t) =>
-  String ->
-  StateEnv.Complete node b (Result t) ->
-  StateIdx.Power node -> Result t
-lookupAbsPowerState caller env n =
-  checkedLookup caller (StateEnv.powerMap $ StateEnv.signal env) n
-
-lookupDetPowerState ::
-  (Ord node, Show d, Show node) =>
-  StateIdx.Power node -> StateEnv.Complete node b (Result d) -> d
-lookupDetPowerState idx =
-  checkDetermined ("lookupDetPowerState (2): " ++ show idx) .
-  flip (lookupAbsPowerState ("lookupDetPowerState (1): " ++ show idx)) idx
-
-lookupDetEnergyState ::
-  (Ord node, Show d, Show node, Show b) =>
-  StateIdx.Energy node -> StateEnv.Complete node b (Result d) -> d
-lookupDetEnergyState idx env =
-  checkDetermined ("lookupDetEnergyState (2):\n" ++ show idx ++ "\n" ++ show env) $
-  flip (lookupAbsEnergyState ("lookupDetEnergyState (1):\n" ++ show idx ++ "\n" ++ show env)) idx env
-
-lookupEnergyStateMaybe ::
-  (Ord node, Show d, Show node, Show b) =>
-  StateIdx.Energy node -> StateEnv.Complete node b (Result d) -> Maybe d
-lookupEnergyStateMaybe idx env =
-  fmap toDet
-  $ Map.lookup idx (StateEnv.energyMap $ StateEnv.signal env)
-  where toDet (Determined x) = x
-        toDet _ =
-          error $ "lookupEnergyStateMaybe undetermined value at "
-                  ++ show idx ++ "\nin\n"
-                  ++ myShowList (Map.keys $ StateEnv.energyMap $ StateEnv.signal env)
