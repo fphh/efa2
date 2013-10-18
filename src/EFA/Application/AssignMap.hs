@@ -15,6 +15,8 @@ import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as SeqIdx
+
+import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -162,6 +164,6 @@ lookupEnergyStacks ::
 lookupEnergyStacks e =
    fmap (Stack.assignDeltaMap . Arith.integrate) .
    Map.mapMaybe Result.toMaybe .
-   fmap (maybe (error $ "lookupEnergyStacksNew" ++ Format.unUnicode (formatValue e)) id .
-         FlowTopo.lookupEnergy e . snd) .
+   fmap (TopoVar.checkedLookup "lookupEnergyStacks" FlowTopo.lookupEnergy e .
+         snd) .
    SeqFlow.sequence
