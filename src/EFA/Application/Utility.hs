@@ -79,24 +79,6 @@ quantityTopology topo =
          else error "quantityTopology: topology has forbidden default edges"
 
 
-{- |
-Construct sequence flow graph with a single section
-containing the topology with default directions.
--}
-seqFlowGraphFromTopology ::
-   (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
-   Topo.Topology node ->
-   SeqFlowQuant.Graph node a v
-seqFlowGraphFromTopology topo =
-   SeqFlowQuant.graphFromPlain $
-   SeqFlow.sequenceGraph $
-   Sequ.fromList $ (:[]) $
-   let flowTopo = Graph.mapEdgesMaybe (Just . Graph.EDirEdge) topo
-   in  if StateAnalysis.admissibleTopology flowTopo
-         then flowTopo
-         else error "seqFlowGraphFromTopology: topology has forbidden default edges"
-
-
 dirEdge :: node -> node -> Graph.EitherEdge node
 dirEdge x y = Graph.EDirEdge $ Graph.DirEdge x y
 
