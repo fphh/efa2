@@ -3,8 +3,6 @@
 
 module Main where
 
-import System.IO.Unsafe (unsafePerformIO)
-
 import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 
@@ -70,8 +68,6 @@ import Data.Foldable (foldMap)
 
 import Control.Functor.HT (for)
 import Control.Monad (void, (>=>))
-
-import Debug.Trace
 
 
 frameOpts ::
@@ -177,20 +173,14 @@ optimalEtasWithPowers params forceFactor env =
         f state = Map.fromList . map g
           where
                 solveFunc :: Optimisation.Param2x2 Double -> EnvResult Double
-                solveFunc x = unsafePerformIO $ do
-                  let res = 
-                        Optimisation.solve
-                          -- stateFlowGraph
-                          System.stateFlowGraph
-                          (System.etaAssignState state)
-                          etaMap
-                          -- env
-                          (env <> initEnv)
-                          state
-                          x
-                  --print x
-                  --Draw.xterm $ Draw.stateFlowGraphWithEnv Draw.optionsDefault System.stateFlowGraph res
-                  return res
+                solveFunc x =
+                  Optimisation.solve
+                    System.stateFlowGraph
+                    (System.etaAssignState state)
+                    etaMap
+                    (env <> initEnv)
+                    state
+                    x
 
                 envsSweep :: Map (Param2 Double) [EnvResult Double]
                 envsSweep =
@@ -319,7 +309,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
         Map Idx.State
           (Map (Idx.PPos Node)
             (Map (Param2 Double) (Double, Double)))
-      optEtaWithPowers = trace "blub" $ optimalEtasWithPowers optParams force env
+      optEtaWithPowers = optimalEtasWithPowers optParams force env
       (_optEta, _optState, optPower) = optimalMaps optEtaWithPowers
 
       optPowerInterp ::
@@ -387,6 +377,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
 nestM :: (Monad m) => Int -> (a -> m a) -> a -> m a
 nestM n act = foldr (>=>) return (replicate n act)
 
+initEnv :: StateEnv.Complete Node (Data Nil Double) (Data Nil Double)
 initEnv = AppOpt.initialEnv System.Water System.stateFlowGraph
 
 main :: IO()
