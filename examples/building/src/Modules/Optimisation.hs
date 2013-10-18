@@ -67,7 +67,8 @@ solve ::
   Param2x2 a -> EnvResult a
 solve stateFlowGraph etaAssign etaFunc state (Sweep.Pair load dof) =
   envGetData $
-    EqSys.solve
+    EqSys.solveOpts
+      (EqSys.equalInOutSums EqSys.optionsDefault)
       (AppOpt.givenAverageWithoutState state stateFlowGraph) $
     AppOpt.givenForOptimisation stateFlowGraph
       etaAssign
