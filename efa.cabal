@@ -95,7 +95,6 @@ Library
     EFA.Report.Format
     EFA.Report.FormatValue
     EFA.Graph
-    EFA.Graph.Draw
     EFA.Graph.Topology
     EFA.Graph.Topology.Index
     EFA.Graph.Topology.Node
