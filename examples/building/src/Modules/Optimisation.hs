@@ -70,13 +70,10 @@ solve stateFlowGraph etaAssign etaFunc state (Sweep.Pair load dof) =
     EqSys.solveOpts
       (EqSys.equalInOutSums EqSys.optionsDefault)
       (AppOpt.givenAverageWithoutState state stateFlowGraph) $
-    AppOpt.givenForOptimisation stateFlowGraph
-      etaAssign
-      etaFunc
-      state
-      (commonGiven
-        <> givenSecLoad state (fmap Data load)
-        <> givenSecDOF state (fmap Data dof))
+    (AppOpt.makeEtaFuncGiven state stateFlowGraph etaAssign etaFunc
+      <> commonGiven
+      <> givenSecLoad state (fmap Data load)
+      <> givenSecDOF state (fmap Data dof))
 
 givenSecLoad ::
    (Arith.Sum a, Eq a) =>

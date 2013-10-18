@@ -24,7 +24,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import Data.Map (Map)
-import Data.Monoid ((<>))
+
 
 -- | TODO Functions below could eventually be moved to a module Application/Given
 
@@ -69,19 +69,6 @@ givenAverageWithoutState stateToRemove =
                  Var.X _ -> v
                  _ -> Undetermined)
 
-
-givenForOptimisation ::
-   (Arith.Constant a, Ord a, Show a, Node.C node) =>
-   StateFlow.Graph node (Result a0) (Result v0) ->
-   EtaAssignMap node ->
-   Map String (a -> a) ->
-   Idx.State ->
-   EqSysState.EquationSystemIgnore node s (Data Nil a) (Data Nil a) ->
-   EqSysState.EquationSystemIgnore node s (Data Nil a) (Data Nil a)
-
-givenForOptimisation flowGraph etaAssign etaFunc state given =
-   given <>
-   makeEtaFuncGiven state flowGraph etaAssign etaFunc
 
 makeEtaFuncGiven ::
    (Node.C node, Show a, Ord a, Arith.Constant a,
