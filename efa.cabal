@@ -102,7 +102,6 @@ Library
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Topology.Count
     EFA.Graph.Flow
-    EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Unknown
     EFA.Equation.Environment

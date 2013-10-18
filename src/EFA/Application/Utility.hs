@@ -9,7 +9,6 @@ import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
@@ -17,16 +16,9 @@ import qualified EFA.Graph as Graph
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Data as Data
 
-import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Environment as EqEnv
-import qualified EFA.Equation.System as EqGen
-import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
-import EFA.Equation.System ((.=))
 
-import EFA.Report.FormatValue (FormatValue)
 
 import qualified EFA.Utility.Map as MapU
 import EFA.Utility.Map (checkedLookup)
@@ -141,36 +133,6 @@ checkDetermined name rx =
       Undetermined -> error $ "undetermined " ++ name
       Determined x -> x
 
-
-{-
-Two restricted variants of (.=).
-I added them in the hope for simpler type signatures.
-The type signatures are still complex, unfortunately.
-The symbols are not used, too.
--}
-infix 0 #=, ~=
-
--- | @(.=)@ restricted to signals
-(~=) ::
-  (Verify.GlobalVar mode v recIdx var node, Arith.Sum v,
-   var ~ Var.InSectionSignal, var ~ Var.Type idx,
-   recIdx ~ EqRecord.ToIndex rec, EqGen.Record rec,
-   EqEnv.AccessMap idx, EqEnv.Environment idx ~ EqEnv.Signal,
-   Ord (idx node), FormatValue (idx node)) =>
-  Idx.Record recIdx (idx node) -> v ->
-  EqGen.EquationSystem mode rec node s a v
-(~=)  =  (.=)
-
--- | @(.=)@ restricted to scalars
-(#=) ::
-  (Verify.GlobalVar mode a recIdx var node, Arith.Sum a,
-   var ~ Var.ForNodeSectionScalar, var ~ Var.Type idx,
-   recIdx ~ EqRecord.ToIndex rec, EqGen.Record rec,
-   EqEnv.AccessMap idx, EqEnv.Environment idx ~ EqEnv.Scalar,
-   Ord (idx node), FormatValue (idx node)) =>
-  Idx.Record recIdx (idx node) -> a ->
-  EqGen.EquationSystem mode rec node s a v
-(#=)  =  (.=)
 
 -- | Unpack scalar result values in env from Data constructor
 envGetData ::
