@@ -253,7 +253,7 @@ to2DMatrix ::
   TC tr (Typ x y z) (Data (v2 :> v1 :> Nil) a)
 to2DMatrix =
   Sig.fromList2 . Map.elems .
-  Map.mapKeysWith (++) (\(NonEmpty.Cons line _) -> line) . fmap (:[])
+  Map.mapKeysWith (++) NonEmpty.head . fmap (:[])
 
 optimalMaps :: (Num a, Ord a, Ord (f a), Ord node) =>
   Map Idx.State (Map (Idx.PPos node) (Map (NonEmpty.T f a) (a, a))) ->
@@ -267,8 +267,7 @@ optimalMaps =
   . Map.unionsWith (Map.unionWith max)
   . Map.elems
   . Map.mapWithKey f
-  where f st = Map.map (Map.map (g st))
-        g st (eta, power) = (eta, st, power)
+  where f st = Map.map (Map.map (\(eta, power) -> (eta, st, power)))
         h (eta, st, power) =
           (to2DMatrix eta, to2DMatrix st, to2DMatrix power)
 
