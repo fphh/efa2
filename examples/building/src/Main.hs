@@ -286,10 +286,8 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap stateFlowGraph = do
           etaMap
           sweepPts
           optimalPower
-      optEtaWithPowers ::
-        Map Idx.State
-          (Map (Idx.PPos Node)
-            (Map (Param2 Double) (Double, Double)))
+
+      optEtaWithPowers :: One.OptimalEtaWithEnv Node Param2 Double
       optEtaWithPowers = optimalEtasWithPowers optParams force stateFlowGraph
       (_optEta, _optState, optPower) = optimalMaps optEtaWithPowers
 
