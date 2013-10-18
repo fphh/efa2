@@ -58,37 +58,6 @@ solve topology etaAssign etaFunc powerRecord =
    in  EqSys.solve qtopo $
        givenSimulate qtopo etaAssign etaFunc powerRecord
 
-{-
-solve2 :: (Node.C node,
-          Eq (v a),
-          Fractional a,
-          Ord a,
-          Show a,
-          EqArith.Constant a,
-          SV.Zipper v,
-          SV.Walker v,
-          SV.Storage v a,
-          SV.Singleton v,
-          SV.Len (v a),
-          SV.FromList v,
-          Base.BSum a) =>
-         Topo.Topology node ->
-         EtaAssignMap node ->
-         Map String (a -> a) ->
-         Record.PowerRecord node v a ->
-         FlowTopo.Section node (Result (Data Nil a))
-solve2 topology etaAssign etaFunc powerRecord =
-    EqSys.solveSimple $
-    givenSimulate stateFlowGraph etaAssign etaFunc powerRecord
-  where
-    -- | Build Sequenceflow graph for simulation
-    stateFlowGraph =
-      FlowTopoPlain.stateGraphActualStorageEdges $
-      Sequ.fromList [Topo.flowFromPlain topology]
--}
-
-
-
 
 givenSimulate ::
    (Node.C node, Show a, Ord a, Arith.Constant a,
@@ -162,23 +131,3 @@ absEtaFunction strP strN etaFunc =
        check str =
           maybe (\x -> error ("not defined: " ++ show str ++ " for " ++ show x))
    in  \x -> if x >= Arith.zero then fpos x else fneg x
-
-{-
--- | Generate given equations using efficiency curves or functions for a specified section
-makeEtaFuncGiven ::
-   (Fractional a, Ord a, Show a, Arith.Sum a,
-    Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
-   (Idx.Section -> EtaAssignMap node) ->
-   Idx.Section ->
-   Map String (a -> a) ->
-   EqSys.EquationSystem node s x (Data c a)
-makeEtaFuncGiven etaAssign sec etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign sec)
-  where f n (strP, strN, g) =
-          EqSys.variable n =.= EqSys.liftF (Data.map ef) (EqSys.variable $ g n)
-          where ef x = if x >= 0 then fpos x else fneg x
-                fpos = maybe (err strP) id (Map.lookup strP etaFunc)
-                fneg = maybe (err strN) (\h -> recip . h . negate)
-                                        (Map.lookup strN etaFunc)
-                err str x = error ("not defined: " ++ show str ++ " for " ++ show x)
-
--}
