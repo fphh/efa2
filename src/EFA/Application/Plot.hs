@@ -463,8 +463,7 @@ etaDistr1Dim :: (Fractional d,
                  String -> Sig.PFSignal v d -> Sig.NFSignal v d ->
                  Sig.PDistr v d -> Sig.FDistr v d -> Sig.NDistr v d -> IO ()
 etaDistr1Dim ti p n pDist fDist nDist =
-  Plot.run DefaultTerm.cons
-  (Plot.xyFrameAttr ti p n) $
+  Plot.run DefaultTerm.cons (Plot.xyFrameAttr ti p n) $
   Plot.xy id p (Plot.label "Efficiency Operation Points over Power" n) <>
   Plot.xy id pDist (Plot.label "Averaged Efficiency over Power" nDist) <>
   Plot.xy id pDist (Plot.label "Input Energy Distribution over Power" fDist)
@@ -504,7 +503,7 @@ etaDistr1DimfromRecordList ::
    (String, (Idx.PPos node, Idx.PPos node, Idx.PPos node)) -> IO ()
 
 etaDistr1DimfromRecordList ti  interval offset rList  (plotTitle, (idIn,idOut,idAbscissa)) = mapM_ f rList
-  where f ((Record.Name recTitle), rec) = do
+  where f (Record.Name recTitle, rec) = do
           let ein = Record.getSig rec idIn
               eout = Record.getSig rec idOut
               eAbscissa = Record.getSig rec idAbscissa
