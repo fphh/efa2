@@ -34,34 +34,6 @@ import Data.Ord (comparing)
 -- | Map a two dimensional load room (varX, varY) and find per load situation
 -- | the optimal solution in the 2d-solution room (two degrees of freevarOptX varOptY)
 
-{-
--- verallgemeinern für (var1, ..., varM) und (varOpt1, ..., varOptN)
-doubleSweep :: (SV.Zipper v2,
-                SV.Zipper v1,
-                SV.Walker v2,
-                SV.Walker v1,
-                SV.Storage v2 (v1 a),
-                SV.Storage v1 a,
-                SV.Storage v2 (v1 b),
-                SV.Storage v1 b,
-                SV.FromList v2,
-                SV.Convert v1 v1,
-                SV.Storage v2 (v1 (TC (Sig.Arith s s) (Typ UT UT UT) (Data (v2 :> (v1 :> Nil)) b))),
-                SV.Storage v1 (TC (Sig.Arith s s) (Typ UT UT UT) (Data (v2 :> (v1 :> Nil)) b)),
-               Sig.Arith s s ~ Sig.Signal) =>
-               (a -> a -> a -> a -> b) ->
-               TC s typ (Data (v2 :> v1 :> Nil) a) ->
-               TC s typ (Data (v2 :> v1 :> Nil) a) ->
-               TC s typ (Data (v2 :> v1 :> Nil) a) ->
-               TC s typ (Data (v2 :> v1 :> Nil) a) ->
-               Sig.UTSignal2 v2  v1 (Sig.UTSignal2 v2  v1 b)
-
-doubleSweep fsolve varOptX varOptY varX varY =
-  Sig.untype $ Sig.zipWith f varX  varY
-  where f x y =
-          Sig.untype $ Sig.convert $ Sig.zipWith (fsolve x y) varOptX varOptY
-
--}
 
 data Pair f g a =
   Pair {
