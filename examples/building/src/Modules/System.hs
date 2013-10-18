@@ -2,24 +2,19 @@ module Modules.System where
 
 import qualified EFA.Application.Utility as AppUt
 
+import EFA.Application.Simulation (EtaAssignMap)
 import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
+import qualified EFA.Flow.State.Quantity as StateFlow
+import qualified EFA.Flow.State as StateFlowPlain
+
 import qualified EFA.Flow.Sequence.Index as SeqIdx
-import qualified EFA.Flow.State.Index as StateIdx
 
-import qualified EFA.Graph.Topology.Index as Idx
+import EFA.Equation.Result (Result)
+
 import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.StateFlow as StateFlow
-import qualified EFA.Graph.Flow as Flow
-
-import qualified EFA.Signal.Sequence as Sequ
---import qualified EFA.Signal.Base as Base
---import qualified EFA.Signal.Record as Rec
---import qualified EFA.Signal.Typ as Typ
---import qualified EFA.Signal.Vector as Vec
-
---import EFA.Signal.Signal ((.+), (./))
 
 import EFA.Signal.Record (SigId(SigId))
 
@@ -75,15 +70,14 @@ edgeNames = Map.fromList el
 
 
 powerPositonNames :: Map (SeqIdx.PPos Node) SigId
-powerPositonNames = Map.fromList $ concat $ map f edgeList
+powerPositonNames = Map.fromList $ concatMap f edgeList
   where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, SigId $ "Power-"++l1),
                              (SeqIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
 
-flowStates :: Sequ.List (Topo.FlowTopology Node)
+flowStates :: [Topo.FlowTopology Node]
 flowStates =
-   fmap (identifyFlowState topology) $
-   Sequ.fromList $
+   map (identifyFlowState topology) $
       [[dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network],
        [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
        [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network],
@@ -91,34 +85,25 @@ flowStates =
  --      [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, undirEdge Network Water],
  --      [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, undirEdge Network Water]]
 
-seqTopology :: Flow.RangeGraph Node
-seqTopology = Flow.sequenceGraph flowStates
 
-
-stateFlowGraph :: Topo.StateFlowGraph Node
-stateFlowGraph = StateFlow.stateGraphAllStorageEdges flowStates
+stateFlowGraph :: StateFlow.Graph Node (Result a) (Result v)
+stateFlowGraph =
+   StateFlow.flowGraphFromPlain $
+   StateFlowPlain.flowGraphFromStates flowStates
 
 
 etaAssign ::
-   Idx.State ->
-   node ->
-   node ->
-   t ->
-   [(StateIdx.Eta node, (t, t, StateIdx.Power node))]
-etaAssign state from to name =
-   let powerIdx = StateIdx.power state to from
-   in  (StateIdx.eta state from to, (name, name, powerIdx)) :
-       (StateIdx.eta state to from, (name, name, powerIdx)) :
-       []
+   node -> node -> name ->
+   (Idx.StructureEdge node, (name, name))
+etaAssign from to name =
+   (Idx.StructureEdge from to, (name, name))
 
-etaAssignState ::
-   Idx.State ->
-   Map (StateIdx.Eta Node) (String, String, StateIdx.Power Node)
-etaAssignState state = Map.fromList $
-   etaAssign state Water Network "storage" ++
-   etaAssign state Coal Network "coal" ++
-   etaAssign state Gas LocalNetwork "gas" ++
-   etaAssign state Network LocalNetwork "transformer" ++
-   etaAssign state LocalNetwork LocalRest "local" ++
-   etaAssign state Network Rest "rest" ++
+etaAssignMap :: EtaAssignMap Node
+etaAssignMap = Map.fromList $
+   etaAssign Network Water "storage" :
+   etaAssign Network Coal "coal" :
+   etaAssign LocalNetwork Gas "gas" :
+   etaAssign LocalNetwork Network "transformer" :
+   etaAssign LocalRest LocalNetwork "local" :
+   etaAssign Rest Network "rest" :
    []

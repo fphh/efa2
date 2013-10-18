@@ -11,7 +11,10 @@ import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Signal.Signal as Sig
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.SystemEta as ES0
+import qualified EFA.Flow.Sequence.SystemEta as SeqEta
+
+import qualified EFA.Flow.State.Quantity as StateFlow
+import qualified EFA.Flow.State.SystemEta as StateEta
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Environment as EqEnv
@@ -118,13 +121,13 @@ optimalSolution2D cond forcing topo sigEnvs = liftA2 (,) etaMax env
         env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
 
 optimalSolution2DNew ::
-  (Node.C node, Show node, Eq a, Show v, Ord v, Arith.Constant v) =>
-  ES0.Condition node a v ->
-  ES0.Forcing node a v ->
+  (Node.C node, Eq a, Ord v, Arith.Constant v) =>
+  SeqEta.Condition node a v ->
+  SeqEta.Forcing node a v ->
   Sig.UTSignal2 V.Vector V.Vector (SeqFlow.Graph node a (Result v)) ->
   Maybe (v, SeqFlow.Graph node a (Result v))
 optimalSolution2DNew cond forcing sigEnvs = liftA2 (,) etaMax env
-  where etaSys = Sig.map (ES0.objectiveFunction cond forcing) sigEnvs
+  where etaSys = Sig.map (SeqEta.objectiveFunction cond forcing) sigEnvs
         etaMax = Sig.fromScalar $ Sig.maximum etaSys
         (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
         env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
@@ -144,13 +147,12 @@ optimalSolution2DState cond forcing topo sigEnvs = liftA2 (,) etaMax env
 
 
 optimalSolutionState ::
-  (Ord v, Fractional v, Ord node, Show node, Show v) =>
-  ES.ConditionState node a v ->
-  ES.ForcingState node a v ->
-  Topo.StateFlowGraph node ->
-  [StateEnv.Complete node a (Result v)] ->
-  Maybe (v, StateEnv.Complete node a (Result v))
-optimalSolutionState cond forcing topo =
+  (Node.C node, Ord v, Arith.Constant v) =>
+  StateEta.Condition node a v ->
+  StateEta.Forcing node a v ->
+  [StateFlow.Graph node a (Result v)] ->
+  Maybe (v, StateFlow.Graph node a (Result v))
+optimalSolutionState cond forcing =
   fmap (NonEmpty.maximumBy (comparing fst)) . NonEmpty.fetch .
   mapMaybe
-    (\e -> fmap (flip (,) e) $ ES.objectiveFunctionState cond forcing topo e)
+    (\e -> fmap (flip (,) e) $ StateEta.objectiveFunction cond forcing e)

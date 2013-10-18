@@ -4,36 +4,29 @@
 
 module EFA.Application.Simulation where
 
---import qualified EFA.Application.Absolute as EqGen
---import qualified EFA.Application.Optimisation as AppOpt
---import qualified EFA.Application.Utility as AppUt
-import qualified EFA.Application.AbsoluteState as EqGen
+import EFA.Application.Utility (quantityTopology)
 
-import EFA.Application.AbsoluteState ( (=.=) )
+import qualified EFA.Flow.Topology.Absolute as EqSys
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Index as XIdx
 
---import qualified EFA.Equation.Environment as EqEnv
---import qualified EFA.Equation.Record as EqRecord
---import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Equation.Arithmetic as EqArith
-import EFA.Equation.Result(Result)
+import EFA.Flow.Topology.Absolute ( (.=), (=.=) )
 
-import qualified EFA.Flow.State.Index as StateIdx
-import qualified EFA.Graph.StateFlow.Environment as EqEnv
-import qualified EFA.Graph.StateFlow as StateFlow
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
+import qualified EFA.Signal.Vector as SV
+import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil,(:>))
 
-import qualified EFA.Signal.Vector as SV
-import qualified EFA.Signal.Base as Base
-import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.Sequence as Sequ
-
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
@@ -41,36 +34,29 @@ import Data.Map (Map)
 import Data.Monoid((<>))
 
 
-type EtaAssignMap node =
-        Map (StateIdx.Eta node) (String, String, StateIdx.Power node)
+type EtaAssignMap node = Map (Idx.StructureEdge node) (String, String)
 
 solve :: (Node.C node,
-          Eq (v a),
+          Eq (v a), Show (v a),
           Fractional a,
-          Show node, Show (v a),
           Ord a,
           Show a,
-          EqArith.Constant a,
+          Arith.Constant a,
           SV.Zipper v,
           SV.Walker v,
           SV.Storage v a,
           SV.Singleton v,
           SV.Len (v a),
-          SV.FromList v,
-          Base.BSum a) =>
+          SV.FromList v) =>
          Topo.Topology node ->
-         (Idx.State -> EtaAssignMap node) ->
+         EtaAssignMap node ->
          Map String (a -> a) ->
          Record.PowerRecord node v a ->
-         EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
+         FlowTopo.Section node (Result (Data (v :> Nil) a))
 solve topology etaAssign etaFunc powerRecord =
-    EqGen.solve stateFlowGraph $
-    givenSimulate etaAssign etaFunc powerRecord
-  where
-    -- | Build Sequenceflow graph for simulation
-    stateFlowGraph =
-      StateFlow.stateGraphActualStorageEdges $
-      Sequ.fromList [Topo.flowFromPlain topology]
+   let qtopo = quantityTopology topology
+   in  EqSys.solve qtopo $
+       givenSimulate qtopo etaAssign etaFunc powerRecord
 
 {-
 solve2 :: (Node.C node,
@@ -87,17 +73,17 @@ solve2 :: (Node.C node,
           SV.FromList v,
           Base.BSum a) =>
          Topo.Topology node ->
-         (Idx.State -> EtaAssignMap node) ->
+         EtaAssignMap node ->
          Map String (a -> a) ->
          Record.PowerRecord node v a ->
-         EqEnv.Complete node (Result (Data Nil a)) (Result (Data Nil a))
+         FlowTopo.Section node (Result (Data Nil a))
 solve2 topology etaAssign etaFunc powerRecord =
-    EqGen.solveSimple $
+    EqSys.solveSimple $
     givenSimulate stateFlowGraph etaAssign etaFunc powerRecord
   where
     -- | Build Sequenceflow graph for simulation
     stateFlowGraph =
-      StateFlow.stateGraphActualStorageEdges $
+      FlowTopoPlain.stateGraphActualStorageEdges $
       Sequ.fromList [Topo.flowFromPlain topology]
 -}
 
@@ -105,63 +91,94 @@ solve2 topology etaAssign etaFunc powerRecord =
 
 
 givenSimulate ::
- (Show a, Fractional a, Ord a, Node.C node,
-  Base.BSum a, EqArith.Sum a, EqArith.Constant a,
-  Eq (v a),
-  SV.Zipper v,SV.FromList v,SV.Len (v a),
-  SV.Singleton v,
-  SV.Walker v,
-  SV.Storage v a) =>
-  (Idx.State ->  EtaAssignMap node) ->
-  Map String (a -> a) ->
-  Record.PowerRecord node v a ->
-  (forall s . EqGen.EquationSystem node s (Data Nil a) (Data (v :> Nil) a))
+   (Node.C node, Show a, Ord a, Arith.Constant a,
+    SV.Zipper v, SV.Walker v,
+    SV.Len (v a), SV.FromList v, SV.Storage v a) =>
+   FlowTopo.Section node (Result v0) ->
+   EtaAssignMap node ->
+   Map String (a -> a) ->
+   Record.PowerRecord node v a ->
+   (forall s. EqSys.EquationSystemIgnore node s (Data (v :> Nil) a))
 
-givenSimulate etaAssign etaFunc powerRecord =
-   f powerRecord
-   where f (Record.Record t xs) =
-           (StateIdx.dTime (Idx.State 0) EqGen..=
-             (Data  $ SV.fromList $ replicate (Sig.len t) 1))
-           <> makeEtaFuncGiven (etaAssign $ Idx.State 0) etaFunc
-           <> Fold.fold (Map.mapWithKey g xs)
-           where
-             g ppos p =
-                (StateIdx.powerFromPPos (Idx.State 0) ppos
-                   EqGen..= Sig.unpack p)
+givenSimulate topo etaAssign etaFunc (Record.Record t xs) =
+   (XIdx.dTime .=
+     (Data $ SV.fromList $ replicate (Sig.len t) $ Arith.one))
+   <> makeEtaFuncGiven topo etaAssign etaFunc
+   <> Fold.fold (Map.mapWithKey f xs)
+   where
+     f ppos p  =  XIdx.powerFromPPos ppos .= Sig.unpack p
+
 
 -- | Generate given equations using efficiency curves or functions for a specified section
 makeEtaFuncGiven ::
-   (Fractional a, Ord a, Show a, EqArith.Sum a,
-    Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
+   (Node.C node, Show a, Ord a, Arith.Constant a,
+    Data.ZipWith c, Data.Storage c a) =>
+   FlowTopo.Section node (Result v0) ->
    EtaAssignMap node ->
    Map String (a -> a) ->
-   EqGen.EquationSystem node s x (Data c a)
-makeEtaFuncGiven etaAssign etaFunc = Fold.fold $ Map.mapWithKey f etaAssign
-  where f eta (strP, strN, power) =
-          EqGen.variable eta =.= EqGen.liftF (Data.map ef) (EqGen.variable power)
-          where ef x = if x >= 0 then fpos x else fneg x
-                fpos = maybe (err strP) id (Map.lookup strP etaFunc)
-                fneg = maybe (err strN) (\h -> recip . h . negate)
-                                        (Map.lookup strN etaFunc)
-                err str x = error ("not defined: " ++ show str ++ " for " ++ show x)
+   EqSys.EquationSystemIgnore node s (Data c a)
+makeEtaFuncGiven topo etaAssign etaFunc =
+   Fold.fold $
+   Map.mapWithKey
+      (\se (strP, strN) ->
+         EqSys.variable (etaFromEdge topo se)
+         =.=
+         EqSys.liftF
+            (Data.map (absEtaFunction strP strN etaFunc))
+            (EqSys.variable $ Idx.Power se))
+      etaAssign
 
+etaFromEdge ::
+   Node.C node =>
+   FlowTopo.Section node v -> Idx.StructureEdge node -> Idx.Eta node
+etaFromEdge topo se =
+   let etaF = Idx.Eta se
+       etaB = Idx.Eta $ Idx.flip se
+   in  checkFoundPair etaF etaB
+          (FlowTopo.lookupEta etaF topo, FlowTopo.lookupEta etaB topo)
+
+checkFoundPair ::
+   FormatValue a =>
+   a -> a -> (Maybe b, Maybe b) -> a
+checkFoundPair etaF etaB ee =
+   case ee of
+      (Just _, Nothing) -> etaF
+      (Nothing, Just _) -> etaB
+      (Nothing, Nothing) ->
+         error $ "found neither " ++ Format.unUnicode (formatValue etaF) ++
+                 " nor " ++ Format.unUnicode (formatValue etaB)
+      (Just _,  Just _) ->
+         error $ "found both " ++ Format.unUnicode (formatValue etaF) ++
+                 " and " ++ Format.unUnicode (formatValue etaB)
+
+
+absEtaFunction ::
+   (Ord k, Show k, Ord a, Show a, Arith.Constant a, Arith.Product b) =>
+   k -> k -> Map k (a -> b) -> a -> b
+absEtaFunction strP strN etaFunc =
+   let fpos = check strP id  $ Map.lookup strP etaFunc
+       fneg = check strN rev $ Map.lookup strN etaFunc
+       rev h = Arith.recip . h . Arith.negate
+       check str =
+          maybe (\x -> error ("not defined: " ++ show str ++ " for " ++ show x))
+   in  \x -> if x >= Arith.zero then fpos x else fneg x
 
 {-
 -- | Generate given equations using efficiency curves or functions for a specified section
 makeEtaFuncGiven ::
-   (Fractional a, Ord a, Show a, EqArith.Sum a,
+   (Fractional a, Ord a, Show a, Arith.Sum a,
     Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
    (Idx.Section -> EtaAssignMap node) ->
    Idx.Section ->
    Map String (a -> a) ->
-   EqGen.EquationSystem node s x (Data c a)
+   EqSys.EquationSystem node s x (Data c a)
 makeEtaFuncGiven etaAssign sec etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign sec)
   where f n (strP, strN, g) =
-          EqGen.variable n =.= EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
+          EqSys.variable n =.= EqSys.liftF (Data.map ef) (EqSys.variable $ g n)
           where ef x = if x >= 0 then fpos x else fneg x
                 fpos = maybe (err strP) id (Map.lookup strP etaFunc)
                 fneg = maybe (err strN) (\h -> recip . h . negate)
                                         (Map.lookup strN etaFunc)
                 err str x = error ("not defined: " ++ show str ++ " for " ++ show x)
 
--}                
+-}

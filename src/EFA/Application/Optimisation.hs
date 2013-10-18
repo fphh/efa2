@@ -4,29 +4,27 @@
 
 module EFA.Application.Optimisation where
 
-import EFA.Application.Simulation (EtaAssignMap, makeEtaFuncGiven)
+import EFA.Application.Simulation (EtaAssignMap, checkFoundPair, absEtaFunction)
 
-import qualified EFA.Application.AbsoluteState as EqGenState
-
+import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.State.Index as StateIdx
+import qualified EFA.Flow.State.Absolute as EqSysState
+import EFA.Flow.State.Absolute ((=.=))
 
+import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil)
 
-import qualified EFA.Equation.Arithmetic as EqArith
+import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
-import qualified EFA.Graph.StateFlow.Environment as EqEnvState
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Graph
 
+import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
-import qualified Data.Set as Set
-import Data.Foldable (foldMap)
 import Data.Map (Map)
-import Data.Tuple.HT (snd3)
-import Data.Monoid((<>),mempty)
-import Data.Maybe (mapMaybe)
+import Data.Monoid ((<>))
 
 -- | TODO Functions below could eventually be moved to a module Application/Given
 
@@ -50,104 +48,87 @@ etaOverPowerOut =
    Idx.liftInPart $ \(Idx.Eta e) -> Idx.Power e
 
 
--- | Takes all non-energy and non-power values from an env,
--- | removes values in section x and generate given equations
 givenAverageWithoutState ::
-  (EqArith.Sum a, EqArith.Sum v, Node.C node) =>
-  Idx.State ->
-  EqEnvState.Complete node a v  ->
-  EqGenState.EquationSystem node s a v
-givenAverageWithoutState stateToRemove (EqEnvState.Complete scalar signal) =
-   (EqGenState.fromMap $ EqEnvState.dtimeMap signal) <>
-   (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.etaMap signal) <>
-   (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.xMap signal) <>
---   (EqGenState.fromMap $ EqEnvState.stEnergyMap scalar) <>
-   (EqGenState.fromMap $ EqEnvState.stXMap scalar)
---   (EqGenState.fromMap $ EqEnvState.stInSumMap scalar) <>
---   (EqGenState.fromMap $ EqEnvState.stOutSumMap scalar)
-   where f :: Idx.InState idx node -> v -> Bool
-         f (Idx.InPart state _) _ = state /= stateToRemove
+   (Arith.Sum a, Arith.Sum v, Node.C node) =>
+   Idx.State ->
+   StateFlow.Graph node (Result a) (Result v) ->
+   StateFlow.Graph node (Result a) (Result v)
+givenAverageWithoutState stateToRemove =
+   StateFlow.mapGraphWithVar
+      (\(Idx.ForNode var _) a ->
+         case var of
+            Var.StX _ -> a
+            _ -> Undetermined)
+      (\(Idx.InPart state var) v ->
+         if state == stateToRemove
+           then Undetermined
+           else
+              case var of
+                 Var.DTime _ -> v
+                 Var.Eta _ -> v
+                 Var.X _ -> v
+                 _ -> Undetermined)
 
 
 givenForOptimisation ::
-  (EqArith.Constant a, Node.C node, Fractional a,
-  Ord a, Show a, EqArith.Sum a, Ord node) =>
-  EqEnvState.Complete node (Data Nil a) (Data Nil a)  ->
-  EtaAssignMap node ->
-  Map String (a -> a) ->
-  Idx.State ->
-  EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
-  EqGenState.EquationSystem node s (Data Nil a) (Data Nil a)
+   (Arith.Constant a, Ord a, Show a, Node.C node) =>
+   StateFlow.Graph node (Result a0) (Result v0) ->
+   EtaAssignMap node ->
+   Map String (a -> a) ->
+   Idx.State ->
+   EqSysState.EquationSystemIgnore node s (Data Nil a) (Data Nil a) ->
+   EqSysState.EquationSystemIgnore node s (Data Nil a) (Data Nil a)
 
-givenForOptimisation env etaAssign etaFunc state given =
-  given <>
-  makeEtaFuncGiven etaAssign etaFunc <>
-  givenAverageWithoutState state env
+givenForOptimisation flowGraph etaAssign etaFunc state given =
+   given <>
+   makeEtaFuncGiven state flowGraph etaAssign etaFunc
+
+makeEtaFuncGiven ::
+   (Node.C node, Show a, Ord a, Arith.Constant a,
+    Data.ZipWith c, Data.Storage c a) =>
+   Idx.State ->
+   StateFlow.Graph node (Result a0) (Result v0) ->
+   EtaAssignMap node ->
+   Map String (a -> a) ->
+   EqSysState.EquationSystemIgnore node s x (Data c a)
+makeEtaFuncGiven state flowGraph etaAssign etaFunc =
+   Fold.fold $
+   Map.mapWithKey
+      (\se (strP, strN) ->
+         EqSysState.variable (etaFromEdge flowGraph state se)
+         =.=
+         EqSysState.liftF
+            (Data.map (absEtaFunction strP strN etaFunc))
+            (EqSysState.variable (Idx.InPart state $ Idx.Power se)))
+      etaAssign
+
+etaFromEdge ::
+   Node.C node =>
+   StateFlow.Graph node a0 v0 ->
+   Idx.State -> Idx.StructureEdge node -> StateIdx.Eta node
+etaFromEdge flowGraph state se =
+   let etaF = Idx.InPart state $ Idx.Eta se
+       etaB = Idx.InPart state $ Idx.Eta $ Idx.flip se
+   in  checkFoundPair etaF etaB
+          (StateFlow.lookupEta etaF flowGraph,
+           StateFlow.lookupEta etaB flowGraph)
 
 
 initialEnv ::
-  (Ord node, Fractional d, Show node) =>
-  node ->
-  Topo.StateFlowGraph node ->
-  EqEnvState.Complete node (Data Nil d) (Data Nil d)
-initialEnv _xStorageEdgesNode g =
-  EqEnvState.Complete
-    ( mempty { EqEnvState.stXMap = Map.fromList stxs } )
-    ( mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
-               EqEnvState.xMap = Map.fromList xs,
-               EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) } )
-  where gdir = Topo.dirFromFlowGraph g
-
-        es = mapMaybe f $ Graph.edges gdir
-        state (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart s _))) = Just s
-        state _ = Nothing
-        node (Idx.PartNode _ n) = n
-        f e = fmap (\s -> StateIdx.eta s (node $ Graph.from e) (node $ Graph.to e)) (state e)
-
-
-        nodestate (Idx.PartNode p _) =
-           Idx.switchAugmented Nothing Nothing Just p
-
-        ns = Graph.nodes gdir
-        h n (ins, _, outs) =
-          flip foldMap (nodestate n) $
-            \st ->
-              let x = StateIdx.x st (node n) . node
-              in  map x $ filter ((nstate n ==) . nstate) $
-                  Set.toList ins ++ Set.toList outs
-
-        xs = foldMap xfactors $ Map.mapWithKey h ns
-
-        -- @HT numerisch ok?
-        xfactors ys = zip ys (repeat $ Data (1/(fromIntegral $ length ys)))
-
-        sts = Map.filter (Topo.isStorage . snd3)
-              $ Graph.nodes
-              $ Graph.lefilter (\(e, ()) -> Topo.isStorageEdge e) gdir
-
-        nstate (Idx.PartNode s _) = s
-
-        hstx n (ins, _, outs) =
-          let stx = StateIdx.stx
-                    . flip Idx.PartNode (node n)
-                    . Idx.StorageTrans (nstate n) . nstate
-          in  map stx $ Set.toList ins ++ Set.toList outs
-        stxs = foldMap xfactors $ Map.mapWithKey hstx sts
-
-        dts = map StateIdx.dTime
-              $ Set.toList
-              $ Set.fromList
-              $ mapMaybe nodestate
-              $ Map.keys ns
-
-{-
-        stKeys = Map.foldWithKey q [] $ Graph.nodes gdir
-        q (Idx.PartNode (Idx.NoExit Idx.Init) n) (_, _, outs) =
-          (map (flip qf n) (Set.toList outs) ++)
-        q _ _ = id
-
-        qf (Idx.PartNode Idx.Exit _) =
-          Idx.ForNode (Idx.StEnergy (Idx.StorageEdge Idx.Init Idx.Exit))
-        qf (Idx.PartNode (Idx.NoExit (Idx.NoInit s)) _) =
-          Idx.ForNode (Idx.StEnergy (Idx.StorageEdge Idx.Init (Idx.NoExit s)))
--}
+   (Ord node, Arith.Constant d) =>
+   StateFlow.Graph node (Result a) (Result v)  ->
+   StateFlow.Graph node (Result (Data Nil d)) (Result (Data Nil d))
+initialEnv =
+   StateFlow.mapGraphWithVar
+      (\(Idx.ForNode var _) _a ->
+         fmap Data $
+         case var of
+            Var.StX _ -> Determined $ Arith.fromRational 0.5
+            _ -> Undetermined)
+      (\(Idx.InPart _state var) _v ->
+         fmap Data $
+         case var of
+            Var.Eta _ -> Determined $ Arith.fromRational 0.5
+            Var.DTime _ -> Determined $ Arith.fromRational 1
+            Var.X _ -> Determined $ Arith.fromRational 0.5
+            _ -> Undetermined)

@@ -1,8 +1,9 @@
+{-# LANGUAGE Rank2Types #-}
 module EFA.Application.OneStorage where
 
-import EFA.Graph.Topology (StateFlowGraph)
+import qualified EFA.Flow.State.Quantity as StateFlow
+
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.StateFlow.Environment as StateEnv
 
 import EFA.Equation.Result (Result)
 
@@ -18,11 +19,11 @@ data SocDrive a = NoDrive
 
 
 noforcing ::
-  (Num v) => SocDrive v -> StateEnv.Complete node b (Result v) -> v
+  (Num v) => SocDrive v -> StateFlow.Graph node b (Result v) -> v
 noforcing _ _ = 0
 
 
-nocondition :: StateEnv.Complete node b (Result v) -> Bool
+nocondition :: StateFlow.Graph node b (Result v) -> Bool
 nocondition _ = True
 
 
@@ -43,5 +44,5 @@ type OptimalEtaWithEnv node f v = Map Idx.State (Map (Idx.PPos node) (Map (f v) 
 data OptimalEnvParams node f g v = OptimalEnvParams {
   etaMap :: Map String (v -> v),
   points :: Sweep.Points f g v,
-  optimalPowers :: OptimalPower node,
-  stateFlowGraph :: StateFlowGraph node }
+  optimalPowers :: OptimalPower node
+  }
