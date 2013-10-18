@@ -83,6 +83,9 @@ instance (Traversable f, Traversable g) => Traversable (Pair f g) where
 
 type Points f g v = Pair f g [v]
 
+instance (Show (f a), Show (g a)) => Show (Pair f g a) where
+  show (Pair f g) = "Pair (" ++ show f ++ ") (" ++ show g ++ ")"
+
 
 doubleSweep ::
   (Traversable f, Traversable g, Ord (f a)) =>

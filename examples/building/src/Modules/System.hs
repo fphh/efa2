@@ -2,7 +2,7 @@ module Modules.System where
 
 import qualified EFA.Application.Utility as AppUt
 
-import EFA.Application.Utility (identifyFlowState, dirEdge)
+import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.State.Index as StateIdx
@@ -85,7 +85,11 @@ flowStates =
    fmap (identifyFlowState topology) $
    Sequ.fromList $
       [[dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network],
-       [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water]]
+       [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
+       [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network],
+       [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water]]
+ --      [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, undirEdge Network Water],
+ --      [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, undirEdge Network Water]]
 
 seqTopology :: Flow.RangeGraph Node
 seqTopology = Flow.sequenceGraph flowStates
