@@ -44,7 +44,6 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Typ (TDisp)
 
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Result (Result)
 import EFA.Equation.Stack (Stack)
@@ -397,7 +396,7 @@ stackFromEnv ::
    XIdx.Energy node ->
    Double ->
    (Record.DeltaName,
-    Env.Complete node t (Result (Stack i Double))) ->
+    SeqFlow.Graph node t (Result (Stack i Double))) ->
    IO ()
 
 stackFromEnv ti energyIndex eps (Record.DeltaName recName, env) = do
@@ -411,7 +410,7 @@ recordStackRow ::
    [Record.DeltaName] ->
    XIdx.Energy node ->
    Double ->
-   [Env.Complete node t (Result (Stack i Double))] ->
+   [SeqFlow.Graph node t (Result (Stack i Double))] ->
    IO ()
 
 recordStackRow ti deltaSets energyIndex eps =

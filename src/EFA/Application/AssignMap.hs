@@ -7,7 +7,6 @@ import EFA.Application.Utility (checkDetermined)
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Stack as Stack
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result)
@@ -146,11 +145,10 @@ stripSection =
 lookupStack ::
    (Ord i, Node.C node) =>
    SeqIdx.Energy node ->
-   Env.Complete node t (Result (Stack i a)) ->
+   SeqFlow.Graph node t (Result (Stack i a)) ->
    Map.Map (IndexSet i) a
-lookupStack energyIndex (Env.Complete _scalarEnv signalEnv) =
-   case Var.checkedLookup "lookupStack" Map.lookup energyIndex $
-        Env.energyMap signalEnv of
+lookupStack energyIndex gr =
+   case Var.checkedLookup "lookupStack" SeqFlow.lookup energyIndex gr of
       d ->
          Map.mapKeys deltaIndexSet $
          Stack.assignDeltaMap $
