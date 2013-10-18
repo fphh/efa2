@@ -426,7 +426,7 @@ sectionStackRow ::
    String ->
    Idx.Energy node ->
    Double ->
-   Env.Complete node t (Result (Stack i Double)) ->
+   SeqFlow.Graph node a (Result (Stack i Double)) ->
    IO ()
 sectionStackRow ti energyIndex eps env =
    case unzip $ Map.toList $ AssignMap.lookupEnergyStacks energyIndex env of
@@ -447,7 +447,7 @@ aggregatedStack ti energyIndex eps env =
    stack ti (formatValue $ Idx.delta energyIndex) $
    AssignMap.threshold eps $
    Map.mapKeys AssignMap.deltaIndexSet $ Fold.fold $
-   AssignMap.lookupEnergyStacksNew energyIndex env
+   AssignMap.lookupEnergyStacks energyIndex env
 
 
 -- | Plotting Average Efficiency Curves over Energy Flow Distribution -------------------------------

@@ -155,23 +155,11 @@ lookupStack energyIndex (Env.Complete _scalarEnv signalEnv) =
          checkDetermined ("lookupStack " ++ Format.unUnicode (formatValue energyIndex)) d
 
 lookupEnergyStacks ::
-   (Ord i, Ord node, a ~ Arith.Scalar v, Arith.Integrate v) =>
-   Idx.Energy node ->
-   Env.Complete node t (Result (Stack i v)) ->
-   Map Idx.Section (Map (Map i Stack.Branch) a)
-lookupEnergyStacks e0 =
-   fmap (Stack.assignDeltaMap . Arith.integrate) .
-   Map.mapMaybe Result.toMaybe .
-   Map.mapKeys (\(Idx.InPart sec _) -> sec) .
-   Map.filterWithKey (\(Idx.InPart _sec e) _ -> e == e0) .
-   Env.energyMap . Env.signal
-
-lookupEnergyStacksNew ::
    (Ord i, Node.C node, a ~ Arith.Scalar v, Arith.Integrate v) =>
    Idx.Energy node ->
    SeqFlow.Graph node t (Result (Stack i v)) ->
    Map Idx.Section (Map (Map i Stack.Branch) a)
-lookupEnergyStacksNew e =
+lookupEnergyStacks e =
    fmap (Stack.assignDeltaMap . Arith.integrate) .
    Map.mapMaybe Result.toMaybe .
    fmap (maybe (error $ "lookupEnergyStacksNew" ++ Format.unUnicode (formatValue e)) id .
