@@ -64,6 +64,7 @@ import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Environment (Environment, Element)
 import EFA.Equation.Unknown (Unknown(unknown))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -513,12 +514,9 @@ seqLookup ::
 seqLookup state = Map.lookup state . states
 
 
-type Element idx a v = Env.PartElement (Environment idx) a v
-
 class
    (Env.AccessPart (Environment idx), Var.Index idx, Var.FormatIndex idx) =>
       Lookup idx where
-   type Environment idx :: *
    lookup ::
       (Ord node) =>
       idx node -> Graph node a v -> Maybe (Element idx a v)
@@ -526,13 +524,11 @@ class
 instance
    (LookupSignal idx, Var.SignalIndex idx) =>
       Lookup (Idx.InState idx) where
-   type Environment (Idx.InState idx) = Env.Signal
    lookup = lookupSignal
 
 instance
    (LookupScalar idx, Var.ScalarIndex idx) =>
       Lookup (Idx.ForNode idx) where
-   type Environment (Idx.ForNode idx) = Env.Scalar
    lookup = lookupScalar
 
 

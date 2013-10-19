@@ -23,5 +23,5 @@ instance AccessPart Signal where
 type Element idx a v = PartElement (Environment idx) a v
 
 type family Environment (idx :: * -> *) :: *
-type instance Environment (Idx.InSection idx) = Signal
+type instance Environment (Idx.InPart part idx) = Signal
 type instance Environment (Idx.ForNode idx) = Scalar
