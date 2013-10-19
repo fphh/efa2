@@ -518,7 +518,7 @@ type Element idx a v = Env.PartElement (Environment idx) a v
 class
    (Env.AccessPart (Environment idx), Var.Index idx, Var.FormatIndex idx) =>
       Lookup idx where
-   type Environment idx :: * -> * -> *
+   type Environment idx :: *
    lookup ::
       (Ord node) =>
       idx node -> Graph node a v -> Maybe (Element idx a v)

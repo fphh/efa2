@@ -23,8 +23,8 @@ module EFA.Flow.Sequence.Quantity (
 
 {-
    envFromGraph,
--}
    graphFromEnv,
+-}
    toAssignMap,
 
    Unknown(..),
@@ -360,7 +360,6 @@ edgeMap ::
 edgeMap sec f =
    Map.mapKeys
       (Idx.InPart sec . f . Topo.structureEdgeFromDirEdge)
--}
 
 
 graphFromEnv ::
@@ -376,6 +375,7 @@ graphFromEnv (Env.Complete envScalar envSignal) =
          Var.checkedLookup "graphFromEnv.lookupSignal"
             Env.lookupSignal idx envSignal) .
    graphFromPlain
+-}
 
 
 toAssignMap ::
