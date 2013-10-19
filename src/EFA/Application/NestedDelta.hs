@@ -9,7 +9,7 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import EFA.Flow.Sequence.EquationSystem ((?=))
 
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Environment as Env
+import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var

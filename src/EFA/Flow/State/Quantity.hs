@@ -51,6 +51,7 @@ module EFA.Flow.State.Quantity (
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State as StateFlow
+import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
 import qualified EFA.Flow.StorageGraph as StorageGraph
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -59,12 +60,11 @@ import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.State (states, storages)
+import EFA.Flow.SequenceState.Quantity (Environment, Element)
 import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Environment (Environment, Element)
 import EFA.Equation.Unknown (Unknown(unknown))
 
 import qualified EFA.Graph.Topology.Index as Idx

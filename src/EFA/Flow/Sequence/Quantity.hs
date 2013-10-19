@@ -62,6 +62,7 @@ module EFA.Flow.Sequence.Quantity (
 import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
+import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
@@ -74,7 +75,6 @@ import EFA.Flow.Sequence (sequence, storages)
 
 import qualified EFA.Signal.Sequence as Sequ
 
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Unknown (Unknown(unknown))
 import EFA.Equation.Variable ((<#>))

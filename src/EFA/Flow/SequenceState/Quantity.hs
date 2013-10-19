@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Equation.Environment where
+module EFA.Flow.SequenceState.Quantity where
 
 import qualified EFA.Graph.Topology.Index as Idx
 
