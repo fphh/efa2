@@ -47,6 +47,7 @@ module EFA.Graph (
    nodes, nodeSet, nodeEdges,
    InOut,
    isLoop,
+   pathExists,
    ) where
 
 import qualified EFA.Utility.TypeConstructor as TC
@@ -731,3 +732,13 @@ _traverseNaive fn fe =
 
 isLoop :: (Edge edge, Eq node) => edge node -> Bool
 isLoop e = from e == to e
+
+pathExists ::
+   (Ord node, Ord (edge node), Edge edge) =>
+   node -> node -> Graph node edge nodeLabel edgeLabel -> Bool
+pathExists src dst =
+   let go topo a =
+          not (isEmpty topo) &&
+          (a==dst ||
+           (any (go (delNode a topo)) $ suc topo a))
+   in  flip go src

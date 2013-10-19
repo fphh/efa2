@@ -2,7 +2,6 @@ module EFA.Graph.Topology (
    Topology,
    FlowTopology,
    ClassifiedTopology,
-   pathExists,
    flowFromPlain,
    plainFromFlow,
    dirEdgeFromStructureEdge,
@@ -61,15 +60,6 @@ type FlowTopology a = Graph a Graph.EitherEdge (Node.Type ()) ()
 type
    ClassifiedTopology a =
       Graph a Graph.EitherEdge (Node.Type (Maybe StoreDir)) ()
-
-
-pathExists :: (Ord a) => a -> a -> Topology a -> Bool
-pathExists src dst =
-   let go topo a =
-          not (Graph.isEmpty topo) &&
-          (a==dst ||
-           (any (go (Graph.delNode a topo)) $ Graph.suc topo a))
-   in  flip go src
 
 
 flowFromPlain :: (Ord node) => Topology node -> FlowTopology node
