@@ -15,10 +15,6 @@ import qualified EFA.Signal.Sequence as Sequ
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
-import qualified Data.List.HT as ListHT
-
-import Data.Tuple.HT (mapPair)
-import Data.Maybe (mapMaybe)
 
 import Prelude hiding (sequence)
 
@@ -108,34 +104,3 @@ storageSequences =
       (\s g ->
          fmap (Map.singleton s) $
          Map.mapMaybe Topo.maybeStorage $ Graph.nodeLabels g)
-
-
-groupEdges ::
-   (Ord part, Ord node) =>
-   Topo.FlowGraph part node ->
-   (Map part [Graph.EitherEdge node],
-    Map node [Idx.StorageEdge part node])
-groupEdges =
-   mapPair (Map.unionsWith (++), Map.unionsWith (++)) .
-   ListHT.unzipEithers .
-   map
-      (\e ->
-         case Topo.edgeType e of
-            Topo.StructureEdge (Idx.InPart s se) ->
-               Left (Map.singleton s [se])
-            Topo.StorageEdge (Idx.ForNode se n) ->
-               Right (Map.singleton n [se])) .
-   Graph.edges
-
-groupNodes ::
-   (Ord (e (Idx.AugNode part node)), Ord part, Ord node, Graph.Edge e) =>
-   Graph.Graph (Idx.AugNode part node) e nl el ->
-   Map part [(node, nl)]
-groupNodes =
-   Map.fromListWith (++) .
-   mapMaybe
-      (\(Idx.PartNode aug node, label) ->
-         Idx.switchAugmented Nothing Nothing
-            (\part -> Just (part, [(node, label)]))
-            aug) .
-   Graph.labNodes
