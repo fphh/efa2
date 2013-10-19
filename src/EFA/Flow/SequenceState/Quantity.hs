@@ -7,21 +7,21 @@ import qualified EFA.Graph.Topology.Index as Idx
 data Signal = Signal
 data Scalar = Scalar
 
-class AccessPart env where
-   type PartElement env a v :: *
-   switchPart :: f Scalar -> f Signal -> f env
+class Type typ where
+   type ChooseElement typ a v :: *
+   switchPart :: f Scalar -> f Signal -> f typ
 
-instance AccessPart Scalar where
-   type PartElement Scalar a v = a
+instance Type Scalar where
+   type ChooseElement Scalar a v = a
    switchPart x _ = x
 
-instance AccessPart Signal where
-   type PartElement Signal a v = v
+instance Type Signal where
+   type ChooseElement Signal a v = v
    switchPart _ x = x
 
 
-type Element idx a v = PartElement (Environment idx) a v
+type Element idx a v = ChooseElement (TypeOf idx) a v
 
-type family Environment (idx :: * -> *) :: *
-type instance Environment (Idx.InPart part idx) = Signal
-type instance Environment (Idx.ForNode idx) = Scalar
+type family TypeOf (idx :: * -> *) :: *
+type instance TypeOf (Idx.InPart part idx) = Signal
+type instance TypeOf (Idx.ForNode idx) = Scalar

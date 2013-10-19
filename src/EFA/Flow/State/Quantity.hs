@@ -45,7 +45,7 @@ module EFA.Flow.State.Quantity (
    Lookup, lookup,
    LookupScalar, lookupScalar,
    LookupSignal, lookupSignal,
-   Environment, Element, Env.switchPart,
+   Env.TypeOf, Env.Element, Env.switchPart,
    ) where
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
@@ -60,7 +60,6 @@ import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.State (states, storages)
-import EFA.Flow.SequenceState.Quantity (Environment, Element)
 import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -515,11 +514,11 @@ seqLookup state = Map.lookup state . states
 
 
 class
-   (Env.AccessPart (Environment idx), Var.Index idx, Var.FormatIndex idx) =>
+   (Env.Type (Env.TypeOf idx), Var.Index idx, Var.FormatIndex idx) =>
       Lookup idx where
    lookup ::
       (Ord node) =>
-      idx node -> Graph node a v -> Maybe (Element idx a v)
+      idx node -> Graph node a v -> Maybe (Env.Element idx a v)
 
 instance
    (LookupSignal idx, Var.SignalIndex idx) =>

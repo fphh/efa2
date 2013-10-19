@@ -139,10 +139,10 @@ evar ?= val  =
 
 
 newtype
-   Lookup rec node s a v idx env =
+   Lookup rec node s a v idx typ =
       Lookup {
          getLookup ::
-            (SeqFlow.Environment idx ~ env) =>
+            (SeqFlow.TypeOf idx ~ typ) =>
             idx node ->
             SeqFlow.Graph node
                (SysRecord.Variable mode rec s a)

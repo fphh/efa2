@@ -54,7 +54,7 @@ module EFA.Flow.Sequence.Quantity (
    Lookup, lookup,
    LookupScalar, lookupScalar,
    LookupSignal, lookupSignal,
-   Env.Environment, Env.Element, Env.switchPart,
+   Env.TypeOf, Env.Element, Env.switchPart,
 
    formatAssigns,
    ) where
@@ -513,7 +513,7 @@ seqLookup sec = Sequ.lookup sec . sequence
 
 
 class
-   (Env.AccessPart (Env.Environment idx), Var.Index idx, Var.FormatIndex idx) =>
+   (Env.Type (Env.TypeOf idx), Var.Index idx, Var.FormatIndex idx) =>
       Lookup idx where
    lookup ::
       (Ord node) =>
