@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Flow.StorageGraph.EquationSystem where
+module EFA.Flow.Storage.EquationSystem where
 
-import qualified EFA.Flow.StorageGraph.Quantity as Quant
+import qualified EFA.Flow.Storage.Quantity as Quant
 import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.EquationSystem (System)
 

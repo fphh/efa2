@@ -11,8 +11,8 @@ import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
-import qualified EFA.Flow.StorageGraph.Quantity as StorageGraph
-import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
+import qualified EFA.Flow.Storage.Quantity as Storage
+import qualified EFA.Flow.Storage as StoragePlain
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -51,7 +51,7 @@ flowGraphFromSequence sd =
              fmap
                 (storageMapFromList
                     (Fold.toList $ Sequ.mapWithSection const sq) .
-                 StorageGraph.forwardEdgesFromSums) $
+                 Storage.forwardEdgesFromSums) $
              storageSequences $ fmap FlowTopo.topology sq,
           SeqFlow.sequence =
              fmap (mapSnd TopoRecord.fromSection) $ Sequ.toMap sq
@@ -61,9 +61,9 @@ storageMapFromList ::
    (Ord node, SeqFlow.Unknown a) =>
    [Idx.Section] ->
    [XIdx.StorageEdge node] ->
-   (StorageGraph Idx.Section node a (SeqFlow.Carry a), Map Idx.Boundary a)
+   (StoragePlain.Graph Idx.Section node a (SeqFlow.Carry a), Map Idx.Boundary a)
 storageMapFromList secs edges =
-   (StorageGraph
+   (StoragePlain.Graph
       (PartMap.constant SeqFlow.unknown secs)
       (Map.fromListWith (error "duplicate storage edge") $
        map (flip (,) (pure SeqFlow.unknown)) edges),

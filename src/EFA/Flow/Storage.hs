@@ -1,4 +1,4 @@
-module EFA.Flow.StorageGraph where
+module EFA.Flow.Storage where
 
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.PartMap (PartMap)
@@ -24,8 +24,8 @@ but this one provides more invariants:
 * Edges cannot start at Exit and cannot end in Init.
 -}
 data
-   StorageGraph part node nodeLabel edgeLabel =
-      StorageGraph {
+   Graph part node nodeLabel edgeLabel =
+      Graph {
          nodes :: PartMap part nodeLabel,
          edges :: Map (Idx.StorageEdge part node) edgeLabel
       } deriving (Eq)
@@ -33,27 +33,27 @@ data
 mapNode ::
    (Ord part) =>
    (nodeLabel0 -> nodeLabel1) ->
-   StorageGraph part node nodeLabel0 edgeLabel ->
-   StorageGraph part node nodeLabel1 edgeLabel
-mapNode f (StorageGraph partMap edgeMap) =
-   StorageGraph (fmap f partMap) edgeMap
+   Graph part node nodeLabel0 edgeLabel ->
+   Graph part node nodeLabel1 edgeLabel
+mapNode f (Graph partMap edgeMap) =
+   Graph (fmap f partMap) edgeMap
 
 mapEdge ::
    (Ord part) =>
    (edgeLabel0 -> edgeLabel1) ->
-   StorageGraph part node nodeLabel edgeLabel0 ->
-   StorageGraph part node nodeLabel edgeLabel1
-mapEdge f (StorageGraph partMap edgeMap) =
-   StorageGraph partMap (fmap f edgeMap)
+   Graph part node nodeLabel edgeLabel0 ->
+   Graph part node nodeLabel edgeLabel1
+mapEdge f (Graph partMap edgeMap) =
+   Graph partMap (fmap f edgeMap)
 
 traverse ::
    (Applicative f, Ord part) =>
    (nodeLabel0 -> f nodeLabel1) ->
    (edgeLabel0 -> f edgeLabel1) ->
-   StorageGraph part node nodeLabel0 edgeLabel0 ->
-   f (StorageGraph part node nodeLabel1 edgeLabel1)
-traverse f g (StorageGraph partMap edgeMap) =
-   liftA2 StorageGraph
+   Graph part node nodeLabel0 edgeLabel0 ->
+   f (Graph part node nodeLabel1 edgeLabel1)
+traverse f g (Graph partMap edgeMap) =
+   liftA2 Graph
       (Trav.traverse f partMap)
       (Trav.traverse g edgeMap)
 
@@ -61,7 +61,7 @@ traverse f g (StorageGraph partMap edgeMap) =
 lookupEdge ::
    (Ord part) =>
    Idx.StorageEdge part node ->
-   StorageGraph part node nodeLabel edgeLabel ->
+   Graph part node nodeLabel edgeLabel ->
    Maybe edgeLabel
 lookupEdge se =
    Map.lookup se . edges
@@ -72,13 +72,13 @@ checkedZipWith ::
    Caller ->
    (nodeLabel0 -> nodeLabel1 -> nodeLabel2) ->
    (edgeLabel0 -> edgeLabel1 -> edgeLabel2) ->
-   StorageGraph part node nodeLabel0 edgeLabel0 ->
-   StorageGraph part node nodeLabel1 edgeLabel1 ->
-   StorageGraph part node nodeLabel2 edgeLabel2
+   Graph part node nodeLabel0 edgeLabel0 ->
+   Graph part node nodeLabel1 edgeLabel1 ->
+   Graph part node nodeLabel2 edgeLabel2
 checkedZipWith name f g
-      (StorageGraph partMap0 edges0)
-      (StorageGraph partMap1 edges1) =
-   StorageGraph
+      (Graph partMap0 edges0)
+      (Graph partMap1 edges1) =
+   Graph
       (PartMap.checkedZipWith (name++".partMap") f partMap0 partMap1)
       (MapU.checkedZipWith (name++".edges") g edges0 edges1)
 

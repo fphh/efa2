@@ -2,9 +2,8 @@ module EFA.Flow.Sequence where
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Topology as FlowTopo
-import qualified EFA.Flow.StorageGraph as StorageGraph
+import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
 import qualified EFA.Graph.Flow as Flow
 
@@ -29,7 +28,7 @@ import Prelude hiding (sequence)
 type
    Storages node storageLabel boundaryLabel storageEdgeLabel =
       Map node
-         (StorageGraph Idx.Section node storageLabel storageEdgeLabel,
+         (Storage.Graph Idx.Section node storageLabel storageEdgeLabel,
           Map Idx.Boundary boundaryLabel)
 
 type
@@ -78,7 +77,7 @@ flatten ::
    RangeGraph node -> Flow.RangeGraph node
 flatten (Graph tracks sq) =
    (,) (fmap fst sq) $
-   Flow.insEdges (fmap (Map.keys . StorageGraph.edges . fst) tracks) $
+   Flow.insEdges (fmap (Map.keys . Storage.edges . fst) tracks) $
    Flow.insNodes (Map.keys tracks) $
    Fold.fold $ Map.mapWithKey Flow.sectionFromClassTopo $
    fmap (FlowTopo.topology . snd) sq
@@ -107,9 +106,9 @@ storageMapFromList ::
    (Ord node) =>
    [Idx.Section] ->
    [XIdx.StorageEdge node] ->
-   (StorageGraph Idx.Section node () (), Map Idx.Boundary ())
+   (Storage.Graph Idx.Section node () (), Map Idx.Boundary ())
 storageMapFromList secs edges =
-   (StorageGraph
+   (Storage.Graph
       (PartMap.constant () secs)
       (Map.fromListWith (error "duplicate storage edge") $
        map (flip (,) ()) edges),

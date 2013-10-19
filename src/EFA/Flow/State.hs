@@ -4,9 +4,9 @@ import qualified EFA.Flow.State.Index as XIdx
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
-import qualified EFA.Flow.StorageGraph.Quantity as StorageGraph
+import qualified EFA.Flow.Storage.Quantity as Storage
+import qualified EFA.Flow.Storage as StoragePlain
 import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -19,7 +19,7 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 type
    Storages node storageLabel storageEdgeLabel =
       Map node
-         (StorageGraph Idx.State node storageLabel storageEdgeLabel)
+         (StoragePlain.Graph Idx.State node storageLabel storageEdgeLabel)
 
 type
    States node structEdge stateLabel nodeLabel structLabel =
@@ -47,7 +47,7 @@ flowGraphFromStates flowStates =
           storages =
              fmap
                 (storageMapFromList (map fst numFlowStates) .
-                 StorageGraph.allEdgesFromSums .
+                 Storage.allEdgesFromSums .
                  fmap (FlowTopo.sumsFromDir ())) $
              storageSequencesFromClassified $
              Map.fromList numFlowStates,
@@ -59,9 +59,9 @@ storageMapFromList ::
    (Ord node) =>
    [Idx.State] ->
    [XIdx.StorageEdge node] ->
-   StorageGraph Idx.State node () ()
+   StoragePlain.Graph Idx.State node () ()
 storageMapFromList sts edges =
-   StorageGraph
+   StoragePlain.Graph
       (PartMap.constant () sts)
       (Map.fromListWith (error "duplicate storage edge") $
        map (flip (,) ()) edges)

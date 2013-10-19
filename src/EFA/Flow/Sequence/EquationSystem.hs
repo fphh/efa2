@@ -29,10 +29,9 @@ import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
-import qualified EFA.Flow.StorageGraph.EquationSystem as StorageEqSys
-import qualified EFA.Flow.StorageGraph as StorageGraph
+import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
+import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.PartMap (PartMap)
 import EFA.Flow.Topology.EquationSystem (fromTopology)
 import EFA.Flow.EquationSystem
@@ -228,13 +227,13 @@ fromStorageSequences opts g =
        stinsum sec node =
           checkedLookup "fromStorageSequences outStorages"
              SeqFlow.lookupStInSum (Idx.ForNode (Idx.StInSum sec) node) g
-       f node (StorageGraph partMap edges, storageMap) =
+       f node (Storage.Graph partMap edges, storageMap) =
           fromStorageSequence opts g node partMap storageMap
           <>
-          StorageGraph.foldInStorages
+          Storage.foldInStorages
              (\sec -> fromInStorages (stoutsum sec node)) edges
           <>
-          StorageGraph.foldOutStorages
+          Storage.foldOutStorages
              (\sec -> fromOutStorages (stinsum sec node)) edges
    in  fold $ Map.mapWithKey f $ SeqFlow.storages g
 

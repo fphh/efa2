@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Flow.StorageGraph.Quantity where
+module EFA.Flow.Storage.Quantity where
 
-import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
+import qualified EFA.Flow.Storage as Storage
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.PartMap as PartMap
@@ -32,10 +32,10 @@ mapGraphWithVar ::
    (Idx.PartNode part node -> Maybe (FlowTopo.Sums v)) ->
    (Var.ForNodeScalar part node -> a0 -> a1) ->
    node ->
-   StorageGraph part node a0 (carry a0) ->
-   StorageGraph part node a1 (carry a1)
-mapGraphWithVar lookupSums f node (StorageGraph partMap edges) =
-   StorageGraph
+   Storage.Graph part node a0 (carry a0) ->
+   Storage.Graph part node a1 (carry a1)
+mapGraphWithVar lookupSums f node (Storage.Graph partMap edges) =
+   Storage.Graph
       (PartMap.mapWithVar
           (maybe
               (error "mapStoragesWithVar: missing corresponding sum")

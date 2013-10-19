@@ -65,11 +65,10 @@ import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
-import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
-import qualified EFA.Flow.StorageGraph as StorageGraph
+import qualified EFA.Flow.Storage.Quantity as StorageQuant
+import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.Topology.Quantity (Topology, Sums(..), Flow(..))
-import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
 
@@ -181,8 +180,8 @@ mapStorages ::
 mapStorages f =
    fmap
       (mapPair
-         (StorageGraph.mapNode f .
-          StorageGraph.mapEdge (fmap f),
+         (Storage.mapNode f .
+          Storage.mapEdge (fmap f),
            fmap f))
 
 
@@ -227,7 +226,7 @@ checkedZipWithStorages caller f =
    in  MapU.checkedZipWith name
           (\(graph0, storage0)
             (graph1, storage1) ->
-               (StorageGraph.checkedZipWith name f (liftA2 f) graph0 graph1,
+               (Storage.checkedZipWith name f (liftA2 f) graph0 graph1,
                 MapU.checkedZipWith (name++".storage") f storage0 storage1))
 
 
@@ -256,7 +255,7 @@ traverseStorages ::
 traverseStorages f =
    traverse
       (uncurry (liftA2 (,)) .
-       mapPair (StorageGraph.traverse f (traverse f), traverse f))
+       mapPair (Storage.traverse f (traverse f), traverse f))
 
 
 {-
@@ -462,21 +461,21 @@ lookupMaxEnergy ::
    (Ord node) => SeqIdx.MaxEnergy node -> Graph node a v -> Maybe a
 lookupMaxEnergy (Idx.ForNode (Idx.MaxEnergy se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
-   fmap carryMaxEnergy $ StorageGraph.lookupEdge se sgr
+   fmap carryMaxEnergy $ Storage.lookupEdge se sgr
 
 lookupStEnergy ::
    (Ord node) => SeqIdx.StEnergy node -> Graph node a v -> Maybe a
 lookupStEnergy (Idx.ForNode (Idx.StEnergy se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
-   fmap carryEnergy $ StorageGraph.lookupEdge se sgr
+   fmap carryEnergy $ Storage.lookupEdge se sgr
 
 lookupStX ::
    (Ord node) => SeqIdx.StX node -> Graph node a v -> Maybe a
 lookupStX (Idx.ForNode (Idx.StX se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
    Idx.withStorageEdgeFromTrans
-      (fmap carryXIn  . flip StorageGraph.lookupEdge sgr)
-      (fmap carryXOut . flip StorageGraph.lookupEdge sgr)
+      (fmap carryXIn  . flip Storage.lookupEdge sgr)
+      (fmap carryXOut . flip Storage.lookupEdge sgr)
       se
 
 {- |
@@ -485,7 +484,7 @@ It is an unchecked error if you lookup StInSum where is only an StOutSum.
 lookupStInSum ::
    (Ord node) => SeqIdx.StInSum node -> Graph node a v -> Maybe a
 lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g = do
-   (StorageGraph partMap _, _) <- Map.lookup node $ storages g
+   (Storage.Graph partMap _, _) <- Map.lookup node $ storages g
    case aug of
       Idx.Exit -> return $ PartMap.exit partMap
       Idx.NoExit sec -> Map.lookup sec $ PartMap.parts partMap
@@ -496,7 +495,7 @@ It is an unchecked error if you lookup StOutSum where is only an StInSum.
 lookupStOutSum ::
    (Ord node) => SeqIdx.StOutSum node -> Graph node a v -> Maybe a
 lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g = do
-   (StorageGraph partMap _, _) <- Map.lookup node $ storages g
+   (Storage.Graph partMap _, _) <- Map.lookup node $ storages g
    case aug of
       Idx.Init -> return $ PartMap.init partMap
       Idx.NoInit sec -> Map.lookup sec $ PartMap.parts partMap
@@ -599,8 +598,8 @@ storagesFromPlain ::
 storagesFromPlain =
    Map.map $
       mapPair
-         (StorageGraph.mapNode (const unknown) .
-          StorageGraph.mapEdge (const $ pure unknown),
+         (Storage.mapNode (const unknown) .
+          Storage.mapEdge (const $ pure unknown),
           (unknown <$))
 
 

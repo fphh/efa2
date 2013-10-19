@@ -26,12 +26,11 @@ module EFA.Flow.Draw (
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
-import qualified EFA.Flow.StorageGraph.Quantity as StorageQuant
-import qualified EFA.Flow.StorageGraph as StorageGraph
+import qualified EFA.Flow.Storage.Quantity as StorageQuant
+import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Topology.Quantity as FlowTopoQuant
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.StorageGraph (StorageGraph(StorageGraph))
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
@@ -738,7 +737,7 @@ seqFlowGraph opts gr =
               " / Time " ++ unUnicode (formatValue dt),
               Graph.mapNodeWithKey
                  (\node sums ->
-                    let (StorageGraph partMap _, stores) =
+                    let (Storage.Graph partMap _, stores) =
                            maybe (error "missing node") id $
                            Map.lookup node $
                            SeqFlowQuant.storages gr
@@ -815,7 +814,7 @@ stateFlowGraph opts gr =
               Graph.mapNodeWithKey
                  (\node _sums ->
                     stateNodeShow node $ PartMap.lookup state $
-                    maybe (error "Draw.stateFlowGraph") StorageGraph.nodes $
+                    maybe (error "Draw.stateFlowGraph") Storage.nodes $
                     Map.lookup node $
                     StateFlowQuant.storages gr) $
               Graph.mapEdgeWithKey (structureSeqStateEdgeShow opts state) topo)) $
@@ -826,9 +825,9 @@ storageGraphShow ::
     Format.Part part, Format output, Node.C node, FormatValue a) =>
    Options output ->
    node ->
-   StorageGraph part node a (carry a) ->
+   Storage.Graph part node a (carry a) ->
    ((output, output), Map (Idx.StorageEdge part node) [output])
-storageGraphShow opts node (StorageGraph partMap edges) =
+storageGraphShow opts node (Storage.Graph partMap edges) =
    ((stateNodeShow node $ Just $ PartMap.init partMap,
      stateNodeShow node $ Just $ PartMap.exit partMap),
     if optStorageEdge opts
