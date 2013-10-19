@@ -21,10 +21,6 @@ module EFA.Flow.Sequence.Quantity (
    foldMap,
    fold,
 
-{-
-   envFromGraph,
-   graphFromEnv,
--}
    toAssignMap,
 
    Unknown(..),
@@ -256,125 +252,6 @@ traverseStorages f =
    traverse
       (uncurry (liftA2 (,)) .
        mapPair (Storage.traverse f (traverse f), traverse f))
-
-
-{-
-envFromGraph ::
-   (Ord node) =>
-   Graph node a v -> Env.Complete node a v
-envFromGraph g =
-   case envFromSequence $ sequence g of
-      ((stInSumMap, stOutSumMap), envSignal) ->
-         Env.Complete
-            (mempty
-                {Env.stInSumMap = stInSumMap,
-                 Env.stOutSumMap = stOutSumMap} <>
-             (envFromStorages $ storages g))
-            envSignal
-
-envFromStorages ::
-   (Ord node) =>
-   Storages node a -> Env.Scalar node a
-envFromStorages =
-   Fold.fold .
-   Map.mapWithKey
-      (\node ((init, exit), storage, edges) ->
-         Env.Scalar {
-            Env.maxEnergyMap =
-               nodeMap node Idx.MaxEnergy $ fmap carryMaxEnergy edges,
-            Env.stEnergyMap =
-               nodeMap node Idx.StEnergy $ fmap carryEnergy edges,
-            Env.stXMap =
-               Map.unionWith
-                  (error "envFromStorages: duplicate X indices")
-                  (nodeMap node (Idx.StX . Idx.storageTransFromEdge) $
-                   fmap carryXOut edges)
-                  (nodeMap node (Idx.StX . Idx.flip . Idx.storageTransFromEdge) $
-                   fmap carryXIn edges),
-            Env.storageMap =
-               nodeMap node Idx.Storage storage,
-            Env.stOutSumMap =
-               Map.singleton (SeqIdx.stOutSum SeqIdx.initSection node) init,
-            Env.stInSumMap =
-               Map.singleton (SeqIdx.stInSum  SeqIdx.exitSection node) exit
-         })
-
-nodeMap ::
-   (Ord node, Ord (idx node)) =>
-   node -> (k -> idx node) -> Map k a -> Map (Idx.ForNode idx node) a
-nodeMap node f =
-   Map.mapKeys (flip Idx.ForNode node . f)
-
-
-envFromSequence ::
-   (Ord node) =>
-   Sequence node a v ->
-   ((Env.StInSumMap node a, Env.StOutSumMap node a),
-    Env.Signal node v)
-envFromSequence =
-   Fold.fold .
-   Map.mapWithKey
-      (\sec (_rng, (dtime, topo)) ->
-         let nls = Graph.nodeLabels topo
-             els = Graph.edgeLabels $ FlowTopoPlain.dirFromFlowGraph topo
-             sumOutMap = Map.mapMaybe sumOut nls
-             sumInMap  = Map.mapMaybe sumIn nls
-         in  ((Map.mapKeys (Idx.ForNode $ Idx.StInSum $ Idx.NoExit sec) $
-               fmap carrySum sumOutMap,
-               Map.mapKeys (Idx.ForNode $ Idx.StOutSum $ Idx.NoInit sec) $
-               fmap carrySum sumInMap),
-              Env.Signal {
-                 Env.powerMap =
-                    Map.unionWith
-                       (error "envFromSequence: duplicate power indices")
-                       (edgeMap sec Idx.Power $ fmap flowPowerOut els)
-                       (edgeMap sec (Idx.Power . Idx.flip) $ fmap flowPowerIn els),
-                 Env.energyMap =
-                    Map.unionWith
-                       (error "envFromSequence: duplicate energy indices")
-                       (edgeMap sec Idx.Energy $ fmap flowEnergyOut els)
-                       (edgeMap sec (Idx.Energy . Idx.flip) $ fmap flowEnergyIn els),
-                 Env.xMap =
-                    Map.unionWith
-                       (error "envFromSequence: duplicate X indices")
-                       (edgeMap sec Idx.X $ fmap flowXOut els)
-                       (edgeMap sec (Idx.X . Idx.flip) $ fmap flowXIn els),
-                 Env.etaMap = edgeMap sec Idx.Eta $ fmap flowEta els,
-                 Env.sumMap =
-                    Map.unionWith
-                       (error "envFromSequence: duplicate Sum indices")
-                       (Map.mapKeys (Idx.InPart sec . Idx.Sum Idx.In) $
-                        fmap flowSum sumInMap)
-                       (Map.mapKeys (Idx.InPart sec . Idx.Sum Idx.Out) $
-                        fmap flowSum sumOutMap),
-                 Env.dtimeMap = Map.singleton (SeqIdx.dTime sec) dtime
-              }))
-
-edgeMap ::
-   (Ord part, Ord (idx node)) =>
-   part ->
-   (Idx.StructureEdge node -> idx node) ->
-   Map (Graph.DirEdge node) a ->
-   Map (Idx.InPart part idx node) a
-edgeMap sec f =
-   Map.mapKeys
-      (Idx.InPart sec . f . Topo.structureEdgeFromDirEdge)
-
-
-graphFromEnv ::
-   (Node.C node) =>
-   Env.Complete node a v ->
-   SeqFlow.RangeGraph node -> Graph node a v
-graphFromEnv (Env.Complete envScalar envSignal) =
-   mapGraphWithVar
-      (\idx Irrelevant ->
-         Var.checkedLookup "graphFromEnv.lookupScalar"
-            Env.lookupScalar idx envScalar)
-      (\idx Irrelevant ->
-         Var.checkedLookup "graphFromEnv.lookupSignal"
-            Env.lookupSignal idx envSignal) .
-   graphFromPlain
--}
 
 
 toAssignMap ::
