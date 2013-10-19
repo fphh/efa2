@@ -72,36 +72,6 @@ sequenceGraph sd =
           sequence = Sequ.toMap $ fmap (FlowTopo.Section ()) sq
        }
 
-flatten ::
-   (Ord node) =>
-   RangeGraph node -> Flow.RangeGraph node
-flatten (Graph tracks sq) =
-   (,) (fmap fst sq) $
-   Flow.insEdges (fmap (Map.keys . Storage.edges . fst) tracks) $
-   Flow.insNodes (Map.keys tracks) $
-   Fold.fold $ Map.mapWithKey Flow.sectionFromClassTopo $
-   fmap (FlowTopo.topology . snd) sq
-
-{-
-Init and Exit sections must be present.
-Range map and graph must be consistent.
--}
-structure ::
-   (Ord node) =>
-   Flow.RangeGraph node -> RangeGraph node
-structure (rngs, g) =
-   let nodes = groupNodes g
-       (structEdges, storeEdges) = groupEdges g
-   in  Graph {
-          storages = fmap (storageMapFromList (Map.keys nodes)) storeEdges,
-          sequence =
-             Map.intersectionWith (,) rngs $
-             fmap (FlowTopo.Section ()) $
-             Map.intersectionWith
-                (\ns es -> Graph.fromList ns $ map (flip (,) ()) es)
-                nodes structEdges
-       }
-
 storageMapFromList ::
    (Ord node) =>
    [Idx.Section] ->
