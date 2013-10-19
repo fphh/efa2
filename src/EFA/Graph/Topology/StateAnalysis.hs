@@ -66,17 +66,17 @@ checkNodeType _ _ _ = False
 
 
 checkInOut ::
-   (Ord node) =>
-   Topo.InOut node (Node.Type ()) -> Bool
-checkInOut (pre, node, suc) =
-   checkNodeType node
+   (Node.C node) =>
+   NodeType -> Topo.InOut node () -> Bool
+checkInOut nodeType (pre, (), suc) =
+   checkNodeType nodeType
       (Topo.anyActive suc)
       (Topo.anyActive pre)
 
 
-admissibleTopology :: (Ord node) => FlowTopology node -> Bool
+admissibleTopology :: (Node.C node) => FlowTopology node -> Bool
 admissibleTopology =
-   Fold.all checkInOut . Graph.graphMap
+   Fold.and . Map.mapWithKey (checkInOut . Node.typ) . Graph.graphMap
 
 
 graphFromMap ::
@@ -100,12 +100,13 @@ instance Eq  (Alternatives a) where (==)     =  equating  (void . getAlternative
 instance Ord (Alternatives a) where compare  =  comparing (void . getAlternatives)
 
 alternatives ::
-   (Ord node) => Graph.DirEdge node -> CountTopology node -> Alternatives node
+   (Node.C node) =>
+   Graph.DirEdge node -> CountTopology node -> Alternatives node
 alternatives e g =
    Alternatives $ map fst $ Count.admissibleEdges e g
 
 recoursePrioEdge ::
-   (Ord node) =>
+   (Node.C node) =>
    Topology node ->
    (CountTopology node, PSQ (Graph.DirEdge node) (Alternatives node)) ->
    [(CountTopology node, PSQ (Graph.DirEdge node) (Alternatives node))]
@@ -152,14 +153,14 @@ data
 
 
 emptyCluster ::
-   (Ord node) =>
+   (Node.C node) =>
    CountTopology node -> Cluster node
 emptyCluster g =
    Cluster Set.empty
       (guard (Count.admissibleTopology g) >> [Set.empty])
 
 singletonCluster ::
-   (Ord node) =>
+   (Node.C node) =>
    CountTopology node -> Graph.DirEdge node -> Cluster node
 singletonCluster g e =
    Cluster
@@ -167,7 +168,7 @@ singletonCluster g e =
       (map (Set.singleton . fst) $ Count.admissibleEdges e g)
 
 mergeCluster ::
-   (Ord node) =>
+   (Node.C node) =>
    CountTopology node ->
    Cluster node -> Cluster node -> Cluster node
 mergeCluster topo c0 c1 =
@@ -184,7 +185,7 @@ mergeCluster topo c0 c1 =
 Merge the two clusters with the least numbers of possibilities.
 -}
 mergeSmallestClusters ::
-   (Ord node) =>
+   (Node.C node) =>
    CountTopology node ->
    PQueue Int (Cluster node) ->
    Either
@@ -243,7 +244,7 @@ Merge the two clusters
 that give the minimal number of possibilities when merged.
 -}
 mergeMinimizingClusterPairs ::
-   (Ord node) =>
+   (Node.C node) =>
    CountTopology node ->
    NonEmpty.T [] (Cluster node) ->
    Either [FlowTopology node] (NonEmpty.T [] (Cluster node))
@@ -272,7 +273,7 @@ then there are less possibilities than for non-connected clusters.
 That is, our selection strategy tends to produce connected clusters.
 -}
 mergeMinimizingCluster ::
-   (Ord node) =>
+   (Node.C node) =>
    CountTopology node ->
    NonEmpty.T [] (Cluster node) ->
    Either [FlowTopology node] (NonEmpty.T [] (Cluster node))
@@ -318,7 +319,7 @@ data SetCoverItem node =
    deriving (Eq, Ord)
 
 setCoverUnDirEdges, setCoverDirEdges ::
-   (Ord node) =>
+   (Node.C node) =>
    Topology node ->
    [SetCover.Assign [Graph.EitherEdge node] (Set (SetCoverItem node))]
 setCoverUnDirEdges topo =
@@ -333,7 +334,7 @@ setCoverUnDirEdges topo =
 setCoverDirEdges topo =
    Fold.fold $
    Map.mapWithKey
-      (\node (pre, nt, suc) ->
+      (\node (pre, (), suc) ->
          map
             (\edges ->
                SetCover.assign
@@ -344,7 +345,7 @@ setCoverDirEdges topo =
                        Map.toList $ fmap snd edges))) $
          filter
             (\edges ->
-               checkNodeType nt
+               checkNodeType (Node.typ node)
                   (not $ Map.null $ Map.filter ((Topo.Out ==) . snd) edges)
                   (not $ Map.null $ Map.filter ((Topo.In  ==) . snd) edges)) $
          map (Map.mapMaybe id) $
@@ -374,7 +375,7 @@ could be turned into a completion algorithm.
 The full enumeration could be obtained by completing an empty topology.
 -}
 complement ::
-   (Ord node, Graph.Edge edge) =>
+   (Node.C node, Graph.Edge edge) =>
    CountTopology node ->
    [edge node] ->
    [FlowTopology node]
@@ -392,7 +393,7 @@ It is an checked error if one of the given edges
 is not contained in the topology.
 -}
 identify ::
-   (Ord node) =>
+   (Node.C node) =>
    Topology node -> [Graph.EitherEdge node] -> [FlowTopology node]
 identify topo givenEdges =
    let edges = Graph.edges topo
@@ -418,7 +419,7 @@ isSingleton xs =
 
 
 reducePattern ::
-   (Ord node) =>
+   (Node.C node) =>
    CountTopology node -> [Graph.EitherEdge node] ->
    [(CountTopology node, [Graph.EitherEdge node])]
 reducePattern reducedTopo freeEdges =
@@ -427,7 +428,7 @@ reducePattern reducedTopo freeEdges =
    Graph.edges reducedTopo
 
 reducePatterns ::
-   (Ord node) =>
+   (Node.C node) =>
    [(CountTopology node, [Graph.EitherEdge node])] ->
    ([[Graph.EitherEdge node]], [(CountTopology node, [Graph.EitherEdge node])])
 reducePatterns =
@@ -458,7 +459,7 @@ This algorithm is not optimized.
 If it is necessary there are certainly many ways to make it more efficient.
 -}
 minimalGiven ::
-   (Ord node) =>
+   (Node.C node) =>
    FlowTopology node -> [[Graph.EitherEdge node]]
 minimalGiven fullTopo =
    concat $ reverse $
@@ -478,7 +479,7 @@ topology in building/src/Modules/System causes duplicates:
 Don't call that function, we only need it for testing.
 -}
 minimalGivenDuplicate ::
-   (Ord node) =>
+   (Node.C node) =>
    FlowTopology node -> [[Graph.EitherEdge node]]
 minimalGivenDuplicate topo =
    let go reducedTopo freeEdges =
@@ -491,7 +492,7 @@ minimalGivenDuplicate topo =
 
 -- * various algorithms
 
-bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
+bruteForce :: (Node.C node) => Topology node -> [FlowTopology node]
 bruteForce topo =
    filter admissibleTopology .
    map (replaceEdges topo) $
@@ -501,13 +502,13 @@ bruteForce topo =
 This algorithm is made after reading R. Birds "Making a Century"
 in Pearls of Functional Algorithm Design.
 -}
-branchAndBound :: (Ord node) => Topology node -> [FlowTopology node]
+branchAndBound :: (Node.C node) => Topology node -> [FlowTopology node]
 branchAndBound topo =
    map removeCounts $
    uncurry (foldM (flip Count.expand)) $
    splitNodesEdges topo
 
-prioritized :: (Ord node) => Topology node -> [FlowTopology node]
+prioritized :: (Node.C node) => Topology node -> [FlowTopology node]
 prioritized topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  guard (Count.admissibleTopology cleanTopo)
@@ -517,7 +518,7 @@ prioritized topo =
         (cleanTopo,
          PSQ.fromList $ map (\e -> e PSQ.:-> alternatives e cleanTopo) es))
 
-clusteringGreedy :: (Ord node) => Topology node -> [FlowTopology node]
+clusteringGreedy :: (Node.C node) => Topology node -> [FlowTopology node]
 clusteringGreedy topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  untilLeft (mergeSmallestClusters cleanTopo) $
@@ -526,25 +527,25 @@ clusteringGreedy topo =
        emptyCluster cleanTopo :
           map (singletonCluster cleanTopo) es
 
-clusteringMinimizing :: (Ord node) => Topology node -> [FlowTopology node]
+clusteringMinimizing :: (Node.C node) => Topology node -> [FlowTopology node]
 clusteringMinimizing topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  untilLeft (mergeMinimizingClusterPairs cleanTopo) $
        emptyCluster cleanTopo !:
           map (singletonCluster cleanTopo) es
 
-clustering :: (Ord node) => Topology node -> [FlowTopology node]
+clustering :: (Node.C node) => Topology node -> [FlowTopology node]
 clustering topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  untilLeft (mergeMinimizingCluster cleanTopo) $
        emptyCluster cleanTopo !:
           map (singletonCluster cleanTopo) es
 
-setCover :: (Ord node) => Topology node -> [FlowTopology node]
+setCover :: (Node.C node) => Topology node -> [FlowTopology node]
 setCover topo =
    map (replaceEdges topo . concat) $
    SetCover.partitions $ setCoverUnDirEdges topo ++ setCoverDirEdges topo
 
 
-advanced :: (Ord node) => Topology node -> [FlowTopology node]
+advanced :: (Node.C node) => Topology node -> [FlowTopology node]
 advanced = clustering

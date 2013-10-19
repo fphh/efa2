@@ -48,7 +48,7 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
          Map.mapKeys (\(Graph.UnDirEdge x y) -> Graph.DirEdge x y) edges
 
 
-type Node = Int
+type Node = Node.Int
 
 prop_branchAndBound :: ArbTopology Node -> Bool
 prop_branchAndBound (ArbTopology g) =
@@ -139,7 +139,7 @@ newtype ArbFlowTopology node = ArbFlowTopology (FlowTopology node)
    deriving (Show)
 
 instance
-   (QC.Arbitrary node, Ord node) =>
+   (QC.Arbitrary node, Node.C node) =>
       QC.Arbitrary (ArbFlowTopology node) where
    arbitrary =
       let try = do

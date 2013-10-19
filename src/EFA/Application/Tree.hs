@@ -12,11 +12,11 @@ data Tree node nodeLabel =
    Tree node (Graph node Graph.DirEdge nodeLabel ())
 
 
-toGraph :: Tree node (Node.Type ()) -> Topo.Topology node
+toGraph :: Tree node () -> Topo.Topology node
 toGraph (Tree _ graph) = graph
 
-cons :: Node.C node => node -> Tree node (Node.Type ())
-cons node = Tree node $ Graph.insNode (node, Node.typ node) Graph.empty
+cons :: Node.C node => node -> Tree node ()
+cons node = Tree node $ Graph.insNode (node, ()) Graph.empty
 
 
 

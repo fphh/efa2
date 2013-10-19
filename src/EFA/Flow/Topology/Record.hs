@@ -38,8 +38,7 @@ type Section node v a =
         FlowTopoPlain.Section
            node Graph.EitherEdge
            (Signal.TSignal v a)
-           (Node.Type ())
-           (Maybe (Flow (Signal.FFSignal v a)))
+           () (Maybe (Flow (Signal.FFSignal v a)))
 
 flowTopologyFromRecord ::
    (Ord node, Show node,

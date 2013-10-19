@@ -53,9 +53,9 @@ anyActive = Fold.any isActive . Map.keysSet
 Should Topology have an UnDirEdge?
 UnDirEdge could be read as "canonically oriented" edge.
 -}
-type Topology a = Graph a Graph.DirEdge (Node.Type ()) ()
+type Topology a = Graph a Graph.DirEdge () ()
 
-type FlowTopology a = Graph a Graph.EitherEdge (Node.Type ()) ()
+type FlowTopology a = Graph a Graph.EitherEdge () ()
 
 type
    ClassifiedTopology a =
@@ -95,14 +95,15 @@ looking only at edges, not at values.
 This means that nodes with in AND out edges cannot be treated.
 -}
 classifyStorages ::
-   (Ord node) =>
+   (Node.C node) =>
    FlowTopology node -> ClassifiedTopology node
 classifyStorages =
    Graph.mapNodeWithInOut
-      (\(pre, (_n, nt), suc) ->
+      (\(pre, (n, ()), suc) ->
          let maybeDir es cls =
                 toMaybe (any (isActive . fst) es) cls
-         in  fmap (\() -> mplus (maybeDir pre In) (maybeDir suc Out)) nt)
+         in  fmap (\() -> mplus (maybeDir pre In) (maybeDir suc Out)) $
+             Node.typ n)
 
 data ViewNodeDir part node =
      ViewNodeIn  (Idx.PartNode (Idx.Init part) node)

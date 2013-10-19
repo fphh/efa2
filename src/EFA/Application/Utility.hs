@@ -31,7 +31,7 @@ topologyFromEdges ::
    Node.C node => [(node, node)] -> Topo.Topology node
 topologyFromEdges es =
    Graph.fromMap
-      (MapU.fromSet Node.typ $ foldMap (\(x,y) -> Set.fromList [x,y]) es)
+      (MapU.fromSet (const ()) $ foldMap (\(x,y) -> Set.fromList [x,y]) es)
       (Map.fromList $ map (\(a, b) -> (Graph.DirEdge a b, ())) es)
 
 
@@ -51,12 +51,14 @@ makeTopology =
 
 
 -- | Edge Label map used for displaying topology with labeled edges
-makeEdgeNameMap :: (Ord node) => LabeledEdgeList node -> Map (node, node) String
+makeEdgeNameMap ::
+   (Node.C node) => LabeledEdgeList node -> Map (node, node) String
 makeEdgeNameMap edgeList = Map.fromList $ map f edgeList
   where f (x, y, lab, _, _) = ((x, y), lab)
 
 -- | Generate Label Map for Power Positions
-makePPosLabelMap :: (Ord node) => LabeledEdgeList node -> PPosLabelMap node
+makePPosLabelMap ::
+   (Node.C node) => LabeledEdgeList node -> PPosLabelMap node
 makePPosLabelMap edgeList = Map.fromList $ concatMap f edgeList
   where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, l1),
                              (SeqIdx.ppos n2 n1, l2)]
@@ -66,7 +68,7 @@ makePPosLabelMap edgeList = Map.fromList $ concatMap f edgeList
 Construct solvable topology from topology with default directions.
 -}
 quantityTopology ::
-   (Ord node, SeqFlowQuant.Unknown v) =>
+   (Node.C node, SeqFlowQuant.Unknown v) =>
    Topo.Topology node ->
    FlowTopo.Section node v
 quantityTopology topo =
@@ -82,11 +84,11 @@ quantityTopology topo =
 dirEdge :: node -> node -> Graph.EitherEdge node
 dirEdge x y = Graph.EDirEdge $ Graph.DirEdge x y
 
-undirEdge :: (Ord node) => node -> node -> Graph.EitherEdge node
+undirEdge :: (Node.C node) => node -> node -> Graph.EitherEdge node
 undirEdge x y = Graph.EUnDirEdge $ Graph.UnDirEdge x y
 
 identifyFlowState ::
-   (Ord node) =>
+   (Node.C node) =>
    Topo.Topology node -> [Graph.EitherEdge node] -> Topo.FlowTopology node
 identifyFlowState topo givenEdges =
    case StateAnalysis.identify topo givenEdges of
@@ -95,7 +97,7 @@ identifyFlowState topo givenEdges =
       _ -> error "identifyFlowState: ambiguous given edges"
 
 seqFlowGraphFromStates ::
-   (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
+   (Node.C node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
    Topo.Topology node ->
    [[Graph.EitherEdge node]] ->
    SeqFlowQuant.Graph node a v

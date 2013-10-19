@@ -509,18 +509,18 @@ dotFromTopology edgeLabels g =
          DotStmts {
             attrStmts = [],
             subGraphs = [],
-            nodeStmts = map dotFromTopoNode $ Graph.labNodes g,
+            nodeStmts = map dotFromTopoNode $ Map.keys $ Graph.nodes g,
             edgeStmts = map (dotFromTopoEdge edgeLabels) $ Graph.edges g
          }
    }
 
 dotFromTopoNode ::
-   (Node.C node, StorageLabel store) =>
-   Graph.LNode node (Node.Type store) -> DotNode T.Text
-dotFromTopoNode (x, typ) =
+   (Node.C node) =>
+   node -> DotNode T.Text
+dotFromTopoNode node =
    DotNode
-      (dotIdentFromNode x)
-      (nodeAttrs typ $ labelFromUnicode $ Node.display x)
+      (dotIdentFromNode node)
+      (nodeAttrs (Node.typ node) $ labelFromUnicode $ Node.display node)
 
 dotFromTopoEdge ::
    (Node.C node) =>
@@ -554,9 +554,9 @@ dotFromFlowTopology ident topo =
       (map mkNode $ Graph.labNodes topo)
       (map mkEdge $ Graph.edges topo)
   where idf x = T.pack $ show ident ++ "_" ++ Node.dotId x
-        mkNode x@(n, t) =
+        mkNode (n, ()) =
            DotNode (idf n)
-              (nodeAttrs t $ labelFromUnicode $ formatTypedNode x)
+              (nodeAttrs (Node.typ n) $ labelFromUnicode $ formatTypedNode n)
         mkEdge el =
            case orientEdge el of
               (DirEdge x y, d, _) ->
@@ -641,10 +641,10 @@ formatNodeType ::
 formatNodeType = Format.literal . showType
 
 formatTypedNode ::
-   (Node.C node, StorageLabel store) =>
-   (node, Node.Type store) -> Unicode
-formatTypedNode (n, l) =
-   Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
+   (Node.C node) =>
+   node -> Unicode
+formatTypedNode n =
+   Unicode $ unUnicode (Node.display n) ++ " - " ++ showType (Node.typ n)
 
 
 data Options output =

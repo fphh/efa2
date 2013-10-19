@@ -53,7 +53,7 @@ auch wenn sie nie aktiv sind!
 So kann man beim Initialisieren auch Werte zuweisen.
 -}
 sequenceGraph ::
-   (Ord node) =>
+   (Node.C node) =>
    Sequ.List (FlowTopology node) -> RangeGraph node
 sequenceGraph sd =
    let sq = fmap Topo.classifyStorages sd

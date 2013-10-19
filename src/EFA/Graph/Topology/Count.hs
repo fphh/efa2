@@ -33,7 +33,7 @@ import Data.Set (Set)
 type NodeType = Node.Type ()
 type NumberOfAdj = Int
 type CountTopology node =
-        Graph node Graph.EitherEdge (NodeType, NumberOfAdj) ()
+        Graph node Graph.EitherEdge NumberOfAdj ()
 
 
 infix 1 `implies`
@@ -58,23 +58,23 @@ checkNodeType typ complete sucActive preActive =
       Node.DeadNode -> not sucActive && not preActive
 
 checkInOut ::
-   (Ord node) =>
-   Topo.InOut node (NodeType, NumberOfAdj) -> Bool
-checkInOut (pre, (node, nadj), suc) =
-   checkNodeType node
+   (Node.C node) =>
+   NodeType -> Topo.InOut node NumberOfAdj -> Bool
+checkInOut nodeType (pre, nadj, suc) =
+   checkNodeType nodeType
       (Map.size pre + Map.size suc == nadj)
       (Topo.anyActive suc)
       (Topo.anyActive pre)
 
-checkNode :: (Ord node) => CountTopology node -> node -> Bool
+checkNode :: (Node.C node) => CountTopology node -> node -> Bool
 checkNode topo x =
    case Map.lookup x $ Graph.graphMap topo of
       Nothing -> error "checkNode: node not in graph"
-      Just inOut -> checkInOut inOut
+      Just inOut -> checkInOut (Node.typ x) inOut
 
-admissibleTopology :: (Ord node) => CountTopology node -> Bool
-admissibleTopology topo =
-   Fold.all checkInOut $ Graph.graphMap topo
+admissibleTopology :: (Node.C node) => CountTopology node -> Bool
+admissibleTopology =
+   Fold.and . Map.mapWithKey (checkInOut . Node.typ) . Graph.graphMap
 
 
 insEdge ::
@@ -101,7 +101,7 @@ edgeOrients e =
 
 
 admissibleEdges ::
-   (Ord node, Graph.Edge edge) =>
+   (Node.C node, Graph.Edge edge) =>
    edge node -> CountTopology node ->
    [(Graph.EitherEdge node, CountTopology node)]
 admissibleEdges e0 g0 = do
@@ -111,16 +111,16 @@ admissibleEdges e0 g0 = do
    return (e1, g1)
 
 expand ::
-   (Ord node, Graph.Edge edge) =>
+   (Node.C node, Graph.Edge edge) =>
    edge node -> CountTopology node -> [CountTopology node]
 expand e g = map snd $ admissibleEdges e g
 
 nodeDegrees ::
    (Ord node, Ord (edge node), Graph.Edge edge) =>
-   Graph node edge (Node.Type ()) () ->
-   Map node (Node.Type (), NumberOfAdj)
+   Graph node edge () () ->
+   Map node NumberOfAdj
 nodeDegrees =
-   Map.map (\(pre,l,suc) -> (l, Map.size pre + Map.size suc)) .
+   Map.map (\(pre,(),suc) -> Map.size pre + Map.size suc) .
    Graph.graphMap
 
 splitNodesEdges ::
@@ -132,4 +132,4 @@ splitNodesEdges topo =
     Graph.edges topo)
 
 removeCounts :: CountTopology node -> FlowTopology node
-removeCounts = Graph.mapNode fst
+removeCounts = Graph.mapNode (const ())
