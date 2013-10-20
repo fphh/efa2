@@ -59,7 +59,7 @@ formatType t =
       NoRestriction -> Format.nodeNoRestriction
 
 
-isSink, isSource :: Type -> Bool
+isSink, isSource, isStorage :: Type -> Bool
 isSink t =
    case t of
       AlwaysSink -> True
@@ -70,6 +70,11 @@ isSource t =
    case t of
       AlwaysSource -> True
       Source -> True
+      _ -> False
+
+isStorage nt =
+   case nt of
+      Storage -> True
       _ -> False
 
 

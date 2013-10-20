@@ -5,7 +5,6 @@ module EFA.Graph.Topology (
    plainFromFlow,
    dirEdgeFromStructureEdge,
    structureEdgeFromDirEdge,
-   isStorage,
    isActive,
    anyActive,
    StoreDir(..),
@@ -13,19 +12,11 @@ module EFA.Graph.Topology (
    ) where
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 import EFA.Graph (Graph)
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Foldable as Fold
-
-
-isStorage :: Node.Type -> Bool
-isStorage nt =
-   case nt of
-      Node.Storage -> True
-      _ -> False
 
 
 isActive :: Graph.EitherEdge node -> Bool

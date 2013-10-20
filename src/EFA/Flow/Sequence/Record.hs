@@ -16,7 +16,6 @@ import qualified EFA.Flow.Storage as StoragePlain
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 import EFA.Graph (Graph)
 
@@ -82,7 +81,7 @@ storageSequences =
    Sequ.mapWithSection
       (\s g ->
          fmap (Map.singleton s) $
-         Map.filterWithKey (const . Topo.isStorage . Node.typ) $
+         Map.filterWithKey (const . Node.isStorage . Node.typ) $
          Graph.nodeLabels g)
 
 

@@ -180,7 +180,7 @@ dotFromStorageGraphs storages sequence =
           (Idx.afterSection current,
            dotFromContentEdge (Just before) (Idx.augment current) $
            fmap FlowTopoQuant.dirFromSums $
-           Map.filterWithKey (\node _ -> Topo.isStorage $ Node.typ node) $
+           Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) $
            Graph.nodeLabels gr))
        Idx.initial sequence)
 

@@ -498,7 +498,7 @@ storageSequences =
       (\s ->
          fmap (Map.singleton s) .
          Map.mapMaybeWithKey
-            (\node sums -> toMaybe (Topo.isStorage (Node.typ node)) sums) .
+            (\node sums -> toMaybe (Node.isStorage (Node.typ node)) sums) .
          Graph.nodeLabels)
 
 
