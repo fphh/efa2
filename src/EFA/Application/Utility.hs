@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Application.Utility where
 
-import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -14,6 +14,7 @@ import qualified EFA.Graph as Graph
 
 import qualified EFA.Signal.Sequence as Sequ
 
+import EFA.Equation.Unknown (Unknown)
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
 
@@ -67,7 +68,7 @@ makePPosLabelMap edgeList = Map.fromList $ concatMap f edgeList
 Construct solvable topology from topology with default directions.
 -}
 quantityTopology ::
-   (Node.C node, SeqFlowQuant.Unknown v) =>
+   (Node.C node, Unknown v) =>
    Topo.Topology node ->
    FlowTopo.Section node v
 quantityTopology topo =
@@ -96,19 +97,19 @@ identifyFlowState topo givenEdges =
       _ -> error "identifyFlowState: ambiguous given edges"
 
 seqFlowGraphFromStates ::
-   (Node.C node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
+   (Node.C node, Unknown a, Unknown v) =>
    Topo.Topology node ->
    [[Graph.EitherEdge node]] ->
-   SeqFlowQuant.Graph node a v
+   SeqFlow.Graph node a v
 seqFlowGraphFromStates topo =
    seqFlowGraphFromFlowTopos . map (identifyFlowState topo)
 
 seqFlowGraphFromFlowTopos ::
-   (Node.C node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
+   (Node.C node, Unknown a, Unknown v) =>
    [Topo.FlowTopology node] ->
-   SeqFlowQuant.Graph node a v
+   SeqFlow.Graph node a v
 seqFlowGraphFromFlowTopos =
-   SeqFlowQuant.sequenceGraph . Sequ.fromList
+   SeqFlow.sequenceGraph . Sequ.fromList
 
 
 checkDetermined :: String -> Result a -> a
