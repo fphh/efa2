@@ -340,7 +340,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap stateFlowGraph = do
       stateFlowEnvWithGraph =
         StateEqAbs.solveOpts
           (EqAbs.equalInOutSums EqAbs.optionsDefault)
-          (StateFlow.flowGraphFromCumResult $
+          (StateFlow.graphFromCumResult $
            StateFlow.fromSequenceFlowResult True $
            SeqFlow.mapGraph id (fmap Arith.integrate) $
            external initStorage sequenceFlowGraph)

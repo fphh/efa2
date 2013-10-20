@@ -19,7 +19,7 @@ main = do
           EqSys.solve TripodGiven.seqFlowGraph TripodGiven.equationSystem
 
        stateFlowGraph =
-          StateFlow.flowGraphFromCumResult $
+          StateFlow.graphFromCumResult $
           StateFlow.fromSequenceFlowResult False seqFlowGraph
 
    concurrentlyMany_ $ map Draw.xterm $

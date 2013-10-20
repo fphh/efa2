@@ -26,7 +26,7 @@ module EFA.Flow.State.Quantity (
    flowResultFromCum,
    flowResultFromCumResult,
 
-   flowGraphFromCumResult,
+   graphFromCumResult,
    graphFromStates,
 
    lookupPower,
@@ -331,9 +331,9 @@ carryResultFromResult e =
       carryEnergy = e
    }
 
-flowGraphFromCumResult ::
+graphFromCumResult ::
    CumGraph node (Result a) -> Graph node (Result a) (Result a)
-flowGraphFromCumResult gr =
+graphFromCumResult gr =
    StateFlow.Graph {
       StateFlow.storages =
          fmap (Storage.mapEdge carryResultFromResult) $
