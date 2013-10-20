@@ -25,9 +25,6 @@ module EFA.Flow.Sequence.Quantity (
 
    Unknown(..),
    sequenceGraph,
-   graphFromPlain,
-   storagesFromPlain,
-   sequenceFromPlain,
 
    mapGraphWithVar,
    mapStoragesWithVar,
@@ -90,7 +87,7 @@ import qualified Control.Monad.Trans.Writer as MW
 import Control.Monad (mplus, (<=<))
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$))
 
-import qualified Data.Map as Map
+import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Foldable as Fold
 
 import Data.Traversable (Traversable, traverse, foldMapDefault)
@@ -459,41 +456,55 @@ instance Unknown Irrelevant where
    unknown = Irrelevant
 
 
+{-
+All storages must be present in the collection of storage graphs,
+also if the storages are always inactive.
+Only this way we can assign values to the initial sections.
+-}
 sequenceGraph ::
    (Node.C node, Unknown a, Unknown v) =>
    Sequ.List (Topo.FlowTopology node) -> Graph node a v
-sequenceGraph =
-   graphFromPlain . SeqFlow.sequenceGraph
+sequenceGraph sd =
+   let sq = fmap (FlowTopo.sectionFromPlain . FlowTopoPlain.Section ()) sd
+   in  SeqFlow.Graph {
+          storages =
+             fmap
+                (storageMapFromList (Fold.toList $ Sequ.mapWithSection const sq) .
+                 StorageQuant.forwardEdgesFromSums) $
+             storageSequences $ fmap FlowTopo.topology sq,
+          sequence = Sequ.toMap sq
+       }
 
-graphFromPlain ::
-   (Ord node, Unknown a, Unknown v) =>
-   SeqFlow.RangeGraph node -> Graph node a v
-graphFromPlain g =
-   SeqFlow.Graph {
-      storages = storagesFromPlain $ SeqFlow.storages g,
-      sequence = sequenceFromPlain $ SeqFlow.sequence g
-   }
-
-
-storagesFromPlain ::
+storageMapFromList ::
    (Ord node, Unknown a) =>
-   SeqFlow.Storages node () () () ->
-   Storages node a
-storagesFromPlain =
-   Map.map $
-      mapPair
-         (Storage.mapNode (const unknown) .
-          Storage.mapEdge (const $ pure unknown),
-          (unknown <$))
+   [Idx.Section] ->
+   [SeqIdx.StorageEdge node] ->
+   (Storage.Graph Idx.Section node a (Carry a), Map Idx.Boundary a)
+storageMapFromList secs edges =
+   (Storage.Graph
+      (PartMap.constant unknown secs)
+      (Map.fromListWith (error "duplicate storage edge") $
+       map (flip (,) (pure unknown)) edges),
+    Map.fromList $ map (flip (,) unknown . Idx.Following) $
+    Idx.Init : map Idx.NoInit secs)
+
+storageSequences ::
+   (Node.C node) =>
+   Sequ.List (Graph.Graph node Graph.EitherEdge (Sums a) edgeLabel) ->
+   Map node (Map Idx.Section (Sums a))
+storageSequences =
+   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
+   .
+   Fold.toList
+   .
+   Sequ.mapWithSection
+      (\s ->
+         fmap (Map.singleton s) .
+         Map.mapMaybeWithKey
+            (\node sums -> sums <$ Topo.maybeStorage (Node.typ node)) .
+         Graph.nodeLabels)
 
 
-sequenceFromPlain ::
-   (Ord node, Unknown v) =>
-   SeqFlow.Sequence node Graph.EitherEdge ()
-      (Node.Type (Maybe Topo.StoreDir)) () ->
-   Sequence node v
-sequenceFromPlain =
-   Map.map $ mapSnd $ FlowTopo.sectionFromPlain
 
 mapGraphWithVar ::
    (Ord node) =>

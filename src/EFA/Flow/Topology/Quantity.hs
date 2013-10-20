@@ -256,7 +256,7 @@ mapFlowWithVar f e =
 
 sectionFromPlain ::
    (Ord node, Unknown v) =>
-   FlowTopo.Section node Graph.EitherEdge () (Node.Type (Maybe Topo.StoreDir)) () ->
+   FlowTopo.Section node Graph.EitherEdge () nl () ->
    Section node v
 sectionFromPlain (FlowTopo.Section () gr) =
    FlowTopo.Section unknown $
