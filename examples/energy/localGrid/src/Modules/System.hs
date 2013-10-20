@@ -7,7 +7,6 @@ import EFA.Equation.Result (Result)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence as SeqFlowPlain
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
@@ -133,6 +132,5 @@ flowState4 =
 flowGraphOpt ::
    SeqFlow.Graph Node (Result (Data Nil Double)) (Result (Data Nil Double))
 flowGraphOpt =
-   SeqFlow.graphFromPlain $
-   SeqFlowPlain.sequenceGraph $
+   SeqFlow.sequenceGraph $
    Sequ.fromList [flowState4, flowState0]

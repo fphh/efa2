@@ -7,7 +7,6 @@ import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence as SeqFlowPlain
 
 import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Graph.Topology (FlowTopology)
@@ -23,9 +22,7 @@ import EFA.Utility.Stream (Stream((:~)))
 assembleFlowTopos ::
    [FlowTopology Node] -> SeqFlow.Graph Node (Result a) (Result v)
 assembleFlowTopos =
-   SeqFlow.graphFromPlain .
-   SeqFlowPlain.sequenceGraph .
-   Sequ.fromList
+   SeqFlow.sequenceGraph . Sequ.fromList
 
 
 state0, state3 :: FlowTopology Node

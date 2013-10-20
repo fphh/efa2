@@ -24,6 +24,7 @@ module EFA.Flow.Sequence.Quantity (
    toAssignMap,
 
    Unknown(..),
+   sequenceGraph,
    graphFromPlain,
    storagesFromPlain,
    sequenceFromPlain,
@@ -457,6 +458,12 @@ data Irrelevant = Irrelevant
 instance Unknown Irrelevant where
    unknown = Irrelevant
 
+
+sequenceGraph ::
+   (Node.C node, Unknown a, Unknown v) =>
+   Sequ.List (Topo.FlowTopology node) -> Graph node a v
+sequenceGraph =
+   graphFromPlain . SeqFlow.sequenceGraph
 
 graphFromPlain ::
    (Ord node, Unknown a, Unknown v) =>

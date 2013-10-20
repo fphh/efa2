@@ -3,7 +3,6 @@ module Main where
 import EFA.Application.Utility (topologyFromEdges)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence as SeqFlowPlain
 import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
@@ -65,8 +64,7 @@ drawSeqGraph sol = do
       SeqFlow.mapGraph
          (\a -> a :: Result Double)
          (\v -> v :: Result Double) $
-      SeqFlow.graphFromPlain $
-      SeqFlowPlain.sequenceGraph $ select sol xs
+      SeqFlow.sequenceGraph $ select sol xs
 
 
 main :: IO ()

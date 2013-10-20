@@ -25,7 +25,6 @@ import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence.Record as RecSeq
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence as SeqFlowPlain
 import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
@@ -624,8 +623,7 @@ main = do
 
      -- | Build Sequenceflow graph for simulation
      flowGraphSim =
-        SeqFlow.graphFromPlain $
-        SeqFlowPlain.sequenceGraph $
+        SeqFlow.sequenceGraph $
         Sequ.fromList [System.flowState4]
 
      -- | Generate and solve Equation System

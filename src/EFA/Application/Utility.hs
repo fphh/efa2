@@ -3,7 +3,6 @@ module EFA.Application.Utility where
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.Sequence.Index as SeqIdx
-import qualified EFA.Flow.Sequence as SeqFlow
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
@@ -102,8 +101,7 @@ seqFlowGraphFromStates ::
    [[Graph.EitherEdge node]] ->
    SeqFlowQuant.Graph node a v
 seqFlowGraphFromStates topo =
-   SeqFlowQuant.graphFromPlain .
-   SeqFlow.sequenceGraph .
+   SeqFlowQuant.sequenceGraph .
    fmap (identifyFlowState topo) .
    Sequ.fromList
 
