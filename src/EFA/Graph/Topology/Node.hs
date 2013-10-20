@@ -81,6 +81,7 @@ isStorage nt =
 instance QC.Arbitrary Type where
    arbitrary =
       QC.elements $
+         Storage :
          Sink :
          AlwaysSink :
          Source :
