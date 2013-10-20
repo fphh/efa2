@@ -25,6 +25,7 @@ module EFA.Flow.Sequence.Quantity (
 
    Unknown(..),
    sequenceGraph,
+   storageMapFromList,
    storageSequences,
 
    mapGraphWithVar,
