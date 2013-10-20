@@ -1,7 +1,6 @@
 module EFA.Graph.Topology (
    Topology,
    FlowTopology,
-   ClassifiedTopology,
    flowFromPlain,
    plainFromFlow,
    dirEdgeFromStructureEdge,
@@ -11,7 +10,6 @@ module EFA.Graph.Topology (
    isActive,
    anyActive,
    StoreDir(..),
-   classifyStorages,
    InOut,
    ) where
 
@@ -22,8 +20,6 @@ import EFA.Graph (Graph)
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Foldable as Fold
-import Control.Monad (mplus)
-import Data.Maybe.HT (toMaybe)
 
 
 isStorage :: Node.Type sl -> Bool
@@ -55,10 +51,6 @@ type Topology a = Graph a Graph.DirEdge () ()
 
 type FlowTopology a = Graph a Graph.EitherEdge () ()
 
-type
-   ClassifiedTopology a =
-      Graph a Graph.EitherEdge (Node.Type (Maybe StoreDir)) ()
-
 
 flowFromPlain :: (Ord node) => Topology node -> FlowTopology node
 flowFromPlain = Graph.mapEdgesMaybe (Just . Graph.EDirEdge)
@@ -85,20 +77,3 @@ type InOut node nodeLabel =
         (Map (Graph.EitherEdge node) (),
          nodeLabel,
          Map (Graph.EitherEdge node) ())
-
-
-{- |
-Classify the storages in in and out storages,
-looking only at edges, not at values.
-This means that nodes with in AND out edges cannot be treated.
--}
-classifyStorages ::
-   (Node.C node) =>
-   FlowTopology node -> ClassifiedTopology node
-classifyStorages =
-   Graph.mapNodeWithInOut
-      (\(pre, (n, ()), suc) ->
-         let maybeDir es cls =
-                toMaybe (any (isActive . fst) es) cls
-         in  fmap (\() -> mplus (maybeDir pre In) (maybeDir suc Out)) $
-             Node.typ n)
