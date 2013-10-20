@@ -256,9 +256,8 @@ mapFlowWithVar f e =
 
 sectionFromPlain ::
    (Ord node, Unknown v) =>
-   FlowTopo.Section node Graph.EitherEdge () nl () ->
-   Section node v
-sectionFromPlain (FlowTopo.Section () gr) =
+   Topo.FlowTopology node -> Section node v
+sectionFromPlain gr =
    FlowTopo.Section unknown $
    unknownTopologyNodes $
    Graph.mapEdgeWithKey

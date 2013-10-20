@@ -465,7 +465,7 @@ sequenceGraph ::
    (Node.C node, Unknown a, Unknown v) =>
    Sequ.List (Topo.FlowTopology node) -> Graph node a v
 sequenceGraph sd =
-   let sq = fmap (FlowTopo.sectionFromPlain . FlowTopoPlain.Section ()) sd
+   let sq = fmap FlowTopo.sectionFromPlain sd
    in  SeqFlow.Graph {
           storages =
              fmap

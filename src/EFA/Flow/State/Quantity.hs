@@ -351,7 +351,7 @@ graphFromStates ::
 graphFromStates flowStates =
    let numFlowStates =
           zip [Idx.State 0 ..] $
-          map (FlowTopo.sectionFromPlain . FlowTopoPlain.Section ()) flowStates
+          map FlowTopo.sectionFromPlain flowStates
    in  StateFlow.Graph {
           storages =
              fmap

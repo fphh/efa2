@@ -5,7 +5,6 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
-import qualified EFA.Flow.Topology as FlowTopoPlain
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
@@ -73,7 +72,6 @@ quantityTopology ::
    FlowTopo.Section node v
 quantityTopology topo =
    FlowTopo.sectionFromPlain $
-   FlowTopoPlain.Section () $
    let flowTopo = Graph.mapEdgesMaybe (Just . Graph.EDirEdge) topo
    in  if StateAnalysis.admissibleTopology flowTopo
          then flowTopo
