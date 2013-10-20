@@ -63,7 +63,6 @@ import Control.Applicative (Applicative, pure, liftA2, liftA3)
 import Data.Foldable (Foldable, foldMap)
 import Data.Set (Set)
 import Data.Map (Map)
-import Data.Maybe (mapMaybe)
 import Data.Monoid (Monoid, mempty, mappend)
 import Data.Tuple.HT (fst3, snd3, thd3, mapFst3, mapThd3)
 -- import Data.Char (toUpper)
@@ -510,10 +509,11 @@ mapEdgesMaybe ::
    (e0 n -> Maybe (e1 n)) ->
    Graph n e0 nl el -> Graph n e1 nl el
 mapEdgesMaybe f =
-   let g = Map.fromList . mapMaybe (\(k,a) -> fmap (flip (,) a) $ f k) . Map.toList
-   in  Graph .
-       fmap (\(ins, nl, outs) -> (g ins, nl, g outs)) .
-       graphMap
+   Graph .
+   fmap
+      (\(ins, nl, outs) ->
+         (MapU.mapMaybeKeys f ins, nl, MapU.mapMaybeKeys f outs)) .
+   graphMap
 
 {-
 delEdgeHelp ::

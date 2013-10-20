@@ -7,7 +7,9 @@ import qualified Data.Map as Map
 import Data.Set (Set)
 import Data.Map (Map)
 import Data.Tuple.HT (swap)
+import Data.Maybe (mapMaybe)
 
+import qualified Prelude as P
 import Prelude hiding (curry, uncurry, flip)
 
 
@@ -94,3 +96,11 @@ flip =
          Map.elems .
          Map.mapWithKey
             (\k1 a -> Map.singleton k1 $ Map.singleton k0 a))
+
+
+mapMaybeKeys ::
+   (Ord k1) =>
+   (k0 -> Maybe k1) ->
+   Map k0 a -> Map k1 a
+mapMaybeKeys f =
+   Map.fromList . mapMaybe (\(k,a) -> fmap (P.flip (,) a) $ f k) . Map.toList
