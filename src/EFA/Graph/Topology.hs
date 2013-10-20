@@ -6,7 +6,6 @@ module EFA.Graph.Topology (
    dirEdgeFromStructureEdge,
    structureEdgeFromDirEdge,
    isStorage,
-   maybeStorage,
    isActive,
    anyActive,
    StoreDir(..),
@@ -27,12 +26,6 @@ isStorage nt =
    case nt of
       Node.Storage _ -> True
       _ -> False
-
-maybeStorage :: Node.Type sl -> Maybe sl
-maybeStorage nt =
-   case nt of
-      Node.Storage x -> Just x
-      _ -> Nothing
 
 
 isActive :: Graph.EitherEdge node -> Bool

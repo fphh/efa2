@@ -83,12 +83,13 @@ import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Set as Set
 import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
-import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$))
+import Control.Applicative (Applicative, pure, liftA2, (<*>))
 import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Maybe (fromMaybe)
 import Data.Tuple.HT (mapSnd)
+import Data.Maybe.HT (toMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -384,7 +385,7 @@ storageSequences =
       (\(s, topo) ->
          fmap (Map.singleton s) $
          Map.mapMaybeWithKey
-            (\node sums -> sums <$ Topo.maybeStorage (Node.typ node)) $
+            (\node sums -> toMaybe (Topo.isStorage (Node.typ node)) sums) $
          Graph.nodeLabels topo)
 
 

@@ -85,7 +85,7 @@ import EFA.Utility.Map (Caller)
 
 import qualified Control.Monad.Trans.Writer as MW
 import Control.Monad (mplus, (<=<))
-import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$))
+import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Foldable as Fold
@@ -94,6 +94,7 @@ import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid)
 import Data.Tuple.HT (mapPair, mapSnd)
+import Data.Maybe.HT (toMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -501,7 +502,7 @@ storageSequences =
       (\s ->
          fmap (Map.singleton s) .
          Map.mapMaybeWithKey
-            (\node sums -> sums <$ Topo.maybeStorage (Node.typ node)) .
+            (\node sums -> toMaybe (Topo.isStorage (Node.typ node)) sums) .
          Graph.nodeLabels)
 
 
