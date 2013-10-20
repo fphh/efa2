@@ -73,7 +73,7 @@ prop_admissible (ArbTopology g) =
    Fold.all StateAnalysis.admissibleTopology $
    StateAnalysis.branchAndBound g
 
-prop_checkNode :: Node.Type () -> Bool -> Bool -> Bool
+prop_checkNode :: Node.Type -> Bool -> Bool -> Bool
 prop_checkNode nt sucActive preActive =
    StateAnalysis.checkNodeType nt sucActive preActive
    ==

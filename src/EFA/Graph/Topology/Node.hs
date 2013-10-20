@@ -22,7 +22,7 @@ class Ord node => C node where
    display :: Format output => node -> output
    subscript :: Format output => node -> output
    dotId :: node -> P.String
-   typ :: node -> Type ()
+   typ :: node -> Type
 
 displayDefault :: (Show node, Format output) => node -> output
 displayDefault = Format.literal . show
@@ -35,8 +35,8 @@ dotIdDefault = show . fromEnum
 
 
 data
-   Type a =
-        Storage a
+   Type =
+        Storage
       | Sink
       | AlwaysSink
       | Source
@@ -46,22 +46,10 @@ data
       | NoRestriction
       deriving (Show, Eq, Ord)
 
-instance Functor Type where
-   fmap f t =
-      case t of
-         Storage a     -> Storage $ f a
-         Sink          -> Sink
-         AlwaysSink    -> AlwaysSink
-         Source        -> Source
-         AlwaysSource  -> AlwaysSource
-         Crossing      -> Crossing
-         DeadNode      -> DeadNode
-         NoRestriction -> NoRestriction
-
-formatType :: Format output => Type () -> output
+formatType :: Format output => Type -> output
 formatType t =
    case t of
-      Storage ()    -> Format.nodeStorage
+      Storage       -> Format.nodeStorage
       Sink          -> Format.nodeSink
       AlwaysSink    -> Format.nodeAlwaysSink
       Source        -> Format.nodeSource
@@ -71,7 +59,7 @@ formatType t =
       NoRestriction -> Format.nodeNoRestriction
 
 
-isSink, isSource :: Type () -> Bool
+isSink, isSource :: Type -> Bool
 isSink t =
    case t of
       AlwaysSink -> True
@@ -85,14 +73,7 @@ isSource t =
       _ -> False
 
 
-class StorageLabel a where
-   arbitraryStorageLabel :: QC.Gen a
-
-instance StorageLabel () where
-   arbitraryStorageLabel = return ()
-
-
-instance StorageLabel a => QC.Arbitrary (Type a) where
+instance QC.Arbitrary Type where
    arbitrary =
       QC.elements $
          Sink :
@@ -110,8 +91,8 @@ instance StorageLabel a => QC.Arbitrary (Type a) where
    shrink _ = [NoRestriction]
 
 
-storage :: Type ()
-storage = Storage ()
+storage :: Type
+storage = Storage
 
 
 data
@@ -141,7 +122,7 @@ instance C Int where
          IntNoRestriction (NodeInt.NoRestriction n) -> "nr"  ++ show n
    typ node =
       case node of
-         IntStorage       _ -> Storage ()
+         IntStorage       _ -> Storage
          IntSink          _ -> Sink
          IntAlwaysSink    _ -> AlwaysSink
          IntSource        _ -> Source
@@ -220,7 +201,7 @@ instance QC.Arbitrary Int where
          IntNoRestriction n -> map IntNoRestriction $ QC.shrink n
 
 
-data String = String (Type ()) P.String deriving (Show, Eq, Ord)
+data String = String (Type) P.String deriving (Show, Eq, Ord)
 
 instance C String where
    display (String t str) =

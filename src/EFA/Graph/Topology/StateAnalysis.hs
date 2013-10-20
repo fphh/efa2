@@ -46,7 +46,7 @@ import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
 
 
-type NodeType = Node.Type ()
+type NodeType = Node.Type
 
 -- How should it be ordered to be faster?
 {- |
@@ -61,7 +61,7 @@ checkNodeType Node.AlwaysSource True False = True
 checkNodeType Node.Sink False _ = True
 checkNodeType Node.AlwaysSink False True = True
 checkNodeType Node.DeadNode False False = True
-checkNodeType (Node.Storage _) _ _ = True
+checkNodeType Node.Storage _ _ = True
 checkNodeType _ _ _ = False
 
 

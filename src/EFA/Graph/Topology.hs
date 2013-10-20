@@ -21,10 +21,10 @@ import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Foldable as Fold
 
 
-isStorage :: Node.Type sl -> Bool
+isStorage :: Node.Type -> Bool
 isStorage nt =
    case nt of
-      Node.Storage _ -> True
+      Node.Storage -> True
       _ -> False
 
 

@@ -101,20 +101,20 @@ storageEdgeColour = Color [RGB 200 0 0]
 contentEdgeColour :: Attribute
 contentEdgeColour = Color [RGB 0 200 0]
 
-shape :: Node.Type a -> Viz.Shape
+shape :: Node.Type -> Viz.Shape
 shape Node.Crossing = Viz.PlainText
 shape Node.Source = Viz.DiamondShape
 shape Node.AlwaysSource = Viz.MDiamond
 shape Node.Sink = Viz.BoxShape
 shape Node.AlwaysSink = Viz.MSquare
-shape (Node.Storage _) = Viz.Ellipse
+shape Node.Storage = Viz.Ellipse
 shape _ = Viz.BoxShape
 
-color :: Node.Type a -> Attribute
-color (Node.Storage _) = FillColor [RGB 251 177 97] -- ghlightorange
+color :: Node.Type -> Attribute
+color Node.Storage = FillColor [RGB 251 177 97] -- ghlightorange
 color _ = FillColor [RGB 136 215 251]  -- ghverylightblue
 
-nodeAttrs :: Node.Type a -> Attribute -> [Attribute]
+nodeAttrs :: Node.Type -> Attribute -> [Attribute]
 nodeAttrs nt label =
   [ label, Viz.Style [Viz.SItem Viz.Filled []],
     Viz.Shape (shape nt), color nt ]
@@ -180,7 +180,7 @@ dotFromStorageGraphs storages sequence =
           (Idx.afterSection current,
            dotFromContentEdge (Just before) (Idx.augment current) $
            fmap FlowTopoQuant.dirFromSums $
-           Map.filterWithKey (\node _ -> Node.typ node == Node.Storage ()) $
+           Map.filterWithKey (\node _ -> Topo.isStorage $ Node.typ node) $
            Graph.nodeLabels gr))
        Idx.initial sequence)
 
@@ -331,8 +331,7 @@ dotFromBndNode ::
 dotFromBndNode n label =
    DotNode
       (dotIdentFromBndNode n)
-      (nodeAttrs (Node.Storage ()) $
-       labelFromUnicode label)
+      (nodeAttrs Node.Storage $ labelFromUnicode label)
 
 dotFromStructureEdgeCompact ::
    (Node.C node) =>
@@ -614,21 +613,10 @@ orientDirEdge (DirEdge x y) =
      else (DirEdge y x, Viz.Back, Reverse)
 
 
-class StorageLabel a where
-   formatStorageLabel :: a -> String
-
-instance StorageLabel () where
-   formatStorageLabel () = ""
-
-instance Show a => StorageLabel (Maybe a) where
-   formatStorageLabel Nothing = ""
-   formatStorageLabel (Just dir) = " " ++ show dir
-
-
-showType :: StorageLabel store => Node.Type store -> String
+showType :: Node.Type -> String
 showType typ =
    case typ of
-      Node.Storage store -> "Storage" ++ formatStorageLabel store
+      Node.Storage       -> "Storage"
       Node.Sink          -> "Sink"
       Node.AlwaysSink    -> "AlwaysSink"
       Node.Source        -> "Source"
@@ -639,8 +627,8 @@ showType typ =
 
 
 formatNodeType ::
-   (Format output, StorageLabel store) =>
-   Node.Type store -> output
+   (Format output) =>
+   Node.Type -> output
 formatNodeType = Format.literal . showType
 
 formatTypedNode ::
@@ -774,7 +762,7 @@ formatNodeStorage opts node beforeAfter sinout =
          Node.display node :
          formatNodeType ty :
             case ty of
-               Node.Storage _ ->
+               Node.Storage ->
                   if optStorage opts
                     then formatStorageUpdate sinout
                     else formatStorageEquation beforeAfter sinout
@@ -847,7 +835,7 @@ stateNodeShow node msum =
          Node.display node :
          formatNodeType ty :
             case ty of
-               Node.Storage _ -> maybeToList $ fmap formatValue msum
+               Node.Storage -> maybeToList $ fmap formatValue msum
                _ -> []
 
 storageEdgeShow ::

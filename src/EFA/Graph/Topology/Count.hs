@@ -30,7 +30,7 @@ import Control.Monad (guard)
 import Data.Set (Set)
 
 
-type NodeType = Node.Type ()
+type NodeType = Node.Type
 type NumberOfAdj = Int
 type CountTopology node =
         Graph node Graph.EitherEdge NumberOfAdj ()
@@ -53,7 +53,7 @@ checkNodeType typ complete sucActive preActive =
       Node.AlwaysSource -> not preActive && (complete `implies` sucActive)
       Node.Sink -> not sucActive
       Node.AlwaysSink -> not sucActive && (complete `implies` preActive)
-      Node.Storage _ -> True
+      Node.Storage -> True
       Node.NoRestriction -> True
       Node.DeadNode -> not sucActive && not preActive
 
