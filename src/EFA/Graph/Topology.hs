@@ -12,8 +12,6 @@ module EFA.Graph.Topology (
    anyActive,
    StoreDir(..),
    classifyStorages,
-   viewNodeDir,
-   ViewNodeDir(..),
    InOut,
    ) where
 
@@ -104,20 +102,3 @@ classifyStorages =
                 toMaybe (any (isActive . fst) es) cls
          in  fmap (\() -> mplus (maybeDir pre In) (maybeDir suc Out)) $
              Node.typ n)
-
-data ViewNodeDir part node =
-     ViewNodeIn  (Idx.PartNode (Idx.Init part) node)
-   | ViewNodeOut (Idx.PartNode (Idx.Exit part) node)
-
-viewNodeDir ::
-   (Idx.AugNode part node, Maybe StoreDir) ->
-   Maybe (ViewNodeDir part node)
-viewNodeDir (node, mdir) =
-   flip fmap mdir $ \dir ->
-      case dir of
-         In ->
-            maybe (error "Exit node must be Out storage") ViewNodeIn $
-            Idx.maybeExitNode node
-         Out ->
-            maybe (error "Init node must be In storage") ViewNodeOut $
-            Idx.maybeInitNode node
