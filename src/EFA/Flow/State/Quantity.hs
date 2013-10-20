@@ -48,7 +48,7 @@ module EFA.Flow.State.Quantity (
    Env.TypeOf, Env.Element, Env.switchPart,
    ) where
 
-import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State as StateFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
@@ -240,10 +240,10 @@ fromSequenceFlowGen ::
    (a -> a -> a) ->
    a ->
    Bool ->
-   SeqFlowQuant.Graph node a v ->
+   SeqFlow.Graph node a v ->
    CumGraph node a
 fromSequenceFlowGen integrate add zero allStEdges gr =
-   let sq = SeqFlowQuant.sequence gr
+   let sq = SeqFlow.sequence gr
        secMap =
           stateMaps $
           fmap (Graph.mapEdge (const ()) .
@@ -254,7 +254,7 @@ fromSequenceFlowGen integrate add zero allStEdges gr =
              (FlowTopoPlain.checkedZipWith "StateFlow.fromSequenceFlow"
                  add (addSums add) (liftA2 (liftA2 add))) $
           fmap (FlowTopoPlain.mapEdge (fmap cumFromFlow) . snd) $
-          SeqFlowQuant.mapSequence integrate sq
+          SeqFlow.mapSequence integrate sq
    in  StateFlow.Graph {
           storages =
              Map.mapWithKey
@@ -268,8 +268,8 @@ fromSequenceFlowGen integrate add zero allStEdges gr =
                                   StorageQuant.allEdgesFromSums (sumsMap node sts)
                              else Map.empty) $
                        cumulateStorageEdges add secMap $
-                       fmap SeqFlowQuant.carryEnergy edges)) $
-             SeqFlowQuant.storages gr,
+                       fmap SeqFlow.carryEnergy edges)) $
+             SeqFlow.storages gr,
           states = sts
        }
 
@@ -311,8 +311,8 @@ instance Applicative Cum where
 cumFromFlow :: Flow v -> Cum v
 cumFromFlow flow =
    Cum
-      (SeqFlowQuant.flowEnergyOut flow)
-      (SeqFlowQuant.flowEnergyIn flow)
+      (SeqFlow.flowEnergyOut flow)
+      (SeqFlow.flowEnergyIn flow)
 
 flowResultFromCum :: Cum v -> Flow (Result v)
 flowResultFromCum =
@@ -321,8 +321,8 @@ flowResultFromCum =
 flowResultFromCumResult :: Cum (Result v) -> Flow (Result v)
 flowResultFromCumResult cum =
    (pure Undetermined) {
-      SeqFlowQuant.flowEnergyOut = cumEnergyOut cum,
-      SeqFlowQuant.flowEnergyIn  = cumEnergyIn  cum
+      SeqFlow.flowEnergyOut = cumEnergyOut cum,
+      SeqFlow.flowEnergyIn  = cumEnergyIn  cum
    }
 
 carryResultFromResult :: Result a -> Carry (Result a)
@@ -608,7 +608,7 @@ If allStEdges
 fromSequenceFlow ::
    (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
    Bool ->
-   SeqFlowQuant.Graph node a v ->
+   SeqFlow.Graph node a v ->
    CumGraph node a
 fromSequenceFlow =
    fromSequenceFlowGen Arith.integrate (~+) Arith.zero
@@ -616,7 +616,7 @@ fromSequenceFlow =
 fromSequenceFlowResult ::
    (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
    Bool ->
-   SeqFlowQuant.Graph node (Result a) (Result v) ->
+   SeqFlow.Graph node (Result a) (Result v) ->
    CumGraph node (Result a)
 fromSequenceFlowResult =
    fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+)) (pure Arith.zero)
