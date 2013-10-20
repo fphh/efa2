@@ -483,10 +483,7 @@ storageMapFromList ::
    [SeqIdx.StorageEdge node] ->
    (Storage.Graph Idx.Section node a (Carry a), Map Idx.Boundary a)
 storageMapFromList secs edges =
-   (Storage.Graph
-      (PartMap.constant unknown secs)
-      (Map.fromListWith (error "duplicate storage edge") $
-       map (flip (,) (pure unknown)) edges),
+   (StorageQuant.graphFromList secs edges,
     Map.fromList $ map (flip (,) unknown . Idx.Following) $
     Idx.Init : map Idx.NoInit secs)
 

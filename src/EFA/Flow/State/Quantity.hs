@@ -63,7 +63,7 @@ import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Unknown (Unknown(unknown))
+import EFA.Equation.Unknown (Unknown)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -356,23 +356,12 @@ graphFromStates flowStates =
    in  StateFlow.Graph {
           storages =
              fmap
-                (storageMapFromList (map fst numFlowStates) .
+                (StorageQuant.graphFromList (map fst numFlowStates) .
                  StorageQuant.allEdgesFromSums) $
              storageSequences $
              map (mapSnd FlowTopo.topology) numFlowStates,
           states = Map.fromList numFlowStates
        }
-
-storageMapFromList ::
-   (Ord node, Unknown a) =>
-   [Idx.State] ->
-   [StateIdx.StorageEdge node] ->
-   Storage.Graph Idx.State node a (Carry a)
-storageMapFromList sts edges =
-   Storage.Graph
-      (PartMap.constant unknown sts)
-      (Map.fromListWith (error "duplicate storage edge") $
-       map (flip (,) (pure unknown)) edges)
 
 storageSequences ::
    (Node.C node) =>

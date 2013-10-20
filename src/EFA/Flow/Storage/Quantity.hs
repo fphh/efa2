@@ -7,6 +7,7 @@ import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.PartMap as PartMap
 
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Unknown (Unknown(unknown))
 
 import qualified EFA.Graph.Topology.Index as Idx
 
@@ -91,3 +92,14 @@ allEdgesFromSums stores =
    liftA2 Idx.StorageEdge
       (Idx.Init : map Idx.NoInit (Map.keys (Map.mapMaybe FlowTopo.sumIn stores)))
       (Idx.Exit : map Idx.NoExit (Map.keys (Map.mapMaybe FlowTopo.sumOut stores)))
+
+graphFromList ::
+   (Ord part, Ord node, Carry carry, Unknown a) =>
+   [part] ->
+   [Idx.StorageEdge part node] ->
+   Storage.Graph part node a (carry a)
+graphFromList sts edges =
+   Storage.Graph
+      (PartMap.constant unknown sts)
+      (Map.fromListWith (error "duplicate storage edge") $
+       map (flip (,) (pure unknown)) edges)
