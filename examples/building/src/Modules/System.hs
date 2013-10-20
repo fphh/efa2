@@ -6,7 +6,6 @@ import EFA.Application.Simulation (EtaAssignMap)
 import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.State.Quantity as StateFlow
-import qualified EFA.Flow.State as StateFlowPlain
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
@@ -88,8 +87,7 @@ flowStates =
 
 stateFlowGraph :: StateFlow.Graph Node (Result a) (Result v)
 stateFlowGraph =
-   StateFlow.flowGraphFromPlain $
-   StateFlowPlain.flowGraphFromStates flowStates
+   StateFlow.graphFromStates flowStates
 
 
 etaAssign ::

@@ -1,30 +1,22 @@
 module EFA.Flow.State where
 
-import qualified EFA.Flow.State.Index as XIdx
-
-import qualified EFA.Flow.Topology.Quantity as FlowTopo
-import qualified EFA.Flow.Topology as FlowTopoPlain
-import qualified EFA.Flow.Storage.Quantity as Storage
-import qualified EFA.Flow.Storage as StoragePlain
-import qualified EFA.Flow.PartMap as PartMap
+import qualified EFA.Flow.Topology as FlowTopo
+import qualified EFA.Flow.Storage as Storage
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Graph
 
-import qualified Data.Map as Map ; import Data.Map (Map)
+import Data.Map (Map)
 
 
 type
    Storages node storageLabel storageEdgeLabel =
       Map node
-         (StoragePlain.Graph Idx.State node storageLabel storageEdgeLabel)
+         (Storage.Graph Idx.State node storageLabel storageEdgeLabel)
 
 type
    States node structEdge stateLabel nodeLabel structLabel =
       Map Idx.State
-         (FlowTopoPlain.Section node structEdge stateLabel nodeLabel structLabel)
+         (FlowTopo.Section node structEdge stateLabel nodeLabel structLabel)
 
 data
    Graph node structEdge
@@ -34,61 +26,3 @@ data
          storages :: Storages node storageLabel storageEdgeLabel,
          states :: States node structEdge stateLabel nodeLabel structLabel
       }
-
-
-flowGraphFromStates ::
-   (Node.C node) =>
-   [Topo.FlowTopology node] ->
-   Graph node Graph.EitherEdge () (Node.Type (Maybe Topo.StoreDir)) () () ()
-flowGraphFromStates flowStates =
-   let numFlowStates =
-          zip [Idx.State 0 ..] $ map Topo.classifyStorages flowStates
-   in  Graph {
-          storages =
-             fmap
-                (storageMapFromList (map fst numFlowStates) .
-                 Storage.allEdgesFromSums .
-                 fmap (FlowTopo.sumsFromDir ())) $
-             storageSequencesFromClassified $
-             Map.fromList numFlowStates,
-          states =
-             fmap (FlowTopoPlain.Section ()) $ Map.fromList numFlowStates
-       }
-
-storageMapFromList ::
-   (Ord node) =>
-   [Idx.State] ->
-   [XIdx.StorageEdge node] ->
-   StoragePlain.Graph Idx.State node () ()
-storageMapFromList sts edges =
-   StoragePlain.Graph
-      (PartMap.constant () sts)
-      (Map.fromListWith (error "duplicate storage edge") $
-       map (flip (,) ()) edges)
-
-storageSequences ::
-   (Node.C node) =>
-   [(Idx.State, Graph.Graph node Graph.EitherEdge (FlowTopo.Sums v) edgeLabel)] ->
-   Map node (Map Idx.State (FlowTopo.Sums v))
-storageSequences =
-   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
-   .
-   map
-      (\(s, topo) ->
-         fmap (Map.singleton s) $
-         Map.filterWithKey (const . Topo.isStorage . Node.typ) $
-         Graph.nodeLabels topo)
-
-storageSequencesFromClassified ::
-   (Ord node) =>
-   Map Idx.State (Topo.ClassifiedTopology node) ->
-   Map node (Map Idx.State (Maybe Topo.StoreDir))
-storageSequencesFromClassified =
-   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
-   .
-   Map.elems
-   .
-   Map.mapWithKey
-      (\s g ->
-         fmap (Map.singleton s) $
-         Map.mapMaybe Topo.maybeStorage $ Graph.nodeLabels g)

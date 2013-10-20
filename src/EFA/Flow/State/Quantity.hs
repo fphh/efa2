@@ -27,7 +27,7 @@ module EFA.Flow.State.Quantity (
    flowResultFromCumResult,
 
    flowGraphFromCumResult,
-   flowGraphFromPlain,
+   graphFromStates,
 
    lookupPower,
    lookupEnergy,
@@ -83,11 +83,12 @@ import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Set as Set
 import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
-import Control.Applicative (Applicative, pure, liftA2, (<*>))
+import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$))
 import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Maybe (fromMaybe)
+import Data.Tuple.HT (mapSnd)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -342,21 +343,49 @@ flowGraphFromCumResult gr =
          StateFlow.states gr
    }
 
-flowGraphFromPlain ::
+
+graphFromStates ::
    (Node.C node, Unknown a, Unknown v) =>
-   StateFlow.Graph node Graph.EitherEdge
-      () (Node.Type (Maybe Topo.StoreDir)) () () () ->
+   [Topo.FlowTopology node] ->
    Graph node a v
-flowGraphFromPlain gr =
-   StateFlow.Graph {
-      StateFlow.storages =
-         fmap (Storage.mapNode (const unknown) .
-               Storage.mapEdge (const $ pure unknown)) $
-         StateFlow.storages gr,
-      StateFlow.states =
-         fmap FlowTopo.sectionFromPlain $
-         StateFlow.states gr
-   }
+graphFromStates flowStates =
+   let numFlowStates =
+          zip [Idx.State 0 ..] $
+          map (FlowTopo.sectionFromPlain . FlowTopoPlain.Section ()) flowStates
+   in  StateFlow.Graph {
+          storages =
+             fmap
+                (storageMapFromList (map fst numFlowStates) .
+                 StorageQuant.allEdgesFromSums) $
+             storageSequences $
+             map (mapSnd FlowTopo.topology) numFlowStates,
+          states = Map.fromList numFlowStates
+       }
+
+storageMapFromList ::
+   (Ord node, Unknown a) =>
+   [Idx.State] ->
+   [StateIdx.StorageEdge node] ->
+   Storage.Graph Idx.State node a (Carry a)
+storageMapFromList sts edges =
+   Storage.Graph
+      (PartMap.constant unknown sts)
+      (Map.fromListWith (error "duplicate storage edge") $
+       map (flip (,) (pure unknown)) edges)
+
+storageSequences ::
+   (Node.C node) =>
+   [(Idx.State, Graph.Graph node Graph.EitherEdge (FlowTopo.Sums v) edgeLabel)] ->
+   Map node (Map Idx.State (FlowTopo.Sums v))
+storageSequences =
+   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
+   .
+   map
+      (\(s, topo) ->
+         fmap (Map.singleton s) $
+         Map.mapMaybeWithKey
+            (\node sums -> sums <$ Topo.maybeStorage (Node.typ node)) $
+         Graph.nodeLabels topo)
 
 
 addSums ::
