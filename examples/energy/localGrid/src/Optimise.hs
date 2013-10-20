@@ -20,6 +20,7 @@ import Modules.Optimisation
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
+import EFA.Application.Utility (seqFlowGraphFromFlowTopos)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
@@ -622,9 +623,7 @@ main = do
 -}
 
      -- | Build Sequenceflow graph for simulation
-     flowGraphSim =
-        SeqFlow.sequenceGraph $
-        Sequ.fromList [System.flowState4]
+     flowGraphSim = seqFlowGraphFromFlowTopos [System.flowState4]
 
      -- | Generate and solve Equation System
 

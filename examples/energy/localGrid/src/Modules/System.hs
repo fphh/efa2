@@ -11,7 +11,6 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
-import qualified EFA.Signal.Sequence as Sequ
 import EFA.Signal.Record (SigId(SigId))
 import EFA.Signal.Data (Data, Nil)
 
@@ -132,5 +131,4 @@ flowState4 =
 flowGraphOpt ::
    SeqFlow.Graph Node (Result (Data Nil Double)) (Result (Data Nil Double))
 flowGraphOpt =
-   SeqFlow.sequenceGraph $
-   Sequ.fromList [flowState4, flowState0]
+   AppUt.seqFlowGraphFromFlowTopos [flowState4, flowState0]

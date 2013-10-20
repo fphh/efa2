@@ -4,25 +4,18 @@ module EFA.Example.Topology.Tripod.State where
 import qualified EFA.Example.Topology.Tripod as Tripod
 import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 
-import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
+import EFA.Application.Utility
+          (seqFlowGraphFromFlowTopos, identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 
 import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Graph.Topology (FlowTopology)
 
-import qualified EFA.Signal.Sequence as Sequ
-
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-
-
-assembleFlowTopos ::
-   [FlowTopology Node] -> SeqFlow.Graph Node (Result a) (Result v)
-assembleFlowTopos =
-   SeqFlow.sequenceGraph . Sequ.fromList
 
 
 state0, state3 :: FlowTopology Node
@@ -41,4 +34,4 @@ sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
 flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
-flowGraph = assembleFlowTopos [state0, state3]
+flowGraph = seqFlowGraphFromFlowTopos [state0, state3]

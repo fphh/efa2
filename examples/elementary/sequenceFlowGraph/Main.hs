@@ -1,6 +1,6 @@
 module Main where
 
-import EFA.Application.Utility (topologyFromEdges)
+import EFA.Application.Utility (seqFlowGraphFromFlowTopos, topologyFromEdges)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Draw as Draw
@@ -8,8 +8,6 @@ import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-
-import qualified EFA.Signal.Sequence as Sequ
 
 import EFA.Equation.Result (Result)
 
@@ -52,9 +50,6 @@ readNum s =
            else error $ "cannot handle characters \"" ++ trailer ++ "\""
       _ -> error "parse error: not a number!"
 
-select :: [topo] -> [Int] -> Sequ.List topo
-select ts = Sequ.fromList . map (ts !!)
-
 drawSeqGraph :: [Topo.FlowTopology Node.Int] ->  IO ()
 drawSeqGraph sol = do
    xs <- parse `fmap`
@@ -64,7 +59,7 @@ drawSeqGraph sol = do
       SeqFlow.mapGraph
          (\a -> a :: Result Double)
          (\v -> v :: Result Double) $
-      SeqFlow.sequenceGraph $ select sol xs
+      seqFlowGraphFromFlowTopos $ map (sol !!) xs
 
 
 main :: IO ()

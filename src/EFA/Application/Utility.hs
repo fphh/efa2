@@ -101,9 +101,14 @@ seqFlowGraphFromStates ::
    [[Graph.EitherEdge node]] ->
    SeqFlowQuant.Graph node a v
 seqFlowGraphFromStates topo =
-   SeqFlowQuant.sequenceGraph .
-   fmap (identifyFlowState topo) .
-   Sequ.fromList
+   seqFlowGraphFromFlowTopos . map (identifyFlowState topo)
+
+seqFlowGraphFromFlowTopos ::
+   (Node.C node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
+   [Topo.FlowTopology node] ->
+   SeqFlowQuant.Graph node a v
+seqFlowGraphFromFlowTopos =
+   SeqFlowQuant.sequenceGraph . Sequ.fromList
 
 
 checkDetermined :: String -> Result a -> a

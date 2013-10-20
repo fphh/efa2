@@ -7,9 +7,10 @@ module Main where
 
 import EFA.Example.Topology.Tripod (Node, source, crossing, sink, storage)
 import EFA.Example.Topology.Tripod.State
-          (assembleFlowTopos, flowGraph, state0, state3, sec0, sec1)
+          (flowGraph, state0, state3, sec0, sec1)
 
 import qualified EFA.Application.Plot as PlotIO
+import EFA.Application.Utility (seqFlowGraphFromFlowTopos)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -272,7 +273,8 @@ main = do
 
       (secs, secSigsHU) = unzip $ sectionHU (snd . bf) hypotheticalUsage
 
-      envHU = EqSys.solve (assembleFlowTopos secs) $ givenEnvHU secSigsHU
+      envHU =
+        EqSys.solve (seqFlowGraphFromFlowTopos secs) $ givenEnvHU secSigsHU
 
       labeledEtaSys =
         PlotIO.label "Laden" etaSys0 :
