@@ -16,8 +16,6 @@ import qualified EFA.Flow.Storage as StoragePlain
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph as Graph
-import EFA.Graph (Graph)
 
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Sequence as Sequ
@@ -51,7 +49,7 @@ flowGraphFromSequence sd =
                 (storageMapFromList
                     (Fold.toList $ Sequ.mapWithSection const sq) .
                  Storage.forwardEdgesFromSums) $
-             storageSequences $ fmap FlowTopo.topology sq,
+             SeqFlow.storageSequences $ fmap FlowTopo.topology sq,
           SeqFlow.sequence =
              fmap (mapSnd TopoRecord.fromSection) $ Sequ.toMap sq
        }
@@ -68,21 +66,6 @@ storageMapFromList secs edges =
        map (flip (,) (pure SeqFlow.unknown)) edges),
     Map.fromList $ map (flip (,) SeqFlow.unknown . Idx.Following) $
     Idx.Init : map Idx.NoInit secs)
-
-storageSequences ::
-   (Node.C node) =>
-   Sequ.List (Graph node Graph.EitherEdge (SeqFlow.Sums v) edgeLabel) ->
-   Map node (Map Idx.Section (SeqFlow.Sums v))
-storageSequences =
-   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
-   .
-   Fold.toList
-   .
-   Sequ.mapWithSection
-      (\s g ->
-         fmap (Map.singleton s) $
-         Map.filterWithKey (const . Node.isStorage . Node.typ) $
-         Graph.nodeLabels g)
 
 
 flowGraphToPowerRecords ::

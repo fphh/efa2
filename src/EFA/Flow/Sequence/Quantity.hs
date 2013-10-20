@@ -25,6 +25,7 @@ module EFA.Flow.Sequence.Quantity (
 
    Unknown(..),
    sequenceGraph,
+   storageSequences,
 
    mapGraphWithVar,
    mapStoragesWithVar,
@@ -94,7 +95,6 @@ import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid)
 import Data.Tuple.HT (mapPair, mapSnd)
-import Data.Maybe.HT (toMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -497,8 +497,7 @@ storageSequences =
    Sequ.mapWithSection
       (\s ->
          fmap (Map.singleton s) .
-         Map.mapMaybeWithKey
-            (\node sums -> toMaybe (Node.isStorage (Node.typ node)) sums) .
+         Map.filterWithKey (const . Node.isStorage . Node.typ) .
          Graph.nodeLabels)
 
 
