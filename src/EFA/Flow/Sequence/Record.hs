@@ -5,11 +5,9 @@ module EFA.Flow.Sequence.Record (
    ) where
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence as SeqFlowPlain
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
-import qualified EFA.Flow.Storage.Quantity as Storage
 
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -21,7 +19,6 @@ import EFA.Signal.Base (BSum)
 
 import EFA.Equation.Result (Result)
 
-import qualified Data.Foldable as Fold
 import Data.Tuple.HT (mapSnd)
 
 
@@ -30,22 +27,13 @@ flowGraphFromSequence ::
     Node.C node) =>
    Sequ.List (TopoRecord.Section node v a) ->
    SeqFlow.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
-flowGraphFromSequence sd =
-   let sq =
-          fmap
-             (\(FlowTopoPlain.Section lab topo) ->
-                FlowTopoPlain.Section lab $
-                FlowTopo.unknownTopologyNodes topo) sd
-   in  SeqFlowPlain.Graph {
-          SeqFlow.storages =
-             fmap
-                (SeqFlow.storageMapFromList
-                    (Fold.toList $ Sequ.mapWithSection const sq) .
-                 Storage.forwardEdgesFromSums) $
-             SeqFlow.storageSequences $ fmap FlowTopo.topology sq,
-          SeqFlow.sequence =
-             fmap (mapSnd TopoRecord.fromSection) $ Sequ.toMap sq
-       }
+flowGraphFromSequence =
+   SeqFlow.graphFromSections .
+   fmap
+      (\(FlowTopoPlain.Section lab topo) ->
+         TopoRecord.fromSection $
+         FlowTopoPlain.Section lab $
+         FlowTopo.unknownTopologyNodes topo)
 
 
 flowGraphToPowerRecords ::

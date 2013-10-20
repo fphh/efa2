@@ -25,8 +25,7 @@ module EFA.Flow.Sequence.Quantity (
 
    Unknown(..),
    sequenceGraph,
-   storageMapFromList,
-   storageSequences,
+   graphFromSections,
 
    mapGraphWithVar,
    mapStoragesWithVar,
@@ -462,16 +461,21 @@ Only this way we can assign values to the initial sections.
 sequenceGraph ::
    (Node.C node, Unknown a, Unknown v) =>
    Sequ.List (Topo.FlowTopology node) -> Graph node a v
-sequenceGraph sd =
-   let sq = fmap FlowTopo.sectionFromPlain sd
-   in  SeqFlow.Graph {
-          storages =
-             fmap
-                (storageMapFromList (Fold.toList $ Sequ.mapWithSection const sq) .
-                 StorageQuant.forwardEdgesFromSums) $
-             storageSequences $ fmap FlowTopo.topology sq,
-          sequence = Sequ.toMap sq
-       }
+sequenceGraph =
+   graphFromSections . fmap FlowTopo.sectionFromPlain
+
+graphFromSections ::
+   (Node.C node, Unknown a) =>
+   Sequ.List (FlowTopo.Section node v) -> Graph node a v
+graphFromSections sq =
+   SeqFlow.Graph {
+      storages =
+         fmap
+            (storageMapFromList (Fold.toList $ Sequ.mapWithSection const sq) .
+             StorageQuant.forwardEdgesFromSums) $
+         storageSequences $ fmap FlowTopo.topology sq,
+      sequence = Sequ.toMap sq
+   }
 
 storageMapFromList ::
    (Ord node, Unknown a) =>
