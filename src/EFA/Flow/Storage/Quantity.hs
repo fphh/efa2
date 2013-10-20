@@ -12,6 +12,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Report.Format as Format
 
+import qualified Data.Traversable as Trav
 import qualified Data.Map as Map ; import Data.Map (Map)
 
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
@@ -50,6 +51,23 @@ mapCarryWithVar ::
    node -> Idx.StorageEdge part node -> carry a0 -> carry a1
 mapCarryWithVar f node edge =
    liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
+
+
+mapGraph ::
+   (Ord part, Functor carry) =>
+   (a -> b) ->
+   Storage.Graph part node a (carry a) ->
+   Storage.Graph part node b (carry b)
+mapGraph f =
+   Storage.mapNode f . Storage.mapEdge (fmap f)
+
+traverseGraph ::
+   (Ord part, Applicative f, Trav.Traversable carry) =>
+   (a -> f b) ->
+   Storage.Graph part node a (carry a) ->
+   f (Storage.Graph part node b (carry b))
+traverseGraph f =
+   Storage.traverse f (Trav.traverse f)
 
 
 forwardEdgesFromSums ::

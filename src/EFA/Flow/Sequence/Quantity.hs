@@ -173,11 +173,7 @@ mapStorages ::
    (a0 -> a1) ->
    Storages node a0 -> Storages node a1
 mapStorages f =
-   fmap
-      (mapPair
-         (Storage.mapNode f .
-          Storage.mapEdge (fmap f),
-           fmap f))
+   fmap (mapPair (StorageQuant.mapGraph f, fmap f))
 
 
 checkedZipWithGraph ::
@@ -250,7 +246,7 @@ traverseStorages ::
 traverseStorages f =
    traverse
       (uncurry (liftA2 (,)) .
-       mapPair (Storage.traverse f (traverse f), traverse f))
+       mapPair (StorageQuant.traverseGraph f, traverse f))
 
 
 toAssignMap ::

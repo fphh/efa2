@@ -167,7 +167,7 @@ mapStorages ::
    (a0 -> a1) ->
    Storages node a0 -> Storages node a1
 mapStorages f =
-   fmap (Storage.mapNode f . Storage.mapEdge (fmap f))
+   fmap (StorageQuant.mapGraph f)
 
 
 traverseGraph ::
@@ -192,7 +192,7 @@ traverseStorages ::
    (a0 -> f a1) ->
    Storages node a0 -> f (Storages node a1)
 traverseStorages f =
-   traverse (Storage.traverse f (traverse f))
+   traverse (StorageQuant.traverseGraph f)
 
 
 
