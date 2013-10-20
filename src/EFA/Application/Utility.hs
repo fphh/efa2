@@ -74,7 +74,6 @@ quantityTopology ::
 quantityTopology topo =
    FlowTopo.sectionFromPlain $
    FlowTopoPlain.Section () $
-   Topo.classifyStorages $
    let flowTopo = Graph.mapEdgesMaybe (Just . Graph.EDirEdge) topo
    in  if StateAnalysis.admissibleTopology flowTopo
          then flowTopo
