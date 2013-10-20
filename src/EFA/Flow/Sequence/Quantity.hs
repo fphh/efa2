@@ -473,7 +473,9 @@ graphFromSections sq =
          fmap
             (storageMapFromList (Fold.toList $ Sequ.mapWithSection const sq) .
              StorageQuant.forwardEdgesFromSums) $
-         storageSequences $ fmap FlowTopo.topology sq,
+         Env.storageSequences $
+         Fold.toList $ Sequ.mapWithSection  (,) $
+         fmap FlowTopo.topology sq,
       sequence = Sequ.toMap sq
    }
 
@@ -486,21 +488,6 @@ storageMapFromList secs edges =
    (StorageQuant.graphFromList secs edges,
     Map.fromList $ map (flip (,) unknown . Idx.Following) $
     Idx.Init : map Idx.NoInit secs)
-
-storageSequences ::
-   (Node.C node) =>
-   Sequ.List (Graph.Graph node Graph.EitherEdge (Sums a) edgeLabel) ->
-   Map node (Map Idx.Section (Sums a))
-storageSequences =
-   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
-   .
-   Fold.toList
-   .
-   Sequ.mapWithSection
-      (\s ->
-         fmap (Map.singleton s) .
-         Map.filterWithKey (const . Node.isStorage . Node.typ) .
-         Graph.nodeLabels)
 
 
 
