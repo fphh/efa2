@@ -119,6 +119,9 @@ nodeAttrs nt label =
   [ label, Viz.Style [Viz.SItem Viz.Filled []],
     Viz.Shape (shape nt), color nt ]
 
+attrsFromNode :: (Node.C node) => node -> Attribute -> [Attribute]
+attrsFromNode node label = nodeAttrs (Node.typ node) label
+
 
 data Triple a = Triple a a a
 
@@ -312,15 +315,15 @@ dotFromNode ::
 dotFromNode node label =
    DotNode
       (dotIdentFromNode node)
-      (nodeAttrs (Node.typ node) $ labelFromUnicode label)
+      (attrsFromNode node $ labelFromUnicode label)
 
 dotFromAugNode ::
    (Part part, Node.C node) =>
    Idx.Augmented part -> node -> Unicode -> DotNode T.Text
-dotFromAugNode part n label =
+dotFromAugNode part node label =
    DotNode
-      (dotIdentFromAugNode $ Idx.PartNode part n)
-      (nodeAttrs (Node.typ n) $ labelFromUnicode label)
+      (dotIdentFromAugNode $ Idx.PartNode part node)
+      (attrsFromNode node $ labelFromUnicode label)
 
 dotFromBndNode ::
    (Node.C node) =>
@@ -520,7 +523,7 @@ dotFromTopoNode ::
 dotFromTopoNode node =
    DotNode
       (dotIdentFromNode node)
-      (nodeAttrs (Node.typ node) $ labelFromUnicode $ Node.display node)
+      (attrsFromNode node $ labelFromUnicode $ Node.display node)
 
 dotFromTopoEdge ::
    (Node.C node) =>
@@ -554,9 +557,9 @@ dotFromFlowTopology ident topo =
       (map mkNode $ Graph.labNodes topo)
       (map mkEdge $ Graph.edges topo)
   where idf x = T.pack $ show ident ++ "_" ++ Node.dotId x
-        mkNode (n, ()) =
-           DotNode (idf n)
-              (nodeAttrs (Node.typ n) $ labelFromUnicode $ formatTypedNode n)
+        mkNode (node, ()) =
+           DotNode (idf node)
+              (attrsFromNode node $ labelFromUnicode $ formatTypedNode node)
         mkEdge el =
            case orientEdge el of
               (DirEdge x y, d, _) ->
@@ -942,7 +945,7 @@ dotFromCumNode ::
    node -> DotNode T.Text
 dotFromCumNode n =
    DotNode (dotIdentFromNode n) $
-   nodeAttrs (Node.typ n) $ labelFromUnicode $ Node.display n
+   attrsFromNode n $ labelFromUnicode $ Node.display n
 
 dotFromCumEdge ::
    (Node.C node) =>
