@@ -38,7 +38,8 @@ import qualified Data.List.Match as Match
 import qualified Data.List.HT as ListHT
 
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
-import Data.Tuple.HT (mapPair)
+import Data.Tuple.HT (mapFst, mapPair)
+import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Data.Zip (transposeClip)
 import Control.Applicative (liftA2)
@@ -54,7 +55,6 @@ import Prelude
            Int, Double,
            Num, Fractional, fromRational, (+), (-), (/), (*), fromIntegral)
 import qualified Prelude as P
-import qualified Data.Maybe as Maybe
 
 
 ----------------------------------------------------------
@@ -1318,32 +1318,11 @@ instance
       FV.FormatValue (TC s t a) where
    formatValue = formatValue
 
+{-# DEPRECATED findIndex "don't use that for implementing an argmax" #-}
 findIndex ::
   (SV.Storage v1 d1, SV.Find v1) =>
   (d1 -> Bool) -> TC s1 t1 (Data (v1 :> Nil) d1) -> Maybe SignalIdx
 findIndex f (TC xs) = fmap SignalIdx $ D.findIndex f xs
-
-
-findIndex2 :: (SV.Find v2 ,
-               SV.Find v1,
-               SV.Walker v2,
-               SV.Storage v2 (v1 d1),
-               SV.Storage v1 d1,
-               SV.Storage v2 (Maybe Int),
-               SV.Singleton v2,
-               TailType s1,
-               SV.Storage v2 Int,
-               SV.Lookup v2,
-               Head s1 ~ Sample) =>
-              (d1 -> Bool) ->
-              TC s1 t1 (Data (v2 :> v1 :> Nil) d1) ->
-              (Maybe SignalIdx, Maybe SignalIdx)
-findIndex2 f x = (xIdx, yIdx)
-  where xIdx = findIndex (P./= P.Nothing) $ y
-        y = map2 (SV.findIndex f) x
-        yIdx = case xIdx of
-          P.Just idx -> ((fmap SignalIdx) . fromSample . P.fst . Maybe.fromJust . viewL) $ subSignal1D y [idx]
-          P.Nothing -> P.Nothing
 
 
 findIndices ::(SV.Walker v1,
@@ -1714,6 +1693,53 @@ zipArgMaximum =
    consData . SV.fromList .
    List.map (P.fst . SV.argMaximum) . transposeClip .
    fmap (SV.toList . unconsData)
+
+
+{-
+TODO: move NonEmpty type to the signature
+and force all callers to provide the proof for non-emptiness.
+-}
+argMaximum ::
+   (Ord d, SV.FromList v, SV.Storage v d) =>
+   TC s t (Data (v :> Nil) d) -> (SignalIdx, d)
+argMaximum = argMaximumKey id
+
+{-
+see argMaximum
+-}
+argMaximumKey ::
+   (Ord d, SV.FromList v, SV.Storage v a) =>
+   (a -> d) -> TC s t (Data (v :> Nil) a) -> (SignalIdx, a)
+argMaximumKey f (TC xs) =
+   mapFst SignalIdx $ SV.argMaximumKey f $
+   fromMaybe (error "Signal.argMaximumKey: empty signal") $
+   NonEmpty.fetch $ D.toList xs
+
+{-
+see argMaximum
+-}
+argMaximum2 ::
+   (Ord d, SV.FromList v1, SV.FromList v2,
+    SV.Storage v1 d, SV.Storage v2 (v1 d)) =>
+   TC s t (Data (v2 :> v1 :> Nil) d) ->
+   ((SignalIdx, SignalIdx), d)
+argMaximum2 = argMaximumKey2 id
+
+{-
+see argMaximum
+-}
+argMaximumKey2 ::
+   (Ord d, SV.FromList v1, SV.FromList v2,
+    SV.Storage v1 a, SV.Storage v2 (v1 a)) =>
+   (a -> d) ->
+   TC s t (Data (v2 :> v1 :> Nil) a) ->
+   ((SignalIdx, SignalIdx), a)
+argMaximumKey2 f (TC xs) =
+   mapFst (mapPair (SignalIdx, SignalIdx)) $ SV.argMaximumKey2 f $
+   fmap (fromMaybe (error "Signal.argMaximum2: empty inner signal") .
+         NonEmpty.fetch) $
+   fromMaybe (error "Signal.argMaximum2: empty outer signal") $
+   NonEmpty.fetch $ D.toList xs
 
 
 variation2D :: (SV.Storage v2 (v1 d),

@@ -661,11 +661,20 @@ argMaximum = argMaximumKey id
 {-
 The Functor constraint could be saved
 by merging the fmap with the fold.
+
+'f' is evaluated twice for every sub-maximum.
+Does this hurt?
 -}
+argMaximumKey2 ::
+   (Functor f, Fold.Foldable f, Fold.Foldable g, Ord b) =>
+   (a -> b) ->
+   NonEmpty.T f (NonEmpty.T g a) -> ((Int, Int), a)
+argMaximumKey2 f =
+   (\(n,(m,a)) -> ((n,m), a)) .
+   argMaximumKey (f . snd) .
+   fmap (argMaximumKey f)
+
 argMaximum2 ::
    (Functor f, Fold.Foldable f, Fold.Foldable g, Ord a) =>
    NonEmpty.T f (NonEmpty.T g a) -> ((Int, Int), a)
-argMaximum2 =
-   (\(n,(m,a)) -> ((n,m), a)) .
-   argMaximumKey snd .
-   fmap argMaximum
+argMaximum2 = argMaximumKey2 id
