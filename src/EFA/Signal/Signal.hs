@@ -1724,9 +1724,9 @@ variation2D :: (SV.Storage v2 (v1 d),
                TC s typ (Data (v1 :> Nil) d) ->
                (TC s typ (Data (v2 :> v1 :> Nil) d),
                 TC s typ (Data (v2 :> v1 :> Nil) d))
-variation2D xs ys = (fromList2 $ Match.replicate (toList ys) (toList xs), fromList2 $ List.map (Match.replicate (toList xs)) (toList ys))
-{-variation2D xs ys = (Match.replicate ys xs, List.map (Match.replicate xs) ys)
-    --where toList = id-}
+variation2D xs ys =
+   (fromList2 $ Match.replicate (toList ys) (toList xs),
+    fromList2 $ List.map (Match.replicate (toList xs)) (toList ys))
 
 
 mergeBy ::
