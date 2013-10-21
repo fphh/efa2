@@ -31,10 +31,8 @@ import qualified EFA.Report.Base as ReportBase
 import qualified EFA.Report.Report as Report
 import qualified EFA.Report.Typ as Typ
 
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-import Data.Map (Map)
-import Data.Set (Set)
+import qualified Data.Map as Map ; import Data.Map (Map)
+import qualified Data.Set as Set ; import Data.Set (Set)
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as ListHT
 
@@ -54,7 +52,7 @@ import Prelude
            Int, Double,
            Num, Fractional, fromRational, (+), (-), (/), (*), fromIntegral)
 import qualified Prelude as P
-import Data.Maybe as Maybe
+import qualified Data.Maybe as Maybe
 
 
 ----------------------------------------------------------
