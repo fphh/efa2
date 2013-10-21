@@ -39,7 +39,6 @@ import qualified Data.List.HT as ListHT
 
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapFst, mapPair)
-import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Data.Zip (transposeClip)
 import Control.Applicative (liftA2)
@@ -1695,51 +1694,35 @@ zipArgMaximum =
    fmap (SV.toList . unconsData)
 
 
-{-
-TODO: move NonEmpty type to the signature
-and force all callers to provide the proof for non-emptiness.
--}
 argMaximum ::
    (Ord d, SV.FromList v, SV.Storage v d) =>
-   TC s t (Data (v :> Nil) d) -> (SignalIdx, d)
+   TC s t (Data (NonEmpty.T v :> Nil) d) -> (SignalIdx, d)
 argMaximum = argMaximumKey id
 
-{-
-see argMaximum
--}
 argMaximumKey ::
    (Ord d, SV.FromList v, SV.Storage v a) =>
-   (a -> d) -> TC s t (Data (v :> Nil) a) -> (SignalIdx, a)
-argMaximumKey f (TC xs) =
+   (a -> d) -> TC s t (Data (NonEmpty.T v :> Nil) a) -> (SignalIdx, a)
+argMaximumKey f (TC (Data xs)) =
    mapFst SignalIdx $ SV.argMaximumKey f $
-   fromMaybe (error "Signal.argMaximumKey: empty signal") $
-   NonEmpty.fetch $ D.toList xs
+   NonEmpty.mapTail SV.toList xs
 
-{-
-see argMaximum
--}
 argMaximum2 ::
    (Ord d, SV.FromList v1, SV.FromList v2,
-    SV.Storage v1 d, SV.Storage v2 (v1 d)) =>
-   TC s t (Data (v2 :> v1 :> Nil) d) ->
+    SV.Storage v1 d, SV.Storage v2 (NonEmpty.T v1 d)) =>
+   TC s t (Data (NonEmpty.T v2 :> NonEmpty.T v1 :> Nil) d) ->
    ((SignalIdx, SignalIdx), d)
 argMaximum2 = argMaximumKey2 id
 
-{-
-see argMaximum
--}
 argMaximumKey2 ::
    (Ord d, SV.FromList v1, SV.FromList v2,
-    SV.Storage v1 a, SV.Storage v2 (v1 a)) =>
+    SV.Storage v1 a, SV.Storage v2 (NonEmpty.T v1 a)) =>
    (a -> d) ->
-   TC s t (Data (v2 :> v1 :> Nil) a) ->
+   TC s t (Data (NonEmpty.T v2 :> NonEmpty.T v1 :> Nil) a) ->
    ((SignalIdx, SignalIdx), a)
-argMaximumKey2 f (TC xs) =
+argMaximumKey2 f (TC (Data xs)) =
    mapFst (mapPair (SignalIdx, SignalIdx)) $ SV.argMaximumKey2 f $
-   fmap (fromMaybe (error "Signal.argMaximum2: empty inner signal") .
-         NonEmpty.fetch) $
-   fromMaybe (error "Signal.argMaximum2: empty outer signal") $
-   NonEmpty.fetch $ D.toList xs
+   fmap (NonEmpty.mapTail SV.toList) $
+   NonEmpty.mapTail SV.toList xs
 
 
 variation2D :: (SV.Storage v2 (v1 d),
