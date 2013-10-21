@@ -254,7 +254,7 @@ makePics eqs tabEta socDrive = (state, optWater, optGas, etaSysMax)
         dischargeFunc = maxOptDischargeFunc socDrive
 
         state =
-          Sig.argMax maxETACharge maxETADischarge
+          Sig.zipArgMax maxETACharge maxETADischarge
 
         optWater = Sweep.combineOptimalMaps maxEtaSysState
                      powerWaterChargeOpt powerWaterDischargeOpt
@@ -263,7 +263,7 @@ makePics eqs tabEta socDrive = (state, optWater, optGas, etaSysMax)
 
         maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax
         maxEtaSysState =
-          Sig.argMax maxETACharge maxETADischarge
+          Sig.zipArgMax maxETACharge maxETADischarge
 
         etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
         etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
@@ -495,7 +495,7 @@ main = do
      etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
 
      maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax
-     maxEtaSysState = Sig.argMax maxETACharge maxETADischarge
+     maxEtaSysState = Sig.zipArgMax maxETACharge maxETADischarge
 
 
      -- | Get the correspondig optimal envs for both states
