@@ -33,12 +33,14 @@ import qualified EFA.Report.Typ as Typ
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Set as Set ; import Data.Set (Set)
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as ListHT
 
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
 import Data.Ord (comparing)
+import Data.Zip (transposeClip)
 import Control.Applicative (liftA2)
 
 import Text.Printf (PrintfArg, printf)
@@ -1706,12 +1708,12 @@ argMax =
 
 argMaximum ::
    (Ord d, SV.FromList v, SV.Storage v d, SV.Storage v Int) =>
-   [TC s typ0 (Data (v :> Nil) d)] ->
+   NonEmpty.T [] (TC s typ0 (Data (v :> Nil) d)) ->
    TC (Arith s s) typ1 (Data (v :> Nil) Int)
 argMaximum =
    consData . SV.fromList .
-   List.map (P.fst . SV.argMaximum) . List.transpose .
-   List.map (SV.toList . unconsData)
+   List.map (P.fst . SV.argMaximum) . transposeClip .
+   fmap (SV.toList . unconsData)
 
 
 variation2D :: (SV.Storage v2 (v1 d),

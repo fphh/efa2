@@ -17,10 +17,12 @@ import qualified Data.List.Match as Match
 import qualified Data.Set as Set
 
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Foldable as Fold
 
+import Data.Functor (Functor)
 import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
-import Data.Ord (Ordering, comparing, (>=), (<=), (<), (>))
+import Data.Ord (Ordering, (>=), (<=), (<), (>))
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
 import Data.Maybe (Maybe(Just, Nothing), maybe, isJust, fromMaybe)
@@ -634,15 +636,36 @@ instance (UV.Unbox d) => Unique UV.Vector d where
 
 
 
-argMaximumKey :: Ord b => (a -> b) -> [a] -> (Int, a)
-argMaximumKey f =
-   List.maximumBy (comparing (f . snd)) . List.zip [0..]
+{-
+might be moved to non-empty package
+-}
+argMaximumKey ::
+   (Fold.Foldable f, Ord b) =>
+   (a -> b) -> NonEmpty.T f a -> (Int, a)
+argMaximumKey f (NonEmpty.Cons x xs) =
+   snd $ snd $
+   Fold.foldl
+      (\(pos, (maxMeas, (maxPos, maxVal))) xi ->
+         (succ pos,
+          let fx = f xi
+          in  if fx>maxMeas
+                then (fx, (pos,xi))
+                else (maxMeas, (maxPos,maxVal))))
+      (1, (f x, (0,x))) xs
 
-argMaximum :: Ord a => [a] -> (Int, a)
+argMaximum ::
+   (Fold.Foldable f, Ord a) =>
+   NonEmpty.T f a -> (Int, a)
 argMaximum = argMaximumKey id
 
-argMaximum2 :: Ord a => [[a]] -> ((Int, Int), a)
+{-
+The Functor constraint could be saved
+by merging the fmap with the fold.
+-}
+argMaximum2 ::
+   (Functor f, Fold.Foldable f, Fold.Foldable g, Ord a) =>
+   NonEmpty.T f (NonEmpty.T g a) -> ((Int, Int), a)
 argMaximum2 =
    (\(n,(m,a)) -> ((n,m), a)) .
    argMaximumKey snd .
-   List.map argMaximum
+   fmap argMaximum
