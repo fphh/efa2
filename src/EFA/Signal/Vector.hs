@@ -20,7 +20,7 @@ import qualified Data.NonEmpty as NonEmpty
 
 import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
-import Data.Ord (Ordering, (>=), (<=), (<), (>))
+import Data.Ord (Ordering, comparing, (>=), (<=), (<), (>))
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
 import Data.Maybe (Maybe(Just, Nothing), maybe, isJust, fromMaybe)
@@ -631,3 +631,18 @@ instance Unique V.Vector d where
 
 instance (UV.Unbox d) => Unique UV.Vector d where
   unique = readUnbox (fromList . Set.toList . Set.fromList . toList)
+
+
+
+argMaximumKey :: Ord b => (a -> b) -> [a] -> (Int, a)
+argMaximumKey f =
+   List.maximumBy (comparing (f . snd)) . List.zip [0..]
+
+argMaximum :: Ord a => [a] -> (Int, a)
+argMaximum = argMaximumKey id
+
+argMaximum2 :: Ord a => [[a]] -> ((Int, Int), a)
+argMaximum2 =
+   (\(n,(m,a)) -> ((n,m), a)) .
+   argMaximumKey snd .
+   List.map argMaximum

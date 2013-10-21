@@ -1710,21 +1710,8 @@ argMaximum ::
    TC (Arith s s) typ1 (Data (v :> Nil) Int)
 argMaximum =
    consData . SV.fromList .
-   List.map (P.fst . listArgMaximum) . List.transpose .
+   List.map (P.fst . SV.argMaximum) . List.transpose .
    List.map (SV.toList . unconsData)
-
-listArgMaximumKey :: Ord b => (a -> b) -> [a] -> (Int, a)
-listArgMaximumKey f =
-   List.maximumBy (comparing (f . P.snd)) . List.zip [0..]
-
-listArgMaximum :: Ord a => [a] -> (Int, a)
-listArgMaximum = listArgMaximumKey id
-
-listArgMaximum2 :: Ord a => [[a]] -> ((Int, Int), a)
-listArgMaximum2 =
-   (\(n,(m,a)) -> ((n,m), a)) .
-   listArgMaximumKey P.snd .
-   List.map listArgMaximum
 
 
 variation2D :: (SV.Storage v2 (v1 d),
