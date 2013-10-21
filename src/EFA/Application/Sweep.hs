@@ -76,12 +76,9 @@ optimalSolution2D ::
   SeqEta.Forcing node a v ->
   Sig.UTSignal2 V.Vector V.Vector (SeqFlow.Graph node a (Result v)) ->
   Maybe (v, SeqFlow.Graph node a (Result v))
-optimalSolution2D cond forcing sigEnvs = liftA2 (,) etaMax env
-  where etaSys = Sig.map (SeqEta.objectiveFunction cond forcing) sigEnvs
-        etaMax = Sig.fromScalar $ Sig.maximum etaSys
-        (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
-        env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
-
+optimalSolution2D cond forcing =
+  optimalSolutionGeneric (SeqEta.objectiveFunction cond forcing) .
+  concat . Sig.toList
 
 optimalSolutionState ::
   (Node.C node, Ord v, Arith.Constant v) =>
@@ -90,6 +87,11 @@ optimalSolutionState ::
   [StateFlow.Graph node a (Result v)] ->
   Maybe (v, StateFlow.Graph node a (Result v))
 optimalSolutionState cond forcing =
+  optimalSolutionGeneric (StateEta.objectiveFunction cond forcing)
+
+optimalSolutionGeneric ::
+  Ord a =>
+  (b -> Maybe a) -> [b] -> Maybe (a, b)
+optimalSolutionGeneric f =
   fmap (NonEmpty.maximumBy (comparing fst)) . NonEmpty.fetch .
-  mapMaybe
-    (\e -> fmap (flip (,) e) $ StateEta.objectiveFunction cond forcing e)
+  mapMaybe (\x -> fmap (flip (,) x) $ f x)
