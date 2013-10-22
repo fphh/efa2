@@ -30,8 +30,10 @@ topologyFromEdges ::
    Node.C node => [(node, node)] -> Topo.Topology node
 topologyFromEdges es =
    Graph.fromMap
-      (MapU.fromSet (const ()) $ foldMap (\(x,y) -> Set.fromList [x,y]) es)
-      (Map.fromList $ map (\(a, b) -> (Graph.DirEdge a b, ())) es)
+      (MapU.fromSet (const ()) $
+       foldMap (\(x,y) -> Set.fromList [x,y]) es)
+      (Map.fromList $
+       map (\(x, y) -> (Graph.DirEdge x y, ())) es)
 
 
 -- @HT neue Utility Funktionen für Topologie-Definition, bitte prüfen
@@ -41,26 +43,16 @@ type PPosLabel = String
 type LabeledEdgeList node = [(node, node, EdgeLabel, PPosLabel, PPosLabel)]
 type PPosLabelMap node = Map (SeqIdx.PPos node) String
 
--- | Generate Topology from labeled edge List
-makeTopology ::
+
+topologyFromLabeledEdges ::
    (Node.C node) =>
-   LabeledEdgeList node -> Topo.Topology node
-makeTopology =
-   topologyFromEdges . map (\(n1,n2,_,_,_) -> (n1,n2))
-
-
--- | Edge Label map used for displaying topology with labeled edges
-makeEdgeNameMap ::
-   (Node.C node) => LabeledEdgeList node -> Map (node, node) String
-makeEdgeNameMap edgeList = Map.fromList $ map f edgeList
-  where f (x, y, lab, _, _) = ((x, y), lab)
-
--- | Generate Label Map for Power Positions
-makePPosLabelMap ::
-   (Node.C node) => LabeledEdgeList node -> PPosLabelMap node
-makePPosLabelMap edgeList = Map.fromList $ concatMap f edgeList
-  where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, l1),
-                             (SeqIdx.ppos n2 n1, l2)]
+   LabeledEdgeList node -> Topo.LabeledTopology node
+topologyFromLabeledEdges es =
+   Graph.fromMap
+      (MapU.fromSet (const "") $
+       foldMap (\(x,y,_,_,_) -> Set.fromList [x,y]) es)
+      (Map.fromList $
+       map (\(x, y, lab, _, _) -> (Graph.DirEdge x y, lab)) es)
 
 
 {- |

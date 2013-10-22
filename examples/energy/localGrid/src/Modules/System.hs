@@ -58,7 +58,10 @@ instance Node.C Node where
 -- * Define System Topology
 
 topology :: Topo.Topology Node
-topology = AppUt.makeTopology edgeList
+topology = Topo.plainFromLabeled labeledTopology
+
+labeledTopology :: Topo.LabeledTopology Node
+labeledTopology = AppUt.topologyFromLabeledEdges edgeList
 
 edgeList :: AppUt.LabeledEdgeList Node
 edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
@@ -71,22 +74,16 @@ edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
             (Sun, LocalNetwork, "SolarPlant", "SunLight", "elSolar")]
 
 
-edgeNames :: Map (Node, Node) String
-edgeNames = Map.fromList el
-  where el = map f edgeList
-        f (x, y, lab, _, _) = ((x, y), lab)
-
-
 powerPositonNames :: Map (XIdx.PPos Node) SigId
 powerPositonNames = Map.fromList $ concat $ map f edgeList
   where f (n1,n2,_,l1,l2) = [(XIdx.ppos n1 n2, SigId $ "Power-"++l1),
                              (XIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
 showPowerId :: XIdx.PPos Node -> String
-showPowerId ppos = f (Map.lookup  ppos powerPositonNames)
+showPowerId ppos = f (Map.lookup ppos powerPositonNames)
   where
     f (Just sid) = show sid
-    f Nothing = (show ppos)
+    f Nothing = show ppos
 
 
 convertPowerId :: XIdx.PPos Node -> SigId
@@ -99,7 +96,10 @@ convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
 ----------------------------------------------------------------------
 -- | Topology for Optimisation
 topologyOpt :: Topo.Topology Node
-topologyOpt = AppUt.makeTopology edgeListOpt
+topologyOpt = Topo.plainFromLabeled labeledTopologyOpt
+
+labeledTopologyOpt :: Topo.LabeledTopology Node
+labeledTopologyOpt = AppUt.topologyFromLabeledEdges edgeListOpt
 
 edgeListOpt :: AppUt.LabeledEdgeList Node
 edgeListOpt = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
@@ -108,11 +108,6 @@ edgeListOpt = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
                (Network, LocalNetwork, "Transformer", "HighVoltage", "LowVoltage"),
                (Gas, LocalNetwork,"GasPlant","Gas","ElGas"),
                (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
-
-edgeNamesOpt :: Map (Node, Node) String
-edgeNamesOpt = Map.fromList el
-  where el = map f edgeListOpt
-        f (x, y, lab, _, _) = ((x, y), lab)
 
 ----------------------------------------------------------------------
 -- | SequenceTopology for Optimisation

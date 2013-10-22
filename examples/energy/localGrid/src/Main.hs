@@ -184,7 +184,7 @@ main = do
 
   concurrentlyMany_ $ [
     -- Topologie
-    Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology
+    Draw.xterm $ Draw.labeledTopology System.labeledTopology
     ]
 
 ---------------------------------------------------------------------------------------

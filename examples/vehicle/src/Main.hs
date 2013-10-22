@@ -326,7 +326,7 @@ main = do
     -- Topologie
     --Draw.topology System.topology,
     --  Draw.topology2pdf System.topology
-    --Draw.topologyWithEdgeLabels System.edgeNames System.topology,
+    --Draw.labeledTopology System.labeledTopology,
     ]
 
 {-

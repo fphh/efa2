@@ -688,7 +688,7 @@ main = do
 
 {-
 
-     Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
+     Draw.xterm $ Draw.labeledTopology System.labeledTopologyOpt,
 
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),

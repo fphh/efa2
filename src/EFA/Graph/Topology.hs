@@ -1,8 +1,10 @@
 module EFA.Graph.Topology (
    Topology,
    FlowTopology,
+   LabeledTopology,
    flowFromPlain,
    plainFromFlow,
+   plainFromLabeled,
    dirEdgeFromStructureEdge,
    structureEdgeFromDirEdge,
    isActive,
@@ -31,9 +33,11 @@ anyActive = Fold.any isActive . Map.keysSet
 Should Topology have an UnDirEdge?
 UnDirEdge could be read as "canonically oriented" edge.
 -}
-type Topology a = Graph a Graph.DirEdge () ()
+type Topology node = Graph node Graph.DirEdge () ()
 
-type FlowTopology a = Graph a Graph.EitherEdge () ()
+type FlowTopology node = Graph node Graph.EitherEdge () ()
+
+type LabeledTopology node = Graph node Graph.DirEdge String String
 
 
 flowFromPlain :: (Ord node) => Topology node -> FlowTopology node
@@ -47,6 +51,11 @@ plainFromFlow =
          case e of
             Graph.EDirEdge de -> de
             Graph.EUnDirEdge ue -> Graph.DirEdge (Graph.from ue) (Graph.to ue))
+
+plainFromLabeled :: (Ord node) => LabeledTopology node -> Topology node
+plainFromLabeled =
+   Graph.mapNode (const ()) . Graph.mapEdge (const ())
+
 
 structureEdgeFromDirEdge :: Graph.DirEdge node -> Idx.StructureEdge node
 structureEdgeFromDirEdge (Graph.DirEdge x y) = Idx.StructureEdge x y

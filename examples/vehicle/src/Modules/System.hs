@@ -2,7 +2,7 @@
 
 module Modules.System where
 
-import EFA.Application.Utility (makeTopology)
+import EFA.Application.Utility (topologyFromLabeledEdges)
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
@@ -52,7 +52,10 @@ instance Node.C Node where
 ----------------------------------------------------------------------
 -- * Define System Topology
 topology :: Topo.Topology Node
-topology = makeTopology edgeList
+topology = Topo.plainFromLabeled labeledTopology
+
+labeledTopology :: Topo.LabeledTopology Node
+labeledTopology = topologyFromLabeledEdges edgeList
 
 -- Define Edges with all their Properties
 edgeList :: [(Node, Node, String, String, String)]
@@ -66,12 +69,6 @@ edgeList = [(Tank, ConBattery, "Engine&Generator", "Fuel","GeneratorClamps"),
             (ConFrontBrakes, FrontBrakes,"ToFrontBrakes","ToFrontBrakes","ToFrontBrakes"),
             (Chassis, RearBrakes,"RearWheels","RearTires", "RearWheelHubs"),
             (Chassis, VehicleInertia,"ToIntertia","ToInertia", "ToInertia")]
-
-
-edgeNames :: Map (Node, Node) String
-edgeNames = Map.fromList el
-  where el = map f edgeList
-        f (x, y, lab, _, _) = ((x, y), lab)
 
 
 powerPositonNames :: Map (SeqIdx.PPos Node) SigId

@@ -17,8 +17,8 @@ module EFA.Flow.Draw (
 
    cumulatedFlow,
 
-   topologyWithEdgeLabels,
    topology,
+   labeledTopology,
    flowTopology,
    flowTopologies,
    ) where
@@ -490,19 +490,27 @@ dotIdentFromEtaNode x y =
 
 
 topology :: (Node.C node) => Topo.Topology node -> DotGraph T.Text
-topology topo = dotFromTopology Map.empty topo
+topology =
+   dotFromTopology .
+   Graph.mapNodeWithKey (\node () -> Node.display node) .
+   Graph.mapEdge (const Format.empty)
 
-topologyWithEdgeLabels ::
-   (Node.C node) =>
-   Map (node, node) String -> Topo.Topology node -> DotGraph T.Text
-topologyWithEdgeLabels edgeLabels topo =
-   dotFromTopology edgeLabels topo
+labeledTopology ::
+   (Node.C node) => Topo.LabeledTopology node -> DotGraph T.Text
+labeledTopology =
+   dotFromTopology .
+   Graph.mapNodeWithKey
+      (\node lab ->
+         if null lab
+           then Node.display node
+           else Format.literal lab) .
+   Graph.mapEdge Format.literal
 
 dotFromTopology ::
    (Node.C node) =>
-   Map (node, node) String ->
-   Topo.Topology node -> DotGraph T.Text
-dotFromTopology edgeLabels g =
+   Graph node Graph.DirEdge Unicode Unicode ->
+   DotGraph T.Text
+dotFromTopology g =
    DotGraph {
       strictGraph = False,
       directedGraph = False,
@@ -511,32 +519,31 @@ dotFromTopology edgeLabels g =
          DotStmts {
             attrStmts = [],
             subGraphs = [],
-            nodeStmts = map dotFromTopoNode $ Map.keys $ Graph.nodes g,
-            edgeStmts = map (dotFromTopoEdge edgeLabels) $ Graph.edges g
+            nodeStmts =
+               Map.elems $ Map.mapWithKey dotFromTopoNode $ Graph.nodeLabels g,
+            edgeStmts =
+               Map.elems $ Map.mapWithKey dotFromTopoEdge $ Graph.edgeLabels g
          }
    }
 
 dotFromTopoNode ::
    (Node.C node) =>
-   node -> DotNode T.Text
-dotFromTopoNode node =
+   node -> Unicode -> DotNode T.Text
+dotFromTopoNode node lab =
    DotNode
       (dotIdentFromNode node)
-      (attrsFromNode node $ labelFromUnicode $ Node.display node)
+      (attrsFromNode node $ labelFromUnicode lab)
 
 dotFromTopoEdge ::
    (Node.C node) =>
-   Map (node, node) String ->
-   DirEdge node -> DotEdge T.Text
-dotFromTopoEdge edgeLabels e =
+   DirEdge node -> Unicode -> DotEdge T.Text
+dotFromTopoEdge e lab =
    case orientDirEdge e of
       (DirEdge x y, _, _) ->
-         let lab = T.pack $ fold $ Map.lookup (x, y) edgeLabels
-         in  DotEdge
-                (dotIdentFromNode x)
-                (dotIdentFromNode y)
-                [ Viz.Dir Viz.NoDir, structureEdgeColour,
-                  Viz.Label $ Viz.StrLabel lab, Viz.EdgeTooltip lab ]
+         DotEdge
+            (dotIdentFromNode x)
+            (dotIdentFromNode y)
+            [ Viz.Dir Viz.NoDir, structureEdgeColour, labelFromUnicode lab ]
 
 
 flowTopologies ::

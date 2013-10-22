@@ -52,7 +52,10 @@ instance Node.C Node where
          LocalRest -> Node.AlwaysSink
 
 topology :: Topo.Topology Node
-topology = AppUt.makeTopology edgeList
+topology = Topo.plainFromLabeled labeledTopology
+
+labeledTopology :: Topo.LabeledTopology Node
+labeledTopology = AppUt.topologyFromLabeledEdges edgeList
 
 edgeList :: AppUt.LabeledEdgeList Node
 edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
@@ -61,11 +64,6 @@ edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
                (Network, LocalNetwork, "Transformer", "HighVoltage", "LowVoltage"),
                (Gas, LocalNetwork,"GasPlant","Gas","ElGas"),
                (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
-
-edgeNames :: Map (Node, Node) String
-edgeNames = Map.fromList el
-  where el = map f edgeList
-        f (x, y, lab, _, _) = (if x<y then (x, y) else (y,x), lab)
 
 
 powerPositonNames :: Map (SeqIdx.PPos Node) SigId
