@@ -28,6 +28,7 @@ module EFA.Flow.State.Quantity (
 
    graphFromCumResult,
    graphFromStates,
+   graphFromStateMap,
 
    lookupPower,
    lookupEnergy,
@@ -88,7 +89,6 @@ import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Maybe (fromMaybe)
-import Data.Tuple.HT (mapSnd)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -348,18 +348,23 @@ graphFromStates ::
    (Node.C node, Unknown a, Unknown v) =>
    [Topo.FlowTopology node] ->
    Graph node a v
-graphFromStates flowStates =
-   let numFlowStates =
-          zip [Idx.State 0 ..] $
-          map FlowTopo.sectionFromPlain flowStates
+graphFromStates =
+   graphFromStateMap . Map.fromList . zip [Idx.State 0 ..]
+
+graphFromStateMap ::
+   (Node.C node, Unknown a, Unknown v) =>
+   Map Idx.State (Topo.FlowTopology node) ->
+   Graph node a v
+graphFromStateMap flowStates =
+   let timeFlowStates = fmap FlowTopo.sectionFromPlain flowStates
    in  StateFlow.Graph {
           storages =
              fmap
-                (StorageQuant.graphFromList (map fst numFlowStates) .
+                (StorageQuant.graphFromList (Map.keys timeFlowStates) .
                  StorageQuant.allEdgesFromSums) $
-             Env.storageSequences $
-             map (mapSnd FlowTopo.topology) numFlowStates,
-          states = Map.fromList numFlowStates
+             Env.storageSequences $ Map.toList $
+             fmap FlowTopo.topology timeFlowStates,
+          states = timeFlowStates
        }
 
 
