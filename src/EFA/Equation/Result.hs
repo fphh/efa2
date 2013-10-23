@@ -2,7 +2,7 @@
 
 module EFA.Equation.Result where
 
-import Control.Applicative (Applicative, pure, (<*>))
+import Control.Applicative (Applicative, pure, (<*>), Alternative, empty, (<|>))
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid (mempty)
 
@@ -19,6 +19,11 @@ instance Applicative Result where
   pure = Determined
   (Determined f) <*> (Determined a) = Determined $ f a
   _ <*> _ = Undetermined
+
+instance Alternative Result where
+  empty = Undetermined
+  x@(Determined _) <|> _ = x
+  _ <|> x = x
 
 instance Foldable Result where
   foldMap f r =
