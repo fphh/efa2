@@ -11,6 +11,10 @@ module EFA.Flow.State.Quantity (
    mapStorages,
    mapStates,
 
+   checkedZipWithGraph,
+   checkedZipWithStates,
+   checkedZipWithStorages,
+
    traverseGraph,
    traverseStorages,
    traverseStates,
@@ -77,6 +81,7 @@ import EFA.Equation.Result (Result(Determined, Undetermined))
 import qualified EFA.Signal.Sequence as Sequ
 
 import qualified EFA.Utility.Map as MapU
+import EFA.Utility.Map (Caller)
 
 import qualified Control.Monad.Trans.State as MS
 
@@ -167,6 +172,48 @@ mapStorages ::
    Storages node a0 -> Storages node a1
 mapStorages f =
    fmap (StorageQuant.mapGraph f)
+
+
+checkedZipWithGraph ::
+   (Ord node) =>
+   Caller ->
+   (a0 -> a1 -> a2) ->
+   (v0 -> v1 -> v2) ->
+   Graph node a0 v0 ->
+   Graph node a1 v1 ->
+   Graph node a2 v2
+checkedZipWithGraph caller f g gr0 gr1 =
+   StateFlow.Graph {
+      states   = checkedZipWithStates   caller g (states   gr0) (states   gr1),
+      storages = checkedZipWithStorages caller f (storages gr0) (storages gr1)
+   }
+
+checkedZipWithStates ::
+   (Ord node) =>
+   Caller ->
+   (v0 -> v1 -> v2) ->
+   States node v0 ->
+   States node v1 ->
+   States node v2
+checkedZipWithStates caller f =
+   MapU.checkedZipWith (caller++".checkedZipWithStates")
+      (\gr0 gr1 ->
+         FlowTopo.checkedZipWithSection
+            (caller++".checkedZipWithStates.section")
+            f gr0 gr1)
+
+checkedZipWithStorages ::
+   (Ord node) =>
+   Caller ->
+   (a0 -> a1 -> a2) ->
+   Storages node a0 ->
+   Storages node a1 ->
+   Storages node a2
+checkedZipWithStorages caller f =
+   let name = caller++".checkedZipWithStorages"
+   in  MapU.checkedZipWith name
+          (\graph0 graph1 ->
+             Storage.checkedZipWith name f (liftA2 f) graph0 graph1)
 
 
 traverseGraph ::
