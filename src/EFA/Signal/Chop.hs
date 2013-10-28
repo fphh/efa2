@@ -7,7 +7,6 @@ module EFA.Signal.Chop where
 
 import qualified EFA.Signal.Sequence as Sequ
 
-import qualified EFA.Signal.Base as SB
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
@@ -61,20 +60,6 @@ data EventType = LeftEvent
                | NoEvent
 
 
-{-# DEPRECATED genSeqFlow "better use (fmap Record.partIntegrate)" #-}
--- | Generate Sequence Flow
-genSeqFlow :: (Num a,
-                V.Zipper v,
-                V.Walker v,
-                V.Storage v a,
-                V.Singleton v,
-                V.FromList v,
-                SB.BSum a,
-                SB.BProd a a)=>
-               (Sequ.List (PowerRecord node v a)) -> Sequ.List (FlowRecord node v a)
-genSeqFlow sqPRec = fmap Record.partIntegrate sqPRec
-
-
 -- | Filter Sequence Flow
 -- | Used to filter Modelica signals
 -- | State changes in solver create several DataPoints with exact the same time
@@ -108,7 +93,7 @@ makeSequence ::
    PowerRecord node [] Double ->
    Sequ.List (FlowRecord node [] Double)
 makeSequence =
-    genSeqFlow . genSequ . addZeroCrossings
+   fmap Record.partIntegrate . genSequ . addZeroCrossings
 
 -----------------------------------------------------------------------------------
 {-
