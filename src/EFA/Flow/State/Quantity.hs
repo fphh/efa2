@@ -267,18 +267,53 @@ identify k = do
                MS.put (Map.insert k i m, is)
                return i
 
-stateMaps ::
+stateMap ::
    (Ord node, Ord nodeLabel) =>
    Map Idx.Section (Topology node nodeLabel) ->
    Map Idx.Section Idx.State
-stateMaps =
+stateMap =
    flip MS.evalState (Map.empty, Stream.iterate succ $ Idx.State 0) .
    traverse identify
+
+stateMapFromSequence ::
+   (Ord node) =>
+   SeqFlow.Sequence node v -> Map Idx.Section Idx.State
+stateMapFromSequence =
+   stateMap .
+   fmap
+      (Graph.mapEdge (const ()) .
+       Graph.mapNode (const ()) .
+       FlowTopo.topology . snd)
 
 
 type
    CumGraph node a =
       StateFlow.Graph node Graph.EitherEdge a (Sums a) a (Maybe (Cum a)) a
+
+
+
+{- |
+If allStEdges
+  Then: Insert all possible storage edges.
+  Else: Insert only the storage edges that have counterparts in the sequence flow graph.
+-}
+fromSequenceFlow ::
+   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
+   Bool ->
+   SeqFlow.Graph node a v ->
+   CumGraph node a
+fromSequenceFlow allStEdges gr =
+   fromSequenceFlowGen Arith.integrate (~+) Arith.zero
+      allStEdges (stateMapFromSequence $ SeqFlow.sequence gr) gr
+
+fromSequenceFlowResult ::
+   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
+   Bool ->
+   SeqFlow.Graph node (Result a) (Result v) ->
+   CumGraph node (Result a)
+fromSequenceFlowResult allStEdges gr =
+   fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+)) (pure Arith.zero)
+      allStEdges (stateMapFromSequence $ SeqFlow.sequence gr) gr
 
 
 fromSequenceFlowGen ::
@@ -287,15 +322,11 @@ fromSequenceFlowGen ::
    (a -> a -> a) ->
    a ->
    Bool ->
+   Map Idx.Section Idx.State ->
    SeqFlow.Graph node a v ->
    CumGraph node a
-fromSequenceFlowGen integrate add zero allStEdges gr =
+fromSequenceFlowGen integrate add zero allStEdges secMap gr =
    let sq = SeqFlow.sequence gr
-       secMap =
-          stateMaps $
-          fmap (Graph.mapEdge (const ()) .
-                Graph.mapNode (const ()) .
-                FlowTopo.topology . snd) sq
        sts =
           flip cumulateSequence secMap
              (FlowTopoPlain.checkedZipWith "StateFlow.fromSequenceFlow"
@@ -624,30 +655,6 @@ instance LookupScalar (Idx.StInSum Idx.State) where
 
 instance LookupScalar (Idx.StOutSum Idx.State) where
    lookupScalar = lookupStOutSum
-
-
-
-{- |
-If allStEdges
-  Then: Insert all possible storage edges.
-  Else: Insert only the storage edges that have counterparts in the sequence flow graph.
--}
-fromSequenceFlow ::
-   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
-   Bool ->
-   SeqFlow.Graph node a v ->
-   CumGraph node a
-fromSequenceFlow =
-   fromSequenceFlowGen Arith.integrate (~+) Arith.zero
-
-fromSequenceFlowResult ::
-   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
-   Bool ->
-   SeqFlow.Graph node (Result a) (Result v) ->
-   CumGraph node (Result a)
-fromSequenceFlowResult =
-   fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+)) (pure Arith.zero)
-
 
 
 mapGraphWithVar ::
