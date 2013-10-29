@@ -104,3 +104,7 @@ mapMaybeKeys ::
    Map k0 a -> Map k1 a
 mapMaybeKeys f =
    Map.fromList . mapMaybe (\(k,a) -> fmap (P.flip (,) a) $ f k) . Map.toList
+
+
+compose :: (Ord a, Ord b) => Map b c -> Map a b -> Map a c
+compose bc ab = Map.mapMaybe (P.flip Map.lookup bc) ab
