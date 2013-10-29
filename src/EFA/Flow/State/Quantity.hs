@@ -25,6 +25,8 @@ module EFA.Flow.State.Quantity (
 
    fromSequenceFlow,
    fromSequenceFlowResult,
+   fromStatesAndSequenceFlow,
+   fromStatesAndSequenceFlowResult,
 
    cumFromFlow,
    flowResultFromCum,
@@ -275,15 +277,28 @@ stateMap =
    flip MS.evalState (Map.empty, Stream.iterate succ $ Idx.State 0) .
    traverse identify
 
+unitLabels ::
+   FlowTopoPlain.Section n e sl nl el -> Graph.Graph n e () ()
+unitLabels =
+   Graph.mapEdge (const ()) .
+   Graph.mapNode (const ()) .
+   FlowTopo.topology
+
 stateMapFromSequence ::
    (Ord node) =>
    SeqFlow.Sequence node v -> Map Idx.Section Idx.State
 stateMapFromSequence =
-   stateMap .
-   fmap
-      (Graph.mapEdge (const ()) .
-       Graph.mapNode (const ()) .
-       FlowTopo.topology . snd)
+   stateMap . fmap (unitLabels . snd)
+
+stateMapFromStatesAndSequence ::
+   (Ord node) =>
+   States node v0 ->
+   SeqFlow.Sequence node v1 ->
+   Map Idx.Section Idx.State
+stateMapFromStatesAndSequence sts seq =
+   MapU.compose
+      (MapU.reverse (fmap unitLabels sts))
+      (fmap (unitLabels . snd) seq)
 
 
 type
@@ -314,6 +329,27 @@ fromSequenceFlowResult ::
 fromSequenceFlowResult allStEdges gr =
    fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+)) (pure Arith.zero)
       allStEdges (stateMapFromSequence $ SeqFlow.sequence gr) gr
+
+
+fromStatesAndSequenceFlow ::
+   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
+   Bool ->
+   States node v0 ->
+   SeqFlow.Graph node a v ->
+   CumGraph node a
+fromStatesAndSequenceFlow allStEdges sts gr =
+   fromSequenceFlowGen Arith.integrate (~+) Arith.zero
+      allStEdges (stateMapFromStatesAndSequence sts $ SeqFlow.sequence gr) gr
+
+fromStatesAndSequenceFlowResult ::
+   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
+   Bool ->
+   States node v0 ->
+   SeqFlow.Graph node (Result a) (Result v) ->
+   CumGraph node (Result a)
+fromStatesAndSequenceFlowResult allStEdges sts gr =
+   fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+)) (pure Arith.zero)
+      allStEdges (stateMapFromStatesAndSequence sts $ SeqFlow.sequence gr) gr
 
 
 fromSequenceFlowGen ::
