@@ -142,16 +142,6 @@ data SocDrive a = NoDrive
 
 -}
 
---forcing :: One.SocDrive Double -> StateFlow.Graph Node b (Result Double) -> Double
---forcing socDrive env = 0
-{-
-case socDrive of
-       NoDrive -> 0
-       ChargeDrive soc -> soc * eCharge
-       DischargeDrive soc -> soc * negate eDischarge
-  where eCharge    = lookupDetEnergy (XIdx.energy sec0 Water Network) env
-        eDischarge = lookupDetEnergy (XIdx.energy sec1 Water Network) env
--}
 -----------------------------------------------------------------------------
 
 condition :: EnvResult Double -> Bool
