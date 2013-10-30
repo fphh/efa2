@@ -14,7 +14,6 @@ import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Base as B
 import EFA.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L)
-import EFA.Signal.Base (ZeroCrossing)
 import EFA.Signal.Typ
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -443,8 +442,6 @@ type DTSamp =  TC Sample (Typ D T Tt) (D.Scalar Double)
 type TSamp =  TC Sample (Typ A T Tt) (D.Scalar Double)
 type TSamp1 =  TC Sample (Typ A T Tt) (UVec Double)
 type TSamp1L =  TC Sample (Typ A T Tt) (List Double)
-type TZeroSamp = TC Sample (Typ A T Tt) (Data Nil ZeroCrossing)
-type TZeroSamp1L = TC Sample (Typ A T Tt) (Data ([] :> Nil) ZeroCrossing)
 
 type PSamp2 = TC Sample (Typ A P Tt) (UVec2 Double)
 type PSamp1 =  TC Sample (Typ A P Tt) (UVec Double)

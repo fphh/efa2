@@ -14,10 +14,9 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.Record (Record(Record), PowerRecord, FlowRecord)
 
 import EFA.Signal.Base
-          (Sign(PSign, NSign, ZSign),
-           ZeroCrossing(NoCrossing, ZeroCrossing))
+          (Sign(PSign, NSign, ZSign))
 import EFA.Signal.Signal
-          (TC(TC), TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
+          (TC(TC), TSigL, TSamp, PSamp, PSigL,
            DTSamp, PSamp2LL, Samp, Samp1L,
            Range(Range),
            (.+), (.-), (.*), (./), (.++),
@@ -205,6 +204,12 @@ getZeroCrossings rs1@(t1,ps1) rs2 = ((S.singleton t1) .++ zeroCrossingTimes,(S.s
           where
              (zeroCrossings, zeroCrossingTimes) = calcZeroTimes rs1 rs2
              zeroPowers = calcZeroPowers rs1 rs2 zeroCrossingTimes zeroCrossings
+
+
+data ZeroCrossing = ZeroCrossing Double | NoCrossing deriving (Show, Eq)
+
+type TZeroSamp = TC S.Sample (Typ A T Tt) (Data Nil ZeroCrossing)
+type TZeroSamp1L = TC S.Sample (Typ A T Tt) (Data ([] :> Nil) ZeroCrossing)
 
 
 calcZeroPowers :: Record.Samp1 -> Record.Samp1 -> TSigL -> TZeroSamp1L -> PSamp2LL

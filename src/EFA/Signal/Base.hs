@@ -97,5 +97,3 @@ sign x =
       EQ -> ZSign -- TODO add intervals later on Zero - Detection
       LT -> NSign
 -}
-
-data ZeroCrossing = ZeroCrossing Double | NoCrossing deriving (Show, Eq)
