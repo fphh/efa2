@@ -409,7 +409,6 @@ data RangeFrom id = RangeFrom [id] | RangeFromAll
 data ToModify id = ToModify [id] | ModifyAll
 
 normSignals2Range :: (Index id,
-                      Num d2,
                       Ord d2,
                       Show (v d2),
                       V.Storage v d2,
@@ -421,7 +420,7 @@ normSignals2Range :: (Index id,
                      Record s1 s2 t1 t2 id v d1 d2
 normSignals2Range (listM,listN) record = modifySignals listN f record
   where (TC (Data minx),TC (Data maxx)) = maxRange listM record
-        f = S.map (\y -> y * (maxx - minx) + minx) . S.norm
+        f = S.map (\y -> y ~* (maxx ~- minx) ~+ minx) . S.norm
 
 normSignals2Max75 :: (Index id,
                       Ord d2,
@@ -724,7 +723,6 @@ sumFlowRecord (Record time pmap) =
 
 {-
 sumFlowRecord :: (V.FromList v,
-                  Num d,
                   V.Zipper v,
                   V.Walker v,
                   V.Storage v d,

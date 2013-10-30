@@ -56,8 +56,8 @@ list = idxList $
       (zip recList (map (genSequ . addZeroCrossings) recList))
 
 f ::
-   (Num a, Ord nty, Show seq, Show nty, Show a) =>
-   (a, (String, (PowerRecord nty [] Double, seq))) -> IO ()
+   (Ord node, Show node, Show seq) =>
+   (Int, (String, (PowerRecord node [] Double, seq))) -> IO ()
 
 f (idx, (title, (pRec, sqRec))) = do
   putStrLn ""

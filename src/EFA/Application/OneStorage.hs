@@ -7,6 +7,7 @@ import qualified EFA.Flow.State.Quantity as StateFlow
 
 import qualified EFA.Graph.Topology.Index as Idx
 
+import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
 
 import qualified Data.Map as Map; import Data.Map (Map)
@@ -18,8 +19,9 @@ data SocDrive a = NoDrive
 
 
 noforcing ::
-  (Num v) => SocDrive v -> StateFlow.Graph node b (Result v) -> v
-noforcing _ _ = 0
+  (Arith.Constant v) =>
+  SocDrive v -> StateFlow.Graph node b (Result v) -> v
+noforcing _ _ = Arith.zero
 
 
 nocondition :: StateFlow.Graph node b (Result v) -> Bool

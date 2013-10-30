@@ -46,7 +46,7 @@ import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
 
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Arithmetic (Product, (~*), Constant)
+import EFA.Equation.Arithmetic (Sum, Product, (~*), Constant)
 
 import EFA.Report.Typ
           (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
@@ -441,7 +441,7 @@ stackLineSpec term colour =
 
 stack ::
    (FormatValue term, Ord term,
-    Num d, Ord d, Atom.C d, Tuple.C d) =>
+    Sum d, Ord d, Atom.C d, Tuple.C d) =>
    Map term d -> Plot2D.T Int d
 stack =
    foldMap
@@ -449,7 +449,7 @@ stack =
          stackLineSpec term col $
          Plot2D.list Graph2D.histograms [val]) .
    Colour.adorn .
-   Key.sort (negate . abs . snd) .
+   Key.sort (Arith.negate . Arith.abs . snd) .
    Map.toList
 
 stacksFrameAttr ::
@@ -466,7 +466,7 @@ stacksFrameAttr title vars =
 
 stacks ::
    (FormatValue term, Ord term,
-    Num d, Ord d, Atom.C d, Tuple.C d) =>
+    Sum d, Ord d, Atom.C d, Tuple.C d) =>
    Map term [d] -> Plot2D.T Int d
 stacks =
    foldMap
@@ -474,7 +474,7 @@ stacks =
          stackLineSpec term col $
          Plot2D.list Graph2D.histograms vals) .
    Colour.adorn .
-   Key.sort (negate . maximum . map abs . snd) .
+   Key.sort (Arith.negate . maximum . map Arith.abs . snd) .
    Map.toList
 
 

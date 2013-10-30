@@ -81,22 +81,24 @@ instance FormatValue i => FormatValue (IndexSet i) where
 {- |
 Convert a list of AssignMaps to an AssignMap of lists.
 -}
-transpose :: (Ord i, Num a) => [Map i a] -> Map i [a]
-transpose = TMap.core . traverse (TMap.cons 0)
+transpose :: (Ord i, Arith.Constant a) => [Map i a] -> Map i [a]
+transpose = TMap.core . traverse (TMap.cons Arith.zero)
 
 
 {- |
 Keep only values above a certain threshold.
 -}
-threshold :: (Ord i, Ord a, Num a) => a -> Map i a -> Map i a
-threshold x = Map.filter ((>=x) . abs)
+threshold ::
+   (Ord i, Ord a, Arith.Sum a) => a -> Map i a -> Map i a
+threshold x = Map.filter ((>=x) . Arith.abs)
 
 {- |
 Keep all those lists where at least one value is above a threshold.
 This allows to filter consistently across stacks.
 -}
-simultaneousThreshold :: (Ord i, Ord a, Num a) => a -> Map i [a] -> Map i [a]
-simultaneousThreshold x = Map.filter (any ((>=x) . abs))
+simultaneousThreshold ::
+   (Ord i, Ord a, Arith.Sum a) => a -> Map i [a] -> Map i [a]
+simultaneousThreshold x = Map.filter (any ((>=x) . Arith.abs))
 
 
 {-

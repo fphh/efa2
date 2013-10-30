@@ -241,7 +241,7 @@ to2DMatrix =
   Sig.fromList2 . Map.elems .
   Map.mapKeysWith (++) NonEmpty.head . fmap (:[])
 
-optimalMaps :: (Num a, Ord a, Ord (f a), Ord node) =>
+optimalMaps :: (Ord a, Ord (f a), Ord node) =>
   Map Idx.State (Map (Idx.PPos node) (Map (NonEmpty.T f a) (a, a))) ->
   ( Sig.NSignal2 V.Vector V.Vector a,
     Sig.UTSignal2 V.Vector V.Vector Idx.State,
