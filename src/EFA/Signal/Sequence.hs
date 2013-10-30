@@ -10,6 +10,8 @@ import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
 import EFA.Signal.Signal (Range(Range))
 
+import EFA.Equation.Arithmetic (Constant)
+
 import qualified EFA.Report.Report as Report
 import EFA.Report.Report (Table, toDoc, autoFormat)
 import EFA.Report.Typ (TDisp)
@@ -156,9 +158,9 @@ instance
     V.Storage v d2,
     DispStorage1 v,
     Ord d2,
-    Fractional d2,
+    Constant d2,
     PrintfArg d2,
-    Fractional d1,
+    Constant d1,
     Ord d1,
     V.Storage v d1,
     PrintfArg d1,

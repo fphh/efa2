@@ -30,7 +30,6 @@ import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Data as Data
-import qualified EFA.Signal.Base as Base
 import qualified EFA.Signal.Vector as SV
 
 import EFA.Signal.Data (Data(Data), Nil, (:>))
@@ -177,7 +176,7 @@ givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 givenSimulate ::
  (Num a, Eq a, Show a, Fractional a, Ord a,
-  Base.BSum a, EqArith.Sum a,
+  EqArith.Sum a,
   Eq (v a),
   SV.Zipper v,SV.FromList v,SV.Len (v a),
   SV.Singleton v,

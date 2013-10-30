@@ -18,9 +18,10 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.Record (Record(Record), FlowRecord)
 import EFA.Signal.Signal (fromScalar)
 import EFA.Signal.Data (Data, Nil, (:>))
-import EFA.Signal.Base (Sign(PSign, NSign, ZSign), BSum, DArith0)
+import EFA.Signal.Base (Sign(PSign, NSign, ZSign))
 
 import EFA.Equation.Result (Result(Determined, Undetermined))
+import EFA.Equation.Arithmetic (Sum, Constant)
 
 import qualified EFA.Utility.Map as MapU
 
@@ -42,7 +43,7 @@ type Section node v a =
 
 flowTopologyFromRecord ::
    (Ord node, Show node,
-    Fractional a, Ord a, BSum a, DArith0 a,
+    Ord a, Constant a,
     SV.Walker v, SV.Storage v a) =>
    Topology node ->
    FlowRecord node v a ->
@@ -73,7 +74,7 @@ flowTopologyFromRecord topo (Record time fs) =
    Graph.edgeLabels topo
 
 fromSection ::
-   (BSum a, SV.Zipper v, SV.Walker v, SV.Singleton v, SV.Storage v a,
+   (Sum a, SV.Zipper v, SV.Walker v, SV.Singleton v, SV.Storage v a,
     Node.C node) =>
    FlowTopoPlain.Section node Graph.EitherEdge
       (Signal.TSignal v a) (FlowTopo.Sums (Result (Data (v :> Nil) a)))

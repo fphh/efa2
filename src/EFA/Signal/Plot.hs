@@ -45,6 +45,9 @@ import EFA.Signal.Record (Record(Record))
 import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
 
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic (Product, (~*), Constant)
+
 import EFA.Report.Typ
           (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
@@ -128,9 +131,9 @@ instance (AxisLabel tc) => AxisLabel [tc] where
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
 getData ::
-   (TDisp typ, D.FromList c, D.Map c, D.Storage c a, Fractional a) =>
+   (TDisp typ, D.FromList c, D.Map c, D.Storage c a, Constant a) =>
    TC s typ (Data c a) -> NestedList c a
-getData x = S.toList $ S.map (* fromRational s) x
+getData x = S.toList $ S.map (~* Arith.fromRational s) x
    where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
 
 
@@ -169,7 +172,7 @@ class AxisLabel tc => Signal tc where
 
 instance
    (TDisp t, SV.Walker v1, SV.FromList v1, SV.Storage v1 y,
-    Atom.C y, Tuple.C y, Fractional y) =>
+    Atom.C y, Tuple.C y, Constant y) =>
       Signal (TC s t (Data (v1 :> Nil) y))  where
    signal opts x =
       fmap (signalStyle opts) $ Plot2D.list Graph2D.listLines $ getData x
@@ -276,8 +279,8 @@ class (AxisLabel tcX, AxisLabel tcY) => XY tcX tcY where
 xyBasic ::
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
+    Atom.C x, Tuple.C x, Constant x,
+    Atom.C y, Tuple.C y, Constant y) =>
    (LineSpec.T -> LineSpec.T) ->
    TC s t1 (Data (v1 :> Nil) x) ->
    TC s t2 (Data (v2 :> Nil) y) ->
@@ -289,8 +292,8 @@ xyBasic opts x y =
 xyLabeled ::
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
+    Atom.C x, Tuple.C x, Constant x,
+    Atom.C y, Tuple.C y, Constant y) =>
    (LineSpec.T -> LineSpec.T) ->
    TC s t1 (Data (v1 :> Nil) x) ->
    Labeled (TC s t2 (Data (v2 :> Nil) y)) ->
@@ -301,8 +304,8 @@ xyLabeled opts x (Labeled lab y) =
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
+    Atom.C x, Tuple.C x, Constant x,
+    Atom.C y, Tuple.C y, Constant y) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
       (Labeled (TC s t2 (Data (v2 :> Nil) y))) where
    xy = xyLabeled
@@ -310,8 +313,8 @@ instance
 instance
    ( TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
      TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-     Atom.C x, Tuple.C x, Fractional x,
-     Atom.C y, Tuple.C y, Fractional y ) =>
+     Atom.C x, Tuple.C x, Constant x,
+     Atom.C y, Tuple.C y, Constant y ) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
       [Labeled (TC s t2 (Data (v2 :> Nil) y))] where
    xy opts x = foldMap (xyLabeled opts x)
@@ -319,8 +322,8 @@ instance
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
+    Atom.C x, Tuple.C x, Constant x,
+    Atom.C y, Tuple.C y, Constant y) =>
    XY [TC s t1 (Data (v1 :> Nil) x)]
       [Labeled (TC s t2 (Data (v2 :> Nil) y))] where
    xy opts xs ys =
@@ -333,8 +336,8 @@ instance
     SV.FromList v3, SV.Storage v3 y,
     SV.FromList v2, SV.Storage v2 (v1 x),
     SV.FromList v4, SV.Storage v4 (v3 y),
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
+    Atom.C x, Tuple.C x, Constant x,
+    Atom.C y, Tuple.C y, Constant y) =>
    XY
       (TC s t1 (Data (v2 :> v1 :> Nil) x))
       (Labeled (TC s t2 (Data (v4 :> v3 :> Nil) y))) where
@@ -367,8 +370,8 @@ recordLineSpec =
 record ::
    (Ord id, TDisp typ1, TDisp typ2,
     SV.Walker v, SV.FromList v,
-    SV.Storage v d1, Fractional d1, Atom.C d1, Tuple.C d1,
-    SV.Storage v d2, Fractional d2, Atom.C d2, Tuple.C d2) =>
+    SV.Storage v d1, Constant d1, Atom.C d1, Tuple.C d1,
+    SV.Storage v d2, Constant d2, Atom.C d2, Tuple.C d2) =>
    (id -> String) ->
    (LineSpec.T -> LineSpec.T) ->
    Record s1 s2 typ1 typ2 id v d1 d2 -> Plot2D.T d1 d2
@@ -387,8 +390,8 @@ record showKey opts (Record time pMap) =
 recordList ::
    (Ord id, TDisp typ1, TDisp typ2,
     SV.Walker v, SV.FromList v,
-    SV.Storage v d1, Fractional d1, Atom.C d1, Tuple.C d1,
-    SV.Storage v d2, Fractional d2, Atom.C d2, Tuple.C d2) =>
+    SV.Storage v d1, Constant d1, Atom.C d1, Tuple.C d1,
+    SV.Storage v d2, Constant d2, Atom.C d2, Tuple.C d2) =>
    (id -> String) ->
    (LineSpec.T -> LineSpec.T) ->
    (Int -> LineSpec.T -> LineSpec.T) ->
@@ -399,7 +402,7 @@ recordList showKey opts varOpts xs =
 -- | Plotting Sequences ---------------------------------------------------------------
 
 
-sequence :: (Fractional d2, Fractional d1, Ord id,
+sequence :: (Constant d2, Constant d1, Ord id,
              SV.Walker v, SV.Storage v d2,
              SV.Storage v d1, SV.FromList v, TDisp typ1,
              TDisp typ2, Atom.C d2, Atom.C d1, Tuple.C d2,
@@ -488,7 +491,7 @@ surfaceLineSpec =
    LineSpec.deflt
 
 surfaceBasic ::
-  (Fractional a2, Fractional a1, Fractional a, D.FromList c2,
+  (Constant a2, Constant a1, Constant a, D.FromList c2,
    D.FromList c1, D.FromList c, D.Map c2, D.Map c1, D.Map c,
    D.Storage c2 a2, D.Storage c1 a1, D.Storage c a, TDisp typ2,
    TDisp typ1, TDisp typ, Atom.C z, Atom.C y, Atom.C x, Tuple.C z,
@@ -511,7 +514,7 @@ class
       tcX -> tcY -> tcZ -> Plot3D.T (Value tcX) (Value tcY) (Value tcZ)
 
 instance
-   ( Fractional x, Fractional y, Fractional z,
+   ( Constant x, Constant y, Constant z,
      SV.Walker v2, SV.Walker v1, SV.Walker v4, SV.Walker v3,
      SV.Walker v6, SV.Walker v5, SV.FromList v1,
      SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
@@ -529,7 +532,7 @@ instance
    surface = surfaceBasic
 
 instance
-   ( Fractional x, Fractional y, Fractional z,
+   ( Constant x, Constant y, Constant z,
      SV.Walker v2, SV.Walker v1, SV.Walker v4, SV.Walker v3,
      SV.Walker v6, SV.Walker v5, SV.FromList v1,
      SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
@@ -549,7 +552,7 @@ instance
 
 
 instance
-   ( Fractional x, Fractional y, Fractional z,
+   ( Constant x, Constant y, Constant z,
      SV.Walker v2, SV.Walker v1, SV.Walker v4,
      SV.Walker v3, SV.Walker v6, SV.Walker v5,
      SV.FromList v1, SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
@@ -568,7 +571,7 @@ instance
       foldMap (surfaceBasic opts x y)
 
 instance
-   ( Fractional x, Fractional y, Fractional z,
+   ( Constant x, Constant y, Constant z,
      SV.Walker v2, SV.Walker v1, SV.Walker v4,
      SV.Walker v3, SV.Walker v6, SV.Walker v5,
      SV.FromList v1, SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,

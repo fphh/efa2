@@ -41,7 +41,6 @@ import qualified EFA.Signal.Chop as Chop
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as Vec
-import qualified EFA.Signal.Base as Base
 
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
@@ -207,7 +206,7 @@ envToPowerRecord =
 
 
 external ::
-  (Eq (v a), Arith.Constant a, Base.BSum a, Vec.Zipper v,
+  (Eq (v a), Arith.Constant a, Vec.Zipper v,
   Vec.Walker v, Vec.Singleton v, Vec.Storage v a, Node.C node) =>
   [(node, a)] ->
   SeqFlow.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a)) ->

@@ -15,8 +15,9 @@ import EFA.Signal.Signal
 
 import qualified EFA.Signal.Data as D
 import EFA.Signal.Data (Data, Nil, Zip)
-import EFA.Signal.Base (BSum((..+), (..-)), BProd((..*), (../)))
 import EFA.Signal.Typ (TSum, TProd)
+
+import EFA.Equation.Arithmetic (Sum, (~+), (~-), Product, (~*), (~/))
 
 import Data.Function (($))
 import qualified Prelude as P
@@ -58,36 +59,36 @@ tzipWith f = zipWith g
 
 (.*) ::
    (TProd t1 t2 t3, D.ZipWithFill c1 c2, Zip c1 c2 ~ c3,
-    D.Storage c1 a1, D.Storage c2 a2, D.Storage c3 a1, BProd a1 a2) =>
-   TC s1 t1 (Data c1 a1) ->
-   TC s2 t2 (Data c2 a2) ->
-   TC (Arith s1 s2) t3 (Data c3 a1)
-(.*) = zipWith (..*)
-
-(./) ::
-   (TProd t1 t2 t3, D.ZipWithFill c1 c2, Zip c1 c2 ~ c3,
-    D.Storage c1 a1, D.Storage c2 a2, D.Storage c3 a1, BProd a1 a2) =>
-   TC s1 t3 (Data c1 a1) ->
-   TC s2 t2 (Data c2 a2) ->
-   TC (Arith s1 s2) t1 (Data c3 a1)
-(./) = zipWith (../)
-
-(.+) ::
-   (TSum t1 t2 t3, D.ZipWithFill c1 c2, Zip c1 c2 ~ c3,
-    D.Storage c1 a, D.Storage c2 a, D.Storage c3 a, BSum a) =>
+    D.Storage c1 a, D.Storage c2 a, D.Storage c3 a, Product a) =>
    TC s1 t1 (Data c1 a) ->
    TC s2 t2 (Data c2 a) ->
    TC (Arith s1 s2) t3 (Data c3 a)
-(.+) = zipWith (..+)
+(.*) = zipWith (~*)
 
-(.-) ::
-   (TSum t1 t2 t3, D.ZipWithFill c1 c2, Zip c1 c2 ~ c3,
-    D.Storage c1 a, D.Storage c2 a, D.Storage c3 a, BSum a) =>
+(./) ::
+   (TProd t1 t2 t3, D.ZipWithFill c1 c2, Zip c1 c2 ~ c3,
+    D.Storage c1 a, D.Storage c2 a, D.Storage c3 a, Product a) =>
    TC s1 t3 (Data c1 a) ->
    TC s2 t2 (Data c2 a) ->
    TC (Arith s1 s2) t1 (Data c3 a)
-(.-) = zipWith (..-)
+(./) = zipWith (~/)
+
+(.+) ::
+   (TSum t1 t2 t3, D.ZipWithFill c1 c2, Zip c1 c2 ~ c3,
+    D.Storage c1 a, D.Storage c2 a, D.Storage c3 a, Sum a) =>
+   TC s1 t1 (Data c1 a) ->
+   TC s2 t2 (Data c2 a) ->
+   TC (Arith s1 s2) t3 (Data c3 a)
+(.+) = zipWith (~+)
+
+(.-) ::
+   (TSum t1 t2 t3, D.ZipWithFill c1 c2, Zip c1 c2 ~ c3,
+    D.Storage c1 a, D.Storage c2 a, D.Storage c3 a, Sum a) =>
+   TC s1 t3 (Data c1 a) ->
+   TC s2 t2 (Data c2 a) ->
+   TC (Arith s1 s2) t1 (Data c3 a)
+(.-) = zipWith (~-)
 
 
 infix 7 .*, ./
-infix 6 .+,.-
+infix 6 .+, .-

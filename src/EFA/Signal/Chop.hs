@@ -26,6 +26,8 @@ import EFA.Signal.Signal
 import EFA.Signal.Typ (Typ, STy, Tt, T, P, A)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 
+import EFA.Equation.Arithmetic (Sum, (~-), abs)
+
 import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty.Set as NonEmptySet
@@ -47,6 +49,8 @@ import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Maybe.HT (toMaybe)
+
+import Prelude hiding (abs)
 
 
 data StepType = LeavesZeroStep
@@ -430,13 +434,13 @@ tailPowerRecord (Record times pMap) =
 
 
 approxSequPwrRecord ::
-   (V.Walker v, V.Storage v a, Real a, Ord node) =>
+   (V.Walker v, V.Storage v a, Ord a, Sum a, Ord node) =>
    a -> Sequ.List (PowerRecord node v a) -> Sequ.List (PowerRecord node v a) -> Bool
 approxSequPwrRecord eps xs ys =
    V.equalBy (approxPowerRecord eps) (Fold.toList xs) (Fold.toList ys)
 
 approxPowerRecord ::
-   (V.Walker v, V.Storage v a, Real a, Ord node) =>
+   (V.Walker v, V.Storage v a, Ord a, Sum a, Ord node) =>
    a -> PowerRecord node v a -> PowerRecord node v a -> Bool
 approxPowerRecord eps
       (Record xt xm) (Record yt ym) =
@@ -446,9 +450,9 @@ approxPowerRecord eps
    &&
    Fold.and (Map.intersectionWith (S.equalBy (approxAbs eps)) xm ym)
 
-approxAbs :: (Real a) => a -> a -> a -> Bool
+approxAbs :: (Ord a, Sum a) => a -> a -> a -> Bool
 approxAbs eps x y =
-   abs (x-y) <= eps
+   abs (x~-y) <= eps
 
 
 

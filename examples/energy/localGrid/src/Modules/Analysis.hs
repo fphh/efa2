@@ -24,7 +24,6 @@ import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.Base as B
 import EFA.Signal.Data (Data(Data), Nil, (:>), getData)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 import EFA.Signal.Record (SignalRecord, PowerRecord, getTime, newTimeBase)
@@ -99,7 +98,7 @@ external sequenceFlowGraph =
 
 external2 ::
    (Vec.Singleton v, Vec.Storage v a, Vec.Walker v,
-    Arith.Constant a, B.BSum a, Vec.Zipper v) =>
+    Arith.Constant a, Vec.Zipper v) =>
    SeqFlow.Graph System.Node
       (Result (Data Nil a))
       (Result (Data (v :> Nil) a)) ->
@@ -113,7 +112,7 @@ external2 sequenceFlowGraph =
       (SeqIdx.storage Idx.initial System.Water  .=  Data initStorage)
 
 external3 ::
-   (Arith.Constant a, B.BSum a) =>
+   (Arith.Constant a) =>
    SeqFlow.Graph System.Node
       (Result (Data Nil a))
       (Result (Data Nil a)) ->

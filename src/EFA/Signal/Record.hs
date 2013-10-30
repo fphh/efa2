@@ -7,7 +7,6 @@ module EFA.Signal.Record where
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
-import qualified EFA.Signal.Base as SB
 import EFA.Signal.Signal
           (TC(TC),
            Range(Range),
@@ -38,7 +37,9 @@ import EFA.Signal.Data (Data(Data),
                         (:>),
                         Nil)
 
-import EFA.Signal.Base (BSum, BProd)
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic
+          (Sum, (~+), (~-), Product, (~*), (~/), Constant, abs)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -70,7 +71,7 @@ import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Data.Ord.HT (inRange)
 
-import qualified Prelude as P; import Prelude hiding (map)
+import qualified Prelude as P; import Prelude hiding (abs, map)
 
 newtype SigId = SigId String deriving (Eq, Ord, Show, Read)
 
@@ -187,13 +188,13 @@ getTimeWindow = S.unzip . S.minmax . getTime
 
 diffTime ::
 {-
-   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v a, BSum a,
+   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v a, Sum a,
     DSucc abs delta) =>
    Record Signal s2 (Typ abs t1 p1) t2 id v a ->
    Record FSignal s2 (Typ delta t1 p1) t2 id v a
 -}
 
-   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v d, BSum d) =>
+   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v d, Sum d) =>
    FlowRecord node v d ->
    DTimeFlowRecord node v d
 diffTime (Record time signals) = Record (S.delta time) signals
@@ -201,11 +202,11 @@ diffTime (Record time signals) = Record (S.delta time) signals
 
 dTimePowerRecord ::
    (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v d,
-   BSum d, Fractional d, Num d) =>
+    Constant d) =>
    PowerRecord n v d ->
    DTimePowerRecord n v d
 dTimePowerRecord (Record time signals) =
-  map (S.deltaMap (\x y -> (x+y)/2)) $
+  map (S.deltaMap (\x y -> (x~+y) ~/ Arith.fromInteger 2)) $
     Record (S.delta time) signals
 
 
@@ -213,14 +214,14 @@ dTimePowerRecord (Record time signals) =
 
 -- | Use carefully -- removes signal jitter around zero
 removeZeroNoise ::
-   (V.Walker v, V.Storage v d, Ord d, Num d) =>
+   (V.Walker v, V.Storage v d, Ord d, Constant d) =>
    d -> PowerRecord node v d -> PowerRecord node v d
 removeZeroNoise threshold (Record time pMap) =
    Record time $ Map.map (S.map (hardShrinkage threshold)) pMap
 
-hardShrinkage :: (Ord d, Num d) => d -> d -> d
+hardShrinkage :: (Ord d, Constant d) => d -> d -> d
 hardShrinkage threshold x =
-   if abs x < threshold then 0 else x
+   if abs x < threshold then Arith.zero else x
 
 
 -- | Generate a new Record with selected signals
@@ -245,8 +246,7 @@ split n (Record time pMap) =
 
 
 sortSigList ::
-   (Num d, Ord d,
-    V.Walker v, V.Storage v d, BSum d) =>
+   (Ord d, Constant d, V.Walker v, V.Storage v d) =>
    [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) d))] ->
    [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) d))]
 sortSigList = Key.sort (S.sum . snd)
@@ -277,7 +277,7 @@ extractLogSignals (Record time sMap) idList =
 
 genPowerRecord ::
   ( Show (v d), V.Zipper v, V.Walker v,
-    V.Storage v d, BProd d d, BSum d, Ord node) =>
+    V.Storage v d, Product d, Ord node) =>
   TSignal v d ->
   [(Idx.PPos node, UTSignal v d, UTSignal v d)] ->
   PowerRecord node v d
@@ -320,7 +320,7 @@ union (Record timeA mA) (Record timeB mB) =
 unionWithNewTime ::
   ( Eq (v d), Show d, Show (v d),
     Index id,
-    Fractional d,
+    Product d,
     Ord d,
     V.Filter v,
     V.Storage v d,
@@ -347,8 +347,8 @@ nonEmptyUnzip (NonEmpty.Cons (x, y) rest) =
 
 
 unionWithNewTime ::
-  ( Eq (v d), Show d,Show (v d),
-    Ord id, Show id,Fractional d, Ord d,
+  ( Eq (v d), Show d, Show (v d),
+    Ord id, Show id, Product d, Ord d,
     V.Filter v, V.FromList v, V.Storage v d, V.Walker v,
     V.Singleton v, V.Lookup v, V.Find v, V.Sort v) =>
   NonEmpty.T [] (Record S.Signal S.Signal (Typ A T Tt) t2 id v d d) ->
@@ -415,7 +415,7 @@ normSignals2Range :: (Index id,
                       V.Storage v d2,
                       V.Singleton v,
                       V.Walker v,
-                      Fractional d2)  =>
+                      Product d2)  =>
                      (RangeFrom id, ToModify id) ->
                      Record s1 s2 t1 t2 id v d1 d2 ->
                      Record s1 s2 t1 t2 id v d1 d2
@@ -424,22 +424,21 @@ normSignals2Range (listM,listN) record = modifySignals listN f record
         f = S.map (\y -> y * (maxx - minx) + minx) . S.norm
 
 normSignals2Max75 :: (Index id,
-                      Num d2,
                       Ord d2,
                       Show (v d2),
                       V.Storage v d2,
                       V.Singleton v,
                       V.Walker v,
-                      Fractional d2)  =>
+                      Constant d2)  =>
                      (RangeFrom id, ToModify id) ->
                      Record s1 s2 t1 t2 id v d1 d2 ->
                      Record s1 s2 t1 t2 id v d1 d2
 normSignals2Max75 (listM,listN) record = modifySignals listN f record
   where ( _ ,TC (Data maxx)) = maxRange listM record
-        f = S.map (\y -> y * 0.75 * maxx) . S.norm
+        f = S.map (\y -> y ~* Arith.fromRational 0.75 ~* maxx) . S.norm
 
 -- | Norm all signals to one
-norm :: (Fractional d2,
+norm :: (Product d2,
          Ord d2,
          V.Walker v,
          V.Storage v d2,
@@ -450,7 +449,7 @@ norm rec = map S.norm rec
 
 -- | Add interpolated data points in an existing record
 newTimeBase ::
-  (Fractional d, Ord d, V.Find v, Show d,Show (v d),
+  (Product d, Ord d, V.Find v, Show d, Show (v d),
    V.Lookup v, V.Walker v, V.Singleton v, V.Storage v d) =>
   String ->
   Record Signal Signal (Typ A T Tt) t2 id v d d ->
@@ -482,36 +481,36 @@ State changes in solver create several DataPoints with exact the same time.
 The resulting sections which have zero time duration are removed.
 -}
 longerThanZero ::
-   (Num d, Ord d, V.Storage v d, V.Singleton v) =>
+   (Sum d, Ord d, V.Storage v d, V.Singleton v) =>
    PowerRecord node v d -> Bool
 longerThanZero = uncurry (/=) . getTimeWindow
 
 -- | Check for minimum duration
 longerThan ::
-   (Num d, Ord d, V.Storage v d, V.Singleton v) =>
+   (Sum d, Ord d, V.Storage v d, V.Singleton v) =>
    d -> Record s1 s2 (Typ A T Tt) t2 id v d d -> Bool
 longerThan threshold r =
    case getTimeWindow r of
-      (TC (Data x), TC (Data y)) -> abs (x - y) > threshold
+      (TC (Data x), TC (Data y)) -> abs (x ~- y) > threshold
 
 -- | Check for minimum duration
 longerEqual ::
-   (Num d, Ord d, V.Storage v d, V.Singleton v) =>
+   (Constant d, Ord d, V.Storage v d, V.Singleton v) =>
    d -> Record s1 s2 (Typ A T Tt) t2 id v d d -> Bool
 longerEqual threshold r =
    case getTimeWindow r of
-      (TC (Data x), TC (Data y)) -> abs (x - y) >= threshold
+      (TC (Data x), TC (Data y)) -> abs (x ~- y) >= threshold
 
 -- | Check for negligible energy flow
 energyBelow ::
-   (Num d, SB.BSum d, Ord d, V.Walker v, V.Storage v d) =>
+   (Constant d, Ord d, V.Walker v, V.Storage v d) =>
    d -> FlowRecord node v d -> Bool
 energyBelow threshold (Record _ fMap) =
    Fold.all (\s -> abs (S.fromScalar (S.sum s)) < threshold) fMap
 
 
 major ::
-   (Num d, SB.BSum d, Ord d,
+   (Constant d, Ord d,
     V.Storage v d, V.Singleton v, V.Walker v) =>
    TC Scalar (Typ A F Tt) (Data Nil d) ->
    TC Scalar (Typ A T Tt) (Data Nil d) ->
@@ -557,7 +556,7 @@ instance (Random d, Integral d) => Sample (Ratio d) where
       x <- QC.choose (-100,100)
       y <- QC.choose (-100,100)
       return $
-         case compare (abs x) (abs y) of
+         case compare (P.abs x) (P.abs y) of
             LT -> x%y
             GT -> y%x
             EQ -> 1 -- prevent 0/0
@@ -571,11 +570,11 @@ instance
     V.Storage v d2,
     DispStorage1 v,
     Ord d1,
-    Fractional d1,
+    Constant d1,
     PrintfArg d1,
     Index id,
     Ord d2,
-    Fractional d2,
+    Constant d2,
     PrintfArg d2,
     S.DispApp s1,
     S.DispApp s2,
@@ -676,13 +675,11 @@ addRecName2SigId :: String -> SignalRecord v d -> SignalRecord v d
 addRecName2SigId name (Record time sigs) = Record time (Map.mapKeys (\ (SigId x) -> SigId (name ++ "_" ++ x) ) sigs)
 
 -- | Integrate power signal step wise to get a flow record
-partIntegrate :: (Num d,
-                  V.Zipper v,
+partIntegrate :: (V.Zipper v,
                   V.Walker v,
                   V.Storage v d,
                   V.Singleton v,
-                  BSum d,
-                  BProd d d) => PowerRecord node v d -> FlowRecord node v d
+                  Constant d) => PowerRecord node v d -> FlowRecord node v d
 partIntegrate rec@(Record time _) = map (S.partIntegrate time) rec
 
 -- | Classify a flow record to get a distribution record
@@ -697,7 +694,7 @@ distribution :: (V.FromList v,
                  V.Storage v d,
                  V.Storage v ([S.Class d], [S.SignalIdx]),
                  V.Lookup v,
-                 BSum d,
+                 Constant d,
                  V.Find v,
                  Node.C n,
                  Show (v d)) => FlowRecord n v d -> [Idx.PPos n] -> d -> d -> DistRecord n v d
@@ -714,13 +711,11 @@ distribution rec@(Record _ pMap) xs interval offset = Record classification ener
 -- | Careful quick hack
 
 sumFlowRecord :: (V.FromList v,
-                  Num d,
                   V.Zipper v,
                   V.Walker v,
                   V.Storage v d,
                   V.Singleton v,
-                  BSum d,
-                  BProd d d) => FlowRecord node v d -> FlowRecord node v d
+                  Constant d) => FlowRecord node v d -> FlowRecord node v d
 sumFlowRecord (Record time pmap) =
    Record
       (S.fromList $ [head $ S.toList time, last $ S.toList time])
@@ -734,7 +729,6 @@ sumFlowRecord :: (V.FromList v,
                   V.Walker v,
                   V.Storage v d,
                   V.Singleton v,
-                  BSum d,
-                  BProd d d) => DTimeFlowRecord node v d -> CumFlowRecord node v d
+                  Product d) => DTimeFlowRecord node v d -> CumFlowRecord node v d
 sumFlowRecord (Record dtime map) = Record (S.sum dtime) (Map.map (S.sum) map)
 -}

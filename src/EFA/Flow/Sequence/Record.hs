@@ -15,15 +15,15 @@ import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
 import EFA.Signal.Data (Data, Nil, (:>))
-import EFA.Signal.Base (BSum)
 
 import EFA.Equation.Result (Result)
+import EFA.Equation.Arithmetic (Sum)
 
 import Data.Tuple.HT (mapSnd)
 
 
 flowGraphFromSequence ::
-   (BSum a, SV.Zipper v, SV.Walker v, SV.Singleton v, SV.Storage v a,
+   (Sum a, SV.Zipper v, SV.Walker v, SV.Singleton v, SV.Storage v a,
     Node.C node) =>
    Sequ.List (TopoRecord.Section node v a) ->
    SeqFlow.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a))

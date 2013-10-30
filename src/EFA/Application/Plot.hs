@@ -37,7 +37,6 @@ import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.Base as Base
 import EFA.Signal.Record (Record)
 
 import qualified EFA.Report.Format as Format
@@ -45,6 +44,8 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Typ (TDisp)
 
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic (Constant)
 import EFA.Equation.Result (Result)
 import EFA.Equation.Stack (Stack)
 
@@ -140,8 +141,8 @@ xy ti terminal opts x y =
 -- | Plotting Records ---------------------------------------------------------------
 
 record :: (Terminal.C term,
-             Fractional d2,
-             Fractional d1,
+             Constant d2,
+             Constant d1,
              Ord id,
              SV.Walker v,
              SV.Storage v d2,
@@ -169,8 +170,8 @@ recordList ::
     SV.FromList v,
     TDisp t1,
     TDisp t2,
-    Fractional d2,
-    Fractional d1,
+    Constant d2,
+    Constant d1,
     SV.Storage v d2,
     SV.Storage v d1,
     Atom.C d2,
@@ -194,8 +195,8 @@ recordList_extract ::
     SV.FromList v,
     TDisp t1,
     TDisp t2,
-    Fractional d2,
-    Fractional d1,
+    Constant d2,
+    Constant d1,
     SV.Storage v d2,
     SV.Storage v d1,
     Atom.C d2,
@@ -217,8 +218,8 @@ recordList_extract ti term showKey opts xs idList =
 
 {-# WARNING  recordList_extractWithLeadSignal "pg: Lead signals still need to be highlighted or scale to be displayed " #-}
 recordList_extractWithLeadSignal :: (Terminal.C term,
-                                       Fractional d2,
-                                       Fractional d1,
+                                       Constant d2,
+                                       Constant d1,
                                        Record.Index id,
                                        SV.Walker v,
                                        SV.Storage v d2,
@@ -252,8 +253,8 @@ recordList_extractWithLeadSignal ti term showKey opts (extract, leadIds) recList
 
 recordSplit ::
    (Terminal.C term,
-    Fractional d1,
-    Fractional d2,
+    Constant d1,
+    Constant d2,
     Record.Index id,
     SV.Walker v,
     SV.Storage v d1,
@@ -280,7 +281,7 @@ recordSplit n ti term showKey opts r =
 recordSplitPlus ::
    (TDisp t1, TDisp t2,
     Ord id,
-    Fractional d,
+    Constant d,
     Tuple.C d, Atom.C d,
     SV.Walker v,
     SV.Storage v d,
@@ -302,7 +303,7 @@ recordSplitPlus n ti term opts r list =
 -- record command to plot selected Signals only
 {-
 sequenceFrame ::
-   (Fractional d,
+   (Constant d,
     Ord id,
     SV.Walker v, SV.Storage v d, SV.FromList v,
     TDisp t2, TDisp t1,
@@ -320,8 +321,8 @@ sequenceFrame ti opts =
 -}
 
 sequence ::
-   (Fractional d1,
-    Fractional d2,
+   (Constant d1,
+    Constant d2,
     Ord id,
     SV.Walker v,
     SV.Storage v d1,
@@ -344,8 +345,8 @@ sequence ti term showKey opts =
    -- (Plot.plotSync term) . sequenceFrame ti opts
 
 sequenceSplit ::
-   (Fractional d2,
-    Fractional d1,
+   (Constant d2,
+    Constant d1,
     Record.Index id,
     SV.Walker v,
     SV.Storage v d2,
@@ -454,7 +455,7 @@ aggregatedStack ti energyIndex eps env =
 -- | Simple plot with provided data p and n time signals, ideally sorted, fDist is energy distribution over power
 -- | and nDist is the averaged efficiency over power
 -- | pg: currently plots over input power, one should be able to choose
-etaDistr1Dim :: (Fractional d,
+etaDistr1Dim :: (Constant d,
                   SV.Walker v,
                   SV.Storage v d,
                   SV.FromList v,
@@ -475,27 +476,24 @@ etaDistr1Dim ti p n pDist fDist nDist =
 etaDistr1DimfromRecordList ::
    (Node.C node,
     Show (v d),
-    Base.BProd d d,
     Ord d,
+    RealFrac d,
+    Constant d,
+    Atom.C d,
+    Tuple.C d,
     SV.Zipper v,
     SV.Walker v,
     SV.Storage v (d, d),
     SV.Storage v d,
-    Fractional d,
     SV.FromList v,
-    Atom.C d,
-    Tuple.C d,
     SV.SortBy v,
     SV.Unique v (Sig.Class d),
     SV.Storage v Sig.SignalIdx,
     SV.Storage v Int,
     SV.Storage v (Sig.Class d),
     SV.Storage v ([Sig.Class d], [Sig.SignalIdx]),
-    RealFrac d,
     SV.Lookup v,
     SV.Find v,
-    Base.BSum d,
-    Base.DArith0 d,
     SV.Storage v (d, (d, d)),
     SV.Singleton v) =>
    String  -> d -> d ->
@@ -514,5 +512,5 @@ etaDistr1DimfromRecordList ti  interval offset rList  (plotTitle, (idIn,idOut,id
                                                  dtime ein eout eout
               (x,y) = Sig.sortTwo (pAbscissa,eta)
           etaDistr1Dim (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y  pDist
-            (Sig.scale 100 $ Sig.norm einDist) nDist
+            (Sig.scale (Arith.fromInteger 100) $ Sig.norm einDist) nDist
 
