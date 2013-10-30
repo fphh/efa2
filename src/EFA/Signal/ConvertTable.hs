@@ -90,27 +90,6 @@ makeEtaFunctions2D sm = Map.mapWithKey f
 
 
 
-{-
--- Only first column of table is used.
-makeEtaFunctions2D ::
-  forall d. ( Fractional d, Ord d, Show d,
-    Base.BProd d d) =>
-  Map String (d, d) ->
-  Map (idx node) (k, idx node -> idx1 node) ->
-  TPT.Map d ->
-  Map String (d -> d)
-makeEtaFunctions2D sm etaAssign = Map.mapWithKey f
-  where {-f k t = Sig.fromSample .
-                  Sig.interp1Lin k xsig ysig .
-                  Sig.toSample-}
-
-         where xs, y :: Sig.PSignal [] d
-               (xs, y:_) = convertToSignal2D (Just t)
-               xsig = maybe xs (Sig.scale xs . fst) (Map.lookup k sm)
-               ysig = maybe y (Sig.scale y . snd) (Map.lookup k sm)
-
--}
-
 -- | no checkedLookup because this would require Show (a -> a)
 getEtas :: Map String (a -> a) -> [String] -> [a -> a]
 getEtas etaFunc = map $
