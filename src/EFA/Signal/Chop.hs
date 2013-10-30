@@ -26,7 +26,8 @@ import EFA.Signal.Signal
 import EFA.Signal.Typ (Typ, STy, Tt, T, P, A)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 
-import EFA.Equation.Arithmetic (Sum, (~-), abs)
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic (Sum, (~+), (~-), (~*), (~/), abs, Constant)
 
 import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
@@ -316,11 +317,11 @@ and will be filtered out by chopAtZeroCrossingsRSig using allEqual.
 This allows for consistency with [1,0,0,-1]
 where we actually want to count two crossings.
 -}
-checkZeroCrossing :: (RealFrac a) => a -> a -> Maybe a
+checkZeroCrossing :: (Ord a, Constant a) => a -> a -> Maybe a
 checkZeroCrossing x0 x1 =
-   toMaybe (compare x0 0 /= compare x1 0) (-x0/(x1-x0))
+   toMaybe (compare x0 Arith.zero /= compare x1 Arith.zero) (x0~/(x0~-x1))
 
-multiZeroCrossings :: (RealFrac a) => [a] -> [a] -> Map a IntSet
+multiZeroCrossings :: (Ord a, Constant a) => [a] -> [a] -> Map a IntSet
 multiZeroCrossings xs ys =
    Map.fromListWith IntSet.union $ catMaybes $
    zipWith (fmap . flip (,) . IntSet.singleton) [0..] $
@@ -333,18 +334,18 @@ multiZeroCrossings xs ys =
 This version touches more elements than necessary
 but I hope that it is easier to fuse.
 -}
-clearAt :: Num a => IntSet -> [a] -> [a]
-clearAt ns = zipWith (\i -> if' (IntSet.member i ns) 0) [0..]
+clearAt :: (Constant a) => IntSet -> [a] -> [a]
+clearAt ns = zipWith (\i -> if' (IntSet.member i ns) Arith.zero) [0..]
 
-interpolate :: (Num a) => a -> a -> a -> a
-interpolate i x y = (1-i)*x + i*y
+interpolate :: (Constant a) => a -> a -> a -> a
+interpolate i x y = (Arith.fromInteger 1~-i)~*x ~+ i~*y
 
 {-
 clearAt is used to insert exact zeros
 where we detected zero crossings.
 If you compute with exact number types, clearAt can be omitted.
 -}
-sample :: (RealFrac a) => (a, IntSet) -> [a] -> [a] -> [a]
+sample :: (Constant a) => (a, IntSet) -> [a] -> [a] -> [a]
 sample (i,ns) xs ys = clearAt ns $ zipWith (interpolate i) xs ys
 
 expandIntervals :: (a -> b) -> (a -> a -> [b]) -> [a] -> [b]
@@ -366,7 +367,7 @@ removeDuplicates :: (Eq b) => (a -> b) -> [a] -> [a]
 removeDuplicates f = map NonEmpty.head . NonEmptyM.groupBy (equating f)
 
 
-chopAtZeroCrossings :: (RealFrac a) => [(a, [a])] -> [[(a, [a])]]
+chopAtZeroCrossings :: (Constant a, Ord a) => [(a, [a])] -> [[(a, [a])]]
 chopAtZeroCrossings =
    map (map snd) .
    ListHT.segmentBefore fst .
@@ -380,7 +381,7 @@ chopAtZeroCrossings =
          Map.toAscList $
          multiZeroCrossings xs ys)
 
-zeroCrossingsPerInterval :: (RealFrac a) => [[a]] -> [[[a]]]
+zeroCrossingsPerInterval :: (Constant a, Ord a) => [[a]] -> [[[a]]]
 zeroCrossingsPerInterval =
    ListHT.mapAdjacent
       (\xs ys ->
@@ -390,7 +391,7 @@ zeroCrossingsPerInterval =
          ys :
          [])
 
-chopAtZeroCrossingsRSig :: (RealFrac a) => RSigX a -> [RSigX a]
+chopAtZeroCrossingsRSig :: (Constant a, Ord a) => RSigX a -> [RSigX a]
 chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    map (mapPair (TC . Data, TC . Data)) $
    map unzip $
@@ -400,7 +401,7 @@ chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    zip times vectorSignal
 
 chopAtZeroCrossingsPowerRecord ::
-   (V.Convert [] v, V.Storage v a, RealFrac a, Ord node) =>
+   (V.Convert [] v, V.Storage v a, Constant a, Ord a, Ord node) =>
    PowerRecord node [] a -> Sequ.List (PowerRecord node v a)
 chopAtZeroCrossingsPowerRecord rSig =
    Sequ.fromLengthList $
@@ -494,7 +495,7 @@ instance (Ord a) => Monoid (IntPattern a) where
       in  IntPattern $ go pa pb
 
 intPattern ::
-   (V.Storage v a, V.FromList v, RealFrac a) =>
+   (V.Storage v a, V.FromList v, Constant a, Ord a) =>
    v a -> IntPattern a
 intPattern =
    IntPattern . snd .
@@ -534,7 +535,7 @@ instance
       in  Pattern $ go pa pb
 
 pattern ::
-   (V.Storage v a, V.Storage v (), V.FromList v, RealFrac a) =>
+   (V.Storage v a, V.Storage v (), V.FromList v, Constant a, Ord a) =>
    v a -> Pattern v a
 pattern =
    Pattern .
@@ -573,7 +574,7 @@ chopVectorInterpolate ::
     NonEmptyC.Empty v, NonEmptyC.Cons v,
     V.Singleton v, V.SplitMatch v,
     V.Storage v a, V.Storage v (), V.Core v ~ v,
-    Num a) =>
+    Constant a) =>
    Pattern v a -> v a -> [Chunk v a]
 chopVectorInterpolate (Pattern p) =
    let go [] (NonEmpty.Cons v []) = [v]
@@ -605,7 +606,7 @@ chopVectorInterpolate2 ::
     NonEmptyC.Empty v, NonEmptyC.Cons v,
     V.Singleton v, V.SplitMatch v,
     V.Storage v a, V.Storage v (), V.Core v ~ v,
-    Num a) =>
+    Constant a) =>
    Pattern v a -> v a -> [Chunk2 v a]
 chopVectorInterpolate2 (Pattern p) =
    let go [] (NonEmpty.Cons v []) = [NonEmpty.mapTail checkedFetch v]  -- we called 'flatten' in the last round, maybe too early
@@ -630,7 +631,7 @@ chopVectorContainer ::
     V.SplitMatch v, V.Singleton v,
     V.Storage v a, V.Storage v (), V.Core v ~ v,
     Trav.Traversable f,
-    RealFrac a) =>
+    Constant a, Ord a) =>
    f (v a) -> [f (Chunk v a)]
 chopVectorContainer m =
    let p = Fold.foldMap pattern m
@@ -653,7 +654,7 @@ chopSignal ::
     NonEmptyC.Empty v, NonEmptyC.Cons v,
     V.SplitMatch v, V.Singleton v,
     V.Storage v a, V.Storage v (), V.Core v ~ v,
-    Num a) =>
+    Constant a) =>
    Pattern v a ->
    TC S.Signal (Typ A t Tt) (Data (v :> Nil) a) ->
    [TC S.Signal (Typ A t Tt) (Data (Chunk v :> Nil) a)]
@@ -665,7 +666,7 @@ chopRecord ::
     V.FromList v, V.DiffLength v,
     V.Length v, V.SplitMatch v, V.Singleton v,
     V.Storage v a, V.Storage v (), V.Core v ~ v,
-    RealFrac a) =>
+    Constant a, Ord a) =>
    PowerRecord node v a ->
    Sequ.List (PowerRecord node (Chunk v) a)
 chopRecord (Record t m) =
