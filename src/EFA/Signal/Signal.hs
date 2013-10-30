@@ -1623,7 +1623,7 @@ etaDistribution1D interval offs dtime  ein eout etrigger  = (pDist, einDist, eou
 
 
 -- | Calculate an efficiency Time Signal from two Power time signals,
--- | pSign >= 0 means eta=p2/p1 else p1/p2 // PSign is usually p1 or p2
+-- | pSign >= 0 means eta=p2/p1 else p1/p2 // Positive is usually p1 or p2
 calcEtaWithSign :: (SV.Storage v1 d1,
                     SV.Storage v1 (d1, (d1, d1)),
                     Constant d1,

@@ -14,7 +14,7 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.Record (Record(Record), PowerRecord, FlowRecord)
 
 import EFA.Signal.Base
-          (Sign(PSign, NSign, ZSign))
+          (Sign(Positive, Negative, Zero))
 import EFA.Signal.Signal
           (TC(TC), TSigL, TSamp, PSamp, PSigL,
            DTSamp, PSamp2LL, Samp, Samp1L,
@@ -165,10 +165,10 @@ stepDetect  (t1,ps1) (t2,ps2) = f
 -- | Function to detect and classify a step over one signal
 stepX :: PSamp -> PSamp -> Samp (Typ A STy Tt) StepType
 stepX p1 p2
-   | S.sign p1== toSample ZSign && S.sign p2 /= toSample ZSign = toSample LeavesZeroStep -- signal leaves zero
-   | S.sign p1/=toSample ZSign && S.sign p2 == toSample ZSign = toSample BecomesZeroStep -- signal becomes zero
-   | S.sign p1==toSample PSign && S.sign p2 == toSample NSign = toSample ZeroCrossingStep
-   | S.sign p1==toSample NSign && S.sign p2 == toSample PSign = toSample ZeroCrossingStep
+   | S.sign p1== toSample Zero && S.sign p2 /= toSample Zero = toSample LeavesZeroStep -- signal leaves zero
+   | S.sign p1/=toSample Zero && S.sign p2 == toSample Zero = toSample BecomesZeroStep -- signal becomes zero
+   | S.sign p1==toSample Positive && S.sign p2 == toSample Negative = toSample ZeroCrossingStep
+   | S.sign p1==toSample Negative && S.sign p2 == toSample Positive = toSample ZeroCrossingStep
    | otherwise = toSample NoStep  -- nostep
 
 
@@ -229,8 +229,8 @@ calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)
 
                  -- | Zero crossing time per signal, if zero crossing happens otherwise empty
                  h2 :: PSamp -> PSamp -> TZeroSamp
-                 h2 p1 p2 | S.sign p1 == toSample PSign && S.sign p2 == toSample NSign = calcZeroTime (t1,p1) (t2,p2)
-                 h2 p1 p2 | S.sign p1 == toSample NSign && S.sign p2 == toSample PSign = calcZeroTime (t1,p1) (t2,p2)
+                 h2 p1 p2 | S.sign p1 == toSample Positive && S.sign p2 == toSample Negative = calcZeroTime (t1,p1) (t2,p2)
+                 h2 p1 p2 | S.sign p1 == toSample Negative && S.sign p2 == toSample Positive = calcZeroTime (t1,p1) (t2,p2)
                  h2 _  _ = toSample NoCrossing
 
 -----------------------------------------------------------------------------------

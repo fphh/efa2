@@ -18,7 +18,7 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.Record (Record(Record), FlowRecord)
 import EFA.Signal.Signal (fromScalar)
 import EFA.Signal.Data (Data, Nil, (:>))
-import EFA.Signal.Base (Sign(PSign, NSign, ZSign))
+import EFA.Signal.Base (Sign(Positive, Negative, Zero))
 
 import EFA.Equation.Result (Result(Determined, Undetermined))
 import EFA.Equation.Arithmetic (Sum, Constant)
@@ -59,15 +59,15 @@ flowTopologyFromRecord topo (Record time fs) =
              normal   = look $ XIdx.ppos idx1 idx2
              opposite = look $ XIdx.ppos idx2 idx1
          in  case fromScalar $ Signal.sign $ Signal.sum normal of
-                PSign ->
+                Positive ->
                    Map.singleton
                       (Graph.EDirEdge $ DirEdge idx1 idx2)
                       (Just $ Flow {flowOut = normal, flowIn = opposite})
-                NSign ->
+                Negative ->
                    Map.singleton
                       (Graph.EDirEdge $ DirEdge idx2 idx1)
                       (Just $ Flow {flowOut = Signal.neg opposite, flowIn = Signal.neg normal})
-                ZSign ->
+                Zero ->
                    Map.singleton
                       (Graph.EUnDirEdge $ unDirEdge idx1 idx2)
                       Nothing) $
