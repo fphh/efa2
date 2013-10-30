@@ -312,55 +312,6 @@ makePics eqs tabEta socDrive = (state, optWater, optGas, etaSysMax)
 
 {-
 
--- Alternative Approach to get StateFlowGraph Data
-
-stateFlow2SeqFlow :: (Ord node) => Topo.StateFlowGraph node -> Topo.SeqFlowGraph node
-stateFlow2SeqFlow = Graph.ixmap f g
-  where f :: Idx.AugNode Idx.State node -> Idx.AugNode Idx.Section node
-        f (Idx.PartNode Idx.Exit x) = Idx.PartNode Idx.Exit x
-        f (Idx.PartNode (Idx.NoExit Idx.Init) x) =
-          Idx.PartNode (Idx.NoExit Idx.Init) x
-        f (Idx.PartNode (Idx.NoExit (Idx.NoInit (Idx.State i))) x) =
-          Idx.PartNode (Idx.NoExit (Idx.NoInit (Idx.Section i))) x
-
-        g :: Topo.FlowEdge Graph.EitherEdge (Idx.AugNode Idx.State node) ->
-             Topo.FlowEdge Graph.EitherEdge (Idx.AugNode Idx.Section node)
-        g = undefined
-
-
-stateEnv2SequEnv :: (Ord node) => StFlEnv.Complete node a v -> SeqFlow.Graph node a v
-stateEnv2SequEnv (StFlEnv.Complete scal sig) =
-  let StFlEnv.Scalar a b c d = scal
-      StFlEnv.Signal u v w x y z = sig
-      scalNew = EqEnv.Scalar
-                  Map.empty
-                  Map.empty
-                  (Map.mapKeys f a)
-                  (Map.mapKeys g b)
-                  (Map.mapKeys h c)
-                  undefined
-
-      f (Idx.ForNode (Idx.StEnergy (Idx.StorageEdge
-          (Idx.NoInit (Idx.State i))
-          (Idx.NoExit (Idx.State j)))) b) =
-        (Idx.ForNode (Idx.StEnergy (Idx.StorageEdge
-          (Idx.NoInit (Idx.Section i))
-          (Idx.NoExit (Idx.Section j)))) b)
-
-      g (Idx.ForNode (Idx.StX (Idx.StorageTrans
-          (Idx.NoExit (Idx.NoInit (Idx.State i)))
-          (Idx.NoExit (Idx.NoInit (Idx.State j))))) b) =
-        (Idx.ForNode (Idx.StX (Idx.StorageTrans
-          (Idx.NoExit (Idx.NoInit (Idx.Section i)))
-          (Idx.NoExit (Idx.NoInit (Idx.Section j))))) b)
-
-      h = undefined
-
-  in EqEnv.Complete scalNew undefined
--}
-
-{-
-
 main :: IO ()
 main = do
 
