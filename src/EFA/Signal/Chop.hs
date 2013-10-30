@@ -66,28 +66,6 @@ data EventType = LeftEvent
 -- | The resulting sections which have zero time duration are removed
 
 
-{-
-separateUncleanSections :: (Num d,
-                          V.Storage v d,
-                          V.Singleton v,
-                          SB.BSum d,
-                          V.Walker v,
-                          Ord d) =>
-                         (Sequ, Sequ.List (PowerRecord id v d) , Sequ.List (FlowRecord id v d)) ->
-                          ((Sequ, Sequ.List (PowerRecord id v d), Sequ.List (FlowRecord id v d)),
-                          (Sequ, Sequ.List(PowerRecord id v d),  Sequ.List (FlowRecord id v d)),
-                          (Sequ, Sequ.List(PowerRecord id v d),  Sequ.List (FlowRecord id v d)))
-
-separateUncleanSections  (xs, ys, zs) =
-  (Sequ.filter3 f (xs, ys, zs),
-   Sequ.filter3 g (xs, ys, zs),
-   Sequ.filter3 h (xs, ys, zs))
-   where  f (_,q) = q == Flow.Clean
-          g (_,q) = q == Flow.Dirty
-          h (_,q) = q == Flow.Wrong
--}
-
-
 makeSequence ::
    (Ord node) =>
    PowerRecord node [] Double ->
