@@ -189,8 +189,8 @@ list = idxList $
   zip titleList
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
-f :: (Num a, Show a, ToTable sequ) =>
-  (a, ([Char], (PowerRecord Node [] Double, sequ))) -> IO ()
+f :: (ToTable sequ) =>
+  (Int, ([Char], (PowerRecord Node [] Double, sequ))) -> IO ()
 f (idx, (title, (pRec, sq))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx+1) ++ ": " ++ title
