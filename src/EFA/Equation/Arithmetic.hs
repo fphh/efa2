@@ -9,7 +9,7 @@ import qualified UniqueLogic.ST.TF.System as Sys
 import Data.Ratio (Ratio)
 
 import qualified Prelude as P
-import Prelude hiding (negate, recip, fromInteger, fromRational)
+import Prelude hiding (negate, recip, abs, fromInteger, fromRational)
 
 
 infixl 6 ~+, ~-
@@ -187,3 +187,7 @@ x^!n =
    in  if n<=0
          then error "exponent must be positive"
          else go n x
+
+
+abs :: (Sum a, Ord a) => a -> a
+abs x = max x $ negate x
