@@ -59,7 +59,7 @@ type Param2 = NonEmpty.T (NonEmpty.T Empty.T)
 type Param2x2 = Sweep.Pair Param2 Param2
 
 solve ::
-  (Ord a, Fractional a, Show a, Arith.Constant a) =>
+  (Ord a, Show a, Arith.Constant a) =>
   EnvResultData a ->
   EtaAssignMap System.Node ->
   Map String (a -> a) ->
