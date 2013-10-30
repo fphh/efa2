@@ -1526,23 +1526,6 @@ concat ::   (SV.Storage v2 (v1 (Apply c d)),
            TC s t (Data (v2 :> v1 :> c) d) -> TC s t (Data (v1 :> c) d)
 concat (TC x) = TC (D.concat x)
 
- {-
--- | Calculate an efficiency Time Signal from two Power time signals,
--- | p1 >= 0 means eta=p2/p1 else p1/p2
-calcEta ::  (SV.Storage v1 d1,
-         SV.Storage v1 (d1, d1),
-         SV.Zipper v1, SV.Walker v1,Ord d1,Num d1, Product d1) =>
-        TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) ->
-        TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) ->
-        TC Signal (Typ A N Tt) (Data (v1 :> Nil) d1)
-calcEta p1 p2 = tmap f $ zip p1 p2
-  where f :: (Ord d1,Num d1,Product d1)  => TC Sample (Typ A P Tt) (Data Nil (d1,d1)) ->
-             TC Sample (Typ A N Tt) (Data Nil d1)
-        f xy = if x P.>= (toSample 0)
-               then y./x
-               else x./y
-          where (x,y) = unzip xy
--}
 
 -- * Distributions
 
@@ -1600,17 +1583,6 @@ combineWith f xs ys =
   fromList $ liftA2 f (toList xs) (toList ys)
 
 
-{-calcDistributionValues ::
-  (Num d,
-   SV.Walker v,
-   SV.Storage v ([Class d], [SignalIdx]),
-   Eq d,
-   SV.Storage v d,
-   SV.Lookup v,
-   Sum d) =>
-  UTDistr v ([Class d],[SignalIdx]) ->
-  TC FSignal t (Data (v :> Nil) d) ->
-  TC FDistrib t (Data (v :> Nil) d)-}
 calcDistributionValues :: (Eq d1, SV.Walker v, SV.Storage v d1, SV.Lookup v,
                            Constant d1, D.Storage c d1, D.Storage c (a, [SignalIdx]),
                            D.Map c, FoldType s, SumType s ~ Scalar) =>
