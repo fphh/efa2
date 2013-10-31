@@ -20,6 +20,7 @@ import Control.Applicative (liftA2)
 
 import qualified Data.Traversable as Trav
 import qualified Data.Map as Map; import Data.Map (Map)
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Vector as V
 import Data.Traversable (Traversable, traverse)
@@ -46,6 +47,10 @@ instance (Foldable f, Foldable g) => Foldable (Pair f g) where
 
 instance (Traversable f, Traversable g) => Traversable (Pair f g) where
   traverse f (Pair xs ys) = liftA2 Pair (traverse f xs) (traverse f ys)
+
+instance (NonEmptyC.Zip f, NonEmptyC.Zip g) => NonEmptyC.Zip (Pair f g) where
+  zipWith f (Pair x0 y0) (Pair x1 y1) =
+     Pair (NonEmptyC.zipWith f x0 x1) (NonEmptyC.zipWith f y0 y1)
 
 type Points f g v = Pair f g [v]
 
