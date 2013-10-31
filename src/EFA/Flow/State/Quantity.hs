@@ -92,7 +92,7 @@ import qualified Data.Set as Set
 import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
-import Control.Monad (mplus, (<=<))
+import Control.Monad ((<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Maybe (fromMaybe)
@@ -548,12 +548,7 @@ lookupAutoDir ::
    (idx node -> Idx.TopologyEdge node) ->
    Idx.InState idx node -> Graph node a v -> Maybe v
 lookupAutoDir fieldOut fieldIn unpackIdx =
-   withTopology $ \idx topo ->
-      case unpackIdx idx of
-         se ->
-            mplus
-               (FlowTopoPlain.lookupEdge fieldOut se topo)
-               (FlowTopoPlain.lookupEdge fieldIn (Idx.flip se) topo)
+   withTopology $ FlowTopo.lookupAutoDir fieldOut fieldIn unpackIdx
 
 
 lookupEta :: (Ord node) => StateIdx.Eta node -> Graph node a v -> Maybe v

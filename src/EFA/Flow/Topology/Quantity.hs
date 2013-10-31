@@ -34,6 +34,8 @@ module EFA.Flow.Topology.Quantity (
    lookupDTime,
    lookupSums,
 
+   lookupAutoDir,
+
    Lookup, lookup,
 
    fold, foldMap,
@@ -156,25 +158,34 @@ toAssignMap =
 lookupPower ::
    (Ord node) => Idx.Power node -> Section node v -> Maybe v
 lookupPower =
-   lookupAutoDir flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
+   lookupAutoDirSection flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
 
 lookupEnergy ::
    (Ord node) => Idx.Energy node -> Section node v -> Maybe v
 lookupEnergy =
-   lookupAutoDir flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
+   lookupAutoDirSection flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
 
 lookupX ::
    (Ord node) => Idx.X node -> Section node v -> Maybe v
 lookupX =
-   lookupAutoDir flowXOut flowXIn (\(Idx.X se) -> se)
+   lookupAutoDirSection flowXOut flowXIn (\(Idx.X se) -> se)
+
+lookupAutoDirSection ::
+   Ord node =>
+   (Flow v -> v) ->
+   (Flow v -> v) ->
+   (idx -> Idx.TopologyEdge node) ->
+   idx -> Section node v -> Maybe v
+lookupAutoDirSection fieldOut fieldIn unpackIdx idx =
+   lookupAutoDir fieldOut fieldIn unpackIdx idx . FlowTopo.topology
 
 lookupAutoDir ::
    Ord node =>
    (Flow v -> v) ->
    (Flow v -> v) ->
    (idx -> Idx.TopologyEdge node) ->
-   idx -> Section node v -> Maybe v
-lookupAutoDir fieldOut fieldIn unpackIdx idx (FlowTopo.Section _lab topo) =
+   idx -> Topology node v -> Maybe v
+lookupAutoDir fieldOut fieldIn unpackIdx idx topo =
    case unpackIdx idx of
       se ->
          mplus

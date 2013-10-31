@@ -85,7 +85,7 @@ import qualified EFA.Utility.Map as MapU
 import EFA.Utility.Map (Caller)
 
 import qualified Control.Monad.Trans.Writer as MW
-import Control.Monad (mplus, (<=<))
+import Control.Monad ((<=<))
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
 import qualified Data.Map as Map; import Data.Map (Map)
@@ -279,21 +279,7 @@ lookupAutoDir ::
    (idx node -> Idx.TopologyEdge node) ->
    Idx.InSection idx node -> Graph node a v -> Maybe v
 lookupAutoDir fieldOut fieldIn unpackIdx =
-   withTopology $ lookupAutoDirTopology fieldOut fieldIn unpackIdx
-
-lookupAutoDirTopology ::
-   Ord node =>
-   (Flow v -> v) ->
-   (Flow v -> v) ->
-   (idx -> Idx.TopologyEdge node) ->
-   idx -> Topology node v -> Maybe v
-lookupAutoDirTopology fieldOut fieldIn unpackIdx =
-   \idx topo ->
-      case unpackIdx idx of
-         se ->
-            mplus
-               (FlowTopoPlain.lookupEdge fieldOut se topo)
-               (FlowTopoPlain.lookupEdge fieldIn (Idx.flip se) topo)
+   withTopology $ FlowTopo.lookupAutoDir fieldOut fieldIn unpackIdx
 
 
 lookupEta :: (Ord node) => SeqIdx.Eta node -> Graph node a v -> Maybe v
