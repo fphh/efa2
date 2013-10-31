@@ -337,12 +337,12 @@ carryBondFromEdge :: CarryEdge sec node -> CarryBond sec node
 carryBondFromEdge (CarryEdge s0 s1) =
    CarryBond (allowExit s0) (allowInit s1)
 
-withCarryEdgeFromTrans ::
+withCarryEdgeFromBond ::
    Ord part =>
    (CarryEdge part node -> a) ->
    (CarryEdge part node -> a) ->
    CarryBond part node -> a
-withCarryEdgeFromTrans fIn fOut (CarryBond stFrom stTo) =
+withCarryEdgeFromBond fIn fOut (CarryBond stFrom stTo) =
    case (stFrom, stTo) of
       (NoExit from, Exit) ->
          fOut $ CarryEdge from Exit

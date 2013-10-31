@@ -592,7 +592,7 @@ lookupStX ::
    (Ord node) => StateIdx.StX node -> Graph node a v -> Maybe a
 lookupStX (Idx.ForStorage (Idx.StX se) node) g = do
    sgr <- Map.lookup node $ storages g
-   Idx.withCarryEdgeFromTrans
+   Idx.withCarryEdgeFromBond
       (fmap carryXIn  . flip Storage.lookupEdge sgr)
       (fmap carryXOut . flip Storage.lookupEdge sgr)
       se
