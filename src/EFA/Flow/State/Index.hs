@@ -21,8 +21,8 @@ type StOutSum node  = Idx.ForNode (Idx.StOutSum Idx.State) node
 
 type PPos = Idx.PPos
 
-type StorageEdge  = Idx.StorageEdge  Idx.State
-type StorageTrans = Idx.StorageTrans Idx.State
+type CarryEdge = Idx.CarryEdge Idx.State
+type CarryBond = Idx.CarryBond Idx.State
 
 
 energy :: Idx.State -> node -> node -> Energy node
@@ -30,19 +30,19 @@ power :: Idx.State -> node -> node -> Power node
 eta :: Idx.State -> node -> node -> Eta node
 x :: Idx.State -> node -> node -> X node
 
-energy    = structureEdge Idx.Energy
-power     = structureEdge Idx.Power
-eta       = structureEdge Idx.Eta
-x         = structureEdge Idx.X
+energy    = topologyEdge Idx.Energy
+power     = topologyEdge Idx.Power
+eta       = topologyEdge Idx.Eta
+x         = topologyEdge Idx.X
 
-structureEdge ::
-   (Idx.StructureEdge node -> idx node) ->
+topologyEdge ::
+   (Idx.TopologyEdge node -> idx node) ->
    Idx.State -> node -> node -> Idx.InState idx node
-structureEdge mkIdx s from to =
-   Idx.InPart s $ mkIdx $ Idx.StructureEdge from to
+topologyEdge mkIdx s from to =
+   Idx.InPart s $ mkIdx $ Idx.TopologyEdge from to
 
 stx ::
-   Idx.PartNode (Idx.StorageTrans sec node) node ->
+   Idx.PartNode (Idx.CarryBond sec node) node ->
    Idx.ForNode (Idx.StX sec) node
 stx = Idx.forNode Idx.StX
 
@@ -55,7 +55,7 @@ sum sec dir = Idx.InPart sec . Idx.Sum dir
 
 
 ppos :: node -> node -> Idx.PPos node
-ppos a b = Idx.PPos $ Idx.StructureEdge a b
+ppos a b = Idx.PPos $ Idx.TopologyEdge a b
 
 powerFromPPos :: Idx.State -> Idx.PPos node -> Power node
 powerFromPPos state (Idx.PPos e) = Idx.InPart state $ Idx.Power e

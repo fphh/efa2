@@ -194,7 +194,7 @@ lookupStruct ::
    (Flow a -> a) ->
    (Flow a -> a) ->
    CumIdx.Direction ->
-   CumIdx.StructureEdge node ->
+   CumIdx.TopologyEdge node ->
    Graph node a -> Maybe a
 lookupStruct fieldOut fieldIn dir =
    lookupEdge
@@ -212,11 +212,11 @@ lookupDTime (CumIdx.DTime se) = lookupEdge flowDTime se
 lookupEdge ::
    Ord n =>
    (el -> a) ->
-   CumIdx.StructureEdge n ->
+   CumIdx.TopologyEdge n ->
    Graph.Graph n Graph.DirEdge nl el ->
    Maybe a
 lookupEdge f se =
-   fmap f . Graph.lookupEdge (Topo.dirEdgeFromStructureEdge se)
+   fmap f . Graph.lookupEdge (Topo.dirEdgeFromTopologyEdge se)
 
 
 lookupSum :: (Ord node) => CumIdx.Sum node -> Graph node a -> Maybe a
@@ -278,7 +278,7 @@ mapGraphWithVar f =
    Graph.mapEdgeWithKey
       (\e ->
          liftA2 f
-            (flowVars <*> pure (Topo.structureEdgeFromDirEdge e)))
+            (flowVars <*> pure (Topo.topologyEdgeFromDirEdge e)))
 
 
 sumsVars :: Sums (node -> CumVar.Any node)
@@ -288,7 +288,7 @@ sumsVars =
       sumIn  = Just $ CumVar.index . CumIdx.Sum CumIdx.In
    }
 
-flowVars :: Flow (CumIdx.StructureEdge node -> CumVar.Any node)
+flowVars :: Flow (CumIdx.TopologyEdge node -> CumVar.Any node)
 flowVars =
    Flow {
       flowPowerOut = CumVar.index . CumIdx.Power CumIdx.Out,

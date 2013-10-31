@@ -172,7 +172,7 @@ lookupStruct ::
    Ord node =>
    (Flow v -> v) ->
    (Flow v -> v) ->
-   (idx -> Idx.StructureEdge node) ->
+   (idx -> Idx.TopologyEdge node) ->
    idx -> Section node v -> Maybe v
 lookupStruct fieldOut fieldIn unpackIdx idx (FlowTopo.Section _lab topo) =
    case unpackIdx idx of
@@ -251,7 +251,7 @@ mapFlowWithVar ::
    Graph.DirEdge node -> Flow v0 -> Flow v1
 mapFlowWithVar f e =
    liftA2 f
-      (flowVars <*> pure (Topo.structureEdgeFromDirEdge e))
+      (flowVars <*> pure (Topo.topologyEdgeFromDirEdge e))
 
 
 sectionFromPlain ::
@@ -355,7 +355,7 @@ traverseSums f (Sums i o) =
       (traverse f o)
 
 
-flowVars :: Flow (Idx.StructureEdge node -> Var.Signal node)
+flowVars :: Flow (Idx.TopologyEdge node -> Var.Signal node)
 flowVars =
    Flow {
       flowPowerOut = Var.index . Idx.Power,

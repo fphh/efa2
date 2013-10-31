@@ -13,9 +13,9 @@ import Prelude hiding (sequence)
 
 
 type
-   Storages node storageLabel boundaryLabel storageEdgeLabel =
+   Storages node storageLabel boundaryLabel carryEdgeLabel =
       Map node
-         (Storage.Graph Idx.Section node storageLabel storageEdgeLabel,
+         (Storage.Graph Idx.Section node storageLabel carryEdgeLabel,
           Map Idx.Boundary boundaryLabel)
 
 type
@@ -26,9 +26,9 @@ type
 data
    Graph node structEdge
          sectionLabel nodeLabel storageLabel boundaryLabel
-         structLabel storageEdgeLabel =
+         structLabel carryEdgeLabel =
       Graph {
-         storages :: Storages node storageLabel boundaryLabel storageEdgeLabel,
+         storages :: Storages node storageLabel boundaryLabel carryEdgeLabel,
          sequence :: Sequence node structEdge sectionLabel nodeLabel structLabel
       }
    deriving (Eq)

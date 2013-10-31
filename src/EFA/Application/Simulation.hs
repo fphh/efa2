@@ -34,7 +34,7 @@ import Data.Map (Map)
 import Data.Monoid((<>))
 
 
-type EtaAssignMap node = Map (Idx.StructureEdge node) (String, String)
+type EtaAssignMap node = Map (Idx.TopologyEdge node) (String, String)
 
 solve :: (Node.C node,
           Eq (v a), Show (v a),
@@ -98,7 +98,7 @@ makeEtaFuncGiven topo etaAssign etaFunc =
 
 etaFromEdge ::
    Node.C node =>
-   FlowTopo.Section node v -> Idx.StructureEdge node -> Idx.Eta node
+   FlowTopo.Section node v -> Idx.TopologyEdge node -> Idx.Eta node
 etaFromEdge topo se =
    let etaF = Idx.Eta se
        etaB = Idx.Eta $ Idx.flip se

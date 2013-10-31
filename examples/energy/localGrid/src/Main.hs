@@ -172,14 +172,14 @@ main = do
           Draw.title ti .
           Draw.bgcolour c .
           Draw.seqFlowGraph
-             (Draw.hideStorageEdge $
+             (Draw.hideCarryEdge $
               Draw.absoluteVariable Draw.optionsDefault)
       drawAbs (Record.Name ti) c =
           Draw.xterm .
           Draw.title ti .
           Draw.bgcolour c .
           Draw.seqFlowGraph
-             (Draw.hideStorageEdge $
+             (Draw.hideCarryEdge $
               Draw.deltaVariable Draw.optionsDefault)
 
   concurrentlyMany_ $ [

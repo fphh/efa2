@@ -128,8 +128,8 @@ instance StorageQuant.Carry Carry where
       Carry {
          carryMaxEnergy = Var.scalarIndex . Idx.MaxEnergy,
          carryEnergy = Var.scalarIndex . Idx.StEnergy,
-         carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
-         carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
+         carryXOut = Var.scalarIndex . Idx.StX . Idx.carryBondFromEdge,
+         carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.carryBondFromEdge
       }
 
 
@@ -276,7 +276,7 @@ lookupStruct ::
    (Ord node) =>
    (Flow v -> v) ->
    (Flow v -> v) ->
-   (idx node -> Idx.StructureEdge node) ->
+   (idx node -> Idx.TopologyEdge node) ->
    Idx.InSection idx node -> Graph node a v -> Maybe v
 lookupStruct fieldOut fieldIn unpackIdx =
    withTopology $ lookupStructTopology fieldOut fieldIn unpackIdx
@@ -285,7 +285,7 @@ lookupStructTopology ::
    Ord node =>
    (Flow v -> v) ->
    (Flow v -> v) ->
-   (idx -> Idx.StructureEdge node) ->
+   (idx -> Idx.TopologyEdge node) ->
    idx -> Topology node v -> Maybe v
 lookupStructTopology fieldOut fieldIn unpackIdx =
    \idx topo ->
@@ -345,7 +345,7 @@ lookupStX ::
    (Ord node) => SeqIdx.StX node -> Graph node a v -> Maybe a
 lookupStX (Idx.ForNode (Idx.StX se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
-   Idx.withStorageEdgeFromTrans
+   Idx.withCarryEdgeFromTrans
       (fmap carryXIn  . flip Storage.lookupEdge sgr)
       (fmap carryXOut . flip Storage.lookupEdge sgr)
       se
@@ -482,7 +482,7 @@ graphFromSections sq =
 storageMapFromList ::
    (Ord node, Unknown a) =>
    [Idx.Section] ->
-   [SeqIdx.StorageEdge node] ->
+   [SeqIdx.CarryEdge node] ->
    (Storage.Graph Idx.Section node a (Carry a), Map Idx.Boundary a)
 storageMapFromList secs edges =
    (StorageQuant.graphFromList secs edges,

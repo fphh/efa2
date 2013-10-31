@@ -11,7 +11,7 @@ module EFA.Flow.Draw (
    Options, optionsDefault,
    absoluteVariable, deltaVariable,
    showVariableIndex, hideVariableIndex,
-   showStorageEdge, hideStorageEdge,
+   showCarryEdge, hideCarryEdge,
    showStorage, hideStorage,
    showEtaNode, hideEtaNode,
 
@@ -92,11 +92,11 @@ import Prelude hiding (sin, reverse, init, last, sequence, (.))
 
 
 
-structureEdgeColour :: Attribute
-structureEdgeColour = Color [RGB 0 0 200]
+topologyEdgeColour :: Attribute
+topologyEdgeColour = Color [RGB 0 0 200]
 
-storageEdgeColour :: Attribute
-storageEdgeColour = Color [RGB 200 0 0]
+carryEdgeColour :: Attribute
+carryEdgeColour = Color [RGB 200 0 0]
 
 contentEdgeColour :: Attribute
 contentEdgeColour = Color [RGB 0 200 0]
@@ -128,7 +128,7 @@ data Triple a = Triple a a a
 instance Foldable Triple where
    foldMap f (Triple pre eta suc) = f pre <> f eta <> f suc
 
-data StructureEdgeLabel =
+data TopologyEdgeLabel =
      HideEtaNode [Unicode]
    | ShowEtaNode (Triple [Unicode])
 
@@ -138,8 +138,8 @@ dotFromFlowGraph ::
    ([DotSubGraph T.Text], [DotEdge T.Text]) ->
    Map node
       ((Unicode, Unicode),
-       Map (Idx.StorageEdge part node) [Unicode]) ->
-   Map part (String, Graph node Graph.EitherEdge Unicode StructureEdgeLabel) ->
+       Map (Idx.CarryEdge part node) [Unicode]) ->
+   Map part (String, Graph node Graph.EitherEdge Unicode TopologyEdgeLabel) ->
    DotGraph T.Text
 dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
    dotDirGraph $
@@ -155,7 +155,7 @@ dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
          contentGraphs,
       nodeStmts = [],
       edgeStmts =
-         (dotFromStorageEdges $ fmap snd sts)
+         (dotFromCarryEdges $ fmap snd sts)
          ++
          contentEdges
    }
@@ -233,7 +233,7 @@ dotFromPartGraph ::
    (Part part, Node.C node) =>
    part ->
    (String,
-    Graph node Graph.EitherEdge Unicode StructureEdgeLabel) ->
+    Graph node Graph.EitherEdge Unicode TopologyEdgeLabel) ->
    DotSubGraph T.Text
 dotFromPartGraph current (subtitle, gr) =
    DotSG True (Just $ Str $ T.pack $ dotIdentFromPart current) $
@@ -246,7 +246,7 @@ dotFromPartGraph current (subtitle, gr) =
 
 dotNodesEdgesFromPartGraph ::
    Node.C node =>
-   Graph node Graph.EitherEdge Unicode StructureEdgeLabel ->
+   Graph node Graph.EitherEdge Unicode TopologyEdgeLabel ->
    ([DotNode T.Text], [DotEdge T.Text])
 dotNodesEdgesFromPartGraph gr =
    let (etaNodes,edges) =
@@ -256,9 +256,9 @@ dotNodesEdgesFromPartGraph gr =
                 let eo = orientFlowEdge e
                 in  case labels of
                        ShowEtaNode l ->
-                          mapFst (:[]) $ dotFromStructureEdgeEta eo l
+                          mapFst (:[]) $ dotFromTopologyEdgeEta eo l
                        HideEtaNode l ->
-                          ([], [dotFromStructureEdgeCompact eo l])) $
+                          ([], [dotFromTopologyEdgeCompact eo l])) $
           Graph.edgeLabels gr
    in  ((Map.elems $
          Map.mapWithKey dotFromNode $
@@ -333,57 +333,57 @@ dotFromBndNode n label =
       (dotIdentFromBndNode n)
       (nodeAttrs Node.Storage $ labelFromUnicode label)
 
-dotFromStructureEdgeCompact ::
+dotFromTopologyEdgeCompact ::
    (Node.C node) =>
    (DirEdge node, Viz.DirType, Order) ->
    [Unicode] -> DotEdge T.Text
-dotFromStructureEdgeCompact (DirEdge x y, dir, ord) label =
+dotFromTopologyEdgeCompact (DirEdge x y, dir, ord) label =
    DotEdge
       (dotIdentFromNode x)
       (dotIdentFromNode y)
       [labelFromLines $ order ord label,
-       Viz.Dir dir, structureEdgeColour]
+       Viz.Dir dir, topologyEdgeColour]
 
-dotFromStructureEdgeEta ::
+dotFromTopologyEdgeEta ::
    (Node.C node) =>
    (DirEdge node, Viz.DirType, Order) ->
    Triple [Unicode] ->
    (DotNode T.Text, [DotEdge T.Text])
-dotFromStructureEdgeEta (DirEdge x y, dir, ord) label =
+dotFromTopologyEdgeEta (DirEdge x y, dir, ord) label =
    let Triple pre eta suc = order ord label
        did = dotIdentFromEtaNode x y
    in  (DotNode did [labelFromLines eta],
         [DotEdge
             (dotIdentFromNode x) did
             [labelFromLines pre,
-             Viz.Dir dir, structureEdgeColour],
+             Viz.Dir dir, topologyEdgeColour],
          DotEdge
             did (dotIdentFromNode y)
             [labelFromLines suc,
-             Viz.Dir dir, structureEdgeColour]])
+             Viz.Dir dir, topologyEdgeColour]])
 
-dotFromStorageEdges ::
+dotFromCarryEdges ::
    (Node.C node, Part part) =>
-   Map node (Map (Idx.StorageEdge part node) [Unicode]) ->
+   Map node (Map (Idx.CarryEdge part node) [Unicode]) ->
    [DotEdge T.Text]
-dotFromStorageEdges =
+dotFromCarryEdges =
    fold .
    Map.mapWithKey
       (\node ->
          Map.elems .
          Map.mapWithKey
-            (\edge -> dotFromStorageEdge (Idx.ForNode edge node)))
+            (\edge -> dotFromCarryEdge (Idx.ForNode edge node)))
 
-dotFromStorageEdge ::
+dotFromCarryEdge ::
    (Node.C node, Part part) =>
-   Idx.ForNode (Idx.StorageEdge part) node ->
+   Idx.ForNode (Idx.CarryEdge part) node ->
    [Unicode] -> DotEdge T.Text
-dotFromStorageEdge e lns =
+dotFromCarryEdge e lns =
    DotEdge
-      (dotIdentFromAugNode $ Idx.storageEdgeFrom e)
-      (dotIdentFromAugNode $ Idx.storageEdgeTo   e)
+      (dotIdentFromAugNode $ Idx.carryEdgeFrom e)
+      (dotIdentFromAugNode $ Idx.carryEdgeTo   e)
       [labelFromLines lns, Viz.Dir Viz.Forward,
-       storageEdgeColour, Viz.Constraint True]
+       carryEdgeColour, Viz.Constraint True]
 
 dotFromContentEdge ::
    (Node.C node) =>
@@ -543,7 +543,7 @@ dotFromTopoEdge e lab =
          DotEdge
             (dotIdentFromNode x)
             (dotIdentFromNode y)
-            [ Viz.Dir Viz.NoDir, structureEdgeColour, labelFromUnicode lab ]
+            [ Viz.Dir Viz.NoDir, topologyEdgeColour, labelFromUnicode lab ]
 
 
 flowTopologies ::
@@ -649,7 +649,7 @@ data Options output =
    Options {
       optRecordIndex :: output -> output,
       optVariableIndex :: Bool,
-      optStorageEdge :: Bool,
+      optCarryEdge :: Bool,
       optStorage :: Bool,
       optEtaNode :: Bool
    }
@@ -659,14 +659,14 @@ optionsDefault =
    Options {
       optRecordIndex = id,
       optVariableIndex = False,
-      optStorageEdge = True,
+      optCarryEdge = True,
       optStorage = False,
       optEtaNode = False
    }
 
 absoluteVariable, deltaVariable,
    showVariableIndex, hideVariableIndex,
-   showStorageEdge, hideStorageEdge,
+   showCarryEdge, hideCarryEdge,
    showStorage, hideStorage,
    showEtaNode, hideEtaNode
    :: Format output => Options output -> Options output
@@ -682,8 +682,8 @@ hideVariableIndex opts = opts { optVariableIndex = False }
 {-
 If storage edges are shown then the subgraphs are not aligned vertically.
 -}
-showStorageEdge opts = opts { optStorageEdge = True }
-hideStorageEdge opts = opts { optStorageEdge = False }
+showCarryEdge opts = opts { optCarryEdge = True }
+hideCarryEdge opts = opts { optCarryEdge = False }
 
 showStorage opts = opts { optStorage = True }
 hideStorage opts = opts { optStorage = False }
@@ -706,7 +706,7 @@ flowTopology opts =
          guard False >>! FlowTopoQuant.sumIn sums) .
    Graph.mapEdgeWithKey
       (\edge flow ->
-         structureEdgeShow opts $
+         topologyEdgeShow opts $
          FlowTopoQuant.liftEdgeFlow
             (FlowTopoQuant.mapFlowWithVar (formatAssignSidesWithOpts opts))
             edge flow)
@@ -824,12 +824,12 @@ storageGraphShow ::
    Options output ->
    node ->
    Storage.Graph part node a (carry a) ->
-   ((output, output), Map (Idx.StorageEdge part node) [output])
+   ((output, output), Map (Idx.CarryEdge part node) [output])
 storageGraphShow opts node (Storage.Graph partMap edges) =
    ((stateNodeShow node $ Just $ PartMap.init partMap,
      stateNodeShow node $ Just $ PartMap.exit partMap),
-    if optStorageEdge opts
-      then Map.mapWithKey (storageEdgeShow opts node) edges
+    if optCarryEdge opts
+      then Map.mapWithKey (carryEdgeShow opts node) edges
       else Map.empty)
 
 stateNodeShow ::
@@ -845,15 +845,15 @@ stateNodeShow node msum =
                Node.Storage -> maybeToList $ fmap formatValue msum
                _ -> []
 
-storageEdgeShow ::
+carryEdgeShow ::
    (StorageQuant.Carry carry, StorageQuant.CarryPart carry ~ part,
     Format.Part part, Node.C node, FormatValue a, Format output) =>
    Options output ->
    node ->
-   Idx.StorageEdge part node ->
+   Idx.CarryEdge part node ->
    carry a ->
    [output]
-storageEdgeShow opts node edge carry =
+carryEdgeShow opts node edge carry =
    Fold.toList $
    StorageQuant.mapCarryWithVar (formatAssignWithOpts opts) node edge carry
 
@@ -864,25 +864,25 @@ structureSeqStateEdgeShow ::
    part ->
    Graph.EitherEdge node ->
    Maybe (FlowTopoQuant.Flow a) ->
-   StructureEdgeLabel
+   TopologyEdgeLabel
 structureSeqStateEdgeShow opts part edge flow =
-   structureEdgeShow opts $
+   topologyEdgeShow opts $
    FlowTopoQuant.liftEdgeFlow
       (FlowTopoQuant.mapFlowWithVar (formatAssignSidesWithOpts opts . Idx.InPart part))
       edge flow
 
-structureEdgeShow ::
+topologyEdgeShow ::
    Options Unicode ->
-   Maybe (FlowTopoQuant.Flow (Unicode, Unicode)) -> StructureEdgeLabel
-structureEdgeShow opts =
+   Maybe (FlowTopoQuant.Flow (Unicode, Unicode)) -> TopologyEdgeLabel
+topologyEdgeShow opts =
    if optEtaNode opts
-     then ShowEtaNode . structureEdgeShowEta
-     else HideEtaNode . structureEdgeShowCompact
+     then ShowEtaNode . topologyEdgeShowEta
+     else HideEtaNode . topologyEdgeShowCompact
 
-structureEdgeShowCompact ::
+topologyEdgeShowCompact ::
    (Format output) =>
    Maybe (FlowTopoQuant.Flow (output, output)) -> [output]
-structureEdgeShowCompact mlabels =
+topologyEdgeShowCompact mlabels =
    case fmap (fmap (uncurry Format.assign)) mlabels of
       Nothing -> []
       Just labels ->
@@ -893,10 +893,10 @@ structureEdgeShowCompact mlabels =
          FlowTopoQuant.flowEnergyIn labels :
          []
 
-structureEdgeShowEta ::
+topologyEdgeShowEta ::
    (Format output) =>
    Maybe (FlowTopoQuant.Flow (output, output)) -> Triple [output]
-structureEdgeShowEta mlabels =
+topologyEdgeShowEta mlabels =
    case mlabels of
       Nothing -> Triple [] [] []
       Just flow ->
@@ -951,7 +951,7 @@ dotFromCumEdge e hd label =
          DotEdge
             (dotIdentFromNode x) (dotIdentFromNode y)
             [labelFromLines $ hd : order ord label,
-             Viz.Dir dir, structureEdgeColour]
+             Viz.Dir dir, topologyEdgeColour]
 
 
 graph ::

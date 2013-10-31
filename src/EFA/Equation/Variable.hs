@@ -189,7 +189,7 @@ instance (Node.C node) => FormatValue (Signal node) where
          Sum idx -> formatValue idx
 
 
-instance Format.StructureIdx Signal where
+instance Format.TopologyIdx Signal where
    structureIdent (Idx.InPart _part var) = signalIdent var
 
 instance Format.StorageIdx (Scalar part) where

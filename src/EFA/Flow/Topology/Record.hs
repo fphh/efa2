@@ -98,7 +98,7 @@ sectionToPowerRecord (FlowTopoPlain.Section time topo) =
    Map.elems $
    Map.mapWithKey
       (\e flow ->
-         let se = Topo.structureEdgeFromDirEdge e
+         let se = Topo.topologyEdgeFromDirEdge e
          in  Map.fromList $
                 (Idx.PPos se, Signal.TC $ FlowTopo.flowPowerOut flow) :
                 (Idx.PPos $ Idx.flip se, Signal.TC $ FlowTopo.flowPowerIn flow) :

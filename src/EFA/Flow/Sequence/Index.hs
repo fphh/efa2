@@ -21,8 +21,8 @@ type StOutSum node  = Idx.ForNode (Idx.StOutSum Idx.Section) node
 
 type PPos = Idx.PPos
 
-type StorageEdge  = Idx.StorageEdge  Idx.Section
-type StorageTrans = Idx.StorageTrans Idx.Section
+type CarryEdge = Idx.CarryEdge Idx.Section
+type CarryBond = Idx.CarryBond Idx.Section
 
 
 energy :: Idx.Section -> node -> node -> Energy node
@@ -30,16 +30,16 @@ power :: Idx.Section -> node -> node -> Power node
 eta :: Idx.Section -> node -> node -> Eta node
 x :: Idx.Section -> node -> node -> X node
 
-energy    = structureEdge Idx.Energy
-power     = structureEdge Idx.Power
-eta       = structureEdge Idx.Eta
-x         = structureEdge Idx.X
+energy    = topologyEdge Idx.Energy
+power     = topologyEdge Idx.Power
+eta       = topologyEdge Idx.Eta
+x         = topologyEdge Idx.X
 
-structureEdge ::
-   (Idx.StructureEdge node -> idx node) ->
+topologyEdge ::
+   (Idx.TopologyEdge node -> idx node) ->
    Idx.Section -> node -> node -> Idx.InSection idx node
-structureEdge mkIdx s from to =
-   Idx.InPart s $ mkIdx $ Idx.StructureEdge from to
+topologyEdge mkIdx s from to =
+   Idx.InPart s $ mkIdx $ Idx.TopologyEdge from to
 
 
 dTime :: Idx.Section -> DTime node
@@ -65,23 +65,23 @@ stX ::
    (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
    from -> to -> node -> StX node
 
-maxEnergy = storageEdge Idx.MaxEnergy
-stEnergy  = storageEdge Idx.StEnergy
-stX       = storageTrans Idx.StX
+maxEnergy = carryEdge Idx.MaxEnergy
+stEnergy  = carryEdge Idx.StEnergy
+stX       = carryBond Idx.StX
 
-storageEdge ::
+carryEdge ::
    (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
-   (StorageEdge node -> idx node) ->
+   (CarryEdge node -> idx node) ->
    from -> to -> node -> Idx.ForNode idx node
-storageEdge mkIdx a b =
-   Idx.storageEdge mkIdx (Idx.initOrSection a) (Idx.sectionOrExit b)
+carryEdge mkIdx a b =
+   Idx.carryEdge mkIdx (Idx.initOrSection a) (Idx.sectionOrExit b)
 
-storageTrans ::
+carryBond ::
    (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
-   (StorageTrans node -> idx node) ->
+   (CarryBond node -> idx node) ->
    from -> to -> node -> Idx.ForNode idx node
-storageTrans mkIdx a b =
-   Idx.storageTrans mkIdx (Idx.augmentSection a) (Idx.augmentSection b)
+carryBond mkIdx a b =
+   Idx.carryBond mkIdx (Idx.augmentSection a) (Idx.augmentSection b)
 
 
 stInSum ::
@@ -101,7 +101,7 @@ storage :: Idx.Boundary -> node -> Storage node
 storage = Idx.ForNode . Idx.Storage
 
 ppos :: node -> node -> Idx.PPos node
-ppos a b = Idx.PPos $ Idx.StructureEdge a b
+ppos a b = Idx.PPos $ Idx.TopologyEdge a b
 
 powerFromPPos :: Idx.Section -> Idx.PPos node -> Power node
 powerFromPPos sec (Idx.PPos e) = Idx.InPart sec $ Idx.Power e

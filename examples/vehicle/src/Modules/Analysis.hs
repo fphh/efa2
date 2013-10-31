@@ -163,7 +163,7 @@ givenForPrediction (Idx.InPart _sec var) v =
          if filterCriterion idx
            then Determined $
               case idx of
-                 Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis) ->
+                 Idx.Energy (Idx.TopologyEdge System.Resistance System.Chassis) ->
                     v ~* Arith.fromRational 1.1
                  _ -> v
            else Undetermined
@@ -175,7 +175,7 @@ modifyPredictionEnergy ::
    Graph.DirEdge System.Node ->
    Result a -> Result a
 modifyPredictionEnergy edge energy =
-   if filterCriterion $ Idx.Energy $ Topo.structureEdgeFromDirEdge edge
+   if filterCriterion $ Idx.Energy $ Topo.topologyEdgeFromDirEdge edge
      then
         case edge of
            Graph.DirEdge System.Resistance System.Chassis ->
@@ -227,7 +227,7 @@ givenForDifferentialAnalysis (Idx.InPart _sec var) v =
 
 
 filterCriterion :: Idx.Energy System.Node -> Bool
-filterCriterion (Idx.Energy (Idx.StructureEdge x y)) =
+filterCriterion (Idx.Energy (Idx.TopologyEdge x y)) =
    -- filterCriterionExtra e &&
    case (x,y) of
       (System.Tank, System.ConBattery) -> True
@@ -241,5 +241,5 @@ filterCriterion (Idx.Energy (Idx.StructureEdge x y)) =
 
 filterCriterionExtra :: XIdx.Energy System.Node -> Bool
 filterCriterionExtra
-      (Idx.InPart sec (Idx.Energy (Idx.StructureEdge x y))) =
+      (Idx.InPart sec (Idx.Energy (Idx.TopologyEdge x y))) =
    not $ sec == Idx.Section 18 || x == System.Tank || y == System.ConBattery

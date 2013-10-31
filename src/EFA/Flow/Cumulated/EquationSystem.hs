@@ -194,7 +194,7 @@ fromTopology opts topo =
    (EqSys.withLocalVar $ \totalTime ->
       (foldMap (totalTime =&=) $
        Map.mapKeysWith (~+)
-          ((\e -> min e (Idx.flip e)) . Topo.structureEdgeFromDirEdge) $
+          ((\e -> min e (Idx.flip e)) . Topo.topologyEdgeFromDirEdge) $
        fmap CumFlow.flowDTime $
        Graph.edgeLabels topo)
       <>

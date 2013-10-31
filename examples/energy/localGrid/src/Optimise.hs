@@ -588,8 +588,8 @@ main = do
      powerRecSim = ModUt.envToPowerRecord (Idx.Section 0) envSim
 
      -- | flip signs of power signals at water edge, as edge flips direction between state 0 and 4
-     flipwater (Idx.PPos (Idx.StructureEdge Network Water)) x = Sig.neg x
-     flipwater (Idx.PPos (Idx.StructureEdge Water Network)) x = Sig.neg x
+     flipwater (Idx.PPos (Idx.TopologyEdge Network Water)) x = Sig.neg x
+     flipwater (Idx.PPos (Idx.TopologyEdge Water Network)) x = Sig.neg x
      flipwater _ x = x
      powerRecSimCorr = Record.mapWithKey flipwater powerRecSim
 

@@ -20,16 +20,16 @@ power :: node -> node -> Power node
 eta :: node -> node -> Eta node
 x :: node -> node -> X node
 
-energy    = structureEdge Idx.Energy
-power     = structureEdge Idx.Power
-eta       = structureEdge Idx.Eta
-x         = structureEdge Idx.X
+energy    = topologyEdge Idx.Energy
+power     = topologyEdge Idx.Power
+eta       = topologyEdge Idx.Eta
+x         = topologyEdge Idx.X
 
-structureEdge ::
-   (Idx.StructureEdge node -> idx node) ->
+topologyEdge ::
+   (Idx.TopologyEdge node -> idx node) ->
    node -> node -> idx node
-structureEdge mkIdx from to =
-   mkIdx $ Idx.StructureEdge from to
+topologyEdge mkIdx from to =
+   mkIdx $ Idx.TopologyEdge from to
 
 
 dTime :: DTime node
@@ -44,7 +44,7 @@ outSum = sum Idx.Out
 
 
 ppos :: node -> node -> Idx.PPos node
-ppos a b = Idx.PPos $ Idx.StructureEdge a b
+ppos a b = Idx.PPos $ Idx.TopologyEdge a b
 
 powerFromPPos :: Idx.PPos node -> Power node
 powerFromPPos (Idx.PPos e) = Idx.Power e

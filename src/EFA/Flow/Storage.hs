@@ -27,7 +27,7 @@ data
    Graph part node nodeLabel edgeLabel =
       Graph {
          nodes :: PartMap part nodeLabel,
-         edges :: Map (Idx.StorageEdge part node) edgeLabel
+         edges :: Map (Idx.CarryEdge part node) edgeLabel
       } deriving (Eq)
 
 mapNode ::
@@ -60,7 +60,7 @@ traverse f g (Graph partMap edgeMap) =
 
 lookupEdge ::
    (Ord part) =>
-   Idx.StorageEdge part node ->
+   Idx.CarryEdge part node ->
    Graph part node nodeLabel edgeLabel ->
    Maybe edgeLabel
 lookupEdge se =
@@ -85,18 +85,18 @@ checkedZipWith name f g
 
 foldInStorages ::
    (Ord part, Monoid m) =>
-   (Idx.Init part -> [a] -> m) -> Map (Idx.StorageEdge part node) a -> m
+   (Idx.Init part -> [a] -> m) -> Map (Idx.CarryEdge part node) a -> m
 foldInStorages f =
    fold .
    Map.mapWithKey (\sec outs -> f sec (Map.elems outs)) .
    MapU.curry "foldInStorages"
-      (\(Idx.StorageEdge from to) -> (from, to))
+      (\(Idx.CarryEdge from to) -> (from, to))
 
 foldOutStorages ::
    (Ord part, Monoid m) =>
-   (Idx.Exit part -> [a] -> m) -> Map (Idx.StorageEdge part node) a -> m
+   (Idx.Exit part -> [a] -> m) -> Map (Idx.CarryEdge part node) a -> m
 foldOutStorages f =
    fold .
    Map.mapWithKey (\sec ins -> f sec (Map.elems ins)) .
    MapU.curry "foldOutStorages"
-      (\(Idx.StorageEdge from to) -> (to, from))
+      (\(Idx.CarryEdge from to) -> (to, from))

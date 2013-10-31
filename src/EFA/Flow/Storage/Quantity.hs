@@ -26,7 +26,7 @@ class (Applicative f, Foldable f) => Carry f where
    type CarryPart f :: *
    carryVars ::
       (CarryPart f ~ part) =>
-      f (Idx.StorageEdge part node -> Var.Scalar part node)
+      f (Idx.CarryEdge part node -> Var.Scalar part node)
 
 
 mapGraphWithVar ::
@@ -49,7 +49,7 @@ mapGraphWithVar lookupSums f node (Storage.Graph partMap edges) =
 mapCarryWithVar ::
    (Carry carry, CarryPart carry ~ part) =>
    (Var.ForNodeScalar part node -> a0 -> a1) ->
-   node -> Idx.StorageEdge part node -> carry a0 -> carry a1
+   node -> Idx.CarryEdge part node -> carry a0 -> carry a1
 mapCarryWithVar f node edge =
    liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
 
@@ -73,7 +73,7 @@ traverseGraph f =
 
 forwardEdgesFromSums ::
    (Ord part) =>
-   Map part (FlowTopo.Sums v) -> [Idx.StorageEdge part node]
+   Map part (FlowTopo.Sums v) -> [Idx.CarryEdge part node]
 forwardEdgesFromSums stores = do
    let ins  = Map.mapMaybe FlowTopo.sumIn stores
    let outs = Map.mapMaybe FlowTopo.sumOut stores
@@ -83,20 +83,20 @@ forwardEdgesFromSums stores = do
       case secin of
          Idx.Init -> outs
          Idx.NoInit s -> snd $ Map.split s outs
-   return $ Idx.StorageEdge secin secout
+   return $ Idx.CarryEdge secin secout
 
 allEdgesFromSums ::
    (Ord part) =>
-   Map part (FlowTopo.Sums a) -> [Idx.StorageEdge part node]
+   Map part (FlowTopo.Sums a) -> [Idx.CarryEdge part node]
 allEdgesFromSums stores =
-   liftA2 Idx.StorageEdge
+   liftA2 Idx.CarryEdge
       (Idx.Init : map Idx.NoInit (Map.keys (Map.mapMaybe FlowTopo.sumIn stores)))
       (Idx.Exit : map Idx.NoExit (Map.keys (Map.mapMaybe FlowTopo.sumOut stores)))
 
 graphFromList ::
    (Ord part, Ord node, Carry carry, Unknown a) =>
    [part] ->
-   [Idx.StorageEdge part node] ->
+   [Idx.CarryEdge part node] ->
    Storage.Graph part node a (carry a)
 graphFromList sts edges =
    Storage.Graph

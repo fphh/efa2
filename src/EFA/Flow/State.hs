@@ -9,9 +9,9 @@ import Data.Map (Map)
 
 
 type
-   Storages node storageLabel storageEdgeLabel =
+   Storages node storageLabel carryEdgeLabel =
       Map node
-         (Storage.Graph Idx.State node storageLabel storageEdgeLabel)
+         (Storage.Graph Idx.State node storageLabel carryEdgeLabel)
 
 type
    States node structEdge stateLabel nodeLabel structLabel =
@@ -21,8 +21,8 @@ type
 data
    Graph node structEdge
          stateLabel nodeLabel storageLabel
-         structLabel storageEdgeLabel =
+         structLabel carryEdgeLabel =
       Graph {
-         storages :: Storages node storageLabel storageEdgeLabel,
+         storages :: Storages node storageLabel carryEdgeLabel,
          states :: States node structEdge stateLabel nodeLabel structLabel
       }

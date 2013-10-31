@@ -396,17 +396,17 @@ class EdgeIdx idx where
    edgeIdent ::
       Format output => idx node -> output
 
-instance StructureIdx idx => EdgeIdx (Idx.InPart part idx) where
+instance TopologyIdx idx => EdgeIdx (Idx.InPart part idx) where
    edgeIdent = structureIdent
 
-class StructureIdx idx where
+class TopologyIdx idx where
    structureIdent ::
       Format output => Idx.InPart part idx node -> output
 
-instance StructureIdx Idx.Energy where structureIdent _ = energy
-instance StructureIdx Idx.Power where structureIdent _ = power
-instance StructureIdx Idx.Eta where structureIdent _ = eta
-instance StructureIdx Idx.X where structureIdent _ = xfactor
+instance TopologyIdx Idx.Energy where structureIdent _ = energy
+instance TopologyIdx Idx.Power where structureIdent _ = power
+instance TopologyIdx Idx.Eta where structureIdent _ = eta
+instance TopologyIdx Idx.X where structureIdent _ = xfactor
 
 instance StorageIdx idx => EdgeIdx (Idx.ForNode idx) where
    edgeIdent = storageIdent

@@ -90,9 +90,9 @@ stateFlowGraph =
 
 etaAssign ::
    node -> node -> name ->
-   (Idx.StructureEdge node, (name, name))
+   (Idx.TopologyEdge node, (name, name))
 etaAssign from to name =
-   (Idx.StructureEdge from to, (name, name))
+   (Idx.TopologyEdge from to, (name, name))
 
 etaAssignMap :: EtaAssignMap Node
 etaAssignMap = Map.fromList $

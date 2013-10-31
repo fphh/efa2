@@ -115,7 +115,7 @@ main =
                 Map.mapWithKey
                    (FlowTopo.liftEdgeFlow $
                     \e flow ->
-                       case Topo.structureEdgeFromDirEdge e of
+                       case Topo.topologyEdgeFromDirEdge e of
                           se ->
                              Map.singleton (Idx.PPos se)
                                 (FlowTopo.flowEnergyOut flow)

@@ -92,7 +92,7 @@ makeEtaFuncGiven state flowGraph etaAssign etaFunc =
 etaFromEdge ::
    Node.C node =>
    StateFlow.Graph node a0 v0 ->
-   Idx.State -> Idx.StructureEdge node -> StateIdx.Eta node
+   Idx.State -> Idx.TopologyEdge node -> StateIdx.Eta node
 etaFromEdge flowGraph state se =
    let etaF = Idx.InPart state $ Idx.Eta se
        etaB = Idx.InPart state $ Idx.Eta $ Idx.flip se

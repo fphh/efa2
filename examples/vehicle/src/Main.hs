@@ -15,6 +15,7 @@ import qualified EFA.Flow.Sequence.Absolute as EqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Record as RecSeq
 import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Signal.Record as Record
@@ -131,8 +132,8 @@ cumStack_filterEnergy = (1^^(-1::Integer))
 energyIndexSec :: SeqIdx.Energy System.Node
 energyIndexSec = Idx.InPart (Idx.Section 7) energyIndex
 
-energyIndex :: Idx.Energy System.Node
-energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
+energyIndex :: TopoIdx.Energy System.Node
+energyIndex  = TopoIdx.energy System.Tank System.ConBattery
 
 sectionMapping :: [Sequ.List a] -> [Sequ.List a]
 sectionMapping = map (Sequ.reIndex [1,2,7,8,16,17,19::Int])
@@ -172,8 +173,8 @@ cumStack_filterEnergy = (1^^(-1::Integer))
 energyIndexSec :: SeqIdx.Energy System.Node
 energyIndexSec = Idx.InPart (Idx.Section 8) energyIndex
 
-energyIndex :: Idx.Energy System.Node
-energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
+energyIndex :: TopoIdx.Energy System.Node
+energyIndex  = TopoIdx.energy System.Tank System.ConBattery
 
 {-
 sectionMapping :: [Int]
@@ -219,9 +220,9 @@ cumStack_filterEnergy = (1^^(-1::Integer))
 energyIndexSec :: SeqIdx.Energy System.Node
 energyIndexSec = Idx.InPart (Idx.Section 18) energyIndex
 
-energyIndex :: Idx.Energy System.Node
---energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
-energyIndex  = Idx.Energy $ Idx.StructureEdge System.Battery System.ConBattery
+energyIndex :: TopoIdx.Energy System.Node
+--energyIndex  = TopoIdx.energy System.Tank System.ConBattery
+energyIndex  = TopoIdx.energy System.Battery System.ConBattery
 
 sectionMapping :: [Sequ.List a] -> [Sequ.List a]
 sectionMapping = map (Sequ.reIndex [8,11,13,14,18,32,37::Int])

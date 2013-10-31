@@ -54,12 +54,12 @@ checkedZipWith caller f g h
 lookupEdge ::
    Ord n =>
    (el -> a) ->
-   Idx.StructureEdge n ->
+   Idx.TopologyEdge n ->
    Graph n Graph.EitherEdge nl (Maybe el) ->
    Maybe a
 lookupEdge f se =
    fmap (maybe (error "lookupEdge: directed edge must have Just label") f) .
-   Graph.lookupEdge (Graph.EDirEdge $ Topo.dirEdgeFromStructureEdge se)
+   Graph.lookupEdge (Graph.EDirEdge $ Topo.dirEdgeFromTopologyEdge se)
 
 
 liftEdgeFlow ::

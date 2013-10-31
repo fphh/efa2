@@ -128,8 +128,8 @@ instance StorageQuant.Carry Carry where
    carryVars =
       Carry {
          carryEnergy = Var.scalarIndex . Idx.StEnergy,
-         carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
-         carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
+         carryXOut = Var.scalarIndex . Idx.StX . Idx.carryBondFromEdge,
+         carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.carryBondFromEdge
       }
 
 
@@ -381,22 +381,22 @@ fromSequenceFlowGen integrate add zero allStEdges secMap gr =
                                   map (flip (,) zero) $
                                   StorageQuant.allEdgesFromSums (sumsMap node sts)
                              else Map.empty) $
-                       cumulateStorageEdges add secMap $
+                       cumulateCarryEdges add secMap $
                        fmap SeqFlow.carryEnergy edges)) $
              SeqFlow.storages gr,
           states = sts
        }
 
 
-cumulateStorageEdges ::
+cumulateCarryEdges ::
    (Ord node) =>
    (a -> a -> a) ->
    Map Idx.Section Idx.State ->
-   Map (Idx.StorageEdge Idx.Section node) a ->
-   Map (Idx.StorageEdge Idx.State node) a
-cumulateStorageEdges add secMap =
+   Map (Idx.CarryEdge Idx.Section node) a ->
+   Map (Idx.CarryEdge Idx.State node) a
+cumulateCarryEdges add secMap =
    Map.mapKeysWith add
-      (mapStorageEdge "cumulateStorageEdges from" secMap)
+      (mapCarryEdge "cumulateCarryEdges from" secMap)
 
 
 sumsMap ::
@@ -516,12 +516,12 @@ cumulateSums add secMap =
 
 
 
-mapStorageEdge ::
+mapCarryEdge ::
    (Ord sec, Show sec, Show state) =>
    String -> Map sec state ->
-   Idx.StorageEdge sec node -> Idx.StorageEdge state node
-mapStorageEdge caller secMap (Idx.StorageEdge from to) =
-   Idx.StorageEdge
+   Idx.CarryEdge sec node -> Idx.CarryEdge state node
+mapCarryEdge caller secMap (Idx.CarryEdge from to) =
+   Idx.CarryEdge
       (fmap (MapU.checkedLookup (caller ++ " from") secMap) from)
       (fmap (MapU.checkedLookup (caller ++ " to")   secMap) to)
 
@@ -545,7 +545,7 @@ lookupStruct ::
    (Ord node) =>
    (Flow v -> v) ->
    (Flow v -> v) ->
-   (idx node -> Idx.StructureEdge node) ->
+   (idx node -> Idx.TopologyEdge node) ->
    Idx.InState idx node -> Graph node a v -> Maybe v
 lookupStruct fieldOut fieldIn unpackIdx =
    withTopology $ \idx topo ->
@@ -597,7 +597,7 @@ lookupStX ::
    (Ord node) => StateIdx.StX node -> Graph node a v -> Maybe a
 lookupStX (Idx.ForNode (Idx.StX se) node) g = do
    sgr <- Map.lookup node $ storages g
-   Idx.withStorageEdgeFromTrans
+   Idx.withCarryEdgeFromTrans
       (fmap carryXIn  . flip Storage.lookupEdge sgr)
       (fmap carryXOut . flip Storage.lookupEdge sgr)
       se
