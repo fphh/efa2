@@ -29,15 +29,14 @@ failing_prop_genSequ prec =
 prop_chopMatchingCutsApprox ::
    PowerRecord Node [] Double -> Bool
 prop_chopMatchingCutsApprox prec =
-   case Chop.chopAtZeroCrossingsPowerRecord prec :: Sequ.List (PowerRecord Node [] Double) of
-       xs ->
-          eqAdjacent
-             (\(Record xt xm)
-               (Record yt ym) ->
-                 fmap snd (Signal.viewR xt) == fmap fst (Signal.viewL yt)
-                 &&
-                 fmap (fmap snd . Signal.viewR) xm == fmap (fmap fst . Signal.viewL) ym)
-             xs
+   eqAdjacent
+      (\(Record xt xm)
+        (Record yt ym) ->
+          fmap snd (Signal.viewR xt) == fmap fst (Signal.viewL yt)
+          &&
+          fmap (fmap snd . Signal.viewR) xm == fmap (fmap fst . Signal.viewL) ym)
+      (Chop.chopAtZeroCrossingsPowerRecord prec
+         :: Sequ.List (PowerRecord Node [] Double))
 
 
 prop_chopProjectiveApprox ::
@@ -53,16 +52,14 @@ prop_chopProjectiveApprox prec =
 prop_chopMatchingCutsExact ::
    PowerRecord Node [] Rational -> Bool
 prop_chopMatchingCutsExact prec =
-   case Chop.chopAtZeroCrossingsPowerRecord prec
-         :: Sequ.List (PowerRecord Node [] Rational) of
-      xs ->
-         eqAdjacent
-            (\(Record xt xm)
-              (Record yt ym) ->
-                fmap snd (Signal.viewR xt) == fmap fst (Signal.viewL yt)
-                &&
-                fmap (fmap snd . Signal.viewR) xm == fmap (fmap fst . Signal.viewL) ym)
-            xs
+   eqAdjacent
+      (\(Record xt xm)
+        (Record yt ym) ->
+          fmap snd (Signal.viewR xt) == fmap fst (Signal.viewL yt)
+          &&
+          fmap (fmap snd . Signal.viewR) xm == fmap (fmap fst . Signal.viewL) ym)
+      (Chop.chopAtZeroCrossingsPowerRecord prec
+         :: Sequ.List (PowerRecord Node [] Rational))
 
 prop_chopProjectiveExact ::
    PowerRecord Node [] Rational -> Bool
