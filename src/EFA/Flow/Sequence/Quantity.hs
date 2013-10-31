@@ -311,25 +311,25 @@ lookupDTime (Idx.InPart sec Idx.DTime) =
 
 lookupStorage ::
    (Ord node) => SeqIdx.Storage node -> Graph node a v -> Maybe a
-lookupStorage (Idx.ForNode (Idx.Storage bnd) node) g = do
+lookupStorage (Idx.ForStorage (Idx.Storage bnd) node) g = do
    (_,stores) <- Map.lookup node $ storages g
    Map.lookup bnd stores
 
 lookupMaxEnergy ::
    (Ord node) => SeqIdx.MaxEnergy node -> Graph node a v -> Maybe a
-lookupMaxEnergy (Idx.ForNode (Idx.MaxEnergy se) node) g = do
+lookupMaxEnergy (Idx.ForStorage (Idx.MaxEnergy se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
    fmap carryMaxEnergy $ Storage.lookupEdge se sgr
 
 lookupStEnergy ::
    (Ord node) => SeqIdx.StEnergy node -> Graph node a v -> Maybe a
-lookupStEnergy (Idx.ForNode (Idx.StEnergy se) node) g = do
+lookupStEnergy (Idx.ForStorage (Idx.StEnergy se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
    fmap carryEnergy $ Storage.lookupEdge se sgr
 
 lookupStX ::
    (Ord node) => SeqIdx.StX node -> Graph node a v -> Maybe a
-lookupStX (Idx.ForNode (Idx.StX se) node) g = do
+lookupStX (Idx.ForStorage (Idx.StX se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
    Idx.withCarryEdgeFromTrans
       (fmap carryXIn  . flip Storage.lookupEdge sgr)
@@ -341,7 +341,7 @@ It is an unchecked error if you lookup StInSum where is only an StOutSum.
 -}
 lookupStInSum ::
    (Ord node) => SeqIdx.StInSum node -> Graph node a v -> Maybe a
-lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g = do
+lookupStInSum (Idx.ForStorage (Idx.StInSum aug) node) g = do
    (Storage.Graph partMap _, _) <- Map.lookup node $ storages g
    case aug of
       Idx.Exit -> return $ PartMap.exit partMap
@@ -352,7 +352,7 @@ It is an unchecked error if you lookup StOutSum where is only an StInSum.
 -}
 lookupStOutSum ::
    (Ord node) => SeqIdx.StOutSum node -> Graph node a v -> Maybe a
-lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g = do
+lookupStOutSum (Idx.ForStorage (Idx.StOutSum aug) node) g = do
    (Storage.Graph partMap _, _) <- Map.lookup node $ storages g
    case aug of
       Idx.Init -> return $ PartMap.init partMap
@@ -383,7 +383,7 @@ instance
 
 instance
    (LookupScalar idx, Var.ScalarIndex idx) =>
-      Lookup (Idx.ForNode idx) where
+      Lookup (Idx.ForStorage idx) where
    lookup = lookupScalar
 
 
@@ -412,7 +412,7 @@ instance LookupSignal Idx.Sum where
 
 class (Var.ScalarIndex idx) => LookupScalar idx where
    lookupScalar ::
-      (Ord node) => Idx.ForNode idx node -> Graph node a v -> Maybe a
+      (Ord node) => Idx.ForStorage idx node -> Graph node a v -> Maybe a
 
 instance LookupScalar Idx.MaxEnergy where
    lookupScalar = lookupMaxEnergy
@@ -479,7 +479,7 @@ storageMapFromList secs edges =
 
 mapGraphWithVar ::
    (Ord node) =>
-   (Var.ForNodeSectionScalar node -> a0 -> a1) ->
+   (Var.ForStorageSectionScalar node -> a0 -> a1) ->
    (Var.InSectionSignal node -> v0 -> v1) ->
    Graph node a0 v0 ->
    Graph node a1 v1
@@ -491,7 +491,7 @@ mapGraphWithVar f g gr =
 
 mapStoragesWithVar ::
    (Ord node) =>
-   (Var.ForNodeSectionScalar node -> a0 -> a1) ->
+   (Var.ForStorageSectionScalar node -> a0 -> a1) ->
    Graph node a0 v0 ->
    Storages node a1
 mapStoragesWithVar f gr =

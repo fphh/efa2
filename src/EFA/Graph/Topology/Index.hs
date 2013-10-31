@@ -402,65 +402,65 @@ liftInSection ::
    InSection idx0 node -> InSection idx1 node
 liftInSection = liftInPart
 
-data ForNode idx node = ForNode (idx node) node
+data ForStorage idx node = ForStorage (idx node) node
    deriving (Show, Eq, Ord)
 
-forNode ::
-   (part -> idx node) -> PartNode part node -> ForNode idx node
-forNode makeIdx (PartNode bnd node) =
-   ForNode (makeIdx bnd) node
+forStorage ::
+   (part -> idx node) -> PartNode part node -> ForStorage idx node
+forStorage makeIdx (PartNode bnd node) =
+   ForStorage (makeIdx bnd) node
 
-liftForNode ::
+liftForStorage ::
    (idx0 node -> idx1 node) ->
-   ForNode idx0 node -> ForNode idx1 node
-liftForNode f (ForNode edge node) =
-   ForNode (f edge) node
+   ForStorage idx0 node -> ForStorage idx1 node
+liftForStorage f (ForStorage edge node) =
+   ForStorage (f edge) node
 
 
 wrapInPart :: InPart part idx node -> InPart part (TC.Wrap idx) node
 wrapInPart = liftInPart TC.Wrap
 
-wrapForNode :: ForNode idx node -> ForNode (TC.Wrap idx) node
-wrapForNode = liftForNode TC.Wrap
+wrapForStorage :: ForStorage idx node -> ForStorage (TC.Wrap idx) node
+wrapForStorage = liftForStorage TC.Wrap
 
 instance (Eq part, TC.Eq idx) => TC.Eq (InPart part idx) where
    eq = equating wrapInPart
-instance TC.Eq idx => TC.Eq (ForNode idx) where
-   eq = equating wrapForNode
+instance TC.Eq idx => TC.Eq (ForStorage idx) where
+   eq = equating wrapForStorage
 
 instance (Ord part, TC.Ord idx) => TC.Ord (InPart part idx) where
    cmp = comparing wrapInPart
-instance TC.Ord idx => TC.Ord (ForNode idx) where
-   cmp = comparing wrapForNode
+instance TC.Ord idx => TC.Ord (ForStorage idx) where
+   cmp = comparing wrapForStorage
 
 instance (Show part, TC.Show idx) => TC.Show (InPart part idx) where
    showsPrec p = showsPrec p . wrapInPart
-instance TC.Show idx => TC.Show (ForNode idx) where
-   showsPrec p = showsPrec p . wrapForNode
+instance TC.Show idx => TC.Show (ForStorage idx) where
+   showsPrec p = showsPrec p . wrapForStorage
 
 
 carryEdge ::
    (CarryEdge sec node -> idx node) ->
-   Init sec -> Exit sec -> node -> ForNode idx node
+   Init sec -> Exit sec -> node -> ForStorage idx node
 carryEdge mkIdx s0 s1 n =
-   ForNode (mkIdx $ CarryEdge s0 s1) n
+   ForStorage (mkIdx $ CarryEdge s0 s1) n
 
 carryBond ::
    (CarryBond sec node -> idx node) ->
-   Augmented sec -> Augmented sec -> node -> ForNode idx node
+   Augmented sec -> Augmented sec -> node -> ForStorage idx node
 carryBond mkIdx s0 s1 n =
-   ForNode (mkIdx $ CarryBond s0 s1) n
+   ForStorage (mkIdx $ CarryBond s0 s1) n
 
 
 carryEdgeFrom, carryEdgeTo ::
-   ForNode (CarryEdge sec) node -> AugNode sec node
-carryEdgeFrom (ForNode (CarryEdge sec _) n) = PartNode (allowExit sec) n
-carryEdgeTo   (ForNode (CarryEdge _ sec) n) = PartNode (allowInit sec) n
+   ForStorage (CarryEdge sec) node -> AugNode sec node
+carryEdgeFrom (ForStorage (CarryEdge sec _) n) = PartNode (allowExit sec) n
+carryEdgeTo   (ForStorage (CarryEdge _ sec) n) = PartNode (allowInit sec) n
 
 carryBondFrom, carryBondTo ::
-   ForNode (CarryBond sec) node -> AugNode sec node
-carryBondFrom (ForNode (CarryBond sec _) n) = PartNode sec n
-carryBondTo   (ForNode (CarryBond _ sec) n) = PartNode sec n
+   ForStorage (CarryBond sec) node -> AugNode sec node
+carryBondFrom (ForStorage (CarryBond sec _) n) = PartNode sec n
+carryBondTo   (ForStorage (CarryBond _ sec) n) = PartNode sec n
 
 
 
@@ -475,8 +475,8 @@ instance Flip TopologyEdge where
    flip (TopologyEdge x y) = TopologyEdge y x
 
 
-instance Flip idx => Flip (ForNode idx) where
-   flip (ForNode idx n) = ForNode (flip idx) n
+instance Flip idx => Flip (ForStorage idx) where
+   flip (ForStorage idx n) = ForStorage (flip idx) n
 
 instance Flip (CarryBond sec) where
    flip (CarryBond s0 s1) = CarryBond s1 s0

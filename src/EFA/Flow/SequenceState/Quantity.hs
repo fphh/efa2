@@ -30,7 +30,7 @@ type Element idx a v = ChooseElement (TypeOf idx) a v
 
 type family TypeOf (idx :: * -> *) :: *
 type instance TypeOf (Idx.InPart part idx) = Signal
-type instance TypeOf (Idx.ForNode idx) = Scalar
+type instance TypeOf (Idx.ForStorage idx) = Scalar
 
 
 

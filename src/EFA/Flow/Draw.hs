@@ -372,11 +372,11 @@ dotFromCarryEdges =
       (\node ->
          Map.elems .
          Map.mapWithKey
-            (\edge -> dotFromCarryEdge (Idx.ForNode edge node)))
+            (\edge -> dotFromCarryEdge (Idx.ForStorage edge node)))
 
 dotFromCarryEdge ::
    (Node.C node, Part part) =>
-   Idx.ForNode (Idx.CarryEdge part) node ->
+   Idx.ForStorage (Idx.CarryEdge part) node ->
    [Unicode] -> DotEdge T.Text
 dotFromCarryEdge e lns =
    DotEdge

@@ -408,12 +408,12 @@ instance TopologyIdx Idx.Power where structureIdent _ = power
 instance TopologyIdx Idx.Eta where structureIdent _ = eta
 instance TopologyIdx Idx.X where structureIdent _ = xfactor
 
-instance StorageIdx idx => EdgeIdx (Idx.ForNode idx) where
+instance StorageIdx idx => EdgeIdx (Idx.ForStorage idx) where
    edgeIdent = storageIdent
 
 class StorageIdx idx where
    storageIdent ::
-      Format output => Idx.ForNode idx node -> output
+      Format output => Idx.ForStorage idx node -> output
 
 instance StorageIdx Idx.MaxEnergy where storageIdent _ = maxEnergy
 instance StorageIdx (Idx.StEnergy sec) where storageIdent _ = energy

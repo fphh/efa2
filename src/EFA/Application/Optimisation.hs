@@ -55,7 +55,7 @@ givenAverageWithoutState ::
    StateFlow.Graph node (Result a) (Result v)
 givenAverageWithoutState stateToRemove =
    StateFlow.mapGraphWithVar
-      (\(Idx.ForNode var _) a ->
+      (\(Idx.ForStorage var _) a ->
          case var of
             Var.StX _ -> a
             _ -> Undetermined)
@@ -107,7 +107,7 @@ initialEnv ::
    StateFlow.Graph node (Result (Data Nil d)) (Result (Data Nil d))
 initialEnv =
    StateFlow.mapGraphWithVar
-      (\(Idx.ForNode var _) _a ->
+      (\(Idx.ForStorage var _) _a ->
          fmap Data $
          case var of
             Var.StX _ -> Determined $ Arith.fromRational 0.5

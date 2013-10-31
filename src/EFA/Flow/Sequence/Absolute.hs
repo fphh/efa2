@@ -85,7 +85,7 @@ solveOpts opts graph sys =
       (SeqFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a Idx.Absolute Var.ForNodeSectionScalar node,
+   (Verify.GlobalVar (Verify.Track output) a Idx.Absolute Var.ForStorageSectionScalar node,
     Arith.Constant a, a ~ Arith.Scalar v,
     Verify.GlobalVar (Verify.Track output) v Idx.Absolute Var.InSectionSignal node,
     Arith.Product v, Arith.Integrate v, Node.C node) =>

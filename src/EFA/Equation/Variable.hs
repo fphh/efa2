@@ -13,7 +13,7 @@ import EFA.Report.FormatValue
 
 data Any part node =
      Signal (InPartSignal part node)
-   | Scalar (ForNodeScalar part node)
+   | Scalar (ForStorageScalar part node)
      deriving (Show, Eq, Ord)
 
 type SectionAny = Any Idx.Section
@@ -43,9 +43,9 @@ type InPartSignal part = Idx.InPart part Signal
 type InSectionSignal   = Idx.InSection Signal
 type InStateSignal     = Idx.InState Signal
 
-type ForNodeScalar part   = Idx.ForNode (Scalar part)
-type ForNodeSectionScalar = ForNodeScalar Idx.Section
-type ForNodeStateScalar   = ForNodeScalar Idx.State
+type ForStorageScalar part   = Idx.ForStorage (Scalar part)
+type ForStorageSectionScalar = ForStorageScalar Idx.Section
+type ForStorageStateScalar   = ForStorageScalar Idx.State
 
 class Index t where
    type Type t :: * -> *
@@ -55,9 +55,9 @@ instance SignalIndex idx => Index (Idx.InPart part idx) where
    type Type (Idx.InPart part idx) = InPartSignal part
    index = Idx.liftInPart signalIndex
 
-instance ScalarIndex idx => Index (Idx.ForNode idx) where
-   type Type (Idx.ForNode idx) = ForNodeScalar (ScalarPart idx)
-   index = Idx.liftForNode scalarIndex
+instance ScalarIndex idx => Index (Idx.ForStorage idx) where
+   type Type (Idx.ForStorage idx) = ForStorageScalar (ScalarPart idx)
+   index = Idx.liftForStorage scalarIndex
 
 
 class FormatSignalIndex t => SignalIndex t where
@@ -102,8 +102,8 @@ instance (Format.Part part) => ScalarIndex (Idx.StOutSum part) where
 
 (<#>) ::
    (ScalarIndex idx, ScalarPart idx ~ part) =>
-   idx node -> node -> ForNodeScalar part node
-(<#>) idx node = Idx.ForNode (scalarIndex idx) node
+   idx node -> node -> ForStorageScalar part node
+(<#>) idx node = Idx.ForStorage (scalarIndex idx) node
 
 (<~>) ::
    (SignalIndex idx) =>
@@ -131,8 +131,8 @@ formatSignalValue (Idx.InPart s var) =
 
 formatScalarValue ::
    (Format output, Format.Part part, Node.C node) =>
-   ForNodeScalar part node -> output
-formatScalarValue (Idx.ForNode var n) =
+   ForStorageScalar part node -> output
+formatScalarValue (Idx.ForStorage var n) =
    case var of
       MaxEnergy idx -> formatScalarIndex idx n
       Storage idx -> formatScalarIndex idx n
@@ -150,15 +150,15 @@ instance
       FormatIndex (Idx.InPart part idx) where
    formatIndex (Idx.InPart s idx) = formatSignalIndex idx s
 
-instance FormatScalarIndex idx => FormatIndex (Idx.ForNode idx) where
-   formatIndex (Idx.ForNode idx n) = formatScalarIndex idx n
+instance FormatScalarIndex idx => FormatIndex (Idx.ForStorage idx) where
+   formatIndex (Idx.ForStorage idx n) = formatScalarIndex idx n
 
 
 instance FormatSignalIndex Signal where
    formatSignalIndex edge sec = formatSignalValue (Idx.InPart sec edge)
 
 instance (Format.Part part) => FormatScalarIndex (Scalar part) where
-   formatScalarIndex edge node = formatScalarValue (Idx.ForNode edge node)
+   formatScalarIndex edge node = formatScalarValue (Idx.ForStorage edge node)
 
 
 instance FormatIndex Signal where
@@ -193,7 +193,7 @@ instance Format.TopologyIdx Signal where
    structureIdent (Idx.InPart _part var) = signalIdent var
 
 instance Format.StorageIdx (Scalar part) where
-   storageIdent (Idx.ForNode var _node) =
+   storageIdent (Idx.ForStorage var _node) =
       case var of
          MaxEnergy _idx -> Format.maxEnergy
          StEnergy _idx -> Format.energy

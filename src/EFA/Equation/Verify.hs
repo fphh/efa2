@@ -107,7 +107,7 @@ type Variable output s a b = Sys.Variable (Track output) s (Pair.T a b)
 
 type MixedTerm mixedTerm recIdx part node =
         mixedTerm
-           (Idx.Record recIdx (Var.ForNodeScalar part node))
+           (Idx.Record recIdx (Var.ForStorageScalar part node))
            (Idx.Record recIdx (Var.InPartSignal part node))
 
 instance

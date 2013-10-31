@@ -220,10 +220,10 @@ fromStorageSequences ::
 fromStorageSequences opts g =
    let stoutsum sec node =
           checkedLookup "fromStorageSequences inStorages"
-             StateFlow.lookupStOutSum (Idx.ForNode (Idx.StOutSum sec) node) g
+             StateFlow.lookupStOutSum (Idx.ForStorage (Idx.StOutSum sec) node) g
        stinsum sec node =
           checkedLookup "fromStorageSequences outStorages"
-             StateFlow.lookupStInSum (Idx.ForNode (Idx.StInSum sec) node) g
+             StateFlow.lookupStInSum (Idx.ForStorage (Idx.StInSum sec) node) g
        f node (Storage.Graph partMap edges) =
           connectCarryFlow opts g node partMap
           <>
@@ -256,7 +256,7 @@ connectCarryFlow opts g node partMap =
 
 variables ::
    (Node.C node, Record rec, Sum a, Sum v,
-    Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node,
+    Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageStateScalar node,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node) =>
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EqSys.Writer mode s
@@ -286,7 +286,7 @@ query =
 
 
 setup ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageStateScalar node,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Constant a, a ~ Scalar v,
     Product v, Integrate v,
@@ -331,7 +331,7 @@ solve ::
 solve = solveOpts SeqStateEqSys.optionsDefault
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForNodeStateScalar node,
+   (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForStorageStateScalar node,
     Constant a, a ~ Scalar v,
     Verify.GlobalVar (Verify.Track output) v recIdx Var.InStateSignal node,
     Product v, Integrate v,

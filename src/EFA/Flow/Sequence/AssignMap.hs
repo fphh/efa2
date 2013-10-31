@@ -12,7 +12,7 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 import Data.Monoid (Monoid, mappend, mempty)
 
 
-type Scalar node a = Map (Var.ForNodeSectionScalar node) a
+type Scalar node a = Map (Var.ForStorageSectionScalar node) a
 type Signal node v = Map (Var.InSectionSignal node) v
 
 data AssignMap node a v =
@@ -28,7 +28,7 @@ instance (Ord node) => Monoid (AssignMap node a v) where
          (Map.unionWith (error "duplicate variable") scalar0 scalar1)
          (Map.unionWith (error "duplicate variable") signal0 signal1)
 
-scalarSingleton :: Var.ForNodeSectionScalar node -> a -> AssignMap node a v
+scalarSingleton :: Var.ForStorageSectionScalar node -> a -> AssignMap node a v
 scalarSingleton idx a = AssignMap (Map.singleton idx a) Map.empty
 
 signalSingleton :: Var.InSectionSignal node -> v -> AssignMap node a v

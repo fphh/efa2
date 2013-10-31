@@ -584,13 +584,13 @@ lookupDTime (Idx.InPart state Idx.DTime) =
 
 lookupStEnergy ::
    (Ord node) => StateIdx.StEnergy node -> Graph node a v -> Maybe a
-lookupStEnergy (Idx.ForNode (Idx.StEnergy se) node) g = do
+lookupStEnergy (Idx.ForStorage (Idx.StEnergy se) node) g = do
    sgr <- Map.lookup node $ storages g
    fmap carryEnergy $ Storage.lookupEdge se sgr
 
 lookupStX ::
    (Ord node) => StateIdx.StX node -> Graph node a v -> Maybe a
-lookupStX (Idx.ForNode (Idx.StX se) node) g = do
+lookupStX (Idx.ForStorage (Idx.StX se) node) g = do
    sgr <- Map.lookup node $ storages g
    Idx.withCarryEdgeFromTrans
       (fmap carryXIn  . flip Storage.lookupEdge sgr)
@@ -602,7 +602,7 @@ It is an unchecked error if you lookup StInSum where is only an StOutSum.
 -}
 lookupStInSum ::
    (Ord node) => StateIdx.StInSum node -> Graph node a v -> Maybe a
-lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g = do
+lookupStInSum (Idx.ForStorage (Idx.StInSum aug) node) g = do
    (Storage.Graph partMap _) <- Map.lookup node $ storages g
    case aug of
       Idx.Exit -> return $ PartMap.exit partMap
@@ -613,7 +613,7 @@ It is an unchecked error if you lookup StOutSum where is only an StInSum.
 -}
 lookupStOutSum ::
    (Ord node) => StateIdx.StOutSum node -> Graph node a v -> Maybe a
-lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g = do
+lookupStOutSum (Idx.ForStorage (Idx.StOutSum aug) node) g = do
    (Storage.Graph partMap _) <- Map.lookup node $ storages g
    case aug of
       Idx.Init -> return $ PartMap.init partMap
@@ -644,7 +644,7 @@ instance
 
 instance
    (LookupScalar idx, Var.ScalarIndex idx) =>
-      Lookup (Idx.ForNode idx) where
+      Lookup (Idx.ForStorage idx) where
    lookup = lookupScalar
 
 
@@ -673,7 +673,7 @@ instance LookupSignal Idx.Sum where
 
 class (Var.ScalarIndex idx) => LookupScalar idx where
    lookupScalar ::
-      (Ord node) => Idx.ForNode idx node -> Graph node a v -> Maybe a
+      (Ord node) => Idx.ForStorage idx node -> Graph node a v -> Maybe a
 
 instance LookupScalar (Idx.StEnergy Idx.State) where
    lookupScalar = lookupStEnergy
@@ -690,7 +690,7 @@ instance LookupScalar (Idx.StOutSum Idx.State) where
 
 mapGraphWithVar ::
    (Ord node) =>
-   (Var.ForNodeStateScalar node -> a0 -> a1) ->
+   (Var.ForStorageStateScalar node -> a0 -> a1) ->
    (Var.InStateSignal node -> v0 -> v1) ->
    Graph node a0 v0 ->
    Graph node a1 v1
@@ -702,7 +702,7 @@ mapGraphWithVar f g gr =
 
 mapStoragesWithVar ::
    (Ord node) =>
-   (Var.ForNodeStateScalar node -> a0 -> a1) ->
+   (Var.ForStorageStateScalar node -> a0 -> a1) ->
    Graph node a0 v0 ->
    Storages node a1
 mapStoragesWithVar f gr =

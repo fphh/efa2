@@ -67,7 +67,7 @@ instance (Ord part) => Traversable (PartMap part) where
 mapWithVar ::
    (Format.Part sec) =>
    (Idx.PartNode sec node -> Maybe Topo.StoreDir) ->
-   (Var.ForNodeScalar sec node -> a0 -> a1) ->
+   (Var.ForStorageScalar sec node -> a0 -> a1) ->
    node ->
    PartMap sec a0 ->
    PartMap sec a1

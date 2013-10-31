@@ -12,12 +12,12 @@ type X node         = Idx.InState Idx.X node
 type DTime node     = Idx.InState Idx.DTime node
 type Sum node       = Idx.InState Idx.Sum node
 
-type Storage node   = Idx.ForNode Idx.Storage node
-type MaxEnergy node = Idx.ForNode Idx.MaxEnergy node
-type StEnergy node  = Idx.ForNode (Idx.StEnergy Idx.State) node
-type StX node       = Idx.ForNode (Idx.StX Idx.State) node
-type StInSum node   = Idx.ForNode (Idx.StInSum Idx.State) node
-type StOutSum node  = Idx.ForNode (Idx.StOutSum Idx.State) node
+type Storage node   = Idx.ForStorage Idx.Storage node
+type MaxEnergy node = Idx.ForStorage Idx.MaxEnergy node
+type StEnergy node  = Idx.ForStorage (Idx.StEnergy Idx.State) node
+type StX node       = Idx.ForStorage (Idx.StX Idx.State) node
+type StInSum node   = Idx.ForStorage (Idx.StInSum Idx.State) node
+type StOutSum node  = Idx.ForStorage (Idx.StOutSum Idx.State) node
 
 type PPos = Idx.PPos
 
@@ -43,8 +43,8 @@ topologyEdge mkIdx s from to =
 
 stx ::
    Idx.PartNode (Idx.CarryBond sec node) node ->
-   Idx.ForNode (Idx.StX sec) node
-stx = Idx.forNode Idx.StX
+   Idx.ForStorage (Idx.StX sec) node
+stx = Idx.forStorage Idx.StX
 
 
 dTime :: Idx.State -> DTime node

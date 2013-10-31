@@ -45,8 +45,8 @@ instance
 
 instance
    (FormatScalarIndex idx, Node.C node) =>
-      FormatValue (Idx.ForNode idx node) where
-   formatValue (Idx.ForNode idx n) = formatScalarIndex idx n
+      FormatValue (Idx.ForStorage idx node) where
+   formatValue (Idx.ForStorage idx n) = formatScalarIndex idx n
 
 
 class FormatSignalIndex idx where
