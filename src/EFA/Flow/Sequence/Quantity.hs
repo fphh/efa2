@@ -260,34 +260,34 @@ toAssignMap =
 lookupPower ::
    (Ord node) => SeqIdx.Power node -> Graph node a v -> Maybe v
 lookupPower =
-   lookupStruct flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
+   lookupAutoDir flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
 
 lookupEnergy ::
    (Ord node) => SeqIdx.Energy node -> Graph node a v -> Maybe v
 lookupEnergy =
-   lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
+   lookupAutoDir flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
 
 lookupX ::
    (Ord node) => SeqIdx.X node -> Graph node a v -> Maybe v
 lookupX =
-   lookupStruct flowXOut flowXIn (\(Idx.X se) -> se)
+   lookupAutoDir flowXOut flowXIn (\(Idx.X se) -> se)
 
-lookupStruct ::
+lookupAutoDir ::
    (Ord node) =>
    (Flow v -> v) ->
    (Flow v -> v) ->
    (idx node -> Idx.TopologyEdge node) ->
    Idx.InSection idx node -> Graph node a v -> Maybe v
-lookupStruct fieldOut fieldIn unpackIdx =
-   withTopology $ lookupStructTopology fieldOut fieldIn unpackIdx
+lookupAutoDir fieldOut fieldIn unpackIdx =
+   withTopology $ lookupAutoDirTopology fieldOut fieldIn unpackIdx
 
-lookupStructTopology ::
+lookupAutoDirTopology ::
    Ord node =>
    (Flow v -> v) ->
    (Flow v -> v) ->
    (idx -> Idx.TopologyEdge node) ->
    idx -> Topology node v -> Maybe v
-lookupStructTopology fieldOut fieldIn unpackIdx =
+lookupAutoDirTopology fieldOut fieldIn unpackIdx =
    \idx topo ->
       case unpackIdx idx of
          se ->

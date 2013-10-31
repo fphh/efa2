@@ -177,26 +177,26 @@ addMaybe add x y = liftA2 add x y <|> x <|> y
 lookupPower ::
    (Ord node) => CumIdx.Power node -> Graph node a -> Maybe a
 lookupPower (CumIdx.Power d se) =
-   lookupStruct flowPowerOut flowPowerIn d se
+   lookupAutoDir flowPowerOut flowPowerIn d se
 
 lookupEnergy ::
    (Ord node) => CumIdx.Energy node -> Graph node a -> Maybe a
 lookupEnergy (CumIdx.Energy d se) =
-   lookupStruct flowEnergyOut flowEnergyIn d se
+   lookupAutoDir flowEnergyOut flowEnergyIn d se
 
 lookupX ::
    (Ord node) => CumIdx.X node -> Graph node a -> Maybe a
 lookupX (CumIdx.X d se) =
-   lookupStruct flowXOut flowXIn d se
+   lookupAutoDir flowXOut flowXIn d se
 
-lookupStruct ::
+lookupAutoDir ::
    (Ord node) =>
    (Flow a -> a) ->
    (Flow a -> a) ->
    CumIdx.Direction ->
    CumIdx.TopologyEdge node ->
    Graph node a -> Maybe a
-lookupStruct fieldOut fieldIn dir =
+lookupAutoDir fieldOut fieldIn dir =
    lookupEdge
       (case dir of
          CumIdx.Out -> fieldOut

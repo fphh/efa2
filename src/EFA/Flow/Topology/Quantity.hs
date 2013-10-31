@@ -156,25 +156,25 @@ toAssignMap =
 lookupPower ::
    (Ord node) => Idx.Power node -> Section node v -> Maybe v
 lookupPower =
-   lookupStruct flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
+   lookupAutoDir flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
 
 lookupEnergy ::
    (Ord node) => Idx.Energy node -> Section node v -> Maybe v
 lookupEnergy =
-   lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
+   lookupAutoDir flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
 
 lookupX ::
    (Ord node) => Idx.X node -> Section node v -> Maybe v
 lookupX =
-   lookupStruct flowXOut flowXIn (\(Idx.X se) -> se)
+   lookupAutoDir flowXOut flowXIn (\(Idx.X se) -> se)
 
-lookupStruct ::
+lookupAutoDir ::
    Ord node =>
    (Flow v -> v) ->
    (Flow v -> v) ->
    (idx -> Idx.TopologyEdge node) ->
    idx -> Section node v -> Maybe v
-lookupStruct fieldOut fieldIn unpackIdx idx (FlowTopo.Section _lab topo) =
+lookupAutoDir fieldOut fieldIn unpackIdx idx (FlowTopo.Section _lab topo) =
    case unpackIdx idx of
       se ->
          mplus

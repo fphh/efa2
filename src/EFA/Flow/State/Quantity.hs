@@ -529,25 +529,25 @@ mapCarryEdge caller secMap (Idx.CarryEdge from to) =
 lookupPower ::
    (Ord node) => StateIdx.Power node -> Graph node a v -> Maybe v
 lookupPower =
-   lookupStruct flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
+   lookupAutoDir flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
 
 lookupEnergy ::
    (Ord node) => StateIdx.Energy node -> Graph node a v -> Maybe v
 lookupEnergy =
-   lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
+   lookupAutoDir flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
 
 lookupX ::
    (Ord node) => StateIdx.X node -> Graph node a v -> Maybe v
 lookupX =
-   lookupStruct flowXOut flowXIn (\(Idx.X se) -> se)
+   lookupAutoDir flowXOut flowXIn (\(Idx.X se) -> se)
 
-lookupStruct ::
+lookupAutoDir ::
    (Ord node) =>
    (Flow v -> v) ->
    (Flow v -> v) ->
    (idx node -> Idx.TopologyEdge node) ->
    Idx.InState idx node -> Graph node a v -> Maybe v
-lookupStruct fieldOut fieldIn unpackIdx =
+lookupAutoDir fieldOut fieldIn unpackIdx =
    withTopology $ \idx topo ->
       case unpackIdx idx of
          se ->
