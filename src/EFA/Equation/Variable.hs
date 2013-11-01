@@ -57,20 +57,8 @@ instance StorageVar.Index idx => Index (Idx.ForStorage idx) where
 instance
    (Format.Part part, Node.C node) =>
       FormatValue (Any part node) where
-   formatValue (Signal var) = formatSignalValue var
+   formatValue (Signal (Idx.InPart s var)) = TopoVar.formatSignalValue var s
    formatValue (Scalar var) = formatValue var
-
-formatSignalValue ::
-   (Format output, Format.Part part, Node.C node) =>
-   InPartSignal part node -> output
-formatSignalValue (Idx.InPart s var) =
-   case var of
-      TopoVar.Energy idx -> formatSignalIndex idx s
-      TopoVar.Power idx -> formatSignalIndex idx s
-      TopoVar.Eta idx -> formatSignalIndex idx s
-      TopoVar.X idx -> formatSignalIndex idx s
-      TopoVar.DTime idx -> formatSignalIndex idx s
-      TopoVar.Sum idx -> formatSignalIndex idx s
 
 
 class FormatIndex idx where
@@ -84,10 +72,6 @@ instance
 instance FormatScalarIndex idx => FormatIndex (Idx.ForStorage idx) where
 --   formatIndex (Idx.ForStorage idx n) = formatScalarIndex idx n
    formatIndex = formatValue
-
-
-instance FormatSignalIndex TopoVar.Signal where
-   formatSignalIndex edge sec = formatSignalValue (Idx.InPart sec edge)
 
 
 instance FormatIndex TopoVar.Signal where

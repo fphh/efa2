@@ -7,7 +7,7 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
           (FormatValue, formatValue,
-           FormatSignalIndex)
+           FormatSignalIndex, formatSignalIndex)
 
 
 data Signal node =
@@ -43,6 +43,23 @@ ident var =
 
 instance Format.EdgeIdx Signal where
    edgeIdent = ident
+
+
+formatSignalValue ::
+   (Format output, Format.Part part, Node.C node) =>
+   Signal node -> part -> output
+formatSignalValue var s =
+   case var of
+      Energy idx -> formatSignalIndex idx s
+      Power idx -> formatSignalIndex idx s
+      Eta idx -> formatSignalIndex idx s
+      X idx -> formatSignalIndex idx s
+      DTime idx -> formatSignalIndex idx s
+      Sum idx -> formatSignalIndex idx s
+
+
+instance FormatSignalIndex Signal where
+   formatSignalIndex = formatSignalValue
 
 
 instance (Node.C node) => FormatValue (Signal node) where
