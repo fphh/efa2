@@ -15,7 +15,7 @@ import Prelude hiding (sequence)
 type
    Storages node storageLabel boundaryLabel carryEdgeLabel =
       Map node
-         (Storage.Graph Idx.Section node storageLabel carryEdgeLabel,
+         (Storage.Graph Idx.Section storageLabel carryEdgeLabel,
           Map Idx.Boundary boundaryLabel)
 
 type

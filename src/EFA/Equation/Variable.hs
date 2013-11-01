@@ -29,13 +29,13 @@ data Signal node =
    | Sum (Idx.Sum node)
      deriving (Show, Eq, Ord)
 
-data Scalar part node =
-     MaxEnergy (Idx.MaxEnergy node)
-   | Storage (Idx.Storage node)
-   | StEnergy (Idx.StEnergy part node)
-   | StX (Idx.StX part node)
-   | StInSum (Idx.StInSum part node)
-   | StOutSum (Idx.StOutSum part node)
+data Scalar part =
+     MaxEnergy Idx.MaxEnergy
+   | Storage Idx.Storage
+   | StEnergy (Idx.StEnergy part)
+   | StX (Idx.StX part)
+   | StInSum (Idx.StInSum part)
+   | StOutSum (Idx.StOutSum part)
      deriving (Show, Eq, Ord)
 
 
@@ -73,7 +73,7 @@ instance SignalIndex Idx.Sum    where signalIndex = Sum
 
 class FormatScalarIndex t => ScalarIndex t where
    type ScalarPart t :: *
-   scalarIndex :: t a -> Scalar (ScalarPart t) a
+   scalarIndex :: t -> Scalar (ScalarPart t)
 
 instance ScalarIndex Idx.MaxEnergy where
    type ScalarPart Idx.MaxEnergy = Idx.Section
@@ -102,7 +102,7 @@ instance (Format.Part part) => ScalarIndex (Idx.StOutSum part) where
 
 (<#>) ::
    (ScalarIndex idx, ScalarPart idx ~ part) =>
-   idx node -> node -> ForStorageScalar part node
+   idx -> node -> ForStorageScalar part node
 (<#>) idx node = Idx.ForStorage (scalarIndex idx) node
 
 (<~>) ::

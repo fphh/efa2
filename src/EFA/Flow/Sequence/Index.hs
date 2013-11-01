@@ -71,14 +71,14 @@ stX       = carryBond Idx.StX
 
 carryEdge ::
    (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
-   (CarryEdge node -> idx node) ->
+   (CarryEdge -> idx) ->
    from -> to -> node -> Idx.ForStorage idx node
 carryEdge mkIdx a b =
    Idx.carryEdge mkIdx (Idx.initOrSection a) (Idx.sectionOrExit b)
 
 carryBond ::
    (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
-   (CarryBond node -> idx node) ->
+   (CarryBond -> idx) ->
    from -> to -> node -> Idx.ForStorage idx node
 carryBond mkIdx a b =
    Idx.carryBond mkIdx (Idx.augmentSection a) (Idx.augmentSection b)

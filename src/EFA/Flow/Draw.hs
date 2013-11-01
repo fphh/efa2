@@ -138,7 +138,7 @@ dotFromFlowGraph ::
    ([DotSubGraph T.Text], [DotEdge T.Text]) ->
    Map node
       ((Unicode, Unicode),
-       Map (Idx.CarryEdge part node) [Unicode]) ->
+       Map (Idx.CarryEdge part) [Unicode]) ->
    Map part (String, Graph node Graph.EitherEdge Unicode TopologyEdgeLabel) ->
    DotGraph T.Text
 dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
@@ -364,7 +364,7 @@ dotFromTopologyEdgeEta (DirEdge x y, dir, ord) label =
 
 dotFromCarryEdges ::
    (Node.C node, Part part) =>
-   Map node (Map (Idx.CarryEdge part node) [Unicode]) ->
+   Map node (Map (Idx.CarryEdge part) [Unicode]) ->
    [DotEdge T.Text]
 dotFromCarryEdges =
    fold .
@@ -823,8 +823,8 @@ storageGraphShow ::
     Format.Part part, Format output, Node.C node, FormatValue a) =>
    Options output ->
    node ->
-   Storage.Graph part node a (carry a) ->
-   ((output, output), Map (Idx.CarryEdge part node) [output])
+   Storage.Graph part a (carry a) ->
+   ((output, output), Map (Idx.CarryEdge part) [output])
 storageGraphShow opts node (Storage.Graph partMap edges) =
    ((stateNodeShow node $ Just $ PartMap.init partMap,
      stateNodeShow node $ Just $ PartMap.exit partMap),
@@ -850,7 +850,7 @@ carryEdgeShow ::
     Format.Part part, Node.C node, FormatValue a, Format output) =>
    Options output ->
    node ->
-   Idx.CarryEdge part node ->
+   Idx.CarryEdge part ->
    carry a ->
    [output]
 carryEdgeShow opts node edge carry =

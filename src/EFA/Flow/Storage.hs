@@ -24,25 +24,25 @@ but this one provides more invariants:
 * Edges cannot start at Exit and cannot end in Init.
 -}
 data
-   Graph part node nodeLabel edgeLabel =
+   Graph part nodeLabel edgeLabel =
       Graph {
          nodes :: PartMap part nodeLabel,
-         edges :: Map (Idx.CarryEdge part node) edgeLabel
+         edges :: Map (Idx.CarryEdge part) edgeLabel
       } deriving (Eq)
 
 mapNode ::
    (Ord part) =>
    (nodeLabel0 -> nodeLabel1) ->
-   Graph part node nodeLabel0 edgeLabel ->
-   Graph part node nodeLabel1 edgeLabel
+   Graph part nodeLabel0 edgeLabel ->
+   Graph part nodeLabel1 edgeLabel
 mapNode f (Graph partMap edgeMap) =
    Graph (fmap f partMap) edgeMap
 
 mapEdge ::
    (Ord part) =>
    (edgeLabel0 -> edgeLabel1) ->
-   Graph part node nodeLabel edgeLabel0 ->
-   Graph part node nodeLabel edgeLabel1
+   Graph part nodeLabel edgeLabel0 ->
+   Graph part nodeLabel edgeLabel1
 mapEdge f (Graph partMap edgeMap) =
    Graph partMap (fmap f edgeMap)
 
@@ -50,8 +50,8 @@ traverse ::
    (Applicative f, Ord part) =>
    (nodeLabel0 -> f nodeLabel1) ->
    (edgeLabel0 -> f edgeLabel1) ->
-   Graph part node nodeLabel0 edgeLabel0 ->
-   f (Graph part node nodeLabel1 edgeLabel1)
+   Graph part nodeLabel0 edgeLabel0 ->
+   f (Graph part nodeLabel1 edgeLabel1)
 traverse f g (Graph partMap edgeMap) =
    liftA2 Graph
       (Trav.traverse f partMap)
@@ -60,8 +60,8 @@ traverse f g (Graph partMap edgeMap) =
 
 lookupEdge ::
    (Ord part) =>
-   Idx.CarryEdge part node ->
-   Graph part node nodeLabel edgeLabel ->
+   Idx.CarryEdge part ->
+   Graph part nodeLabel edgeLabel ->
    Maybe edgeLabel
 lookupEdge se =
    Map.lookup se . edges
@@ -72,9 +72,9 @@ checkedZipWith ::
    Caller ->
    (nodeLabel0 -> nodeLabel1 -> nodeLabel2) ->
    (edgeLabel0 -> edgeLabel1 -> edgeLabel2) ->
-   Graph part node nodeLabel0 edgeLabel0 ->
-   Graph part node nodeLabel1 edgeLabel1 ->
-   Graph part node nodeLabel2 edgeLabel2
+   Graph part nodeLabel0 edgeLabel0 ->
+   Graph part nodeLabel1 edgeLabel1 ->
+   Graph part nodeLabel2 edgeLabel2
 checkedZipWith name f g
       (Graph partMap0 edges0)
       (Graph partMap1 edges1) =
@@ -85,7 +85,7 @@ checkedZipWith name f g
 
 foldInStorages ::
    (Ord part, Monoid m) =>
-   (Idx.Init part -> [a] -> m) -> Map (Idx.CarryEdge part node) a -> m
+   (Idx.Init part -> [a] -> m) -> Map (Idx.CarryEdge part) a -> m
 foldInStorages f =
    fold .
    Map.mapWithKey (\sec outs -> f sec (Map.elems outs)) .
@@ -94,7 +94,7 @@ foldInStorages f =
 
 foldOutStorages ::
    (Ord part, Monoid m) =>
-   (Idx.Exit part -> [a] -> m) -> Map (Idx.CarryEdge part node) a -> m
+   (Idx.Exit part -> [a] -> m) -> Map (Idx.CarryEdge part) a -> m
 foldOutStorages f =
    fold .
    Map.mapWithKey (\sec ins -> f sec (Map.elems ins)) .

@@ -57,7 +57,7 @@ class FormatSignalIndex idx where
 class FormatScalarIndex idx where
    formatScalarIndex ::
       (Node.C node, Format output) =>
-      idx node -> node -> output
+      idx -> node -> output
 
 formatBoundaryNode ::
    (Format output, Node.C node) =>
@@ -114,7 +114,7 @@ formatTopologySecEdge e se s =
 
 formatCarryEdge ::
    (Format.Part sec, Format output, Node.C node) =>
-   output -> Idx.CarryEdge sec node -> node -> output
+   output -> Idx.CarryEdge sec -> node -> output
 formatCarryEdge e (Idx.CarryEdge s0 s1) n =
    Format.subscript e $
    (Format.initOrOther s0 `Format.link` Format.otherOrExit s1)
@@ -122,7 +122,7 @@ formatCarryEdge e (Idx.CarryEdge s0 s1) n =
 
 formatCarryBond ::
    (Format.Part sec, Format output, Node.C node) =>
-   output -> Idx.CarryBond sec node -> node -> output
+   output -> Idx.CarryBond sec -> node -> output
 formatCarryBond e (Idx.CarryBond s0 s1) n =
    Format.subscript e $
    (Format.augmented s0 `Format.link` Format.augmented s1)

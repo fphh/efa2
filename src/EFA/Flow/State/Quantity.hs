@@ -390,11 +390,10 @@ fromSequenceFlowGen integrate add zero allStEdges secMap gr =
 
 
 cumulateCarryEdges ::
-   (Ord node) =>
    (a -> a -> a) ->
    Map Idx.Section Idx.State ->
-   Map (Idx.CarryEdge Idx.Section node) a ->
-   Map (Idx.CarryEdge Idx.State node) a
+   Map (Idx.CarryEdge Idx.Section) a ->
+   Map (Idx.CarryEdge Idx.State) a
 cumulateCarryEdges add secMap =
    Map.mapKeysWith add
       (mapCarryEdge "cumulateCarryEdges from" secMap)
@@ -520,7 +519,7 @@ cumulateSums add secMap =
 mapCarryEdge ::
    (Ord sec, Show sec, Show state) =>
    String -> Map sec state ->
-   Idx.CarryEdge sec node -> Idx.CarryEdge state node
+   Idx.CarryEdge sec -> Idx.CarryEdge state
 mapCarryEdge caller secMap (Idx.CarryEdge from to) =
    Idx.CarryEdge
       (fmap (MapU.checkedLookup (caller ++ " from") secMap) from)

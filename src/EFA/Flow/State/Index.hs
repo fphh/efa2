@@ -42,7 +42,7 @@ topologyEdge mkIdx s from to =
    Idx.InPart s $ mkIdx $ Idx.TopologyEdge from to
 
 stx ::
-   Idx.PartNode (Idx.CarryBond sec node) node ->
+   Idx.PartNode (Idx.CarryBond sec) node ->
    Idx.ForStorage (Idx.StX sec) node
 stx = Idx.forStorage Idx.StX
 

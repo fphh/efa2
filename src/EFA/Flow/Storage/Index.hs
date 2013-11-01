@@ -6,10 +6,10 @@ import Prelude hiding (flip)
 
 
 class Flip edge where
-   flip :: edge node -> edge node
+   flip :: edge -> edge
 
 
-instance Flip idx => Flip (Idx.ForStorage idx) where
+instance Flip idx => Flip (Idx.ForStorage idx node) where
    flip (Idx.ForStorage idx n) = Idx.ForStorage (flip idx) n
 
 instance Flip (Idx.StX part) where

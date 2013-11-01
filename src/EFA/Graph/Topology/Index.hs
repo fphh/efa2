@@ -314,34 +314,34 @@ However, a splitting factor exists both in chronological and reversed order.
 On the other hand in the future we may use chronological order exclusively
 and register two split factors per edge.
 -}
-data CarryEdge sec node = CarryEdge (Init sec) (Exit sec)
+data CarryEdge sec = CarryEdge (Init sec) (Exit sec)
    deriving (Show, Eq, Ord)
 
-data CarryBond sec node = CarryBond (Augmented sec) (Augmented sec)
+data CarryBond sec = CarryBond (Augmented sec) (Augmented sec)
    deriving (Show, Eq, Ord)
 
 instance TC.Eq TopologyEdge where eq = (==)
-instance (Eq sec) => TC.Eq (CarryEdge sec) where eq = (==)
-instance (Eq sec) => TC.Eq (CarryBond sec) where eq = (==)
+instance TC.Eq CarryEdge where eq = (==)
+instance TC.Eq CarryBond where eq = (==)
 
 instance TC.Ord TopologyEdge where cmp = compare
-instance (Ord sec) => TC.Ord (CarryEdge sec) where cmp = compare
-instance (Ord sec) => TC.Ord (CarryBond sec) where cmp = compare
+instance TC.Ord CarryEdge where cmp = compare
+instance TC.Ord CarryBond where cmp = compare
 
 instance TC.Show TopologyEdge where showsPrec = showsPrec
-instance (Show sec) => TC.Show (CarryEdge sec) where showsPrec = showsPrec
-instance (Show sec) => TC.Show (CarryBond sec) where showsPrec = showsPrec
+instance TC.Show CarryEdge where showsPrec = showsPrec
+instance TC.Show CarryBond where showsPrec = showsPrec
 
 
-carryBondFromEdge :: CarryEdge sec node -> CarryBond sec node
+carryBondFromEdge :: CarryEdge part -> CarryBond part
 carryBondFromEdge (CarryEdge s0 s1) =
    CarryBond (allowExit s0) (allowInit s1)
 
 withCarryEdgeFromBond ::
    Ord part =>
-   (CarryEdge part node -> a) ->
-   (CarryEdge part node -> a) ->
-   CarryBond part node -> a
+   (CarryEdge part -> a) ->
+   (CarryEdge part -> a) ->
+   CarryBond part -> a
 withCarryEdgeFromBond fIn fOut (CarryBond stFrom stTo) =
    case (stFrom, stTo) of
       (NoExit from, Exit) ->
@@ -402,16 +402,16 @@ liftInSection ::
    InSection idx0 node -> InSection idx1 node
 liftInSection = liftInPart
 
-data ForStorage idx node = ForStorage (idx node) node
+data ForStorage idx node = ForStorage idx node
    deriving (Show, Eq, Ord)
 
 forStorage ::
-   (part -> idx node) -> PartNode part node -> ForStorage idx node
+   (part -> idx) -> PartNode part node -> ForStorage idx node
 forStorage makeIdx (PartNode bnd node) =
    ForStorage (makeIdx bnd) node
 
 liftForStorage ::
-   (idx0 node -> idx1 node) ->
+   (idx0 -> idx1) ->
    ForStorage idx0 node -> ForStorage idx1 node
 liftForStorage f (ForStorage edge node) =
    ForStorage (f edge) node
@@ -420,33 +420,31 @@ liftForStorage f (ForStorage edge node) =
 wrapInPart :: InPart part idx node -> InPart part (TC.Wrap idx) node
 wrapInPart = liftInPart TC.Wrap
 
-wrapForStorage :: ForStorage idx node -> ForStorage (TC.Wrap idx) node
-wrapForStorage = liftForStorage TC.Wrap
 
 instance (Eq part, TC.Eq idx) => TC.Eq (InPart part idx) where
    eq = equating wrapInPart
-instance TC.Eq idx => TC.Eq (ForStorage idx) where
-   eq = equating wrapForStorage
+instance Eq idx => TC.Eq (ForStorage idx) where
+   eq = (==)
 
 instance (Ord part, TC.Ord idx) => TC.Ord (InPart part idx) where
    cmp = comparing wrapInPart
-instance TC.Ord idx => TC.Ord (ForStorage idx) where
-   cmp = comparing wrapForStorage
+instance Ord idx => TC.Ord (ForStorage idx) where
+   cmp = compare
 
 instance (Show part, TC.Show idx) => TC.Show (InPart part idx) where
    showsPrec p = showsPrec p . wrapInPart
-instance TC.Show idx => TC.Show (ForStorage idx) where
-   showsPrec p = showsPrec p . wrapForStorage
+instance Show idx => TC.Show (ForStorage idx) where
+   showsPrec p = P.showsPrec p
 
 
 carryEdge ::
-   (CarryEdge sec node -> idx node) ->
+   (CarryEdge sec -> idx) ->
    Init sec -> Exit sec -> node -> ForStorage idx node
 carryEdge mkIdx s0 s1 n =
    ForStorage (mkIdx $ CarryEdge s0 s1) n
 
 carryBond ::
-   (CarryBond sec node -> idx node) ->
+   (CarryBond sec -> idx) ->
    Augmented sec -> Augmented sec -> node -> ForStorage idx node
 carryBond mkIdx s0 s1 n =
    ForStorage (mkIdx $ CarryBond s0 s1) n
@@ -507,13 +505,13 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
 -- | Energy variables.
 newtype Energy node = Energy (TopologyEdge node) deriving (Show, Ord, Eq)
 
-newtype StEnergy sec node = StEnergy (CarryEdge sec node) deriving (Show, Ord, Eq)
+newtype StEnergy sec = StEnergy (CarryEdge sec) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
 -- At storage edges they describe the maximum energy
 -- that a storage could deliver.
-newtype MaxEnergy node = MaxEnergy (CarryEdge Section node) deriving (Show, Ord, Eq)
+newtype MaxEnergy = MaxEnergy (CarryEdge Section) deriving (Show, Ord, Eq)
 
 -- | Power variables.
 newtype Power node = Power (TopologyEdge node) deriving (Show, Ord, Eq)
@@ -524,17 +522,17 @@ newtype Eta node = Eta (TopologyEdge node) deriving (Show, Ord, Eq)
 -- | Splitting factors.
 newtype X node = X (TopologyEdge node) deriving (Show, Ord, Eq)
 
-newtype StX sec node = StX (CarryBond sec node) deriving (Show, Ord, Eq)
+newtype StX sec = StX (CarryBond sec) deriving (Show, Ord, Eq)
 
-newtype Storage node = Storage Boundary deriving (Show, Ord, Eq)
+newtype Storage = Storage Boundary deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 
-data StInSum sec node = StInSum (Exit sec) deriving (Show, Ord, Eq)
+data StInSum sec = StInSum (Exit sec) deriving (Show, Ord, Eq)
 
-data StOutSum sec node = StOutSum (Init sec) deriving (Show, Ord, Eq)
+data StOutSum sec = StOutSum (Init sec) deriving (Show, Ord, Eq)
 
 
 -- * Other indices

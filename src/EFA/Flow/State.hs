@@ -11,7 +11,7 @@ import Data.Map (Map)
 type
    Storages node storageLabel carryEdgeLabel =
       Map node
-         (Storage.Graph Idx.State node storageLabel carryEdgeLabel)
+         (Storage.Graph Idx.State storageLabel carryEdgeLabel)
 
 type
    States node structEdge stateLabel nodeLabel structLabel =

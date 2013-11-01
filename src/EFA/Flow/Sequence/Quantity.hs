@@ -467,10 +467,10 @@ graphFromSections sq =
    }
 
 storageMapFromList ::
-   (Ord node, Unknown a) =>
+   (Unknown a) =>
    [Idx.Section] ->
-   [SeqIdx.CarryEdge node] ->
-   (Storage.Graph Idx.Section node a (Carry a), Map Idx.Boundary a)
+   [SeqIdx.CarryEdge] ->
+   (Storage.Graph Idx.Section a (Carry a), Map Idx.Boundary a)
 storageMapFromList secs edges =
    (StorageQuant.graphFromList secs edges,
     Map.fromList $ map (flip (,) unknown . Idx.Following) $
