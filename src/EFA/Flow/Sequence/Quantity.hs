@@ -46,6 +46,7 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
 import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Storage.Index as StorageIdx
@@ -296,7 +297,7 @@ class
       idx node -> Graph node a v -> Maybe (Env.Element idx a v)
 
 instance
-   (LookupSignal idx, Var.SignalIndex idx) =>
+   (LookupSignal idx, TopoVar.Index idx) =>
       Lookup (Idx.InSection idx) where
    lookup = lookupSignal
 
@@ -306,7 +307,7 @@ instance
    lookup = lookupScalar
 
 
-class (Var.SignalIndex idx) => LookupSignal idx where
+class (TopoVar.Index idx) => LookupSignal idx where
    lookupSignal ::
       (Ord node) => Idx.InSection idx node -> Graph node a v -> Maybe v
 

@@ -52,6 +52,7 @@ import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.PartMap (PartMap)
@@ -550,7 +551,7 @@ class
       idx node -> Graph node a v -> Maybe (Env.Element idx a v)
 
 instance
-   (LookupSignal idx, Var.SignalIndex idx) =>
+   (LookupSignal idx, TopoVar.Index idx) =>
       Lookup (Idx.InState idx) where
    lookup = lookupSignal
 
@@ -560,7 +561,7 @@ instance
    lookup = lookupScalar
 
 
-class (Var.SignalIndex idx) => LookupSignal idx where
+class (TopoVar.Index idx) => LookupSignal idx where
    lookupSignal ::
       (Ord node) => Idx.InState idx node -> Graph node a v -> Maybe v
 

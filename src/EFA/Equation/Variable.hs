@@ -2,6 +2,7 @@
 module EFA.Equation.Variable where
 
 import qualified EFA.Flow.Storage.Variable as StorageVar
+import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
@@ -21,19 +22,9 @@ type SectionAny = Any Idx.Section
 type StateAny   = Any Idx.State
 
 
-data Signal node =
-     Energy (Idx.Energy node)
-   | Power (Idx.Power node)
-   | Eta (Idx.Eta node)
-   | DTime (Idx.DTime node)
-   | X (Idx.X node)
-   | Sum (Idx.Sum node)
-     deriving (Show, Eq, Ord)
-
-
-type InPartSignal part = Idx.InPart part Signal
-type InSectionSignal   = Idx.InSection Signal
-type InStateSignal     = Idx.InState Signal
+type InPartSignal part = Idx.InPart part TopoVar.Signal
+type InSectionSignal   = Idx.InSection TopoVar.Signal
+type InStateSignal     = Idx.InState TopoVar.Signal
 
 type ForStorageScalar part   = Idx.ForStorage (StorageVar.Scalar part)
 type ForStorageSectionScalar = ForStorageScalar Idx.Section
@@ -43,24 +34,13 @@ class Index t where
    type Type t :: * -> *
    index :: t a -> Type t a
 
-instance SignalIndex idx => Index (Idx.InPart part idx) where
+instance TopoVar.Index idx => Index (Idx.InPart part idx) where
    type Type (Idx.InPart part idx) = InPartSignal part
-   index = Idx.liftInPart signalIndex
+   index = Idx.liftInPart TopoVar.index
 
 instance StorageVar.Index idx => Index (Idx.ForStorage idx) where
    type Type (Idx.ForStorage idx) = ForStorageScalar (StorageVar.Part idx)
    index = Idx.liftForStorage StorageVar.index
-
-
-class FormatSignalIndex t => SignalIndex t where
-   signalIndex :: t a -> Signal a
-
-instance SignalIndex Idx.Energy where signalIndex = Energy
-instance SignalIndex Idx.Power  where signalIndex = Power
-instance SignalIndex Idx.Eta    where signalIndex = Eta
-instance SignalIndex Idx.DTime  where signalIndex = DTime
-instance SignalIndex Idx.X      where signalIndex = X
-instance SignalIndex Idx.Sum    where signalIndex = Sum
 
 
 (<#>) ::
@@ -69,9 +49,9 @@ instance SignalIndex Idx.Sum    where signalIndex = Sum
 (<#>) idx node = Idx.ForStorage (StorageVar.index idx) node
 
 (<~>) ::
-   (SignalIndex idx) =>
+   (TopoVar.Index idx) =>
    part -> idx node -> InPartSignal part node
-(<~>) part idx = Idx.InPart part $ signalIndex idx
+(<~>) part idx = Idx.InPart part $ TopoVar.index idx
 
 
 instance
@@ -85,12 +65,12 @@ formatSignalValue ::
    InPartSignal part node -> output
 formatSignalValue (Idx.InPart s var) =
    case var of
-      Energy idx -> formatSignalIndex idx s
-      Power idx -> formatSignalIndex idx s
-      Eta idx -> formatSignalIndex idx s
-      X idx -> formatSignalIndex idx s
-      DTime idx -> formatSignalIndex idx s
-      Sum idx -> formatSignalIndex idx s
+      TopoVar.Energy idx -> formatSignalIndex idx s
+      TopoVar.Power idx -> formatSignalIndex idx s
+      TopoVar.Eta idx -> formatSignalIndex idx s
+      TopoVar.X idx -> formatSignalIndex idx s
+      TopoVar.DTime idx -> formatSignalIndex idx s
+      TopoVar.Sum idx -> formatSignalIndex idx s
 
 
 class FormatIndex idx where
@@ -102,43 +82,16 @@ instance
    formatIndex (Idx.InPart s idx) = formatSignalIndex idx s
 
 instance FormatScalarIndex idx => FormatIndex (Idx.ForStorage idx) where
+--   formatIndex (Idx.ForStorage idx n) = formatScalarIndex idx n
    formatIndex = formatValue
 
 
-instance FormatSignalIndex Signal where
+instance FormatSignalIndex TopoVar.Signal where
    formatSignalIndex edge sec = formatSignalValue (Idx.InPart sec edge)
 
 
-instance FormatIndex Signal where
+instance FormatIndex TopoVar.Signal where
    formatIndex = formatValue
-
-signalIdent :: Format output => Signal node -> output
-signalIdent var =
-   case var of
-      Energy _idx -> Format.energy
-      Power _idx -> Format.power
-      Eta _idx -> Format.eta
-      X _idx -> Format.xfactor
-      DTime _idx -> Format.dtime
-      Sum _idx -> Format.signalSum
-
-instance Format.EdgeIdx Signal where
-   edgeIdent = signalIdent
-
-
-instance (Node.C node) => FormatValue (Signal node) where
-   formatValue var =
-      case var of
-         Energy idx -> formatValue idx
-         Power idx -> formatValue idx
-         Eta idx -> formatValue idx
-         X idx -> formatValue idx
-         DTime idx -> formatValue idx
-         Sum idx -> formatValue idx
-
-
-instance Format.TopologyIdx Signal where
-   flowIdent (Idx.InPart _part var) = signalIdent var
 
 
 checkedLookup ::

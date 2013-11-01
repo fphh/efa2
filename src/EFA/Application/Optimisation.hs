@@ -6,6 +6,8 @@ module EFA.Application.Optimisation where
 
 import EFA.Application.Simulation (EtaAssignMap, checkFoundPair, absEtaFunction)
 
+import qualified EFA.Flow.Topology.Variable as TopoVar
+
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State.Absolute as EqSysState
@@ -16,7 +18,6 @@ import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil)
 
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
@@ -66,9 +67,9 @@ givenAverageWithoutState stateToRemove =
            then Undetermined
            else
               case var of
-                 Var.DTime _ -> v
-                 Var.Eta _ -> v
-                 Var.X _ -> v
+                 TopoVar.DTime _ -> v
+                 TopoVar.Eta _ -> v
+                 TopoVar.X _ -> v
                  _ -> Undetermined)
 
 
@@ -117,7 +118,7 @@ initialEnv =
       (\(Idx.InPart _state var) _v ->
          fmap Data $
          case var of
-            Var.Eta _ -> Determined $ Arith.fromRational 0.5
-            Var.DTime _ -> Determined $ Arith.fromRational 1
-            Var.X _ -> Determined $ Arith.fromRational 0.5
+            TopoVar.Eta _ -> Determined $ Arith.fromRational 0.5
+            TopoVar.DTime _ -> Determined $ Arith.fromRational 1
+            TopoVar.X _ -> Determined $ Arith.fromRational 0.5
             _ -> Undetermined)

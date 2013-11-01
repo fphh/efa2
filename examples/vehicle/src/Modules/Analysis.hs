@@ -14,6 +14,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 import EFA.Flow.Sequence.Absolute ((.=))
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
+import qualified EFA.Flow.Topology.Variable as TopoVar
 
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
@@ -157,9 +158,9 @@ givenForPrediction ::
    Var.InSectionSignal System.Node -> v -> Result v
 givenForPrediction (Idx.InPart _sec var) v =
    case var of
-      Var.DTime _ -> Determined v
-      Var.Eta _ -> Determined v
-      Var.Energy idx ->
+      TopoVar.DTime _ -> Determined v
+      TopoVar.Eta _ -> Determined v
+      TopoVar.Energy idx ->
          if filterCriterion idx
            then Determined $
               case idx of
@@ -217,9 +218,9 @@ givenForDifferentialAnalysis ::
    Var.InSectionSignal System.Node -> v -> Result v
 givenForDifferentialAnalysis (Idx.InPart _sec var) v =
    case var of
-      Var.DTime _ -> Determined v
-      Var.Eta _ -> Determined v
-      Var.Energy idx ->
+      TopoVar.DTime _ -> Determined v
+      TopoVar.Eta _ -> Determined v
+      TopoVar.Energy idx ->
          if filterCriterion idx
            then Determined v
            else Undetermined

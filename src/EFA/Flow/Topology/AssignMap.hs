@@ -1,6 +1,6 @@
 module EFA.Flow.Topology.AssignMap where
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.Topology.Variable as Var
 
 import qualified EFA.Graph.Topology.Node as Node
 

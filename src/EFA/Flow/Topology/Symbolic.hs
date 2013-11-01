@@ -7,6 +7,7 @@ module EFA.Flow.Topology.Symbolic (
 
 import qualified EFA.Flow.Topology.EquationSystem as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Variable as TopoVar
 import EFA.Flow.Topology.EquationSystem ((.=), (%=), (=%%=))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -14,7 +15,6 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Equation.Variable as Var
 
 import EFA.Utility (Pointed, point)
 
@@ -25,7 +25,7 @@ import Data.Monoid ((<>))
 
 type
    Term recIdx term node =
-      term (Idx.Record recIdx (Var.Signal node))
+      term (Idx.Record recIdx (TopoVar.Signal node))
 
 type
    EquationSystem mode rec node s term =
@@ -35,21 +35,21 @@ type
 
 symbol ::
    Pointed term =>
-   Idx.Record recIdx (Var.Signal node) ->
+   Idx.Record recIdx (TopoVar.Signal node) ->
    Term recIdx term node
 symbol = point
 
 varSymbol ::
-   (Pointed term, Var.SignalIndex idx) =>
+   (Pointed term, TopoVar.Index idx) =>
    Idx.Record recIdx (idx node) -> Term recIdx term node
 varSymbol idx =
-   symbol (fmap Var.signalIndex idx)
+   symbol (fmap TopoVar.index idx)
 
 
 given ::
    (Sys.Value mode t, t ~ Term recIdx term node,
     EqSys.Record rec, recIdx ~ EqRecord.ToIndex rec, Pointed term,
-    Var.SignalIndex idx, FlowTopo.Lookup idx, Node.C node) =>
+    TopoVar.Index idx, FlowTopo.Lookup idx, Node.C node) =>
    Idx.Record recIdx (idx node) ->
    EquationSystem mode rec node s term
 given idx =
@@ -61,7 +61,7 @@ infixr 6 =<>
 (=<>) ::
    (Sys.Value mode t, t ~ Term recIdx term node,
     EqSys.Record rec, recIdx ~ EqRecord.ToIndex rec, Pointed term,
-    Var.SignalIndex idx, FlowTopo.Lookup idx, Node.C node) =>
+    TopoVar.Index idx, FlowTopo.Lookup idx, Node.C node) =>
    Idx.Record recIdx (idx node) ->
    EquationSystem mode rec node s term ->
    EquationSystem mode rec node s term

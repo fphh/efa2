@@ -1,16 +1,63 @@
-module EFA.Flow.Topology.Variable (
-   module EFA.Flow.Topology.Variable,
-   Var.Signal(..),
-   ) where
+module EFA.Flow.Topology.Variable where
 
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
-          (FormatValue, formatValue)
+          (FormatValue, formatValue,
+           FormatSignalIndex)
+
+
+data Signal node =
+     Energy (Idx.Energy node)
+   | Power (Idx.Power node)
+   | Eta (Idx.Eta node)
+   | DTime (Idx.DTime node)
+   | X (Idx.X node)
+   | Sum (Idx.Sum node)
+     deriving (Show, Eq, Ord)
+
+
+class FormatSignalIndex t => Index t where
+   index :: t a -> Signal a
+
+instance Index Idx.Energy where index = Energy
+instance Index Idx.Power  where index = Power
+instance Index Idx.Eta    where index = Eta
+instance Index Idx.DTime  where index = DTime
+instance Index Idx.X      where index = X
+instance Index Idx.Sum    where index = Sum
+
+
+ident :: Format output => Signal node -> output
+ident var =
+   case var of
+      Energy _idx -> Format.energy
+      Power _idx -> Format.power
+      Eta _idx -> Format.eta
+      X _idx -> Format.xfactor
+      DTime _idx -> Format.dtime
+      Sum _idx -> Format.signalSum
+
+instance Format.EdgeIdx Signal where
+   edgeIdent = ident
+
+
+instance (Node.C node) => FormatValue (Signal node) where
+   formatValue var =
+      case var of
+         Energy idx -> formatValue idx
+         Power idx -> formatValue idx
+         Eta idx -> formatValue idx
+         X idx -> formatValue idx
+         DTime idx -> formatValue idx
+         Sum idx -> formatValue idx
+
+
+instance Format.TopologyIdx Signal where
+   flowIdent (Idx.InPart _part var) = ident var
 
 
 class FormatIndex idx where
@@ -33,10 +80,6 @@ instance FormatIndex Idx.DTime where
 
 instance FormatIndex Idx.Sum where
    formatIndex = formatValue
-
-
-index :: (Var.SignalIndex idx) => idx node -> Var.Signal node
-index = Var.signalIndex
 
 
 checkedLookup ::
