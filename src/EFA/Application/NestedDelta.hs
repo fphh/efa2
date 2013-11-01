@@ -8,15 +8,17 @@ import qualified EFA.Flow.Sequence.EquationSystem as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import EFA.Flow.Sequence.EquationSystem ((?=))
 
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Flow.SequenceState.Quantity as Env
+import qualified EFA.Flow.SequenceState.Variable as Var
+
+import qualified EFA.Symbolic.Variable as SymVar
+
+import qualified EFA.Equation.RecordIndex as RecIdx
+import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Flow.SequenceState.Variable as Var
-import qualified EFA.Symbolic.Variable as SymVar
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import EFA.Utility (Pointed)
 
@@ -149,7 +151,7 @@ e &&> ParameterRecord inner xs =
 
 parameterSymbol ::
    (Pointed term, Node.C node,
-    t ~ SymVar.VarTerm var Idx.Delta term node,
+    t ~ SymVar.VarTerm var RecIdx.Delta term node,
     Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    OuterExtrusion rec t ->
@@ -157,19 +159,19 @@ parameterSymbol ::
 
 parameterSymbol param idx =
    runOuterExtrusion param
-      (SymVar.varSymbol $ Idx.before idx)
-      (SymVar.varSymbol $ Idx.delta  idx)
+      (SymVar.varSymbol $ RecIdx.before idx)
+      (SymVar.varSymbol $ RecIdx.delta  idx)
 
 absoluteSymbol ::
    (Pointed term, Node.C node,
-    t ~ SymVar.VarTerm var Idx.Delta term node,
+    t ~ SymVar.VarTerm var RecIdx.Delta term node,
     Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    InnerExtrusion rec t ->
    idx node -> rec (Result t)
 
 absoluteSymbol absolute idx =
-   absoluteRecord absolute (SymVar.varSymbol $ Idx.before idx)
+   absoluteRecord absolute (SymVar.varSymbol $ RecIdx.before idx)
 
 parameterRecord ::
    OuterExtrusion rec x ->
@@ -187,7 +189,7 @@ givenParameterSymbol ::
    (Verify.LocalVar mode t,
     EqSys.Record rec, Record.ToIndex rec ~ recIdx,
     Pointed term, Node.C node,
-    t ~ SymVar.VarTerm var Idx.Delta term node,
+    t ~ SymVar.VarTerm var RecIdx.Delta term node,
     t ~ Env.Element idx scalar signal,
     Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 

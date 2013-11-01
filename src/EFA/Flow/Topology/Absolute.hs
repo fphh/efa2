@@ -10,12 +10,12 @@ import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Variable as Var
 import EFA.Flow.Topology.EquationSystem ((=.=))
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result(Result)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
@@ -55,7 +55,7 @@ solve graph sys =
    EqSys.solve (FlowTopo.mapSection Record.Absolute graph) sys
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a Idx.Absolute Var.Signal node,
+   (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute Var.Signal node,
     Arith.Product a, Node.C node) =>
    FlowTopo.Section node (Result a) ->
    (forall s. EquationSystem (Verify.Track output) node s a) ->
@@ -76,7 +76,7 @@ constant = EqSys.constant
 variable ::
    (Sys.Value mode a, FlowTopo.Lookup idx, Node.C node) =>
    idx node -> Expression mode node s a a
-variable = EqSys.variable . Idx.absolute
+variable = EqSys.variable . RecIdx.absolute
 
 
 liftF ::

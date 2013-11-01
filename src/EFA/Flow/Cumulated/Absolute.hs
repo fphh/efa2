@@ -11,12 +11,12 @@ import qualified EFA.Flow.Cumulated.Quantity as CumFlow
 import qualified EFA.Flow.Cumulated.Variable as CumVar
 import EFA.Flow.Cumulated.EquationSystem ((=.=))
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result(Result)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
@@ -56,7 +56,7 @@ solve graph sys =
    EqSys.solve (CumFlow.mapGraph Record.Absolute graph) sys
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a Idx.Absolute CumVar.Any node,
+   (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute CumVar.Any node,
     Arith.Constant a, Node.C node) =>
    CumFlow.Graph node (Result a) ->
    (forall s. EquationSystem (Verify.Track output) node s a) ->
@@ -77,7 +77,7 @@ constant = EqSys.constant
 variable ::
    (Sys.Value mode a, CumFlow.Lookup idx, Node.C node) =>
    idx node -> Expression mode node s a a
-variable = EqSys.variable . Idx.absolute
+variable = EqSys.variable . RecIdx.absolute
 
 
 liftF ::

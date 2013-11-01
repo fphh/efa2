@@ -34,6 +34,7 @@ import EFA.Flow.EquationSystem
           (constant, constantRecord, join,
            (=%=), (=.=), (=&=))
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Result as Result
@@ -44,7 +45,6 @@ import EFA.Equation.SystemRecord
 import EFA.Equation.Arithmetic
           (Sum, Product, Constant, (~+), (~*))
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
@@ -139,7 +139,7 @@ variable ::
    (Node.C node, CumFlow.Lookup idx, Record rec) =>
    Record.Indexed rec (idx node) ->
    Expression mode rec node s a a
-variable (Idx.Record recIdx idx) =
+variable (RecIdx.Record recIdx idx) =
    fmap (Accessor.get (Record.access recIdx) . unwrap) $
    variableRecord idx
 

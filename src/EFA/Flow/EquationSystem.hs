@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Flow.EquationSystem where
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.SystemRecord as SysRecord
@@ -15,8 +16,6 @@ import EFA.Equation.Arithmetic
            Constant, zero,
            Integrate, Scalar, integrate,
            Scale, scale)
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import EFA.Report.FormatValue (FormatValue)
 
@@ -72,7 +71,7 @@ globalVariable ::
 globalVariable var = do
    vars <-
       lift $ for Record.indices $ \recIdx ->
-         Verify.globalVariableDyn $ Idx.Record recIdx var
+         Verify.globalVariableDyn $ RecIdx.Record recIdx var
    tell $ SysRecord.rules vars
    return vars
 

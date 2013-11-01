@@ -39,6 +39,8 @@ import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
 import qualified EFA.Flow.SequenceState.Variable as Var
 
+import qualified EFA.Equation.RecordIndex as RecIdx
+
 import EFA.Signal.Signal (SignalIdx(SignalIdx), Range(Range))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -672,10 +674,10 @@ absoluteVariable, deltaVariable,
    showEtaNode, hideEtaNode
    :: Format output => Options output -> Options output
 absoluteVariable opts =
-   opts { optRecordIndex = Format.record Idx.Absolute }
+   opts { optRecordIndex = Format.record RecIdx.Absolute }
 
 deltaVariable opts =
-   opts { optRecordIndex = Format.record Idx.Delta }
+   opts { optRecordIndex = Format.record RecIdx.Delta }
 
 showVariableIndex opts = opts { optVariableIndex = True }
 hideVariableIndex opts = opts { optVariableIndex = False }

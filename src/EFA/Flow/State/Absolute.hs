@@ -13,13 +13,13 @@ import qualified EFA.Flow.State.EquationSystem as EqSys
 import qualified EFA.Flow.State.Quantity as StateFlow
 import EFA.Flow.State.EquationSystem ((=.=))
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result(Result)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
@@ -78,9 +78,9 @@ solveOpts opts graph sys =
       (StateFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a Idx.Absolute Var.ForStorageStateScalar node,
+   (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute Var.ForStorageStateScalar node,
     Arith.Constant a, a ~ Arith.Scalar v,
-    Verify.GlobalVar (Verify.Track output) v Idx.Absolute Var.InStateSignal node,
+    Verify.GlobalVar (Verify.Track output) v RecIdx.Absolute Var.InStateSignal node,
     Arith.Product v, Arith.Integrate v, Node.C node) =>
    StateFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem (Verify.Track output) node s a v) ->
@@ -102,7 +102,7 @@ variable ::
    (Sys.Value mode x, x ~ StateFlow.Element idx a v,
     StateFlow.Lookup idx, Node.C node) =>
    idx node -> Expression mode node s a v x
-variable = EqSys.variable . Idx.absolute
+variable = EqSys.variable . RecIdx.absolute
 
 
 liftF ::

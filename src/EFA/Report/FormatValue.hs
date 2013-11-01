@@ -6,6 +6,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
+
+import qualified EFA.Equation.RecordIndex as RecIdx
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified Data.NonEmpty as NonEmpty
@@ -35,8 +37,8 @@ instance FormatValue Char where
 
 instance
    (Format.Record rec, FormatValue idx) =>
-      FormatValue (Idx.Record rec idx) where
-   formatValue (Idx.Record r idx) =
+      FormatValue (RecIdx.Record rec idx) where
+   formatValue (RecIdx.Record r idx) =
       Format.record r $ formatValue idx
 
 

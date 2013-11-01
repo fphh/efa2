@@ -7,13 +7,14 @@ import EFA.Application.Utility (checkDetermined)
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Stack as Stack
-import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Equation.RecordIndex as RecIdx
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result)
 import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.SequenceState.Variable as Var
 
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -74,8 +75,8 @@ instance FormatValue i => FormatValue (IndexSet i) where
          (\(i,b) ->
             Format.recordDelta
                (case b of
-                  Stack.Before -> Idx.Before
-                  Stack.Delta -> Idx.Delta) $
+                  Stack.Before -> RecIdx.Before
+                  Stack.Delta -> RecIdx.Delta) $
             formatValue i) $
       Map.toList x
 

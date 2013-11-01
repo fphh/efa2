@@ -31,6 +31,7 @@ import qualified EFA.Application.AssignMap as AssignMap
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.SequenceState.Variable as Var
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
@@ -45,13 +46,12 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Typ (TDisp)
 
-import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic (Constant)
 import EFA.Equation.Result (Result)
 import EFA.Equation.Stack (Stack)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
@@ -404,7 +404,7 @@ stackFromEnv ::
 
 stackFromEnv ti energyIndex eps (Record.DeltaName recName, env) = do
    stack ("Record " ++ recName ++ "-" ++ ti)
-      (formatValue $ Idx.delta $ Var.index energyIndex)
+      (formatValue $ RecIdx.delta $ Var.index energyIndex)
       (AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env)
 
 recordStackRow ::
@@ -446,7 +446,7 @@ aggregatedStack ::
    IO ()
 
 aggregatedStack ti energyIndex eps env =
-   stack ti (formatValue $ Idx.delta energyIndex) $
+   stack ti (formatValue $ RecIdx.delta energyIndex) $
    AssignMap.threshold eps $
    Map.mapKeys AssignMap.deltaIndexSet $ Fold.fold $
    AssignMap.lookupEnergyStacks energyIndex env

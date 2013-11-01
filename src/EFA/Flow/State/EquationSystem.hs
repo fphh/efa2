@@ -38,6 +38,7 @@ import EFA.Flow.Topology.EquationSystem (fromTopology)
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join, (=%=), (=.=))
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Flow.SequenceState.Variable as Var
@@ -181,7 +182,7 @@ variable ::
    (Node.C node, StateFlow.Lookup idx, StateFlow.Element idx a v ~ x, Record rec) =>
    Record.Indexed rec (idx node) ->
    Expression mode rec node s a v x
-variable (Idx.Record recIdx idx) =
+variable (RecIdx.Record recIdx idx) =
    fmap (Accessor.get (Record.access recIdx) . unwrap) $
    variableRecord idx
 

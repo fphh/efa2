@@ -3,7 +3,7 @@
 module EFA.Equation.Record where
 
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Equation.RecordIndex as RecIdx
 
 import EFA.Equation.Arithmetic (Sum, (~-), Constant, zero)
 
@@ -26,7 +26,7 @@ import Data.Tuple.HT (mapFst)
 import Prelude hiding (lookup, (.))
 
 
-type Indexed rec = Idx.Record (ToIndex rec)
+type Indexed rec = RecIdx.Record (ToIndex rec)
 
 
 newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show, Eq)
@@ -90,9 +90,9 @@ instance FormatValue (f a) => FormatValue (ExtDelta f a) where
                 (Format.recordDelta idx Format.empty)
                 (formatValue $ sel rec)
       in  Format.list $
-             assign Idx.Delta  extDelta  :
-             assign Idx.Before extBefore :
-             assign Idx.After  extAfter  :
+             assign RecIdx.Delta  extDelta  :
+             assign RecIdx.Before extBefore :
+             assign RecIdx.After  extAfter  :
              []
 
 instance Functor f => Functor (ExtDelta f) where
@@ -122,45 +122,45 @@ class
    access :: (idx ~ ToIndex rec) => idx -> Accessor.T (rec a) a
 
 instance C Absolute where
-   type ToIndex Absolute = Idx.Absolute
-   type FromIndex Idx.Absolute = Absolute
-   access Idx.Absolute = Accessor.fromWrapper Absolute unAbsolute
+   type ToIndex Absolute = RecIdx.Absolute
+   type FromIndex RecIdx.Absolute = Absolute
+   access RecIdx.Absolute = Accessor.fromWrapper Absolute unAbsolute
 
 instance C Delta where
-   type ToIndex Delta = Idx.Delta
-   type FromIndex Idx.Delta = Delta
+   type ToIndex Delta = RecIdx.Delta
+   type FromIndex RecIdx.Delta = Delta
    access idx =
       case idx of
-         Idx.Delta  -> Accessor.fromSetGet (\a d -> d{delta  = a}) delta
-         Idx.Before -> Accessor.fromSetGet (\a d -> d{before = a}) before
-         Idx.After  -> Accessor.fromSetGet (\a d -> d{after  = a}) after
+         RecIdx.Delta  -> Accessor.fromSetGet (\a d -> d{delta  = a}) delta
+         RecIdx.Before -> Accessor.fromSetGet (\a d -> d{before = a}) before
+         RecIdx.After  -> Accessor.fromSetGet (\a d -> d{after  = a}) after
 
 instance C rec => C (ExtDelta rec) where
-   type ToIndex (ExtDelta rec) = Idx.ExtDelta (ToIndex rec)
-   type FromIndex (Idx.ExtDelta idx) = ExtDelta (FromIndex idx)
-   access (Idx.ExtDelta idx sub) =
+   type ToIndex (ExtDelta rec) = RecIdx.ExtDelta (ToIndex rec)
+   type FromIndex (RecIdx.ExtDelta idx) = ExtDelta (FromIndex idx)
+   access (RecIdx.ExtDelta idx sub) =
       case idx of
-         Idx.Delta  -> access sub . Accessor.fromSetGet (\a d -> d{extDelta  = a}) extDelta
-         Idx.Before -> access sub . Accessor.fromSetGet (\a d -> d{extBefore = a}) extBefore
-         Idx.After  -> access sub . Accessor.fromSetGet (\a d -> d{extAfter  = a}) extAfter
+         RecIdx.Delta  -> access sub . Accessor.fromSetGet (\a d -> d{extDelta  = a}) extDelta
+         RecIdx.Before -> access sub . Accessor.fromSetGet (\a d -> d{extBefore = a}) extBefore
+         RecIdx.After  -> access sub . Accessor.fromSetGet (\a d -> d{extAfter  = a}) extAfter
 
 
 class C rec => IndexSet rec where
    indices :: (idx ~ ToIndex rec) => rec idx
 
 instance IndexSet Absolute where
-   indices = Absolute Idx.Absolute
+   indices = Absolute RecIdx.Absolute
 
 instance IndexSet Delta where
    indices =
-      Delta {delta = Idx.Delta, before = Idx.Before, after = Idx.After}
+      Delta {delta = RecIdx.Delta, before = RecIdx.Before, after = RecIdx.After}
 
 instance IndexSet rec => IndexSet (ExtDelta rec) where
    indices =
       ExtDelta {
-         extDelta  = fmap (Idx.ExtDelta Idx.Delta)  indices,
-         extBefore = fmap (Idx.ExtDelta Idx.Before) indices,
-         extAfter  = fmap (Idx.ExtDelta Idx.After)  indices
+         extDelta  = fmap (RecIdx.ExtDelta RecIdx.Delta)  indices,
+         extBefore = fmap (RecIdx.ExtDelta RecIdx.Before) indices,
+         extAfter  = fmap (RecIdx.ExtDelta RecIdx.After)  indices
       }
 
 
@@ -168,16 +168,16 @@ class C rec => Assigns rec where
    assigns :: rec a -> NonEmpty.T [] (ToIndex rec, a)
 
 instance Assigns Absolute where
-   assigns (Absolute x) = NonEmpty.singleton (Idx.Absolute, x)
+   assigns (Absolute x) = NonEmpty.singleton (RecIdx.Absolute, x)
 
 instance Assigns Delta where
-   assigns r = (Idx.Before, before r) !: (Idx.Delta, delta r) : []
+   assigns r = (RecIdx.Before, before r) !: (RecIdx.Delta, delta r) : []
 
 instance Assigns rec => Assigns (ExtDelta rec) where
    assigns r =
       NonEmptyC.append
-         (fmap (mapFst (Idx.ExtDelta Idx.Before)) $ assigns (extBefore r))
-         (fmap (mapFst (Idx.ExtDelta Idx.Delta))  $ assigns (extDelta r))
+         (fmap (mapFst (RecIdx.ExtDelta RecIdx.Before)) $ assigns (extBefore r))
+         (fmap (mapFst (RecIdx.ExtDelta RecIdx.Delta))  $ assigns (extDelta r))
 
 
 {- |

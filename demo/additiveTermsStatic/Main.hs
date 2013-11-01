@@ -23,14 +23,13 @@ import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Topology.NestedDelta
           (givenParameterSymbol, givenParameterNumber, (?=))
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Symbolic.OperatorTree as Op
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -44,9 +43,9 @@ import Data.Monoid (mempty, (<>))
 
 
 
-type Term = Symbolic.Term Idx.Delta SumProduct.Term Node
+type Term = Symbolic.Term RecIdx.Delta SumProduct.Term Node
 
-type IdxMultiDelta = Idx.ExtDelta (Idx.ExtDelta (Idx.ExtDelta Idx.Absolute))
+type IdxMultiDelta = RecIdx.ExtDelta (RecIdx.ExtDelta (RecIdx.ExtDelta RecIdx.Absolute))
 type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Absolute))
 
 type
@@ -94,12 +93,12 @@ eta1 = XIdx.eta node1 node2
 
 termFromIndex ::
    IdxMultiDelta ->
-   [Idx.Record Idx.Delta (Var.Signal Node)]
+   [RecIdx.Record RecIdx.Delta (Var.Signal Node)]
 termFromIndex
-      (Idx.ExtDelta r2 (Idx.ExtDelta r1 (Idx.ExtDelta r0 Idx.Absolute))) =
-   Idx.Record r2 (Var.index ein) :
-   Idx.Record r1 (Var.index eta0) :
-   Idx.Record r0 (Var.index eta1) :
+      (RecIdx.ExtDelta r2 (RecIdx.ExtDelta r1 (RecIdx.ExtDelta r0 RecIdx.Absolute))) =
+   RecIdx.Record r2 (Var.index ein) :
+   RecIdx.Record r1 (Var.index eta0) :
+   RecIdx.Record r0 (Var.index eta1) :
    []
 
 
@@ -204,7 +203,7 @@ mainNumeric = do
                 Record.assignDeltaMap x
          AssignMap.print assigns
          PlotIO.stack "Decomposition of total output energy"
-            (formatValue $ Idx.delta $ Var.index eout)
+            (formatValue $ RecIdx.delta $ Var.index eout)
             (AssignMap.ignoreUndetermined assigns)
 
 

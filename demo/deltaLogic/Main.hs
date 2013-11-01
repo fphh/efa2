@@ -16,10 +16,9 @@ import EFA.Flow.Topology.EquationSystem ((=%=))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import EFA.Equation.Arithmetic ((~*))
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Report.Format as Format
 
@@ -34,13 +33,14 @@ given, sys ::
    Symbolic.EquationSystem Symbolic.Ignore
       Record.Delta Node s SumProduct.Term
 given =
+   RecIdx.before XIdx.dTime =<>
 
-   Idx.before (XIdx.power Source Sink) =<>
-   Idx.before (XIdx.eta Source Sink) =<>
+   RecIdx.before (XIdx.power Source Sink) =<>
+   RecIdx.before (XIdx.eta Source Sink) =<>
 
-   Idx.after (XIdx.eta Source Sink) =<>
+   RecIdx.after (XIdx.eta Source Sink) =<>
 
-   Idx.delta (XIdx.power Source Sink) =<>
+   RecIdx.delta (XIdx.power Source Sink) =<>
 
    mempty
 

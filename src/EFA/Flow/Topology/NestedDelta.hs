@@ -12,17 +12,17 @@ import qualified EFA.Flow.Topology.EquationSystem as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import EFA.Flow.Topology.EquationSystem ((?=))
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Verify as Verify
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import EFA.Utility (Pointed)
 
 
 
 parameterSymbol ::
-   (Pointed term, Node.C node, t ~ SymVar.Term Idx.Delta term node,
+   (Pointed term, Node.C node, t ~ SymVar.Term RecIdx.Delta term node,
     FlowTopo.Lookup idx) =>
 
    OuterExtrusion rec t ->
@@ -30,13 +30,13 @@ parameterSymbol ::
 
 parameterSymbol param idx =
    runOuterExtrusion param
-      (SymVar.varSymbol $ Idx.before idx)
-      (SymVar.varSymbol $ Idx.delta  idx)
+      (SymVar.varSymbol $ RecIdx.before idx)
+      (SymVar.varSymbol $ RecIdx.delta  idx)
 
 
 givenParameterSymbol ::
    (Verify.LocalVar mode v, EqSys.Record rec,
-    Pointed term, Node.C node, SymVar.Term Idx.Delta term node ~ v,
+    Pointed term, Node.C node, SymVar.Term RecIdx.Delta term node ~ v,
     FlowTopo.Lookup idx) =>
 
    idx node ->

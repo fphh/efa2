@@ -104,6 +104,7 @@ Library
     EFA.Equation.Result
     EFA.Equation.Unknown
     EFA.Equation.Record
+    EFA.Equation.RecordIndex
     EFA.Equation.Arithmetic
     EFA.Equation.MultiValue
     EFA.Equation.Stack

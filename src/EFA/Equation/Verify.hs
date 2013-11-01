@@ -4,11 +4,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Equation.Verify where
 
-import qualified EFA.Graph.Topology.Index as Idx
-
-import qualified EFA.Equation.Pair as Pair
 import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Symbolic.Variable as SymVar
+
+import qualified EFA.Equation.RecordIndex as RecIdx
+import qualified EFA.Equation.Pair as Pair
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -95,11 +95,11 @@ class LocalVar w a => GlobalVar w a recIdx var node where
    globalVariable ::
       (Format.Record recIdx, FormatValue (idx node),
        Var.Index idx, Var.Type idx ~ var) =>
-      Idx.Record recIdx (idx node) -> ST s (Sys.Variable w s a)
+      RecIdx.Record recIdx (idx node) -> ST s (Sys.Variable w s a)
 
    globalVariableDyn ::
       (Format.Record recIdx, FormatValue (var node)) =>
-      Idx.Record recIdx (var node) -> ST s (Sys.Variable w s a)
+      RecIdx.Record recIdx (var node) -> ST s (Sys.Variable w s a)
 
 
 type Variable output s a b = Sys.Variable (Track output) s (Pair.T a b)
@@ -107,8 +107,8 @@ type Variable output s a b = Sys.Variable (Track output) s (Pair.T a b)
 
 type MixedTerm mixedTerm recIdx part node =
         mixedTerm
-           (Idx.Record recIdx (Var.ForStorageScalar part node))
-           (Idx.Record recIdx (Var.InPartSignal part node))
+           (RecIdx.Record recIdx (Var.ForStorageScalar part node))
+           (RecIdx.Record recIdx (Var.InPartSignal part node))
 
 instance
    (Format output, FormatValue a, Eq a,
@@ -146,8 +146,8 @@ instance GlobalVar IdentityT a recIdx var node where
 globalVariableTracked ::
    (Format output, Format.Record recIdx, FormatValue (idx node),
     FormatValue varTerm, FormatValue a, Eq a) =>
-   (Idx.Record recIdx (idx node) -> varTerm) ->
-   Idx.Record recIdx (idx node) ->
+   (RecIdx.Record recIdx (idx node) -> varTerm) ->
+   RecIdx.Record recIdx (idx node) ->
    ST s (Variable output s varTerm a)
 globalVariableTracked symbol idx =
    Sys.globalVariable
@@ -179,8 +179,8 @@ inconsistency name old new =
 logUpdate ::
    (Format output, Format.Record recIdx, FormatValue (idx node),
     FormatValue varTerm, FormatValue a) =>
-   (Idx.Record recIdx (idx node) -> varTerm) ->
-   Idx.Record recIdx (idx node) ->
+   (RecIdx.Record recIdx (idx node) -> varTerm) ->
+   RecIdx.Record recIdx (idx node) ->
    MaybeT (ST s) (Pair.T varTerm a) ->
    MaybeT (UMT.Wrap (Track output) (ST s)) (Pair.T varTerm a)
 logUpdate symbol idx act = do

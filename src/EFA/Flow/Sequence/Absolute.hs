@@ -9,21 +9,20 @@ module EFA.Flow.Sequence.Absolute (
    (=.=),
    ) where
 
-import qualified EFA.Flow.Sequence.Symbolic as Symbolic
-
 import qualified EFA.Symbolic.Variable as SymVar
 
+import qualified EFA.Flow.Sequence.Symbolic as Symbolic
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import EFA.Flow.Sequence.EquationSystem ((=.=))
 
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Equation.RecordIndex as RecIdx
+import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import EFA.Utility (Pointed)
@@ -85,9 +84,9 @@ solveOpts opts graph sys =
       (SeqFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a Idx.Absolute Var.ForStorageSectionScalar node,
+   (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute Var.ForStorageSectionScalar node,
     Arith.Constant a, a ~ Arith.Scalar v,
-    Verify.GlobalVar (Verify.Track output) v Idx.Absolute Var.InSectionSignal node,
+    Verify.GlobalVar (Verify.Track output) v RecIdx.Absolute Var.InSectionSignal node,
     Arith.Product v, Arith.Integrate v, Node.C node) =>
    SeqFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem (Verify.Track output) node s a v) ->
@@ -109,7 +108,7 @@ variable ::
    (Sys.Value mode x, x ~ SeqFlow.Element idx a v,
     SeqFlow.Lookup idx, Node.C node) =>
    idx node -> Expression mode node s a v x
-variable = EqSys.variable . Idx.absolute
+variable = EqSys.variable . RecIdx.absolute
 
 
 liftF ::
@@ -128,11 +127,11 @@ liftF2 ::
 liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3
 
 
-type SignalTerm term node = Symbolic.SignalTerm Idx.Absolute term node
-type ScalarTerm term node = Symbolic.ScalarTerm Idx.Absolute term node
-type ScalarAtom term node = Symbolic.ScalarAtom Idx.Absolute term node
+type SignalTerm term node = Symbolic.SignalTerm RecIdx.Absolute term node
+type ScalarTerm term node = Symbolic.ScalarTerm RecIdx.Absolute term node
+type ScalarAtom term node = Symbolic.ScalarAtom RecIdx.Absolute term node
 
-type VarTerm var term node = SymVar.VarTerm var Idx.Absolute term node
+type VarTerm var term node = SymVar.VarTerm var RecIdx.Absolute term node
 
 type
    SymbolicEquationSystem mode node s term =
@@ -145,7 +144,7 @@ type
 symbol ::
    (SymVar.Symbol var, Pointed term) =>
    var node -> VarTerm var term node
-symbol = SymVar.symbol . Idx.absolute
+symbol = SymVar.symbol . RecIdx.absolute
 
 givenSymbol ::
    (Sys.Value mode t, t ~ VarTerm var term node,

@@ -16,6 +16,7 @@ import EFA.Flow.Sequence.EquationSystem ((.=), (%=), (=%%=))
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Flow.SequenceState.Variable as Var
@@ -50,7 +51,7 @@ given ::
     EqSys.Record rec, recIdx ~ EqRecord.ToIndex rec, Pointed term,
     Var.Type idx ~ var, Symbol var,
     SeqFlow.Lookup idx, Node.C node) =>
-   Idx.Record recIdx (idx node) ->
+   RecIdx.Record recIdx (idx node) ->
    EquationSystem mode rec node s term
 given idx =
    idx .= varSymbol idx
@@ -64,7 +65,7 @@ infixr 6 =<>
     EqSys.Record rec, recIdx ~ EqRecord.ToIndex rec, Pointed term,
     Var.Type idx ~ var, Symbol var,
     SeqFlow.Lookup idx, Node.C node) =>
-   Idx.Record recIdx (idx node) ->
+   RecIdx.Record recIdx (idx node) ->
    EquationSystem mode rec node s term ->
    EquationSystem mode rec node s term
 idx =<> eqsys = given idx <> eqsys

@@ -3,6 +3,7 @@ module EFA.Report.Format where
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Equation.RecordIndex as RecIdx
 
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -77,7 +78,7 @@ class Format output where
 
    function :: Function -> output -> output
    integral :: output -> output
-   recordDelta :: Idx.Delta -> output -> output
+   recordDelta :: RecIdx.Delta -> output -> output
    initial, exit :: output
    section :: Idx.Section -> output
    state :: Idx.State -> output
@@ -131,9 +132,9 @@ instance Format ASCII where
    recordDelta d (ASCII rest) =
       ASCII $ (++rest) $
       case d of
-         Idx.Before -> "[0]"
-         Idx.After -> "[1]"
-         Idx.Delta -> "d"
+         RecIdx.Before -> "[0]"
+         RecIdx.After -> "[1]"
+         RecIdx.Delta -> "d"
    initial = ASCII "init"
    exit = ASCII "exit"
    section (Idx.Section s) = ASCII $ show s
@@ -205,9 +206,9 @@ instance Format Unicode where
    recordDelta d (Unicode rest) =
       Unicode $ (++rest) $
       case d of
-         Idx.Before -> "\x2070"
-         Idx.After -> "\xb9"
-         Idx.Delta -> [deltaChar]
+         RecIdx.Before -> "\x2070"
+         RecIdx.After -> "\xb9"
+         RecIdx.Delta -> [deltaChar]
    initial = Unicode "init"
    exit = Unicode "exit"
    section (Idx.Section s) = Unicode $ show s
@@ -324,9 +325,9 @@ instance Format Latex where
          alternatively use packages leftidx or tensor:
          http://tex.stackexchange.com/questions/11542/left-and-right-subscript
          -}
-         Idx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
-         Idx.After -> "\\leftexp{1}{" ++ rest ++ "}"
-         Idx.Delta -> "\\Delta " ++ rest
+         RecIdx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
+         RecIdx.After -> "\\leftexp{1}{" ++ rest ++ "}"
+         RecIdx.Delta -> "\\Delta " ++ rest
    initial = Latex "\\mbox{init}"
    exit = Latex "\\mbox{exit}"
    section (Idx.Section s) = Latex $ show s
@@ -384,14 +385,14 @@ realExp x =
 class Record record where
    record :: Format output => record -> output -> output
 
-instance Record Idx.Absolute where
-   record Idx.Absolute = id
+instance Record RecIdx.Absolute where
+   record RecIdx.Absolute = id
 
-instance Record Idx.Delta where
+instance Record RecIdx.Delta where
    record = recordDelta
 
-instance Record rec => Record (Idx.ExtDelta rec) where
-   record (Idx.ExtDelta d r) = recordDelta d . record r
+instance Record rec => Record (RecIdx.ExtDelta rec) where
+   record (RecIdx.ExtDelta d r) = recordDelta d . record r
 
 
 class EdgeIdx idx where

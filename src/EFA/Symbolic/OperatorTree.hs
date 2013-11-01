@@ -2,10 +2,10 @@
 module EFA.Symbolic.OperatorTree where
 
 import qualified EFA.Symbolic.SumProduct as Term
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, zero, (~+), (~-),
@@ -229,13 +229,13 @@ fromNormalTerm :: Ord a => Term.Term a -> Term a
 fromNormalTerm = Term.evaluate Atom
 
 
-delta :: Term (Idx.Record Idx.Absolute a) -> Term (Idx.Record Idx.Delta a)
+delta :: Term (RecIdx.Record RecIdx.Absolute a) -> Term (RecIdx.Record RecIdx.Delta a)
 delta =
-   let before = fmap (\(Idx.Record Idx.Absolute a) -> (Idx.Record Idx.Before a))
+   let before = fmap (\(RecIdx.Record RecIdx.Absolute a) -> (RecIdx.Record RecIdx.Before a))
        function fn x =
           Function fn (before x + go x) - Function fn (before x)
        go (Const _) = Const 0
-       go (Atom (Idx.Record Idx.Absolute a)) = (Atom (Idx.Record Idx.Delta a))
+       go (Atom (RecIdx.Record RecIdx.Absolute a)) = (Atom (RecIdx.Record RecIdx.Delta a))
        go (Function fn a) =
           case fn of
              Format.Absolute -> function fn a

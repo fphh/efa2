@@ -14,6 +14,7 @@ import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import EFA.Equation.Arithmetic (zero)
 
@@ -33,26 +34,26 @@ given ::
    Symbolic.EquationSystem Symbolic.Ignore
       Record.Delta Node s SumProduct.Term
 given =
-   (Idx.delta (XIdx.dTime sec0) .= zero) <>
+   (RecIdx.delta (XIdx.dTime sec0) .= zero) <>
 
-   Idx.before (XIdx.dTime sec0) =<>
+   RecIdx.before (XIdx.dTime sec0) =<>
 
-   Idx.before (XIdx.storage Idx.initial node3) =<>
-   Idx.delta (XIdx.storage (Idx.afterSection sec0) node3) =<>
+   RecIdx.before (XIdx.storage Idx.initial node3) =<>
+   RecIdx.delta (XIdx.storage (Idx.afterSection sec0) node3) =<>
 
-   Idx.after (XIdx.power sec0 node3 node2) =<>
-   Idx.after (XIdx.x sec0 node2 node3) =<>
+   RecIdx.after (XIdx.power sec0 node3 node2) =<>
+   RecIdx.after (XIdx.x sec0 node2 node3) =<>
 
-   Idx.before (XIdx.power sec0 node3 node2) =<>
-   Idx.before (XIdx.x sec0 node2 node3) =<>
+   RecIdx.before (XIdx.power sec0 node3 node2) =<>
+   RecIdx.before (XIdx.x sec0 node2 node3) =<>
 
-   Idx.before (XIdx.eta sec0 node3 node2) =<>
-   Idx.before (XIdx.eta sec0 node0 node2) =<>
-   Idx.before (XIdx.eta sec0 node2 node1) =<>
+   RecIdx.before (XIdx.eta sec0 node3 node2) =<>
+   RecIdx.before (XIdx.eta sec0 node0 node2) =<>
+   RecIdx.before (XIdx.eta sec0 node2 node1) =<>
 
-   Idx.after (XIdx.eta sec0 node3 node2) =<>
-   Idx.delta (XIdx.eta sec0 node0 node2) =<>
-   Idx.delta (XIdx.eta sec0 node2 node1) =<>
+   RecIdx.after (XIdx.eta sec0 node3 node2) =<>
+   RecIdx.delta (XIdx.eta sec0 node0 node2) =<>
+   RecIdx.delta (XIdx.eta sec0 node2 node1) =<>
 
    mempty
 

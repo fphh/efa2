@@ -19,12 +19,11 @@ import EFA.Flow.Topology.Absolute ((.=))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
+import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Stack (Stack)
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -36,7 +35,7 @@ import qualified System.IO as IO
 
 
 
-type Term = Symbolic.Term Idx.Delta SumProduct.Term Node
+type Term = Symbolic.Term RecIdx.Delta SumProduct.Term Node
 
 
 type
@@ -51,7 +50,7 @@ infixr 6 *=<>, -=<>
    idx Node ->
    EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
-   (idx .= (Stack.singleton $ Symbolic.varSymbol $ Idx.before idx))
+   (idx .= (Stack.singleton $ Symbolic.varSymbol $ RecIdx.before idx))
    <>
    eqsys
 
@@ -63,8 +62,8 @@ idx -=<> eqsys =
    (idx .=
       let var = Var.index idx
       in  Stack.deltaPair var
-             (Symbolic.symbol (Idx.before var))
-             (Symbolic.symbol (Idx.delta  var)))
+             (Symbolic.symbol (RecIdx.before var))
+             (Symbolic.symbol (RecIdx.delta  var)))
    <>
    eqsys
 
@@ -140,7 +139,7 @@ mainNumeric = do
                       Stack.assignDeltaMap x
                AssignMap.print assigns
                PlotIO.stack "Decomposition of total output energy"
-                  (formatValue $ Idx.delta $ Var.index eout) assigns
+                  (formatValue $ RecIdx.delta $ Var.index eout) assigns
 
 
 main :: IO ()
