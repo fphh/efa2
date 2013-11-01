@@ -91,7 +91,7 @@ trange = 0.01:[0.5, 1 .. 12]
 solve :: Double -> Double -> String
 solve x e =
    let solved = EqSys.solve flowGraph (given x e)
-       emap idx = Var.checkedLookup "solve" SeqFlow.lookupEnergy idx solved
+       emap idx = Var.checkedLookup "solve" SeqFlow.lookupSignal idx solved
        stemap idx = Var.checkedLookup "solve" SeqFlow.lookupScalar idx solved
        f _es ei eo0 eo1 = (eo0 + eo1) / ei
    in  show x ++ " " ++ show e ++ " " ++

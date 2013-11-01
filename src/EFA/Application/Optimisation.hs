@@ -99,8 +99,8 @@ etaFromEdge flowGraph state se =
    let etaF = Idx.InPart state $ Idx.Eta se
        etaB = Idx.InPart state $ Idx.Eta $ Idx.flip se
    in  checkFoundPair etaF etaB
-          (StateFlow.lookupEta etaF flowGraph,
-           StateFlow.lookupEta etaB flowGraph)
+          (StateFlow.lookup etaF flowGraph,
+           StateFlow.lookup etaB flowGraph)
 
 
 initialEnv ::

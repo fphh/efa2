@@ -31,12 +31,6 @@ module EFA.Flow.Sequence.Quantity (
    mapStoragesWithVar,
    mapSequenceWithVar,
 
-   lookupPower,
-   lookupEnergy,
-   lookupX,
-   lookupEta,
-   lookupDTime,
-   lookupSum,
    lookupSums,
 
    Lookup, lookup,
@@ -52,7 +46,6 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
-import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
@@ -250,63 +243,21 @@ toAssignMap =
    mapGraphWithVar AssignMap.scalarSingleton AssignMap.signalSingleton
 
 
-lookupPower ::
-   (Ord node) => SeqIdx.Power node -> Graph node a v -> Maybe v
-lookupPower =
-   lookupAutoDir flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
-
-lookupEnergy ::
-   (Ord node) => SeqIdx.Energy node -> Graph node a v -> Maybe v
-lookupEnergy =
-   lookupAutoDir flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
-
-lookupX ::
-   (Ord node) => SeqIdx.X node -> Graph node a v -> Maybe v
-lookupX =
-   lookupAutoDir flowXOut flowXIn (\(Idx.X se) -> se)
-
-lookupAutoDir ::
-   (Ord node) =>
-   (Flow v -> v) ->
-   (Flow v -> v) ->
-   (idx node -> Idx.TopologyEdge node) ->
-   Idx.InSection idx node -> Graph node a v -> Maybe v
-lookupAutoDir fieldOut fieldIn unpackIdx =
-   withTopology $ FlowTopo.lookupAutoDir fieldOut fieldIn unpackIdx
-
-
-lookupEta :: (Ord node) => SeqIdx.Eta node -> Graph node a v -> Maybe v
-lookupEta =
-   withTopology $ \(Idx.Eta se) -> FlowTopoPlain.lookupEdge flowEta se
-
-lookupSum :: (Ord node) => SeqIdx.Sum node -> Graph node a v -> Maybe v
-lookupSum =
-   withTopology $ \(Idx.Sum dir node) topo -> do
-      sums <- Graph.lookupNode node topo
-      case dir of
-         Idx.In  -> sumIn sums
-         Idx.Out -> sumOut sums
-
-
-withTopology ::
-   (idx node -> Topology node v -> Maybe r) ->
-   Idx.InSection idx node ->
-   Graph node a v ->
-   Maybe r
-withTopology f (Idx.InPart sec idx) g =
-   f idx . FlowTopo.topology =<< seqLookup sec g
-
-
-lookupDTime :: SeqIdx.DTime node -> Graph node a v -> Maybe v
-lookupDTime (Idx.InPart sec Idx.DTime) =
-   fmap FlowTopo.label . seqLookup sec
-
-
 lookupSums ::
    (Ord node) =>
    Idx.SecNode node -> Graph node a v -> Maybe (Sums v)
 lookupSums (Idx.PartNode sec node) =
    Graph.lookupNode node . FlowTopo.topology <=< seqLookup sec
+
+
+withSection ::
+   (idx node -> FlowTopo.Section node v -> Maybe r) ->
+   Idx.InSection idx node ->
+   Graph node a v ->
+   Maybe r
+withSection f (Idx.InPart sec idx) g =
+   f idx =<< seqLookup sec g
+
 
 seqLookup ::
    Idx.Section -> Graph node a v -> Maybe (FlowTopo.Section node v)
@@ -359,22 +310,22 @@ class (Var.SignalIndex idx) => LookupSignal idx where
       (Ord node) => Idx.InSection idx node -> Graph node a v -> Maybe v
 
 instance LookupSignal Idx.Energy where
-   lookupSignal = lookupEnergy
+   lookupSignal = withSection FlowTopo.lookupEnergy
 
 instance LookupSignal Idx.Power where
-   lookupSignal = lookupPower
+   lookupSignal = withSection FlowTopo.lookupPower
 
 instance LookupSignal Idx.Eta where
-   lookupSignal = lookupEta
+   lookupSignal = withSection FlowTopo.lookupEta
 
 instance LookupSignal Idx.DTime where
-   lookupSignal = lookupDTime
+   lookupSignal = withSection FlowTopo.lookupDTime
 
 instance LookupSignal Idx.X where
-   lookupSignal = lookupX
+   lookupSignal = withSection FlowTopo.lookupX
 
 instance LookupSignal Idx.Sum where
-   lookupSignal = lookupSum
+   lookupSignal = withSection FlowTopo.lookupSum
 
 
 class (Var.ScalarIndex idx) => LookupScalar idx where

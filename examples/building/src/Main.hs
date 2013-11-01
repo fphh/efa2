@@ -173,7 +173,7 @@ optimalEtasWithPowers params forceFactor env =
                    Map.mapMaybe (fmap (fmap
                       (AppUt.checkDetermined "optimalEtasWithPowers" .
                        Var.checkedLookup "optimalEtasWithPowers"
-                       StateFlow.lookupPower
+                       StateFlow.lookup
                           (StateIdx.powerFromPPos state ppos))))
 
                 solveFunc :: Optimisation.Param2x2 Double -> EnvResult Double

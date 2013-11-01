@@ -36,13 +36,6 @@ module EFA.Flow.State.Quantity (
    graphFromStates,
    graphFromStateMap,
 
-   lookupPower,
-   lookupEnergy,
-   lookupX,
-   lookupEta,
-   lookupDTime,
-   lookupSum,
-
    lookupSums,
 
    Lookup, lookup,
@@ -51,10 +44,9 @@ module EFA.Flow.State.Quantity (
    Env.TypeOf, Env.Element, Env.switchPart,
    ) where
 
-import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State as StateFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
@@ -522,61 +514,13 @@ mapCarryEdge caller secMap (Idx.CarryEdge from to) =
       (fmap (MapU.checkedLookup (caller ++ " to")   secMap) to)
 
 
-lookupPower ::
-   (Ord node) => StateIdx.Power node -> Graph node a v -> Maybe v
-lookupPower =
-   lookupAutoDir flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
-
-lookupEnergy ::
-   (Ord node) => StateIdx.Energy node -> Graph node a v -> Maybe v
-lookupEnergy =
-   lookupAutoDir flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
-
-lookupX ::
-   (Ord node) => StateIdx.X node -> Graph node a v -> Maybe v
-lookupX =
-   lookupAutoDir flowXOut flowXIn (\(Idx.X se) -> se)
-
-lookupAutoDir ::
-   (Ord node) =>
-   (Flow v -> v) ->
-   (Flow v -> v) ->
-   (idx node -> Idx.TopologyEdge node) ->
-   Idx.InState idx node -> Graph node a v -> Maybe v
-lookupAutoDir fieldOut fieldIn unpackIdx =
-   withTopology $ FlowTopo.lookupAutoDir fieldOut fieldIn unpackIdx
-
-
-lookupEta :: (Ord node) => StateIdx.Eta node -> Graph node a v -> Maybe v
-lookupEta =
-   withTopology $ \(Idx.Eta se) -> FlowTopoPlain.lookupEdge flowEta se
-
-
-lookupSum :: (Ord node) => StateIdx.Sum node -> Graph node a v -> Maybe v
-lookupSum =
-   withTopology $ \(Idx.Sum dir node) topo -> do
-      sums <- Graph.lookupNode node topo
-      case dir of
-         Idx.In  -> sumIn sums
-         Idx.Out -> sumOut sums
-
-
-type FlowTopology node v =
-        Graph.Graph node Graph.EitherEdge (Sums v) (Maybe (Flow v))
-
-withTopology ::
-   (idx node -> FlowTopology node v -> Maybe r) ->
+withSection ::
+   (idx node -> FlowTopo.Section node v -> Maybe r) ->
    Idx.InState idx node ->
    Graph node a v ->
    Maybe r
-withTopology f (Idx.InPart state idx) g =
-   f idx . FlowTopo.topology =<< seqLookup state g
-
-
-lookupDTime :: StateIdx.DTime node -> Graph node a v -> Maybe v
-lookupDTime (Idx.InPart state Idx.DTime) =
-   fmap FlowTopo.label . seqLookup state
-
+withSection f (Idx.InPart state idx) g =
+   f idx =<< seqLookup state g
 
 lookupSums ::
    (Ord node) =>
@@ -620,22 +564,22 @@ class (Var.SignalIndex idx) => LookupSignal idx where
       (Ord node) => Idx.InState idx node -> Graph node a v -> Maybe v
 
 instance LookupSignal Idx.Energy where
-   lookupSignal = lookupEnergy
+   lookupSignal = withSection FlowTopo.lookupEnergy
 
 instance LookupSignal Idx.Power where
-   lookupSignal = lookupPower
+   lookupSignal = withSection FlowTopo.lookupPower
 
 instance LookupSignal Idx.Eta where
-   lookupSignal = lookupEta
+   lookupSignal = withSection FlowTopo.lookupEta
 
 instance LookupSignal Idx.DTime where
-   lookupSignal = lookupDTime
+   lookupSignal = withSection FlowTopo.lookupDTime
 
 instance LookupSignal Idx.X where
-   lookupSignal = lookupX
+   lookupSignal = withSection FlowTopo.lookupX
 
 instance LookupSignal Idx.Sum where
-   lookupSignal = lookupSum
+   lookupSignal = withSection FlowTopo.lookupSum
 
 
 class (Var.ScalarIndex idx) => LookupScalar idx where

@@ -216,14 +216,14 @@ lookupDetPower ::
 lookupDetPower idx =
   AppUt.checkDetermined ("lookupDetPower determined: " ++ show idx) .
   Var.checkedLookup ("lookupDetPower lookup: " ++ show idx)
-    SeqFlow.lookupPower idx
+    SeqFlow.lookup idx
 
 lookupDetEnergy ::
   XIdx.Energy Node -> SeqFlow.Graph Node b (Result Double) -> Double
 lookupDetEnergy idx =
   AppUt.checkDetermined ("lookupDetEnergy determined: " ++ show idx) .
   Var.checkedLookup ("lookupDetEnergy lookup: " ++ show idx)
-    SeqFlow.lookupEnergy idx
+    SeqFlow.lookup idx
 
 
 -----------------------------------------------------------------------------

@@ -34,8 +34,6 @@ module EFA.Flow.Topology.Quantity (
    lookupDTime,
    lookupSums,
 
-   lookupAutoDir,
-
    Lookup, lookup,
 
    fold, foldMap,
