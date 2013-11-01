@@ -44,7 +44,7 @@ import Data.Foldable (foldMap)
 
 
 state0, state1, state2, state3 :: Idx.State
-state0 :~ state1 :~ state2 :~ state3 :~ _ = Stream.enumFrom $ Idx.State 0
+state0 :~ state1 :~ state2 :~ state3 :~ _ = Stream.enumFrom $ Idx.state0
 
 
 type EnvData a = StateFlow.Graph System.Node (Data Nil a) (Data Nil a)

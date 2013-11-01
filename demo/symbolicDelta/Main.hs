@@ -23,7 +23,7 @@ import Data.Monoid (mempty, (<>))
 
 
 sec0 :: Idx.Section
-sec0 = Idx.Section 0
+sec0 = Idx.section0
 
 
 {-

@@ -20,7 +20,7 @@ import Data.Monoid (mconcat)
 
 
 sec0, sec1 :: Idx.Section
-sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
+sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.section0
 
 
 given :: EqSys.EquationSystemIgnore Node s Double Double

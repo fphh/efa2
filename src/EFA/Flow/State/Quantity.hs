@@ -244,7 +244,7 @@ _states ::
    Map (Topology node nodeLabel) Idx.State
 _states =
    Map.fromAscList .
-   flip zip [Idx.State 0 ..] .
+   flip zip [Idx.state0 ..] .
    Set.toAscList . foldMap Set.singleton
 
 
@@ -266,7 +266,7 @@ stateMap ::
    Map Idx.Section (Topology node nodeLabel) ->
    Map Idx.Section Idx.State
 stateMap =
-   flip MS.evalState (Map.empty, Stream.iterate succ $ Idx.State 0) .
+   flip MS.evalState (Map.empty, Stream.iterate succ $ Idx.state0) .
    traverse identify
 
 unitLabels ::
@@ -454,7 +454,7 @@ graphFromStates ::
    [Topo.FlowTopology node] ->
    Graph node a v
 graphFromStates =
-   graphFromStateMap . Map.fromList . zip [Idx.State 0 ..]
+   graphFromStateMap . Map.fromList . zip [Idx.state0 ..]
 
 graphFromStateMap ::
    (Node.C node, Unknown a, Unknown v) =>

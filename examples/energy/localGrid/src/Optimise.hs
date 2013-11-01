@@ -586,7 +586,7 @@ main = do
 
 
      -- | extract power record from simulation env to allow subsequent EFA
-     powerRecSim = ModUt.envToPowerRecord (Idx.Section 0) envSim
+     powerRecSim = ModUt.envToPowerRecord (Idx.section0) envSim
 
      -- | flip signs of power signals at water edge, as edge flips direction between state 0 and 4
      flipwater (TopoIdx.PPos (TopoIdx.Edge Network Water)) x = Sig.neg x

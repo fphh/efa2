@@ -78,7 +78,7 @@ fromList =
 
 fromRangeList :: [(Range, a)] -> List a
 fromRangeList =
-   List . zipWith (uncurry . Section) [Idx.Section 0 ..]
+   List . zipWith (uncurry . Section) [Idx.section0 ..]
 
 fromLengthList :: [(Int, a)] -> List a
 fromLengthList =

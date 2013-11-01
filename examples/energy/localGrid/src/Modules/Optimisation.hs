@@ -44,7 +44,7 @@ import Data.Monoid (mconcat, (<>))
 
 
 sec0, sec1 :: Idx.Section
-sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
+sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.section0
 
 type EtaAssignMap =
         Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)

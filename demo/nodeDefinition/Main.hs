@@ -18,7 +18,7 @@ import EFA.Utility.Stream (Stream((:~)))
 
 
 sec0 :: Idx.Section
-sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
+sec0 :~ _ = Stream.enumFrom $ Idx.section0
 
 -------------------------------------------------
 -- Vordefinierte Knoten Int
