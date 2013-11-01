@@ -4,8 +4,8 @@ import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 
-import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Variable ((<#>))
+import qualified EFA.Flow.SequenceState.Variable as Var
+import EFA.Flow.SequenceState.Variable ((<#>))
 
 import qualified EFA.Report.Format as Format
 

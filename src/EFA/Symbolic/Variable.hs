@@ -5,7 +5,7 @@ module EFA.Symbolic.Variable where
 
 import qualified EFA.Graph.Topology.Index as Idx
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Symbolic.Mixed as Term
 import EFA.Utility (Pointed, point)
 

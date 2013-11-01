@@ -60,7 +60,7 @@ import EFA.Flow.State (states, storages)
 import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Unknown (Unknown)
 
 import qualified EFA.Graph.Topology.Index as Idx

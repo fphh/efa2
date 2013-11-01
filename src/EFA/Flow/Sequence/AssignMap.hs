@@ -1,6 +1,6 @@
 module EFA.Flow.Sequence.AssignMap where
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 
 import qualified EFA.Graph.Topology.Node as Node
 

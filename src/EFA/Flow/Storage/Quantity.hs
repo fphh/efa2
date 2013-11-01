@@ -8,7 +8,7 @@ import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.PartMap as PartMap
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Unknown (Unknown(unknown))
 
 import qualified EFA.Graph.Topology.Index as Idx

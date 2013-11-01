@@ -43,7 +43,7 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Typ (TDisp)
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic (Constant)
 import EFA.Equation.Result (Result)

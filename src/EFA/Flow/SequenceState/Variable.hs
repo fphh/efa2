@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Equation.Variable where
+module EFA.Flow.SequenceState.Variable where
 
 import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Topology.Variable as TopoVar

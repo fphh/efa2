@@ -16,7 +16,7 @@ import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys

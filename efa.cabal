@@ -104,7 +104,6 @@ Library
     EFA.Equation.Result
     EFA.Equation.Unknown
     EFA.Equation.Record
-    EFA.Equation.Variable
     EFA.Equation.Arithmetic
     EFA.Equation.MultiValue
     EFA.Equation.Stack
@@ -126,6 +125,7 @@ Library
     EFA.Flow.Topology.AssignMap
     EFA.Flow.Topology.Absolute
     EFA.Flow.Topology.NestedDelta
+    EFA.Flow.SequenceState.Variable
     EFA.Flow.SequenceState.Quantity
     EFA.Flow.SequenceState.EquationSystem
     EFA.Flow.Sequence

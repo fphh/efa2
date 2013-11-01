@@ -7,7 +7,7 @@ module EFA.Equation.Verify where
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Pair as Pair
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Symbolic.Variable as SymVar
 
 import qualified EFA.Report.Format as Format

@@ -16,7 +16,7 @@ import EFA.Flow.Sequence.Absolute ((.=))
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Variable as TopoVar
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Record as EqRecord

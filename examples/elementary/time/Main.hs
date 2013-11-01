@@ -10,7 +10,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.Absolute ((.=), (=.=))
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Arithmetic ((^!))
 
 import EFA.Utility.Async (concurrentlyMany_)

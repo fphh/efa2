@@ -7,7 +7,7 @@ import EFA.Application.Utility (checkDetermined)
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Stack as Stack
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result)
 import EFA.Equation.Stack (Stack)

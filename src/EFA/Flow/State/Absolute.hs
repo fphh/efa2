@@ -14,7 +14,7 @@ import qualified EFA.Flow.State.Quantity as StateFlow
 import EFA.Flow.State.EquationSystem ((=.=))
 
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result(Result)

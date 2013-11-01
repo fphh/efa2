@@ -41,7 +41,7 @@ import EFA.Flow.EquationSystem
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.SystemRecord as SysRecord
 import EFA.Equation.Result(Result)

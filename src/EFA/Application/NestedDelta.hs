@@ -12,7 +12,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Symbolic.Variable as SymVar
 import EFA.Equation.Result (Result(Determined, Undetermined))
 

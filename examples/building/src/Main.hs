@@ -48,7 +48,7 @@ import EFA.Signal.Typ (Typ, F, T, A, Tt)
 import qualified EFA.IO.TableParser as Table
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Result (Result)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm

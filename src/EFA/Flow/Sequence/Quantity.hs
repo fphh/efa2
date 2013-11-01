@@ -57,9 +57,9 @@ import EFA.Flow.Sequence (sequence, storages)
 
 import qualified EFA.Signal.Sequence as Sequ
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Unknown (Unknown(unknown))
-import EFA.Equation.Variable ((<#>))
+import EFA.Flow.SequenceState.Variable ((<#>))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node

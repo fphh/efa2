@@ -15,7 +15,7 @@ import EFA.Flow.Sequence.Absolute ((=.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Arithmetic ((^!))
 import EFA.Equation.Result (Result)
 

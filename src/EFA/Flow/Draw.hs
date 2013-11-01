@@ -36,7 +36,7 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 
 import EFA.Signal.Signal (SignalIdx(SignalIdx), Range(Range))
 

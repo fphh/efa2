@@ -18,7 +18,7 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Flow.SequenceState.Variable as Var
 
 import qualified UniqueLogic.ST.TF.System as Sys
 
