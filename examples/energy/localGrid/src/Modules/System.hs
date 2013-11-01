@@ -5,8 +5,8 @@ import EFA.Application.Utility (identifyFlowState, dirEdge)
 
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Topology.Index as XIdx
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo

@@ -4,7 +4,7 @@ module Modules.System where
 
 import EFA.Application.Utility (topologyFromLabeledEdges)
 
-import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import EFA.Signal.Record (SigId(SigId))
 
@@ -71,15 +71,15 @@ edgeList = [(Tank, ConBattery, "Engine&Generator", "Fuel","GeneratorClamps"),
             (Chassis, VehicleInertia,"ToIntertia","ToInertia", "ToInertia")]
 
 
-powerPositonNames :: Map (SeqIdx.PPos Node) SigId
+powerPositonNames :: Map (TopoIdx.PPos Node) SigId
 powerPositonNames = Map.fromList $ concat $ map f edgeList
-  where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, SigId $ "Power-"++l1),
-                             (SeqIdx.ppos n2 n1, SigId $ "Power-"++l2)]
+  where f (n1,n2,_,l1,l2) = [(TopoIdx.ppos n1 n2, SigId $ "Power-"++l1),
+                             (TopoIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
-showPowerId :: SeqIdx.PPos Node -> String
+showPowerId :: TopoIdx.PPos Node -> String
 showPowerId ppos =
   maybe (show ppos) show $ Map.lookup  ppos powerPositonNames
 
-convertPowerId :: SeqIdx.PPos Node -> SigId
+convertPowerId :: TopoIdx.PPos Node -> SigId
 convertPowerId ppos =
   Map.findWithDefault (SigId $ show ppos) ppos powerPositonNames

@@ -9,9 +9,10 @@ import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Utility (checkDetermined)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence.Record as RecSeq
 import qualified EFA.Flow.Draw as Draw
+
+import qualified EFA.Flow.Topology.Index as XIdx
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology as Topo
