@@ -1,7 +1,7 @@
 module EFA.Flow.Storage where
 
-import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.PartMap (PartMap)
+import qualified EFA.Flow.Part.Map as PartMap
+import EFA.Flow.Part.Map (PartMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
 

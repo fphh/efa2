@@ -1,4 +1,4 @@
-module EFA.Flow.PartMap where
+module EFA.Flow.Part.Map where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx

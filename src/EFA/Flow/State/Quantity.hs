@@ -55,8 +55,8 @@ import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Topology as FlowTopoPlain
-import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.PartMap (PartMap)
+import qualified EFA.Flow.Part.Map as PartMap
+import EFA.Flow.Part.Map (PartMap)
 import EFA.Flow.State (states, storages)
 import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 

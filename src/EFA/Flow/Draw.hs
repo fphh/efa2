@@ -30,7 +30,7 @@ import qualified EFA.Flow.Storage.Quantity as StorageQuant
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Topology.Quantity as FlowTopoQuant
 import qualified EFA.Flow.Topology as FlowTopo
-import qualified EFA.Flow.PartMap as PartMap
+import qualified EFA.Flow.Part.Map as PartMap
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)

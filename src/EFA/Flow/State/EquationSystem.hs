@@ -32,8 +32,8 @@ import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
 import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
 import qualified EFA.Flow.Storage as Storage
-import qualified EFA.Flow.PartMap as PartMap
-import EFA.Flow.PartMap (PartMap)
+import qualified EFA.Flow.Part.Map as PartMap
+import EFA.Flow.Part.Map (PartMap)
 import EFA.Flow.Topology.EquationSystem (fromTopology)
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join, (=%=), (=.=))

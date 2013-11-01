@@ -109,7 +109,7 @@ Library
     EFA.Equation.Stack
     EFA.Equation.Pair
     EFA.Equation.Verify
-    EFA.Flow.PartMap
+    EFA.Flow.Part.Map
     EFA.Flow.Storage
     EFA.Flow.Storage.Index
     EFA.Flow.Storage.Variable
