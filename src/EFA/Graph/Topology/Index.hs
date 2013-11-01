@@ -18,6 +18,7 @@ module EFA.Graph.Topology.Index (
    ) where
 
 import qualified EFA.Flow.Topology.Index as Idx
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Part.Index as PartIdx
 import EFA.Flow.Part.Index
           (State, Section, Boundary, Augmented,
@@ -128,61 +129,6 @@ stateNode = PartNode
 
 -- * Edge indices
 
-{- |
-A storage edge is always directed from an early to a later section.
-However, a splitting factor exists both in chronological and reversed order.
-On the other hand in the future we may use chronological order exclusively
-and register two split factors per edge.
--}
-data CarryEdge sec = CarryEdge (Init sec) (Exit sec)
-   deriving (Show, Eq, Ord)
-
-data CarryBond sec = CarryBond (Augmented sec) (Augmented sec)
-   deriving (Show, Eq, Ord)
-
-instance TC.Eq CarryEdge where eq = (==)
-instance TC.Eq CarryBond where eq = (==)
-
-instance TC.Ord CarryEdge where cmp = compare
-instance TC.Ord CarryBond where cmp = compare
-
-instance TC.Show CarryEdge where showsPrec = showsPrec
-instance TC.Show CarryBond where showsPrec = showsPrec
-
-
-carryBondFromEdge :: CarryEdge part -> CarryBond part
-carryBondFromEdge (CarryEdge s0 s1) =
-   CarryBond (allowExit s0) (allowInit s1)
-
-withCarryEdgeFromBond ::
-   Ord part =>
-   (CarryEdge part -> a) ->
-   (CarryEdge part -> a) ->
-   CarryBond part -> a
-withCarryEdgeFromBond fIn fOut (CarryBond stFrom stTo) =
-   case (stFrom, stTo) of
-      (NoExit from, Exit) ->
-         fOut $ CarryEdge from Exit
-      (NoExit Init, NoExit (NoInit to)) ->
-         fOut $ CarryEdge Init (NoExit to)
-
-      (Exit, NoExit from) ->
-         fIn $ CarryEdge from Exit
-      (NoExit (NoInit to), NoExit Init) ->
-         fIn $ CarryEdge Init (NoExit to)
-
-      (NoExit (NoInit x), NoExit (NoInit y)) ->
-         case compare x y of
-            LT -> fOut $ CarryEdge (NoInit x) (NoExit y)
-            GT -> fIn  $ CarryEdge (NoInit y) (NoExit x)
-            EQ -> error "storage loop in section"
-
-      (NoExit Init, NoExit Init) ->
-         error "storage loop at Init"
-      (Exit, Exit) ->
-         error "storage loop at Exit"
-
-
 data InPart part idx node = InPart part (idx node)
    deriving (Show, Eq, Ord)
 
@@ -255,28 +201,31 @@ instance Show idx => TC.Show (ForStorage idx) where
 
 
 carryEdge ::
-   (CarryEdge sec -> idx) ->
+   (StorageIdx.Edge sec -> idx) ->
    Init sec -> Exit sec -> node -> ForStorage idx node
 carryEdge mkIdx s0 s1 n =
-   ForStorage (mkIdx $ CarryEdge s0 s1) n
+   ForStorage (mkIdx $ StorageIdx.Edge s0 s1) n
 
 carryBond ::
-   (CarryBond sec -> idx) ->
+   (StorageIdx.Bond sec -> idx) ->
    Augmented sec -> Augmented sec -> node -> ForStorage idx node
 carryBond mkIdx s0 s1 n =
-   ForStorage (mkIdx $ CarryBond s0 s1) n
+   ForStorage (mkIdx $ StorageIdx.Bond s0 s1) n
 
 
 carryEdgeFrom, carryEdgeTo ::
-   ForStorage (CarryEdge sec) node -> AugNode sec node
-carryEdgeFrom (ForStorage (CarryEdge sec _) n) = PartNode (allowExit sec) n
-carryEdgeTo   (ForStorage (CarryEdge _ sec) n) = PartNode (allowInit sec) n
+   ForStorage (StorageIdx.Edge sec) node -> AugNode sec node
+carryEdgeFrom (ForStorage (StorageIdx.Edge sec _) n) = PartNode (allowExit sec) n
+carryEdgeTo   (ForStorage (StorageIdx.Edge _ sec) n) = PartNode (allowInit sec) n
 
 carryBondFrom, carryBondTo ::
-   ForStorage (CarryBond sec) node -> AugNode sec node
-carryBondFrom (ForStorage (CarryBond sec _) n) = PartNode sec n
-carryBondTo   (ForStorage (CarryBond _ sec) n) = PartNode sec n
+   ForStorage (StorageIdx.Bond sec) node -> AugNode sec node
+carryBondFrom (ForStorage (StorageIdx.Bond sec _) n) = PartNode sec n
+carryBondTo   (ForStorage (StorageIdx.Bond _ sec) n) = PartNode sec n
 
 
 instance Idx.Flip idx => Idx.Flip (InPart part idx) where
    flip (InPart s idx) = InPart s (Idx.flip idx)
+
+instance StorageIdx.Flip idx => StorageIdx.Flip (ForStorage idx node) where
+   flip (ForStorage idx n) = ForStorage (StorageIdx.flip idx) n

@@ -144,8 +144,8 @@ instance FormatScalarIndex StorageIdx.Content where
 
 formatCarryEdge ::
    (Format.Part sec, Format output) =>
-   Idx.CarryEdge sec -> output
-formatCarryEdge (Idx.CarryEdge s0 s1) =
+   StorageIdx.Edge sec -> output
+formatCarryEdge (StorageIdx.Edge s0 s1) =
    Format.initOrOther s0 `Format.link` Format.otherOrExit s1
 
 instance FormatScalarIndex StorageIdx.MaxEnergy where
@@ -157,8 +157,8 @@ instance (Format.Part sec) => FormatScalarIndex (StorageIdx.Energy sec) where
 
 formatCarryBond ::
    (Format.Part sec, Format output) =>
-   Idx.CarryBond sec -> output
-formatCarryBond (Idx.CarryBond s0 s1) =
+   StorageIdx.Bond sec -> output
+formatCarryBond (StorageIdx.Bond s0 s1) =
    Format.augmented s0 `Format.link` Format.augmented s1
 
 instance (Format.Part sec) => FormatScalarIndex (StorageIdx.X sec) where

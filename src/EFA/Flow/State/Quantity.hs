@@ -120,8 +120,8 @@ instance StorageQuant.Carry Carry where
    carryVars =
       Carry {
          carryEnergy = StorageVar.index . StorageIdx.Energy,
-         carryXOut = StorageVar.index . StorageIdx.X . Idx.carryBondFromEdge,
-         carryXIn = StorageVar.index . StorageIdx.X . StorageIdx.flip . Idx.carryBondFromEdge
+         carryXOut = StorageVar.index . StorageIdx.X . StorageIdx.bondFromEdge,
+         carryXIn = StorageVar.index . StorageIdx.X . StorageIdx.flip . StorageIdx.bondFromEdge
       }
 
 
@@ -383,8 +383,8 @@ fromSequenceFlowGen integrate add zero allStEdges secMap gr =
 cumulateCarryEdges ::
    (a -> a -> a) ->
    Map Idx.Section Idx.State ->
-   Map (Idx.CarryEdge Idx.Section) a ->
-   Map (Idx.CarryEdge Idx.State) a
+   Map (StorageIdx.Edge Idx.Section) a ->
+   Map (StorageIdx.Edge Idx.State) a
 cumulateCarryEdges add secMap =
    Map.mapKeysWith add
       (mapCarryEdge "cumulateCarryEdges from" secMap)
@@ -510,9 +510,9 @@ cumulateSums add secMap =
 mapCarryEdge ::
    (Ord sec, Show sec, Show state) =>
    String -> Map sec state ->
-   Idx.CarryEdge sec -> Idx.CarryEdge state
-mapCarryEdge caller secMap (Idx.CarryEdge from to) =
-   Idx.CarryEdge
+   StorageIdx.Edge sec -> StorageIdx.Edge state
+mapCarryEdge caller secMap (StorageIdx.Edge from to) =
+   StorageIdx.Edge
       (fmap (MapU.checkedLookup (caller ++ " from") secMap) from)
       (fmap (MapU.checkedLookup (caller ++ " to")   secMap) to)
 

@@ -27,6 +27,7 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Topology.Quantity as FlowTopoQuant
 import qualified EFA.Flow.Topology as FlowTopo
@@ -138,7 +139,7 @@ dotFromFlowGraph ::
    ([DotSubGraph T.Text], [DotEdge T.Text]) ->
    Map node
       ((Unicode, Unicode),
-       Map (Idx.CarryEdge part) [Unicode]) ->
+       Map (StorageIdx.Edge part) [Unicode]) ->
    Map part (String, Graph node Graph.EitherEdge Unicode TopologyEdgeLabel) ->
    DotGraph T.Text
 dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
@@ -364,7 +365,7 @@ dotFromTopologyEdgeEta (DirEdge x y, dir, ord) label =
 
 dotFromCarryEdges ::
    (Node.C node, Part part) =>
-   Map node (Map (Idx.CarryEdge part) [Unicode]) ->
+   Map node (Map (StorageIdx.Edge part) [Unicode]) ->
    [DotEdge T.Text]
 dotFromCarryEdges =
    fold .
@@ -376,7 +377,7 @@ dotFromCarryEdges =
 
 dotFromCarryEdge ::
    (Node.C node, Part part) =>
-   Idx.ForStorage (Idx.CarryEdge part) node ->
+   Idx.ForStorage (StorageIdx.Edge part) node ->
    [Unicode] -> DotEdge T.Text
 dotFromCarryEdge e lns =
    DotEdge
@@ -824,7 +825,7 @@ storageGraphShow ::
    Options output ->
    node ->
    Storage.Graph part a (carry a) ->
-   ((output, output), Map (Idx.CarryEdge part) [output])
+   ((output, output), Map (StorageIdx.Edge part) [output])
 storageGraphShow opts node (Storage.Graph partMap edges) =
    ((stateNodeShow node $ Just $ PartMap.init partMap,
      stateNodeShow node $ Just $ PartMap.exit partMap),
@@ -850,7 +851,7 @@ carryEdgeShow ::
     Format.Part part, Node.C node, FormatValue a, Format output) =>
    Options output ->
    node ->
-   Idx.CarryEdge part ->
+   StorageIdx.Edge part ->
    carry a ->
    [output]
 carryEdgeShow opts node edge carry =

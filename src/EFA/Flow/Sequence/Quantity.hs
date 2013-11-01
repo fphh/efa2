@@ -117,8 +117,8 @@ instance StorageQuant.Carry Carry where
       Carry {
          carryMaxEnergy = StorageVar.index . StorageIdx.MaxEnergy,
          carryEnergy = StorageVar.index . StorageIdx.Energy,
-         carryXOut = StorageVar.index . StorageIdx.X . Idx.carryBondFromEdge,
-         carryXIn = StorageVar.index . StorageIdx.X . StorageIdx.flip . Idx.carryBondFromEdge
+         carryXOut = StorageVar.index . StorageIdx.X . StorageIdx.bondFromEdge,
+         carryXIn = StorageVar.index . StorageIdx.X . StorageIdx.flip . StorageIdx.bondFromEdge
       }
 
 

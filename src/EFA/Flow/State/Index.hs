@@ -22,8 +22,8 @@ type StX node       = Idx.ForStorage (StorageIdx.X Idx.State) node
 type StInSum node   = Idx.ForStorage (StorageIdx.InSum Idx.State) node
 type StOutSum node  = Idx.ForStorage (StorageIdx.OutSum Idx.State) node
 
-type CarryEdge = Idx.CarryEdge Idx.State
-type CarryBond = Idx.CarryBond Idx.State
+type CarryEdge = StorageIdx.Edge Idx.State
+type CarryBond = StorageIdx.Bond Idx.State
 
 
 energy :: Idx.State -> node -> node -> Energy node
@@ -44,7 +44,7 @@ topologyEdge mkIdx s from to =
 
 
 stX ::
-   Idx.PartNode (Idx.CarryBond sec) node ->
+   Idx.PartNode (StorageIdx.Bond sec) node ->
    Idx.ForStorage (StorageIdx.X sec) node
 stX = Idx.forStorage StorageIdx.X
 

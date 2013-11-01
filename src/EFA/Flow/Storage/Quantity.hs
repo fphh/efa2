@@ -30,7 +30,7 @@ class (Applicative f, Foldable f) => Carry f where
    type CarryPart f :: *
    carryVars ::
       (CarryPart f ~ part) =>
-      f (Idx.CarryEdge part -> StorageVar.Scalar part)
+      f (StorageIdx.Edge part -> StorageVar.Scalar part)
 
 
 mapGraphWithVar ::
@@ -53,7 +53,7 @@ mapGraphWithVar lookupSums f node (Storage.Graph partMap edges) =
 mapCarryWithVar ::
    (Carry carry, CarryPart carry ~ part) =>
    (Var.ForStorageScalar part node -> a0 -> a1) ->
-   node -> Idx.CarryEdge part -> carry a0 -> carry a1
+   node -> StorageIdx.Edge part -> carry a0 -> carry a1
 mapCarryWithVar f node edge =
    liftA2 f (Idx.ForStorage <$> (carryVars <*> pure edge) <*> pure node)
 
@@ -75,7 +75,7 @@ traverseGraph f =
 
 forwardEdgesFromSums ::
    (Ord part) =>
-   Map part (FlowTopo.Sums v) -> [Idx.CarryEdge part]
+   Map part (FlowTopo.Sums v) -> [StorageIdx.Edge part]
 forwardEdgesFromSums stores = do
    let ins  = Map.mapMaybe FlowTopo.sumIn stores
    let outs = Map.mapMaybe FlowTopo.sumOut stores
@@ -85,20 +85,20 @@ forwardEdgesFromSums stores = do
       case secin of
          Idx.Init -> outs
          Idx.NoInit s -> snd $ Map.split s outs
-   return $ Idx.CarryEdge secin secout
+   return $ StorageIdx.Edge secin secout
 
 allEdgesFromSums ::
    (Ord part) =>
-   Map part (FlowTopo.Sums a) -> [Idx.CarryEdge part]
+   Map part (FlowTopo.Sums a) -> [StorageIdx.Edge part]
 allEdgesFromSums stores =
-   liftA2 Idx.CarryEdge
+   liftA2 StorageIdx.Edge
       (Idx.Init : map Idx.NoInit (Map.keys (Map.mapMaybe FlowTopo.sumIn stores)))
       (Idx.Exit : map Idx.NoExit (Map.keys (Map.mapMaybe FlowTopo.sumOut stores)))
 
 graphFromList ::
    (Carry carry, CarryPart carry ~ part, Ord part, Unknown a) =>
    [part] ->
-   [Idx.CarryEdge part] ->
+   [StorageIdx.Edge part] ->
    Graph carry a
 graphFromList sts edges =
    Storage.Graph
@@ -118,7 +118,7 @@ lookupX ::
    (Carry carry, CarryPart carry ~ part, Ord part) =>
    StorageIdx.X part -> Graph carry a -> Maybe a
 lookupX (StorageIdx.X se) sgr =
-   Idx.withCarryEdgeFromBond
+   StorageIdx.withEdgeFromBond
       (fmap carryXIn  . flip Storage.lookupEdge sgr)
       (fmap carryXOut . flip Storage.lookupEdge sgr)
       se

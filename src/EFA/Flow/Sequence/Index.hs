@@ -22,8 +22,8 @@ type StX node       = Idx.ForStorage (StorageIdx.X Idx.Section) node
 type StInSum node   = Idx.ForStorage (StorageIdx.InSum Idx.Section) node
 type StOutSum node  = Idx.ForStorage (StorageIdx.OutSum Idx.Section) node
 
-type CarryEdge = Idx.CarryEdge Idx.Section
-type CarryBond = Idx.CarryBond Idx.Section
+type CarryEdge = StorageIdx.Edge Idx.Section
+type CarryBond = StorageIdx.Bond Idx.Section
 
 
 energy :: Idx.Section -> node -> node -> Energy node

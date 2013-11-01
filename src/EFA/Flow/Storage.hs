@@ -3,6 +3,7 @@ module EFA.Flow.Storage where
 import qualified EFA.Flow.Part.Map as PartMap
 import EFA.Flow.Part.Map (PartMap)
 
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Utility.Map as MapU
@@ -27,7 +28,7 @@ data
    Graph part nodeLabel edgeLabel =
       Graph {
          nodes :: PartMap part nodeLabel,
-         edges :: Map (Idx.CarryEdge part) edgeLabel
+         edges :: Map (StorageIdx.Edge part) edgeLabel
       } deriving (Eq)
 
 mapNode ::
@@ -60,7 +61,7 @@ traverse f g (Graph partMap edgeMap) =
 
 lookupEdge ::
    (Ord part) =>
-   Idx.CarryEdge part ->
+   StorageIdx.Edge part ->
    Graph part nodeLabel edgeLabel ->
    Maybe edgeLabel
 lookupEdge se =
@@ -85,18 +86,18 @@ checkedZipWith name f g
 
 foldInStorages ::
    (Ord part, Monoid m) =>
-   (Idx.Init part -> [a] -> m) -> Map (Idx.CarryEdge part) a -> m
+   (Idx.Init part -> [a] -> m) -> Map (StorageIdx.Edge part) a -> m
 foldInStorages f =
    fold .
    Map.mapWithKey (\sec outs -> f sec (Map.elems outs)) .
    MapU.curry "foldInStorages"
-      (\(Idx.CarryEdge from to) -> (from, to))
+      (\(StorageIdx.Edge from to) -> (from, to))
 
 foldOutStorages ::
    (Ord part, Monoid m) =>
-   (Idx.Exit part -> [a] -> m) -> Map (Idx.CarryEdge part) a -> m
+   (Idx.Exit part -> [a] -> m) -> Map (StorageIdx.Edge part) a -> m
 foldOutStorages f =
    fold .
    Map.mapWithKey (\sec ins -> f sec (Map.elems ins)) .
    MapU.curry "foldOutStorages"
-      (\(Idx.CarryEdge from to) -> (to, from))
+      (\(StorageIdx.Edge from to) -> (to, from))
