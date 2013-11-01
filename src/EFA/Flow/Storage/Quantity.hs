@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Flow.Storage.Quantity where
 
+import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Storage as Storage
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -26,7 +27,7 @@ class (Applicative f, Foldable f) => Carry f where
    type CarryPart f :: *
    carryVars ::
       (CarryPart f ~ part) =>
-      f (Idx.CarryEdge part -> Var.Scalar part)
+      f (Idx.CarryEdge part -> StorageVar.Scalar part)
 
 
 mapGraphWithVar ::

@@ -11,6 +11,8 @@ import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State.Absolute as EqSysState
 import EFA.Flow.State.Absolute ((=.=))
 
+import qualified EFA.Flow.Storage.Variable as StorageVar
+
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil)
 
@@ -57,7 +59,7 @@ givenAverageWithoutState stateToRemove =
    StateFlow.mapGraphWithVar
       (\(Idx.ForStorage var _) a ->
          case var of
-            Var.StX _ -> a
+            StorageVar.X _ -> a
             _ -> Undetermined)
       (\(Idx.InPart state var) v ->
          if state == stateToRemove
@@ -110,7 +112,7 @@ initialEnv =
       (\(Idx.ForStorage var _) _a ->
          fmap Data $
          case var of
-            Var.StX _ -> Determined $ Arith.fromRational 0.5
+            StorageVar.X _ -> Determined $ Arith.fromRational 0.5
             _ -> Undetermined)
       (\(Idx.InPart _state var) _v ->
          fmap Data $

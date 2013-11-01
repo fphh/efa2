@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Equation.Variable where
 
+import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
@@ -29,21 +30,12 @@ data Signal node =
    | Sum (Idx.Sum node)
      deriving (Show, Eq, Ord)
 
-data Scalar part =
-     MaxEnergy Idx.MaxEnergy
-   | Storage Idx.Storage
-   | StEnergy (Idx.StEnergy part)
-   | StX (Idx.StX part)
-   | StInSum (Idx.StInSum part)
-   | StOutSum (Idx.StOutSum part)
-     deriving (Show, Eq, Ord)
-
 
 type InPartSignal part = Idx.InPart part Signal
 type InSectionSignal   = Idx.InSection Signal
 type InStateSignal     = Idx.InState Signal
 
-type ForStorageScalar part   = Idx.ForStorage (Scalar part)
+type ForStorageScalar part   = Idx.ForStorage (StorageVar.Scalar part)
 type ForStorageSectionScalar = ForStorageScalar Idx.Section
 type ForStorageStateScalar   = ForStorageScalar Idx.State
 
@@ -73,31 +65,31 @@ instance SignalIndex Idx.Sum    where signalIndex = Sum
 
 class FormatScalarIndex t => ScalarIndex t where
    type ScalarPart t :: *
-   scalarIndex :: t -> Scalar (ScalarPart t)
-
-instance ScalarIndex Idx.MaxEnergy where
-   type ScalarPart Idx.MaxEnergy = Idx.Section
-   scalarIndex = MaxEnergy
+   scalarIndex :: t -> StorageVar.Scalar (ScalarPart t)
 
 instance ScalarIndex Idx.Storage where
    type ScalarPart Idx.Storage = Idx.Section
-   scalarIndex = Storage
+   scalarIndex = StorageVar.Storage
+
+instance ScalarIndex Idx.MaxEnergy where
+   type ScalarPart Idx.MaxEnergy = Idx.Section
+   scalarIndex = StorageVar.MaxEnergy
 
 instance (Format.Part part) => ScalarIndex (Idx.StEnergy part) where
    type ScalarPart (Idx.StEnergy part) = part
-   scalarIndex = StEnergy
+   scalarIndex = StorageVar.Energy
 
 instance (Format.Part part) => ScalarIndex (Idx.StX part) where
    type ScalarPart (Idx.StX part) = part
-   scalarIndex = StX
+   scalarIndex = StorageVar.X
 
 instance (Format.Part part) => ScalarIndex (Idx.StInSum part) where
    type ScalarPart (Idx.StInSum part) = part
-   scalarIndex = StInSum
+   scalarIndex = StorageVar.InSum
 
 instance (Format.Part part) => ScalarIndex (Idx.StOutSum part) where
    type ScalarPart (Idx.StOutSum part) = part
-   scalarIndex = StOutSum
+   scalarIndex = StorageVar.OutSum
 
 
 (<#>) ::
@@ -115,7 +107,7 @@ instance
    (Format.Part part, Node.C node) =>
       FormatValue (Any part node) where
    formatValue (Signal var) = formatSignalValue var
-   formatValue (Scalar var) = formatScalarValue var
+   formatValue (Scalar var) = StorageVar.formatScalarValue var
 
 formatSignalValue ::
    (Format output, Format.Part part, Node.C node) =>
@@ -128,18 +120,6 @@ formatSignalValue (Idx.InPart s var) =
       X idx -> formatSignalIndex idx s
       DTime idx -> formatSignalIndex idx s
       Sum idx -> formatSignalIndex idx s
-
-formatScalarValue ::
-   (Format output, Format.Part part, Node.C node) =>
-   ForStorageScalar part node -> output
-formatScalarValue (Idx.ForStorage var n) =
-   case var of
-      MaxEnergy idx -> formatScalarIndex idx n
-      Storage idx -> formatScalarIndex idx n
-      StEnergy idx -> formatScalarIndex idx n
-      StX idx -> formatScalarIndex idx n
-      StInSum idx -> formatScalarIndex idx n
-      StOutSum idx -> formatScalarIndex idx n
 
 
 class FormatIndex idx where
@@ -156,9 +136,6 @@ instance FormatScalarIndex idx => FormatIndex (Idx.ForStorage idx) where
 
 instance FormatSignalIndex Signal where
    formatSignalIndex edge sec = formatSignalValue (Idx.InPart sec edge)
-
-instance (Format.Part part) => FormatScalarIndex (Scalar part) where
-   formatScalarIndex edge node = formatScalarValue (Idx.ForStorage edge node)
 
 
 instance FormatIndex Signal where
@@ -191,16 +168,6 @@ instance (Node.C node) => FormatValue (Signal node) where
 
 instance Format.TopologyIdx Signal where
    structureIdent (Idx.InPart _part var) = signalIdent var
-
-instance Format.StorageIdx (Scalar part) where
-   storageIdent (Idx.ForStorage var _node) =
-      case var of
-         MaxEnergy _idx -> Format.maxEnergy
-         StEnergy _idx -> Format.energy
-         StX _idx -> Format.xfactor
-         StInSum _idx -> Format.scalarSum
-         StOutSum _idx -> Format.scalarSum
-         Storage _idx -> Format.storage
 
 
 checkedLookup ::

@@ -113,6 +113,7 @@ Library
     EFA.Flow.PartMap
     EFA.Flow.Storage
     EFA.Flow.Storage.Index
+    EFA.Flow.Storage.Variable
     EFA.Flow.Storage.Quantity
     EFA.Flow.Storage.EquationSystem
     EFA.Flow.Topology
