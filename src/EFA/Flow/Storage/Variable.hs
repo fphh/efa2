@@ -57,7 +57,7 @@ ident var =
       OutSum _idx -> Format.scalarSum
 
 instance Format.StorageIdx (Scalar part) where
-   storageIdent (Idx.ForStorage var _node) = ident var
+   carryIdent (Idx.ForStorage var _node) = ident var
 
 
 formatScalarValue ::

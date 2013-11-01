@@ -138,7 +138,7 @@ instance (Node.C node) => FormatValue (Signal node) where
 
 
 instance Format.TopologyIdx Signal where
-   structureIdent (Idx.InPart _part var) = signalIdent var
+   flowIdent (Idx.InPart _part var) = signalIdent var
 
 
 checkedLookup ::

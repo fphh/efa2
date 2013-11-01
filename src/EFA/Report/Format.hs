@@ -398,27 +398,27 @@ class EdgeIdx idx where
       Format output => idx node -> output
 
 instance TopologyIdx idx => EdgeIdx (Idx.InPart part idx) where
-   edgeIdent = structureIdent
+   edgeIdent = flowIdent
 
 class TopologyIdx idx where
-   structureIdent ::
+   flowIdent ::
       Format output => Idx.InPart part idx node -> output
 
-instance TopologyIdx Idx.Energy where structureIdent _ = energy
-instance TopologyIdx Idx.Power where structureIdent _ = power
-instance TopologyIdx Idx.Eta where structureIdent _ = eta
-instance TopologyIdx Idx.X where structureIdent _ = xfactor
+instance TopologyIdx Idx.Energy where flowIdent _ = energy
+instance TopologyIdx Idx.Power where flowIdent _ = power
+instance TopologyIdx Idx.Eta where flowIdent _ = eta
+instance TopologyIdx Idx.X where flowIdent _ = xfactor
 
 instance StorageIdx idx => EdgeIdx (Idx.ForStorage idx) where
-   edgeIdent = storageIdent
+   edgeIdent = carryIdent
 
 class StorageIdx idx where
-   storageIdent ::
+   carryIdent ::
       Format output => Idx.ForStorage idx node -> output
 
-instance StorageIdx StorageIdx.MaxEnergy where storageIdent _ = maxEnergy
-instance StorageIdx (StorageIdx.Energy sec) where storageIdent _ = energy
-instance StorageIdx (StorageIdx.X sec) where storageIdent _ = xfactor
+instance StorageIdx StorageIdx.MaxEnergy where carryIdent _ = maxEnergy
+instance StorageIdx (StorageIdx.Energy sec) where carryIdent _ = energy
+instance StorageIdx (StorageIdx.X sec) where carryIdent _ = xfactor
 
 
 directionShort :: Idx.Direction -> String
