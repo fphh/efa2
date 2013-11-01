@@ -221,10 +221,10 @@ fromStorageSequences ::
 fromStorageSequences opts g =
    let stoutsum state node =
           checkedLookup "fromStorageSequences inStorages"
-             StateFlow.lookupStOutSum (StateIdx.stOutSum state node) g
+             StateFlow.lookupScalar (StateIdx.stOutSum state node) g
        stinsum state node =
           checkedLookup "fromStorageSequences outStorages"
-             StateFlow.lookupStInSum (StateIdx.stInSum state node) g
+             StateFlow.lookupScalar (StateIdx.stInSum state node) g
        f node (Storage.Graph partMap edges) =
           connectCarryFlow opts g node partMap
           <>

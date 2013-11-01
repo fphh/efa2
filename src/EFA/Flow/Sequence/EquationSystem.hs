@@ -224,10 +224,10 @@ fromStorageSequences ::
 fromStorageSequences opts g =
    let stoutsum sec node =
           checkedLookup "fromStorageSequences inStorages"
-             SeqFlow.lookupStOutSum (SeqIdx.stOutSum sec node) g
+             SeqFlow.lookupScalar (SeqIdx.stOutSum sec node) g
        stinsum sec node =
           checkedLookup "fromStorageSequences outStorages"
-             SeqFlow.lookupStInSum (SeqIdx.stInSum sec node) g
+             SeqFlow.lookupScalar (SeqIdx.stInSum sec node) g
        f node (Storage.Graph partMap edges, storageMap) =
           fromStorageSequence opts g node partMap storageMap
           <>

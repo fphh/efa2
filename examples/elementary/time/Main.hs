@@ -92,7 +92,7 @@ solve :: Double -> Double -> String
 solve x e =
    let solved = EqSys.solve flowGraph (given x e)
        emap idx = Var.checkedLookup "solve" SeqFlow.lookupEnergy idx solved
-       stemap idx = Var.checkedLookup "solve" SeqFlow.lookupStEnergy idx solved
+       stemap idx = Var.checkedLookup "solve" SeqFlow.lookupScalar idx solved
        f _es ei eo0 eo1 = (eo0 + eo1) / ei
    in  show x ++ " " ++ show e ++ " " ++
        Format.unUnicode (formatValue

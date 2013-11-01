@@ -2,6 +2,7 @@
 module EFA.Flow.Storage.Quantity where
 
 import qualified EFA.Flow.Storage.Variable as StorageVar
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -104,3 +105,42 @@ graphFromList sts edges =
       (PartMap.constant unknown sts)
       (Map.fromListWith (error "duplicate storage edge") $
        map (flip (,) (pure unknown)) edges)
+
+
+
+lookupEnergy ::
+   (Carry carry, CarryPart carry ~ part, Ord part) =>
+   StorageIdx.Energy part -> Graph carry a -> Maybe a
+lookupEnergy (StorageIdx.Energy se) sgr =
+   fmap carryEnergy $ Storage.lookupEdge se sgr
+
+lookupX ::
+   (Carry carry, CarryPart carry ~ part, Ord part) =>
+   StorageIdx.X part -> Graph carry a -> Maybe a
+lookupX (StorageIdx.X se) sgr =
+   Idx.withCarryEdgeFromBond
+      (fmap carryXIn  . flip Storage.lookupEdge sgr)
+      (fmap carryXOut . flip Storage.lookupEdge sgr)
+      se
+
+{- |
+It is an unchecked error if you lookup StInSum where is only an StOutSum.
+-}
+lookupInSum ::
+   (Carry carry, CarryPart carry ~ part, Ord part) =>
+   StorageIdx.InSum part -> Graph carry a -> Maybe a
+lookupInSum (StorageIdx.InSum aug) (Storage.Graph partMap _) =
+   case aug of
+      Idx.Exit -> return $ PartMap.exit partMap
+      Idx.NoExit sec -> Map.lookup sec $ PartMap.parts partMap
+
+{- |
+It is an unchecked error if you lookup StOutSum where is only an StInSum.
+-}
+lookupOutSum ::
+   (Carry carry, CarryPart carry ~ part, Ord part) =>
+   StorageIdx.OutSum part -> Graph carry a -> Maybe a
+lookupOutSum (StorageIdx.OutSum aug) (Storage.Graph partMap _) =
+   case aug of
+      Idx.Init -> return $ PartMap.init partMap
+      Idx.NoInit sec -> Map.lookup sec $ PartMap.parts partMap

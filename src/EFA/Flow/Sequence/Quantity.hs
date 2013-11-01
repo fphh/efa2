@@ -37,13 +37,6 @@ module EFA.Flow.Sequence.Quantity (
    lookupEta,
    lookupDTime,
    lookupSum,
-
-   lookupStorage,
-   lookupMaxEnergy,
-   lookupStEnergy,
-   lookupStX,
-   lookupStInSum,
-   lookupStOutSum,
    lookupSums,
 
    Lookup, lookup,
@@ -63,7 +56,6 @@ import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
-import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.Topology.Quantity (Topology, Sums(..), Flow(..))
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
@@ -310,55 +302,6 @@ lookupDTime (Idx.InPart sec Idx.DTime) =
    fmap FlowTopo.label . seqLookup sec
 
 
-lookupStorage ::
-   (Ord node) => SeqIdx.Storage node -> Graph node a v -> Maybe a
-lookupStorage (Idx.ForStorage (StorageIdx.Content bnd) node) g = do
-   (_,stores) <- Map.lookup node $ storages g
-   Map.lookup bnd stores
-
-lookupMaxEnergy ::
-   (Ord node) => SeqIdx.MaxEnergy node -> Graph node a v -> Maybe a
-lookupMaxEnergy (Idx.ForStorage (StorageIdx.MaxEnergy se) node) g = do
-   (sgr,_) <- Map.lookup node $ storages g
-   fmap carryMaxEnergy $ Storage.lookupEdge se sgr
-
-lookupStEnergy ::
-   (Ord node) => SeqIdx.StEnergy node -> Graph node a v -> Maybe a
-lookupStEnergy (Idx.ForStorage (StorageIdx.Energy se) node) g = do
-   (sgr,_) <- Map.lookup node $ storages g
-   fmap carryEnergy $ Storage.lookupEdge se sgr
-
-lookupStX ::
-   (Ord node) => SeqIdx.StX node -> Graph node a v -> Maybe a
-lookupStX (Idx.ForStorage (StorageIdx.X se) node) g = do
-   (sgr,_) <- Map.lookup node $ storages g
-   Idx.withCarryEdgeFromBond
-      (fmap carryXIn  . flip Storage.lookupEdge sgr)
-      (fmap carryXOut . flip Storage.lookupEdge sgr)
-      se
-
-{- |
-It is an unchecked error if you lookup StInSum where is only an StOutSum.
--}
-lookupStInSum ::
-   (Ord node) => SeqIdx.StInSum node -> Graph node a v -> Maybe a
-lookupStInSum (Idx.ForStorage (StorageIdx.InSum aug) node) g = do
-   (Storage.Graph partMap _, _) <- Map.lookup node $ storages g
-   case aug of
-      Idx.Exit -> return $ PartMap.exit partMap
-      Idx.NoExit sec -> Map.lookup sec $ PartMap.parts partMap
-
-{- |
-It is an unchecked error if you lookup StOutSum where is only an StInSum.
--}
-lookupStOutSum ::
-   (Ord node) => SeqIdx.StOutSum node -> Graph node a v -> Maybe a
-lookupStOutSum (Idx.ForStorage (StorageIdx.OutSum aug) node) g = do
-   (Storage.Graph partMap _, _) <- Map.lookup node $ storages g
-   case aug of
-      Idx.Init -> return $ PartMap.init partMap
-      Idx.NoInit sec -> Map.lookup sec $ PartMap.parts partMap
-
 lookupSums ::
    (Ord node) =>
    Idx.SecNode node -> Graph node a v -> Maybe (Sums v)
@@ -368,6 +311,29 @@ lookupSums (Idx.PartNode sec node) =
 seqLookup ::
    Idx.Section -> Graph node a v -> Maybe (FlowTopo.Section node v)
 seqLookup sec = Sequ.lookup sec . sequence
+
+
+
+lookupStorage ::
+   (Ord node) => SeqIdx.Storage node -> Graph node a v -> Maybe a
+lookupStorage (Idx.ForStorage (StorageIdx.Content bnd) node) g = do
+   (_,stores) <- Map.lookup node $ storages g
+   Map.lookup bnd stores
+
+lookupMaxEnergy ::
+   (Ord node) => SeqIdx.MaxEnergy node -> Graph node a v -> Maybe a
+lookupMaxEnergy =
+   withStorage
+      (\(StorageIdx.MaxEnergy se) ->
+         fmap carryMaxEnergy . Storage.lookupEdge se)
+
+
+withStorage ::
+   (Ord node) =>
+   (idx -> StorageQuant.Graph Carry a -> Maybe a) ->
+   Idx.ForStorage idx node -> Graph node a v -> Maybe a
+withStorage look (Idx.ForStorage idx node) =
+   look idx . fst <=< Map.lookup node . storages
 
 
 class
@@ -422,16 +388,16 @@ instance LookupScalar StorageIdx.Content where
    lookupScalar = lookupStorage
 
 instance LookupScalar (StorageIdx.Energy Idx.Section) where
-   lookupScalar = lookupStEnergy
+   lookupScalar = withStorage StorageQuant.lookupEnergy
 
 instance LookupScalar (StorageIdx.X Idx.Section) where
-   lookupScalar = lookupStX
+   lookupScalar = withStorage StorageQuant.lookupX
 
 instance LookupScalar (StorageIdx.InSum Idx.Section) where
-   lookupScalar = lookupStInSum
+   lookupScalar = withStorage StorageQuant.lookupInSum
 
 instance LookupScalar (StorageIdx.OutSum Idx.Section) where
-   lookupScalar = lookupStOutSum
+   lookupScalar = withStorage StorageQuant.lookupOutSum
 
 
 data Irrelevant = Irrelevant

@@ -43,10 +43,6 @@ module EFA.Flow.State.Quantity (
    lookupDTime,
    lookupSum,
 
-   lookupStEnergy,
-   lookupStX,
-   lookupStInSum,
-   lookupStOutSum,
    lookupSums,
 
    Lookup, lookup,
@@ -582,43 +578,6 @@ lookupDTime (Idx.InPart state Idx.DTime) =
    fmap FlowTopo.label . seqLookup state
 
 
-lookupStEnergy ::
-   (Ord node) => StateIdx.StEnergy node -> Graph node a v -> Maybe a
-lookupStEnergy (Idx.ForStorage (StorageIdx.Energy se) node) g = do
-   sgr <- Map.lookup node $ storages g
-   fmap carryEnergy $ Storage.lookupEdge se sgr
-
-lookupStX ::
-   (Ord node) => StateIdx.StX node -> Graph node a v -> Maybe a
-lookupStX (Idx.ForStorage (StorageIdx.X se) node) g = do
-   sgr <- Map.lookup node $ storages g
-   Idx.withCarryEdgeFromBond
-      (fmap carryXIn  . flip Storage.lookupEdge sgr)
-      (fmap carryXOut . flip Storage.lookupEdge sgr)
-      se
-
-{- |
-It is an unchecked error if you lookup StInSum where is only an StOutSum.
--}
-lookupStInSum ::
-   (Ord node) => StateIdx.StInSum node -> Graph node a v -> Maybe a
-lookupStInSum (Idx.ForStorage (StorageIdx.InSum aug) node) g = do
-   (Storage.Graph partMap _) <- Map.lookup node $ storages g
-   case aug of
-      Idx.Exit -> return $ PartMap.exit partMap
-      Idx.NoExit sec -> Map.lookup sec $ PartMap.parts partMap
-
-{- |
-It is an unchecked error if you lookup StOutSum where is only an StInSum.
--}
-lookupStOutSum ::
-   (Ord node) => StateIdx.StOutSum node -> Graph node a v -> Maybe a
-lookupStOutSum (Idx.ForStorage (StorageIdx.OutSum aug) node) g = do
-   (Storage.Graph partMap _) <- Map.lookup node $ storages g
-   case aug of
-      Idx.Init -> return $ PartMap.init partMap
-      Idx.NoInit sec -> Map.lookup sec $ PartMap.parts partMap
-
 lookupSums ::
    (Ord node) =>
    Idx.StateNode node -> Graph node a v -> Maybe (Sums v)
@@ -628,6 +587,14 @@ lookupSums (Idx.PartNode state node) =
 seqLookup ::
    Idx.State -> Graph node a v -> Maybe (FlowTopo.Section node v)
 seqLookup state = Map.lookup state . states
+
+
+withStorage ::
+   (Ord node) =>
+   (idx -> StorageQuant.Graph Carry a -> Maybe a) ->
+   Idx.ForStorage idx node -> Graph node a v -> Maybe a
+withStorage look (Idx.ForStorage idx node) =
+   look idx <=< Map.lookup node . storages
 
 
 class
@@ -676,16 +643,16 @@ class (Var.ScalarIndex idx) => LookupScalar idx where
       (Ord node) => Idx.ForStorage idx node -> Graph node a v -> Maybe a
 
 instance LookupScalar (StorageIdx.Energy Idx.State) where
-   lookupScalar = lookupStEnergy
+   lookupScalar = withStorage StorageQuant.lookupEnergy
 
 instance LookupScalar (StorageIdx.X Idx.State) where
-   lookupScalar = lookupStX
+   lookupScalar = withStorage StorageQuant.lookupX
 
 instance LookupScalar (StorageIdx.InSum Idx.State) where
-   lookupScalar = lookupStInSum
+   lookupScalar = withStorage StorageQuant.lookupInSum
 
 instance LookupScalar (StorageIdx.OutSum Idx.State) where
-   lookupScalar = lookupStOutSum
+   lookupScalar = withStorage StorageQuant.lookupOutSum
 
 
 mapGraphWithVar ::
