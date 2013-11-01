@@ -1,8 +1,5 @@
 module EFA.Report.Format where
 
-import qualified EFA.Flow.Storage.Index as StorageIdx
-import qualified EFA.Flow.Topology.Index as TopoIdx
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.RecordIndex as RecIdx
 
 import qualified Data.Map as Map
@@ -80,10 +77,8 @@ class Format output where
    integral :: output -> output
    recordDelta :: RecIdx.Delta -> output -> output
    initial, exit :: output
-   section :: Idx.Section -> output
-   state :: Idx.State -> output
    sectionNode :: output -> output -> output
-   direction :: TopoIdx.Direction -> output
+   directionIn, directionOut :: output
    delta :: output -> output
    energy, maxEnergy, power, xfactor, eta :: output
    dtime, signalSum, scalarSum, storage :: output
@@ -137,11 +132,10 @@ instance Format ASCII where
          RecIdx.Delta -> "d"
    initial = ASCII "init"
    exit = ASCII "exit"
-   section (Idx.Section s) = ASCII $ show s
-   state (Idx.State s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
-   direction = ASCII . directionShort
+   directionIn = ASCII shortIn
+   directionOut = ASCII shortOut
    delta (ASCII s) = ASCII $ 'd':s
    energy = ASCII "E"
    maxEnergy = ASCII "Em"
@@ -211,11 +205,10 @@ instance Format Unicode where
          RecIdx.Delta -> [deltaChar]
    initial = Unicode "init"
    exit = Unicode "exit"
-   section (Idx.Section s) = Unicode $ show s
-   state (Idx.State s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
-   direction = Unicode . directionShort
+   directionIn = Unicode shortIn
+   directionOut = Unicode shortOut
    delta (Unicode s) = Unicode $ deltaChar:s
    energy = Unicode "E"
    maxEnergy = Unicode "\xCA"
@@ -330,11 +323,10 @@ instance Format Latex where
          RecIdx.Delta -> "\\Delta " ++ rest
    initial = Latex "\\mbox{init}"
    exit = Latex "\\mbox{exit}"
-   section (Idx.Section s) = Latex $ show s
-   state (Idx.State s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
-   direction = Latex . directionShort
+   directionIn = Latex shortIn
+   directionOut = Latex shortOut
    delta (Latex s) = Latex $ "\\Delta " ++ s
    energy = Latex "E"
    maxEnergy = Latex "\\^E"
@@ -395,56 +387,7 @@ instance Record rec => Record (RecIdx.ExtDelta rec) where
    record (RecIdx.ExtDelta d r) = recordDelta d . record r
 
 
-class EdgeIdx idx where
-   edgeIdent ::
-      Format output => idx node -> output
 
-instance TopologyIdx idx => EdgeIdx (Idx.InPart part idx) where
-   edgeIdent = flowIdent
-
-class TopologyIdx idx where
-   flowIdent ::
-      Format output => Idx.InPart part idx node -> output
-
-instance TopologyIdx TopoIdx.Energy where flowIdent _ = energy
-instance TopologyIdx TopoIdx.Power where flowIdent _ = power
-instance TopologyIdx TopoIdx.Eta where flowIdent _ = eta
-instance TopologyIdx TopoIdx.X where flowIdent _ = xfactor
-
-instance StorageIdx idx => EdgeIdx (Idx.ForStorage idx) where
-   edgeIdent = carryIdent
-
-class StorageIdx idx where
-   carryIdent ::
-      Format output => Idx.ForStorage idx node -> output
-
-instance StorageIdx StorageIdx.MaxEnergy where carryIdent _ = maxEnergy
-instance StorageIdx (StorageIdx.Energy sec) where carryIdent _ = energy
-instance StorageIdx (StorageIdx.X sec) where carryIdent _ = xfactor
-
-
-directionShort :: TopoIdx.Direction -> String
-directionShort d =
-   case d of
-      TopoIdx.In -> "i" -- Verwirrung mit initial aus der Format-Klasse?
-      TopoIdx.Out -> "o"
-
-boundary :: Format output => Idx.Boundary -> output
-boundary (Idx.Following Idx.Init) = initial
-boundary (Idx.Following (Idx.NoInit s)) = section s
-
-class Part sec where part :: Format output => sec -> output
-instance Part Idx.Section where part = section
-instance Part Idx.State where part = state
-
-initOrOther :: (Part sec, Format output) => Idx.Init sec -> output
-initOrOther (Idx.Init) = initial
-initOrOther (Idx.NoInit s) = part s
-
-otherOrExit :: (Part sec, Format output) => Idx.Exit sec -> output
-otherOrExit (Idx.NoExit s) = part s
-otherOrExit (Idx.Exit) = exit
-
-augmented :: (Part sec, Format output) => Idx.Augmented sec -> output
-augmented =
-   Idx.switchAugmented initial exit part
+shortIn, shortOut :: String
+shortIn = "i" -- Verwirrung mit initial aus der Format-Klasse?
+shortOut = "o"

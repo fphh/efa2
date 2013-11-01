@@ -2,6 +2,7 @@ module EFA.Report.FormatValue where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
@@ -43,7 +44,7 @@ instance
 
 
 instance
-   (FormatSignalIndex idx, Format.Part part, Node.C node) =>
+   (FormatSignalIndex idx, PartIdx.Format part, Node.C node) =>
       FormatValue (Idx.InPart part idx node) where
    formatValue (Idx.InPart s idx) = formatSignalIndex idx s
 
@@ -62,17 +63,17 @@ formatForStorage (e, idx) n =
 
 class FormatSignalIndex idx where
    formatSignalIndex ::
-      (Node.C node, Format.Part part, Format output) =>
+      (Node.C node, PartIdx.Format part, Format output) =>
       idx node -> part -> output
 
 class FormatScalarIndex idx where
    formatScalarIndex :: (Format output) => idx -> (output, output)
 
 formatPartNode ::
-   (Format output, Format.Part part, Node.C node) =>
+   (Format output, PartIdx.Format part, Node.C node) =>
    Idx.PartNode part node -> output
 formatPartNode (Idx.PartNode s n) =
-   Format.part s `Format.sectionNode` Node.subscript n
+   PartIdx.format s `Format.sectionNode` Node.subscript n
 
 
 formatTopologyLink ::
@@ -105,15 +106,15 @@ instance (Node.C node) => FormatValue (TopoIdx.DTime node) where
 instance (Node.C node) => FormatValue (TopoIdx.Sum node) where
    formatValue (TopoIdx.Sum dir node) =
       Format.subscript Format.signalSum $
-      Format.direction dir `Format.connect` Node.subscript node
+      TopoIdx.formatDirection dir `Format.connect` Node.subscript node
 
 
 formatTopologySecEdge ::
-   (Format output, Format.Part part, Node.C node) =>
+   (Format output, PartIdx.Format part, Node.C node) =>
    output -> TopoIdx.Edge node -> part -> output
 formatTopologySecEdge e se s =
    Format.subscript e $
-   Format.part s `Format.sectionNode` formatTopologyLink se
+   PartIdx.format s `Format.sectionNode` formatTopologyLink se
 
 
 instance FormatSignalIndex TopoIdx.Energy where
@@ -130,40 +131,40 @@ instance FormatSignalIndex TopoIdx.X where
 
 instance FormatSignalIndex TopoIdx.DTime where
    formatSignalIndex TopoIdx.DTime s =
-      Format.subscript Format.dtime $ Format.part s
+      Format.subscript Format.dtime $ PartIdx.format s
 
 instance FormatSignalIndex TopoIdx.Sum where
    formatSignalIndex (TopoIdx.Sum dir n) s =
       Format.subscript Format.signalSum $
-      Format.direction dir `Format.connect`
+      TopoIdx.formatDirection dir `Format.connect`
          formatPartNode (Idx.PartNode s n)
 
 
 instance FormatScalarIndex StorageIdx.Content where
    formatScalarIndex (StorageIdx.Content bnd) =
-      (Format.storage, Format.boundary bnd)
+      (Format.storage, PartIdx.formatBoundary bnd)
 
 
 formatCarryEdge ::
-   (Format.Part sec, Format output) =>
-   StorageIdx.Edge sec -> output
+   (PartIdx.Format part, Format output) =>
+   StorageIdx.Edge part -> output
 formatCarryEdge (StorageIdx.Edge s0 s1) =
-   Format.initOrOther s0 `Format.link` Format.otherOrExit s1
+   PartIdx.formatInitOrOther s0 `Format.link` PartIdx.formatOtherOrExit s1
 
 instance FormatScalarIndex StorageIdx.MaxEnergy where
    formatScalarIndex (StorageIdx.MaxEnergy e) = (Format.maxEnergy, formatCarryEdge e)
 
-instance (Format.Part sec) => FormatScalarIndex (StorageIdx.Energy sec) where
+instance (PartIdx.Format part) => FormatScalarIndex (StorageIdx.Energy part) where
    formatScalarIndex (StorageIdx.Energy e) = (Format.energy, formatCarryEdge e)
 
 
 formatCarryBond ::
-   (Format.Part sec, Format output) =>
-   StorageIdx.Bond sec -> output
+   (PartIdx.Format part, Format output) =>
+   StorageIdx.Bond part -> output
 formatCarryBond (StorageIdx.Bond s0 s1) =
-   Format.augmented s0 `Format.link` Format.augmented s1
+   PartIdx.formatAugmented s0 `Format.link` PartIdx.formatAugmented s1
 
-instance (Format.Part sec) => FormatScalarIndex (StorageIdx.X sec) where
+instance (PartIdx.Format part) => FormatScalarIndex (StorageIdx.X part) where
    formatScalarIndex (StorageIdx.X e) = (Format.xfactor, formatCarryBond e)
 
 
@@ -171,15 +172,15 @@ formatStSum ::
    (Format output) =>
    TopoIdx.Direction -> output -> (output, output)
 formatStSum dir s =
-   (Format.scalarSum, Format.direction dir `Format.connect` s)
+   (Format.scalarSum, TopoIdx.formatDirection dir `Format.connect` s)
 
-instance (Format.Part sec) => FormatScalarIndex (StorageIdx.InSum sec) where
+instance (PartIdx.Format part) => FormatScalarIndex (StorageIdx.InSum part) where
    formatScalarIndex (StorageIdx.InSum s) =
-      formatStSum TopoIdx.In (Format.otherOrExit s)
+      formatStSum TopoIdx.In (PartIdx.formatOtherOrExit s)
 
-instance (Format.Part sec) => FormatScalarIndex (StorageIdx.OutSum sec) where
+instance (PartIdx.Format part) => FormatScalarIndex (StorageIdx.OutSum part) where
    formatScalarIndex (StorageIdx.OutSum s) =
-      formatStSum TopoIdx.Out (Format.initOrOther s)
+      formatStSum TopoIdx.Out (PartIdx.formatInitOrOther s)
 
 
 formatChar :: Format output => Char -> output

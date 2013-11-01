@@ -8,6 +8,9 @@ import EFA.Flow.Part.Index
 
 import qualified EFA.Utility.TypeConstructor as TC
 
+import qualified EFA.Report.Format as Format
+import EFA.Report.Format (Format)
+
 import Prelude hiding (flip)
 
 
@@ -94,3 +97,11 @@ withEdgeFromBond fIn fOut (Bond stFrom stTo) =
          error "storage loop at Init"
       (Exit, Exit) ->
          error "storage loop at Exit"
+
+
+class Identifier idx where
+   identifier :: Format output => idx -> output
+
+instance Identifier MaxEnergy where identifier _ = Format.maxEnergy
+instance Identifier (Energy sec) where identifier _ = Format.energy
+instance Identifier (X sec) where identifier _ = Format.xfactor

@@ -1,13 +1,12 @@
 module EFA.Flow.Part.Map where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Flow.SequenceState.Variable ((<#>))
-
-import qualified EFA.Report.Format as Format
 
 import qualified EFA.Utility.Map as MapU
 import EFA.Utility.Map (Caller)
@@ -66,7 +65,7 @@ instance (Ord part) => Traversable (PartMap part) where
 
 
 mapWithVar ::
-   (Format.Part sec) =>
+   (PartIdx.Format sec) =>
    (Idx.PartNode sec node -> Maybe Topo.StoreDir) ->
    (Var.ForStorageScalar sec node -> a0 -> a1) ->
    node ->

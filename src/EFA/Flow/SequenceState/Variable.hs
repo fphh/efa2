@@ -3,6 +3,7 @@ module EFA.Flow.SequenceState.Variable where
 
 import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Topology.Variable as TopoVar
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
@@ -55,7 +56,7 @@ instance StorageVar.Index idx => Index (Idx.ForStorage idx) where
 
 
 instance
-   (Format.Part part, Node.C node) =>
+   (PartIdx.Format part, Node.C node) =>
       FormatValue (Any part node) where
    formatValue (Signal (Idx.InPart s var)) = TopoVar.formatSignalValue var s
    formatValue (Scalar var) = formatValue var
@@ -65,7 +66,7 @@ class FormatIndex idx where
    formatIndex :: (Node.C node, Format output) => idx node -> output
 
 instance
-   (Format.Part part, FormatSignalIndex idx) =>
+   (PartIdx.Format part, FormatSignalIndex idx) =>
       FormatIndex (Idx.InPart part idx) where
    formatIndex (Idx.InPart s idx) = formatSignalIndex idx s
 

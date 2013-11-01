@@ -9,6 +9,7 @@ module EFA.Flow.Cumulated.Index (
    Direction(..),
    Edge(..),
    TopoIdx.flip,
+   TopoIdx.formatDirection,
    ) where
 
 import qualified EFA.Flow.Topology.Index as TopoIdx

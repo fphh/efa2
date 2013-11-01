@@ -6,14 +6,13 @@ import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.Part.Map as PartMap
 
 import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Unknown (Unknown(unknown))
 
 import qualified EFA.Graph.Topology.Index as Idx
-
-import qualified EFA.Report.Format as Format
 
 import qualified Data.Traversable as Trav
 import qualified Data.Map as Map ; import Data.Map (Map)
@@ -34,7 +33,7 @@ class (Applicative f, Foldable f) => Carry f where
 
 
 mapGraphWithVar ::
-   (Carry carry, CarryPart carry ~ part, Format.Part part) =>
+   (Carry carry, CarryPart carry ~ part, PartIdx.Format part) =>
    (Idx.PartNode part node -> Maybe (FlowTopo.Sums v)) ->
    (Var.ForStorageScalar part node -> a0 -> a1) ->
    node ->

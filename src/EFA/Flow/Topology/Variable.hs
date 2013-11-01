@@ -1,6 +1,7 @@
 module EFA.Flow.Topology.Variable where
 
 import qualified EFA.Flow.Topology.Index as Idx
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Graph.Topology.Index as FlowIdx
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -42,12 +43,12 @@ ident var =
       DTime _idx -> Format.dtime
       Sum _idx -> Format.signalSum
 
-instance Format.EdgeIdx Signal where
-   edgeIdent = ident
+instance FlowIdx.Identifier Signal where
+   identifier = ident
 
 
 formatSignalValue ::
-   (Format output, Format.Part part, Node.C node) =>
+   (Format output, PartIdx.Format part, Node.C node) =>
    Signal node -> part -> output
 formatSignalValue var s =
    case var of
@@ -74,8 +75,8 @@ instance (Node.C node) => FormatValue (Signal node) where
          Sum idx -> formatValue idx
 
 
-instance Format.TopologyIdx Signal where
-   flowIdent (FlowIdx.InPart _part var) = ident var
+instance Idx.Identifier Signal where
+   identifier = ident
 
 
 class FormatIndex idx where

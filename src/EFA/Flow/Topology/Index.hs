@@ -2,6 +2,9 @@ module EFA.Flow.Topology.Index where
 
 import qualified EFA.Utility.TypeConstructor as TC
 
+import qualified EFA.Report.Format as Format
+import EFA.Report.Format (Format)
+
 import qualified Test.QuickCheck as QC
 import Control.Monad (liftM2)
 
@@ -104,3 +107,19 @@ powerFromPPos (PPos e) = Power e
 
 energyFromPPos :: PPos node -> Energy node
 energyFromPPos (PPos e) = Energy e
+
+
+class Identifier idx where
+   identifier :: Format output => idx node -> output
+
+instance Identifier Energy where identifier _ = Format.energy
+instance Identifier Power where identifier _ = Format.power
+instance Identifier Eta where identifier _ = Format.eta
+instance Identifier X where identifier _ = Format.xfactor
+
+
+formatDirection :: Format output => Direction -> output
+formatDirection d =
+   case d of
+      In  -> Format.directionIn
+      Out -> Format.directionOut

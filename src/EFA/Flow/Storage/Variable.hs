@@ -2,6 +2,7 @@
 module EFA.Flow.Storage.Variable where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
@@ -29,19 +30,19 @@ instance Index StorageIdx.MaxEnergy where
    type Part StorageIdx.MaxEnergy = Idx.Section
    index = MaxEnergy
 
-instance (Format.Part part) => Index (StorageIdx.Energy part) where
+instance (PartIdx.Format part) => Index (StorageIdx.Energy part) where
    type Part (StorageIdx.Energy part) = part
    index = Energy
 
-instance (Format.Part part) => Index (StorageIdx.X part) where
+instance (PartIdx.Format part) => Index (StorageIdx.X part) where
    type Part (StorageIdx.X part) = part
    index = X
 
-instance (Format.Part part) => Index (StorageIdx.InSum part) where
+instance (PartIdx.Format part) => Index (StorageIdx.InSum part) where
    type Part (StorageIdx.InSum part) = part
    index = InSum
 
-instance (Format.Part part) => Index (StorageIdx.OutSum part) where
+instance (PartIdx.Format part) => Index (StorageIdx.OutSum part) where
    type Part (StorageIdx.OutSum part) = part
    index = OutSum
 
@@ -56,12 +57,12 @@ ident var =
       InSum _idx -> Format.scalarSum
       OutSum _idx -> Format.scalarSum
 
-instance Format.StorageIdx (Scalar part) where
-   carryIdent (Idx.ForStorage var _node) = ident var
+instance StorageIdx.Identifier (Scalar part) where
+   identifier = ident
 
 
 formatScalarValue ::
-   (Format output, Format.Part part) =>
+   (Format output, PartIdx.Format part) =>
    Scalar part -> (output, output)
 formatScalarValue var =
    case var of
@@ -72,5 +73,5 @@ formatScalarValue var =
       InSum idx -> formatScalarIndex idx
       OutSum idx -> formatScalarIndex idx
 
-instance (Format.Part part) => FormatScalarIndex (Scalar part) where
+instance (PartIdx.Format part) => FormatScalarIndex (Scalar part) where
    formatScalarIndex var = formatScalarValue var

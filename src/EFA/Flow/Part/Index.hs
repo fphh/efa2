@@ -1,5 +1,7 @@
 module EFA.Flow.Part.Index where
 
+import qualified EFA.Report.Format as Format
+
 import Data.Word (Word)
 
 import qualified Prelude as P
@@ -208,3 +210,29 @@ section0 = Section 0
 
 state0 :: State
 state0 = State 0
+
+
+
+formatBoundary :: Format.Format output => Boundary -> output
+formatBoundary (Following Init) = Format.initial
+formatBoundary (Following (NoInit s)) = format s
+
+class Format part where
+   format :: Format.Format output => part -> output
+
+instance Format Section where
+   format (Section n) = Format.integer $ fromIntegral n
+
+instance Format State where
+   format (State n) = Format.integer $ fromIntegral n
+
+formatInitOrOther :: (Format part, Format.Format output) => Init part -> output
+formatInitOrOther (Init) = Format.initial
+formatInitOrOther (NoInit s) = format s
+
+formatOtherOrExit :: (Format part, Format.Format output) => Exit part -> output
+formatOtherOrExit (NoExit s) = format s
+formatOtherOrExit (Exit) = Format.exit
+
+formatAugmented :: (Format part, Format.Format output) => Augmented part -> output
+formatAugmented = switchAugmented Format.initial Format.exit format

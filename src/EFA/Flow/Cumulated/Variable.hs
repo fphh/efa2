@@ -60,7 +60,7 @@ instance FormatIndex Idx.X where
 instance FormatIndex Idx.Sum where
    formatIndex (Idx.Sum dir n) =
       Format.subscript Format.signalSum $
-      Format.direction dir `Format.connect` Node.subscript n
+      Idx.formatDirection dir `Format.connect` Node.subscript n
 
 instance FormatIndex Idx.DTime where
    formatIndex (Idx.DTime e) =
@@ -76,7 +76,7 @@ formatEdge ::
    output -> Idx.Direction -> Idx.Edge node -> output
 formatEdge e d se =
    Format.subscript e $
-   Format.direction d `Format.connect` formatTopologyLink se
+   Idx.formatDirection d `Format.connect` formatTopologyLink se
 
 
 checkedLookup ::

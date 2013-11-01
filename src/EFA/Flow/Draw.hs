@@ -31,6 +31,7 @@ import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Topology.Quantity as FlowTopoQuant
 import qualified EFA.Flow.Topology as FlowTopo
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.Part.Map as PartMap
 
 import qualified EFA.Report.Format as Format
@@ -823,7 +824,7 @@ stateFlowGraph opts gr =
 
 storageGraphShow ::
    (StorageQuant.Carry carry, StorageQuant.CarryPart carry ~ part,
-    Format.Part part, Format output, Node.C node, FormatValue a) =>
+    PartIdx.Format part, Format output, Node.C node, FormatValue a) =>
    Options output ->
    node ->
    Storage.Graph part a (carry a) ->
@@ -850,7 +851,7 @@ stateNodeShow node msum =
 
 carryEdgeShow ::
    (StorageQuant.Carry carry, StorageQuant.CarryPart carry ~ part,
-    Format.Part part, Node.C node, FormatValue a, Format output) =>
+    PartIdx.Format part, Node.C node, FormatValue a, Format output) =>
    Options output ->
    node ->
    StorageIdx.Edge part ->
@@ -862,7 +863,7 @@ carryEdgeShow opts node edge carry =
 
 
 structureSeqStateEdgeShow ::
-   (Format.Part part, Node.C node, FormatValue a) =>
+   (PartIdx.Format part, Node.C node, FormatValue a) =>
    Options Unicode ->
    part ->
    Graph.EitherEdge node ->
@@ -982,19 +983,19 @@ dotDirGraph stmts =
 
 
 formatAssignWithOpts ::
-   (Node.C node, Var.FormatIndex idx, Format.EdgeIdx idx,
+   (Node.C node, Var.FormatIndex idx, Idx.Identifier idx,
     FormatValue a, Format output) =>
    Options output -> idx node -> a -> output
 formatAssignWithOpts opts idx val =
    uncurry Format.assign $ formatAssignSidesWithOpts opts idx val
 
 formatAssignSidesWithOpts ::
-   (Node.C node, Var.FormatIndex idx, Format.EdgeIdx idx,
+   (Node.C node, Var.FormatIndex idx, Idx.Identifier idx,
     FormatValue a, Format output) =>
    Options output -> idx node -> a -> (output, output)
 formatAssignSidesWithOpts opts idx val =
    (optRecordIndex opts $
     if optVariableIndex opts
       then Var.formatIndex idx
-      else Format.edgeIdent idx,
+      else Idx.identifier idx,
     formatValue val)

@@ -17,13 +17,15 @@ module EFA.Graph.Topology.Index (
    PartIdx.exitSection,
    ) where
 
-import qualified EFA.Flow.Topology.Index as Idx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Part.Index as PartIdx
 import EFA.Flow.Part.Index
           (State, Section, Boundary, Augmented,
            Init(Init, NoInit), maybeInit, allowInit,
            Exit(Exit, NoExit), maybeExit, allowExit)
+
+import EFA.Report.Format (Format)
 
 import qualified EFA.Utility.TypeConstructor as TC
 
@@ -192,8 +194,19 @@ carryBondFrom (ForStorage (StorageIdx.Bond sec _) n) = PartNode sec n
 carryBondTo   (ForStorage (StorageIdx.Bond _ sec) n) = PartNode sec n
 
 
-instance Idx.Flip idx => Idx.Flip (InPart part idx) where
-   flip (InPart s idx) = InPart s (Idx.flip idx)
+instance TopoIdx.Flip idx => TopoIdx.Flip (InPart part idx) where
+   flip (InPart s idx) = InPart s (TopoIdx.flip idx)
 
 instance StorageIdx.Flip idx => StorageIdx.Flip (ForStorage idx node) where
    flip (ForStorage idx n) = ForStorage (StorageIdx.flip idx) n
+
+
+
+class Identifier idx where
+   identifier :: Format output => idx node -> output
+
+instance TopoIdx.Identifier idx => Identifier (InPart part idx) where
+   identifier (InPart _part idx) = TopoIdx.identifier idx
+
+instance StorageIdx.Identifier idx => Identifier (ForStorage idx) where
+   identifier (ForStorage idx _node) = StorageIdx.identifier idx
