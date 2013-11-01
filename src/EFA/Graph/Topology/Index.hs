@@ -1,9 +1,8 @@
 module EFA.Graph.Topology.Index where
 
-import qualified EFA.Utility.TypeConstructor as TC
+import qualified EFA.Flow.Topology.Index as Idx
 
-import qualified Test.QuickCheck as QC
-import Control.Monad (liftM2)
+import qualified EFA.Utility.TypeConstructor as TC
 
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
@@ -305,9 +304,6 @@ stateNode = PartNode
 
 -- * Edge indices
 
-data TopologyEdge node = TopologyEdge node node
-   deriving (Show, Read, Eq, Ord)
-
 {- |
 A storage edge is always directed from an early to a later section.
 However, a splitting factor exists both in chronological and reversed order.
@@ -320,15 +316,12 @@ data CarryEdge sec = CarryEdge (Init sec) (Exit sec)
 data CarryBond sec = CarryBond (Augmented sec) (Augmented sec)
    deriving (Show, Eq, Ord)
 
-instance TC.Eq TopologyEdge where eq = (==)
 instance TC.Eq CarryEdge where eq = (==)
 instance TC.Eq CarryBond where eq = (==)
 
-instance TC.Ord TopologyEdge where cmp = compare
 instance TC.Ord CarryEdge where cmp = compare
 instance TC.Ord CarryBond where cmp = compare
 
-instance TC.Show TopologyEdge where showsPrec = showsPrec
 instance TC.Show CarryEdge where showsPrec = showsPrec
 instance TC.Show CarryBond where showsPrec = showsPrec
 
@@ -461,62 +454,5 @@ carryBondFrom (ForStorage (CarryBond sec _) n) = PartNode sec n
 carryBondTo   (ForStorage (CarryBond _ sec) n) = PartNode sec n
 
 
-
-class Flip edge where
-   flip :: edge node -> edge node
-
-
-instance Flip idx => Flip (InPart part idx) where
-   flip (InPart s idx) = InPart s (flip idx)
-
-instance Flip TopologyEdge where
-   flip (TopologyEdge x y) = TopologyEdge y x
-
-
-instance Flip Power where
-   flip (Power x) = Power $ flip x
-
-instance Flip Energy where
-   flip (Energy x) = Energy $ flip x
-
-instance Flip PPos where
-   flip (PPos x) = PPos $ flip x
-
-
-instance (QC.Arbitrary node) => QC.Arbitrary (TopologyEdge node) where
-   arbitrary = liftM2 TopologyEdge QC.arbitrary QC.arbitrary
-   shrink (TopologyEdge from to) =
-      map (uncurry TopologyEdge) $ QC.shrink (from, to)
-
-instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
-   arbitrary = fmap PPos QC.arbitrary
-   shrink (PPos x) = map PPos $ QC.shrink x
-
-
--- | Energy variables.
-newtype Energy node = Energy (TopologyEdge node) deriving (Show, Ord, Eq)
-
-
--- | Power variables.
-newtype Power node = Power (TopologyEdge node) deriving (Show, Ord, Eq)
-
--- | Eta variables.
-newtype Eta node = Eta (TopologyEdge node) deriving (Show, Ord, Eq)
-
--- | Splitting factors.
-newtype X node = X (TopologyEdge node) deriving (Show, Ord, Eq)
-
-data Direction = In | Out deriving (Show, Eq, Ord)
-
-data Sum node = Sum Direction node deriving (Show, Ord, Eq)
-
-
--- * Other indices
-
--- | Delta time variables, depending solely on their section and record number.
-data DTime node = DTime deriving (Show, Ord, Eq)
-
--- | Indices for Power Position
-newtype PPos node = PPos (TopologyEdge node) deriving (Show, Read, Ord, Eq)
-
-
+instance Idx.Flip idx => Idx.Flip (InPart part idx) where
+   flip (InPart s idx) = InPart s (Idx.flip idx)

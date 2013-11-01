@@ -4,7 +4,7 @@ module Main where
 
 import EFA.Example.Topology.LinearOne (Node(Source, Sink))
 
-import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Record (PowerRecord, Record(Record))

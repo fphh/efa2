@@ -1,6 +1,7 @@
 module EFA.Flow.Topology.Variable where
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Index as FlowIdx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Report.Format as Format
@@ -74,7 +75,7 @@ instance (Node.C node) => FormatValue (Signal node) where
 
 
 instance Format.TopologyIdx Signal where
-   flowIdent (Idx.InPart _part var) = ident var
+   flowIdent (FlowIdx.InPart _part var) = ident var
 
 
 class FormatIndex idx where

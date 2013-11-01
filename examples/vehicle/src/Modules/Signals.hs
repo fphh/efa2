@@ -12,15 +12,14 @@ import Modules.System (
       FrontBrakes, VehicleInertia, RearBrakes
    ))
 
-import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology.Index as XIdx
 
 import EFA.Signal.Record (SigId(SigId),
                           getSig,getTime,extractLogSignals,
                           PowerRecord, SignalRecord, genPowerRecord)
 
--- import qualified EFA.Graph.Topology.Node as Node
 import EFA.Signal.Signal ((.*), (.-), neg, TC, Signal, len, fromList)
-import EFA.Signal.Typ (UT,Typ)
+import EFA.Signal.Typ (UT, Typ)
 import EFA.Signal.Data (Data, Nil, (:>))
 
 

@@ -1,6 +1,6 @@
 module EFA.Flow.Topology where
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 import EFA.Graph (Graph)
@@ -54,7 +54,7 @@ checkedZipWith caller f g h
 lookupEdge ::
    Ord n =>
    (el -> a) ->
-   Idx.TopologyEdge n ->
+   TopoIdx.Edge n ->
    Graph n Graph.EitherEdge nl (Maybe el) ->
    Maybe a
 lookupEdge f se =

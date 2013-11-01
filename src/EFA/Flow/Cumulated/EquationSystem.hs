@@ -25,6 +25,7 @@ module EFA.Flow.Cumulated.EquationSystem (
    ) where
 
 import qualified EFA.Flow.Cumulated.Quantity as CumFlow
+import qualified EFA.Flow.Cumulated.Index as CumIdx
 import qualified EFA.Flow.Cumulated.Variable as Var
 
 import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
@@ -194,7 +195,7 @@ fromTopology opts topo =
    (EqSys.withLocalVar $ \totalTime ->
       (foldMap (totalTime =&=) $
        Map.mapKeysWith (~+)
-          ((\e -> min e (Idx.flip e)) . Topo.topologyEdgeFromDirEdge) $
+          ((\e -> min e (CumIdx.flip e)) . Topo.topologyEdgeFromDirEdge) $
        fmap CumFlow.flowDTime $
        Graph.edgeLabels topo)
       <>

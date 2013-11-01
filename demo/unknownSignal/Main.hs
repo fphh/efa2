@@ -19,7 +19,6 @@ import EFA.Flow.Topology.Absolute ((.=), (=.=))
 import qualified EFA.Equation.Result as Result
 
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
@@ -117,10 +116,10 @@ main =
                     \e flow ->
                        case Topo.topologyEdgeFromDirEdge e of
                           se ->
-                             Map.singleton (Idx.PPos se)
+                             Map.singleton (XIdx.PPos se)
                                 (FlowTopo.flowEnergyOut flow)
                              <>
-                             Map.singleton (Idx.PPos $ Idx.flip se)
+                             Map.singleton (XIdx.PPos $ XIdx.flip se)
                                 (FlowTopo.flowEnergyIn flow)) $
                 Graph.edgeLabels flowTopo
 

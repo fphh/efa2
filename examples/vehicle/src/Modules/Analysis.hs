@@ -13,10 +13,16 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
 import EFA.Flow.Sequence.Absolute ((.=))
 
+import qualified EFA.Flow.SequenceState.Variable as Var
+
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Variable as TopoVar
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
-import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph as Graph
+
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Record as EqRecord
@@ -34,10 +40,6 @@ import EFA.Signal.Record (SignalRecord, PowerRecord, getTime, newTimeBase)
 import EFA.Signal.Chop (addZeroCrossings, genSequ)
 import EFA.Signal.Data (Data, Nil, (:>), getData)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
-
-import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Graph
 
 import Data.Monoid ((<>))
 
@@ -164,7 +166,7 @@ givenForPrediction (Idx.InPart _sec var) v =
          if filterCriterion idx
            then Determined $
               case idx of
-                 Idx.Energy (Idx.TopologyEdge System.Resistance System.Chassis) ->
+                 TopoIdx.Energy (TopoIdx.Edge System.Resistance System.Chassis) ->
                     v ~* Arith.fromRational 1.1
                  _ -> v
            else Undetermined
@@ -176,7 +178,7 @@ modifyPredictionEnergy ::
    Graph.DirEdge System.Node ->
    Result a -> Result a
 modifyPredictionEnergy edge energy =
-   if filterCriterion $ Idx.Energy $ Topo.topologyEdgeFromDirEdge edge
+   if filterCriterion $ TopoIdx.Energy $ Topo.topologyEdgeFromDirEdge edge
      then
         case edge of
            Graph.DirEdge System.Resistance System.Chassis ->
@@ -227,8 +229,8 @@ givenForDifferentialAnalysis (Idx.InPart _sec var) v =
       _ -> Undetermined
 
 
-filterCriterion :: Idx.Energy System.Node -> Bool
-filterCriterion (Idx.Energy (Idx.TopologyEdge x y)) =
+filterCriterion :: TopoIdx.Energy System.Node -> Bool
+filterCriterion (TopoIdx.Energy (TopoIdx.Edge x y)) =
    -- filterCriterionExtra e &&
    case (x,y) of
       (System.Tank, System.ConBattery) -> True
@@ -242,5 +244,5 @@ filterCriterion (Idx.Energy (Idx.TopologyEdge x y)) =
 
 filterCriterionExtra :: XIdx.Energy System.Node -> Bool
 filterCriterionExtra
-      (Idx.InPart sec (Idx.Energy (Idx.TopologyEdge x y))) =
+      (Idx.InPart sec (TopoIdx.Energy (TopoIdx.Edge x y))) =
    not $ sec == Idx.Section 18 || x == System.Tank || y == System.ConBattery

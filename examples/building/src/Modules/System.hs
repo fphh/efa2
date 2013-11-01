@@ -7,12 +7,11 @@ import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.State.Quantity as StateFlow
 
-import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 
 import EFA.Signal.Record (SigId(SigId))
@@ -66,10 +65,10 @@ edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
                (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
 
 
-powerPositonNames :: Map (SeqIdx.PPos Node) SigId
+powerPositonNames :: Map (TopoIdx.PPos Node) SigId
 powerPositonNames = Map.fromList $ concatMap f edgeList
-  where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, SigId $ "Power-"++l1),
-                             (SeqIdx.ppos n2 n1, SigId $ "Power-"++l2)]
+  where f (n1,n2,_,l1,l2) = [(TopoIdx.ppos n1 n2, SigId $ "Power-"++l1),
+                             (TopoIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
 
 flowStates :: [Topo.FlowTopology Node]
@@ -90,9 +89,9 @@ stateFlowGraph =
 
 etaAssign ::
    node -> node -> name ->
-   (Idx.TopologyEdge node, (name, name))
+   (TopoIdx.Edge node, (name, name))
 etaAssign from to name =
-   (Idx.TopologyEdge from to, (name, name))
+   (TopoIdx.Edge from to, (name, name))
 
 etaAssignMap :: EtaAssignMap Node
 etaAssignMap = Map.fromList $

@@ -6,7 +6,7 @@ import EFA.Example.Topology.LinearTwo (Node(Source, Crossing, Sink))
 
 import qualified EFA.Application.Plot as PlotIO
 
-import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Chop (addZeroCrossings)

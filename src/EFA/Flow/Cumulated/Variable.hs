@@ -73,7 +73,7 @@ instance FormatIndex Idx.Eta where
 
 formatEdge ::
    (Format output, Node.C node) =>
-   output -> Idx.Direction -> Idx.TopologyEdge node -> output
+   output -> Idx.Direction -> Idx.Edge node -> output
 formatEdge e d se =
    Format.subscript e $
    Format.direction d `Format.connect` formatTopologyLink se

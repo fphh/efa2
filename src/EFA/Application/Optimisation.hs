@@ -7,6 +7,7 @@ module EFA.Application.Optimisation where
 import EFA.Application.Simulation (EtaAssignMap, checkFoundPair, absEtaFunction)
 
 import qualified EFA.Flow.Topology.Variable as TopoVar
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.State.Index as StateIdx
@@ -37,18 +38,18 @@ Function to specify that an efficiency function in etaAssign
 is to be looked up with input power
 -}
 etaOverPowerIn ::
-   Idx.InPart part Idx.Eta node -> Idx.InPart part Idx.Power node
+   Idx.InPart part TopoIdx.Eta node -> Idx.InPart part TopoIdx.Power node
 etaOverPowerIn =
-   Idx.liftInPart $ \(Idx.Eta e) -> Idx.Power $ Idx.flip e
+   Idx.liftInPart $ \(TopoIdx.Eta e) -> TopoIdx.Power $ TopoIdx.flip e
 
 {- |
 Function to specify that an efficiency function in etaAssign
 is to be looked up with output power
 -}
 etaOverPowerOut ::
-   Idx.InPart part Idx.Eta node -> Idx.InPart part Idx.Power node
+   Idx.InPart part TopoIdx.Eta node -> Idx.InPart part TopoIdx.Power node
 etaOverPowerOut =
-   Idx.liftInPart $ \(Idx.Eta e) -> Idx.Power e
+   Idx.liftInPart $ \(TopoIdx.Eta e) -> TopoIdx.Power e
 
 
 givenAverageWithoutState ::
@@ -89,16 +90,16 @@ makeEtaFuncGiven state flowGraph etaAssign etaFunc =
          =.=
          EqSysState.liftF
             (Data.map (absEtaFunction strP strN etaFunc))
-            (EqSysState.variable (Idx.InPart state $ Idx.Power se)))
+            (EqSysState.variable (Idx.InPart state $ TopoIdx.Power se)))
       etaAssign
 
 etaFromEdge ::
    Node.C node =>
    StateFlow.Graph node a0 v0 ->
-   Idx.State -> Idx.TopologyEdge node -> StateIdx.Eta node
+   Idx.State -> TopoIdx.Edge node -> StateIdx.Eta node
 etaFromEdge flowGraph state se =
-   let etaF = Idx.InPart state $ Idx.Eta se
-       etaB = Idx.InPart state $ Idx.Eta $ Idx.flip se
+   let etaF = Idx.InPart state $ TopoIdx.Eta se
+       etaB = Idx.InPart state $ TopoIdx.Eta $ TopoIdx.flip se
    in  checkFoundPair etaF etaB
           (StateFlow.lookup etaF flowGraph,
            StateFlow.lookup etaB flowGraph)

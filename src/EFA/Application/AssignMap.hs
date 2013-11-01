@@ -17,6 +17,7 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -158,7 +159,7 @@ lookupStack energyIndex gr =
 
 lookupEnergyStacks ::
    (Ord i, Node.C node, a ~ Arith.Scalar v, Arith.Integrate v) =>
-   Idx.Energy node ->
+   TopoIdx.Energy node ->
    SeqFlow.Graph node t (Result (Stack i v)) ->
    Map Idx.Section (Map (Map i Stack.Branch) a)
 lookupEnergyStacks e =

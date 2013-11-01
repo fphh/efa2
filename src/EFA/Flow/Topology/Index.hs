@@ -1,18 +1,71 @@
 module EFA.Flow.Topology.Index where
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Utility.TypeConstructor as TC
 
-import Prelude hiding (sum)
+import qualified Test.QuickCheck as QC
+import Control.Monad (liftM2)
+
+import qualified Prelude as P
+import Prelude hiding (init, flip, sum)
 
 
-type Energy node    = Idx.Energy node
-type Power node     = Idx.Power node
-type Eta node       = Idx.Eta node
-type X node         = Idx.X node
-type DTime node     = Idx.DTime node
-type Sum node       = Idx.Sum node
+-- | Energy variables
+newtype Energy node = Energy (Edge node) deriving (Show, Ord, Eq)
 
-type PPos = Idx.PPos
+-- | Power variables
+newtype Power node = Power (Edge node) deriving (Show, Ord, Eq)
+
+-- | Efficiency variables
+newtype Eta node = Eta (Edge node) deriving (Show, Ord, Eq)
+
+-- | Splitting factors
+newtype X node = X (Edge node) deriving (Show, Ord, Eq)
+
+data Direction = In | Out deriving (Show, Eq, Ord)
+
+data Sum node = Sum Direction node deriving (Show, Ord, Eq)
+
+
+-- | Delta time variables
+data DTime node = DTime deriving (Show, Ord, Eq)
+
+-- | Indices for Power Position
+newtype PPos node = PPos (Edge node) deriving (Show, Read, Ord, Eq)
+
+
+data Edge node = Edge node node
+   deriving (Show, Read, Eq, Ord)
+
+
+class Flip edge where
+   flip :: edge node -> edge node
+
+instance Flip Edge where
+   flip (Edge from to) = Edge to from
+
+
+instance Flip Power where
+   flip (Power p) = Power $ flip p
+
+instance Flip Energy where
+   flip (Energy p) = Energy $ flip p
+
+instance Flip PPos where
+   flip (PPos p) = PPos $ flip p
+
+
+instance TC.Eq Edge where eq = (==)
+instance TC.Ord Edge where cmp = compare
+instance TC.Show Edge where showsPrec = showsPrec
+
+instance (QC.Arbitrary node) => QC.Arbitrary (Edge node) where
+   arbitrary = liftM2 Edge QC.arbitrary QC.arbitrary
+   shrink (Edge from to) =
+      map (uncurry Edge) $ QC.shrink (from, to)
+
+instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
+   arbitrary = fmap PPos QC.arbitrary
+   shrink (PPos p) = map PPos $ QC.shrink p
 
 
 energy :: node -> node -> Energy node
@@ -20,34 +73,34 @@ power :: node -> node -> Power node
 eta :: node -> node -> Eta node
 x :: node -> node -> X node
 
-energy    = topologyEdge Idx.Energy
-power     = topologyEdge Idx.Power
-eta       = topologyEdge Idx.Eta
-x         = topologyEdge Idx.X
+energy    = edge Energy
+power     = edge Power
+eta       = edge Eta
+x         = edge X
 
-topologyEdge ::
-   (Idx.TopologyEdge node -> idx node) ->
+edge ::
+   (Edge node -> idx node) ->
    node -> node -> idx node
-topologyEdge mkIdx from to =
-   mkIdx $ Idx.TopologyEdge from to
+edge mkIdx from to =
+   mkIdx $ Edge from to
 
 
 dTime :: DTime node
-dTime = Idx.DTime
+dTime = DTime
 
-sum :: Idx.Direction -> node -> Sum node
-sum dir = Idx.Sum dir
+sum :: Direction -> node -> Sum node
+sum dir = Sum dir
 
 inSum, outSum :: node -> Sum node
-inSum  = sum Idx.In
-outSum = sum Idx.Out
+inSum  = sum In
+outSum = sum Out
 
 
-ppos :: node -> node -> Idx.PPos node
-ppos a b = Idx.PPos $ Idx.TopologyEdge a b
+ppos :: node -> node -> PPos node
+ppos a b = PPos $ Edge a b
 
-powerFromPPos :: Idx.PPos node -> Power node
-powerFromPPos (Idx.PPos e) = Idx.Power e
+powerFromPPos :: PPos node -> Power node
+powerFromPPos (PPos e) = Power e
 
-energyFromPPos :: Idx.PPos node -> Energy node
-energyFromPPos (Idx.PPos e) = Idx.Energy e
+energyFromPPos :: PPos node -> Energy node
+energyFromPPos (PPos e) = Energy e

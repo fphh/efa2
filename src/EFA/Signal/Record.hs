@@ -41,7 +41,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-), Product, (~*), (~/), Constant, abs)
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Report.Format as Format

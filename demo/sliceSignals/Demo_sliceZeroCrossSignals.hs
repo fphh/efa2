@@ -4,7 +4,7 @@
 
 module Main where
 
-import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Topology.Index as XIdx
 
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Signal as Signal

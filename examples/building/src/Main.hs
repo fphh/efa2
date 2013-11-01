@@ -19,6 +19,7 @@ import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Flow.Sequence.Absolute as EqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
@@ -135,8 +136,8 @@ optimalPower =
     (Optimisation.state2, lst) :
     (Optimisation.state3, lst) : []
   where lst =
-           [SeqIdx.ppos System.Network System.Water,
-            SeqIdx.ppos System.LocalNetwork System.Gas]
+           [TopoIdx.ppos System.Network System.Water,
+            TopoIdx.ppos System.LocalNetwork System.Gas]
 
 force :: One.SocDrive Double
 force = One.ChargeDrive 0
@@ -166,8 +167,8 @@ optimalEtasWithPowers params forceFactor env =
         etaMap = One.etaMap params
 
         f :: Idx.State ->
-             [Idx.PPos Node] ->
-             Map (Idx.PPos Node) (Map (Param2 Double) (Double, Double))
+             [TopoIdx.PPos Node] ->
+             Map (TopoIdx.PPos Node) (Map (Param2 Double) (Double, Double))
         f state = Map.fromList . map (\p -> (p, h p optEtaEnv))
           where h ppos =
                    Map.mapMaybe (fmap (fmap
@@ -242,10 +243,10 @@ to2DMatrix =
   Map.mapKeysWith (++) NonEmpty.head . fmap (:[])
 
 optimalMaps :: (Ord a, Ord (f a), Ord node) =>
-  Map Idx.State (Map (Idx.PPos node) (Map (NonEmpty.T f a) (a, a))) ->
+  Map Idx.State (Map (TopoIdx.PPos node) (Map (NonEmpty.T f a) (a, a))) ->
   ( Sig.NSignal2 V.Vector V.Vector a,
     Sig.UTSignal2 V.Vector V.Vector Idx.State,
-    Map (Idx.PPos node) (Sig.PSignal2 V.Vector V.Vector a) )
+    Map (TopoIdx.PPos node) (Sig.PSignal2 V.Vector V.Vector a) )
 optimalMaps =
   (\(eta, st, power) -> (head $ Map.elems eta, head $ Map.elems st, power))
   . unzip3Map
@@ -261,7 +262,7 @@ optimalMaps =
 givenSignals ::
   Ord node =>
   Sig.TSignal [] Double ->
-  Map (Idx.PPos node) (Sig.PSignal [] Double) ->
+  Map (TopoIdx.PPos node) (Sig.PSignal [] Double) ->
   Record.PowerRecord node [] Double
 givenSignals time =
   Chop.addZeroCrossings . Record.Record time
@@ -291,7 +292,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap stateFlowGraph = do
       (_optEta, _optState, optPower) = optimalMaps optEtaWithPowers
 
       optPowerInterp ::
-        Map (Idx.PPos Node) (Sig.PSignal [] Double)
+        Map (TopoIdx.PPos Node) (Sig.PSignal [] Double)
       optPowerInterp =
         for optPower $ \powerStateOpt ->
           Sig.tzipWith
@@ -305,8 +306,8 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap stateFlowGraph = do
         givenSignals time $
         Map.union optPowerInterp $
         Map.fromList $
-          (SeqIdx.ppos System.LocalRest System.LocalNetwork, plocal) :
-          (SeqIdx.ppos System.Rest System.Network, prest) :
+          (TopoIdx.ppos System.LocalRest System.LocalNetwork, plocal) :
+          (TopoIdx.ppos System.Rest System.Network, prest) :
           []
 
       envSims :: FlowTopo.Section Node (Result (Data ([] :> Nil) Double))

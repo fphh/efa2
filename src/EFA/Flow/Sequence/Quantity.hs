@@ -47,6 +47,7 @@ import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Variable as TopoVar
+import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
 import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Storage.Index as StorageIdx
@@ -311,22 +312,22 @@ class (TopoVar.Index idx) => LookupSignal idx where
    lookupSignal ::
       (Ord node) => Idx.InSection idx node -> Graph node a v -> Maybe v
 
-instance LookupSignal Idx.Energy where
+instance LookupSignal TopoIdx.Energy where
    lookupSignal = withSection FlowTopo.lookupEnergy
 
-instance LookupSignal Idx.Power where
+instance LookupSignal TopoIdx.Power where
    lookupSignal = withSection FlowTopo.lookupPower
 
-instance LookupSignal Idx.Eta where
+instance LookupSignal TopoIdx.Eta where
    lookupSignal = withSection FlowTopo.lookupEta
 
-instance LookupSignal Idx.DTime where
+instance LookupSignal TopoIdx.DTime where
    lookupSignal = withSection FlowTopo.lookupDTime
 
-instance LookupSignal Idx.X where
+instance LookupSignal TopoIdx.X where
    lookupSignal = withSection FlowTopo.lookupX
 
-instance LookupSignal Idx.Sum where
+instance LookupSignal TopoIdx.Sum where
    lookupSignal = withSection FlowTopo.lookupSum
 
 

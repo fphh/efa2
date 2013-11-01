@@ -29,6 +29,7 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 
@@ -549,10 +550,10 @@ main = do
            -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $
            Record.Record time' $
            Map.fromList [
-              (XIdx.ppos Rest Network, powerSignalRest),
-              (XIdx.ppos LocalRest LocalNetwork, powerSignalLocal),
-              (XIdx.ppos Network Water, powerSignalWater),
-              (XIdx.ppos LocalNetwork Gas, powerSignalGas)
+              (TopoIdx.ppos Rest Network, powerSignalRest),
+              (TopoIdx.ppos LocalRest LocalNetwork, powerSignalLocal),
+              (TopoIdx.ppos Network Water, powerSignalWater),
+              (TopoIdx.ppos LocalNetwork Gas, powerSignalGas)
              ]
 
 
@@ -562,8 +563,8 @@ main = do
            -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $
            Record.Record time' $
            Map.fromList [
-              (XIdx.ppos Rest Network, powerSignalRest),
-              (XIdx.ppos LocalRest LocalNetwork, powerSignalLocal)
+              (TopoIdx.ppos Rest Network, powerSignalRest),
+              (TopoIdx.ppos LocalRest LocalNetwork, powerSignalLocal)
              ]
 
 {-
@@ -588,8 +589,8 @@ main = do
      powerRecSim = ModUt.envToPowerRecord (Idx.Section 0) envSim
 
      -- | flip signs of power signals at water edge, as edge flips direction between state 0 and 4
-     flipwater (Idx.PPos (Idx.TopologyEdge Network Water)) x = Sig.neg x
-     flipwater (Idx.PPos (Idx.TopologyEdge Water Network)) x = Sig.neg x
+     flipwater (TopoIdx.PPos (TopoIdx.Edge Network Water)) x = Sig.neg x
+     flipwater (TopoIdx.PPos (TopoIdx.Edge Water Network)) x = Sig.neg x
      flipwater _ x = x
      powerRecSimCorr = Record.mapWithKey flipwater powerRecSim
 

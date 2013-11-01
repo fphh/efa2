@@ -47,7 +47,7 @@ import EFA.Flow.Topology (label, topology)
 
 import EFA.Equation.Unknown (Unknown(unknown))
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
@@ -171,7 +171,7 @@ lookupAutoDirSection ::
    Ord node =>
    (Flow v -> v) ->
    (Flow v -> v) ->
-   (idx -> Idx.TopologyEdge node) ->
+   (idx -> Idx.Edge node) ->
    idx -> Section node v -> Maybe v
 lookupAutoDirSection fieldOut fieldIn unpackIdx idx =
    lookupAutoDir fieldOut fieldIn unpackIdx idx . FlowTopo.topology
@@ -180,7 +180,7 @@ lookupAutoDir ::
    Ord node =>
    (Flow v -> v) ->
    (Flow v -> v) ->
-   (idx -> Idx.TopologyEdge node) ->
+   (idx -> Idx.Edge node) ->
    idx -> Topology node v -> Maybe v
 lookupAutoDir fieldOut fieldIn unpackIdx idx topo =
    case unpackIdx idx of
@@ -363,7 +363,7 @@ traverseSums f (Sums i o) =
       (traverse f o)
 
 
-flowVars :: Flow (Idx.TopologyEdge node -> Var.Signal node)
+flowVars :: Flow (Idx.Edge node -> Var.Signal node)
 flowVars =
    Flow {
       flowPowerOut = Var.index . Idx.Power,

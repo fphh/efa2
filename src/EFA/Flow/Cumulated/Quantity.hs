@@ -194,7 +194,7 @@ lookupAutoDir ::
    (Flow a -> a) ->
    (Flow a -> a) ->
    CumIdx.Direction ->
-   CumIdx.TopologyEdge node ->
+   CumIdx.Edge node ->
    Graph node a -> Maybe a
 lookupAutoDir fieldOut fieldIn dir =
    lookupEdge
@@ -212,7 +212,7 @@ lookupDTime (CumIdx.DTime se) = lookupEdge flowDTime se
 lookupEdge ::
    Ord n =>
    (el -> a) ->
-   CumIdx.TopologyEdge n ->
+   CumIdx.Edge n ->
    Graph.Graph n Graph.DirEdge nl el ->
    Maybe a
 lookupEdge f se =
@@ -288,7 +288,7 @@ sumsVars =
       sumIn  = Just $ CumVar.index . CumIdx.Sum CumIdx.In
    }
 
-flowVars :: Flow (CumIdx.TopologyEdge node -> CumVar.Any node)
+flowVars :: Flow (CumIdx.Edge node -> CumVar.Any node)
 flowVars =
    Flow {
       flowPowerOut = CumVar.index . CumIdx.Power CumIdx.Out,

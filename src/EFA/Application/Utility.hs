@@ -2,9 +2,9 @@
 module EFA.Application.Utility where
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
@@ -41,7 +41,7 @@ type EdgeLabel = String
 type PPosLabel = String
 
 type LabeledEdgeList node = [(node, node, EdgeLabel, PPosLabel, PPosLabel)]
-type PPosLabelMap node = Map (SeqIdx.PPos node) String
+type PPosLabelMap node = Map (TopoIdx.PPos node) String
 
 
 topologyFromLabeledEdges ::

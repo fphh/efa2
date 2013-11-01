@@ -32,6 +32,8 @@ import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
 
+import qualified EFA.Flow.Topology.Index as TopoIdx
+
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Sequence as Sequ
@@ -424,7 +426,7 @@ recordStackRow ti deltaSets energyIndex eps =
 sectionStackRow ::
    (Node.C node, Ord i, FormatValue i) =>
    String ->
-   Idx.Energy node ->
+   TopoIdx.Energy node ->
    Double ->
    SeqFlow.Graph node a (Result (Stack i Double)) ->
    IO ()
@@ -438,7 +440,7 @@ sectionStackRow ti energyIndex eps env =
 aggregatedStack ::
    (Node.C node, Ord i, FormatValue i) =>
    String ->
-   Idx.Energy node ->
+   TopoIdx.Energy node ->
    Double ->
    SeqFlow.Graph node t (Result (Stack i Double)) ->
    IO ()
@@ -498,7 +500,7 @@ etaDistr1DimfromRecordList ::
     SV.Singleton v) =>
    String  -> d -> d ->
    [(Record.Name, Record.DTimeFlowRecord node v d)] ->
-   (String, (Idx.PPos node, Idx.PPos node, Idx.PPos node)) -> IO ()
+   (String, (TopoIdx.PPos node, TopoIdx.PPos node, TopoIdx.PPos node)) -> IO ()
 
 etaDistr1DimfromRecordList ti  interval offset rList  (plotTitle, (idIn,idOut,idAbscissa)) = mapM_ f rList
   where f (Record.Name recTitle, rec) = do

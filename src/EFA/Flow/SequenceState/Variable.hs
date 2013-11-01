@@ -70,7 +70,6 @@ instance
    formatIndex (Idx.InPart s idx) = formatSignalIndex idx s
 
 instance FormatScalarIndex idx => FormatIndex (Idx.ForStorage idx) where
---   formatIndex (Idx.ForStorage idx n) = formatScalarIndex idx n
    formatIndex = formatValue
 
 

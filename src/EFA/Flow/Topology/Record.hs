@@ -2,10 +2,9 @@
 module EFA.Flow.Topology.Record where
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
-import qualified EFA.Flow.Topology.Index as XIdx
+import qualified EFA.Flow.Topology.Index as Idx
 import qualified EFA.Flow.Topology as FlowTopoPlain
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
@@ -56,8 +55,8 @@ flowTopologyFromRecord topo (Record time fs) =
    Map.mapWithKey
       (\(DirEdge idx1 idx2) () ->
          let look = MapU.checkedLookup "Flow.flowTopologyFromRecord" fs
-             normal   = look $ XIdx.ppos idx1 idx2
-             opposite = look $ XIdx.ppos idx2 idx1
+             normal   = look $ Idx.ppos idx1 idx2
+             opposite = look $ Idx.ppos idx2 idx1
          in  case fromScalar $ Signal.sign $ Signal.sum normal of
                 Positive ->
                    Map.singleton

@@ -15,7 +15,6 @@ import EFA.Flow.Topology.Absolute ( (.=), (=.=) )
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
@@ -34,7 +33,7 @@ import Data.Map (Map)
 import Data.Monoid((<>))
 
 
-type EtaAssignMap node = Map (Idx.TopologyEdge node) (String, String)
+type EtaAssignMap node = Map (XIdx.Edge node) (String, String)
 
 solve :: (Node.C node,
           Eq (v a), Show (v a),
@@ -93,15 +92,15 @@ makeEtaFuncGiven topo etaAssign etaFunc =
          =.=
          EqSys.liftF
             (Data.map (absEtaFunction strP strN etaFunc))
-            (EqSys.variable $ Idx.Power se))
+            (EqSys.variable $ XIdx.Power se))
       etaAssign
 
 etaFromEdge ::
    Node.C node =>
-   FlowTopo.Section node v -> Idx.TopologyEdge node -> Idx.Eta node
+   FlowTopo.Section node v -> XIdx.Edge node -> XIdx.Eta node
 etaFromEdge topo se =
-   let etaF = Idx.Eta se
-       etaB = Idx.Eta $ Idx.flip se
+   let etaF = XIdx.Eta se
+       etaB = XIdx.Eta $ XIdx.flip se
    in  checkFoundPair etaF etaB
           (FlowTopo.lookupEta etaF topo, FlowTopo.lookupEta etaB topo)
 

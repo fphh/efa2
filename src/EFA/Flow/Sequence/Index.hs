@@ -1,17 +1,18 @@
 module EFA.Flow.Sequence.Index where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Graph.Topology.Index as Idx
 
 import Prelude hiding (sum)
 
 
-type Energy node    = Idx.InSection Idx.Energy node
-type Power node     = Idx.InSection Idx.Power node
-type Eta node       = Idx.InSection Idx.Eta node
-type X node         = Idx.InSection Idx.X node
-type DTime node     = Idx.InSection Idx.DTime node
-type Sum node       = Idx.InSection Idx.Sum node
+type Energy node    = Idx.InSection TopoIdx.Energy node
+type Power node     = Idx.InSection TopoIdx.Power node
+type Eta node       = Idx.InSection TopoIdx.Eta node
+type X node         = Idx.InSection TopoIdx.X node
+type DTime node     = Idx.InSection TopoIdx.DTime node
+type Sum node       = Idx.InSection TopoIdx.Sum node
 
 type Storage node   = Idx.ForStorage StorageIdx.Content node
 type MaxEnergy node = Idx.ForStorage StorageIdx.MaxEnergy node
@@ -19,8 +20,6 @@ type StEnergy node  = Idx.ForStorage (StorageIdx.Energy Idx.Section) node
 type StX node       = Idx.ForStorage (StorageIdx.X Idx.Section) node
 type StInSum node   = Idx.ForStorage (StorageIdx.InSum Idx.Section) node
 type StOutSum node  = Idx.ForStorage (StorageIdx.OutSum Idx.Section) node
-
-type PPos = Idx.PPos
 
 type CarryEdge = Idx.CarryEdge Idx.Section
 type CarryBond = Idx.CarryBond Idx.Section
@@ -31,27 +30,27 @@ power :: Idx.Section -> node -> node -> Power node
 eta :: Idx.Section -> node -> node -> Eta node
 x :: Idx.Section -> node -> node -> X node
 
-energy    = topologyEdge Idx.Energy
-power     = topologyEdge Idx.Power
-eta       = topologyEdge Idx.Eta
-x         = topologyEdge Idx.X
+energy    = topologyEdge TopoIdx.Energy
+power     = topologyEdge TopoIdx.Power
+eta       = topologyEdge TopoIdx.Eta
+x         = topologyEdge TopoIdx.X
 
 topologyEdge ::
-   (Idx.TopologyEdge node -> idx node) ->
+   (TopoIdx.Edge node -> idx node) ->
    Idx.Section -> node -> node -> Idx.InSection idx node
 topologyEdge mkIdx s from to =
-   Idx.InPart s $ mkIdx $ Idx.TopologyEdge from to
+   Idx.InPart s $ mkIdx $ TopoIdx.Edge from to
 
 
 dTime :: Idx.Section -> DTime node
-dTime sec = Idx.InPart sec Idx.DTime
+dTime sec = Idx.InPart sec TopoIdx.DTime
 
-sum :: Idx.Section -> Idx.Direction -> node -> Sum node
-sum sec dir = Idx.InPart sec . Idx.Sum dir
+sum :: Idx.Section -> TopoIdx.Direction -> node -> Sum node
+sum sec dir = Idx.InPart sec . TopoIdx.Sum dir
 
 inSum, outSum :: Idx.Section -> node -> Sum node
-inSum  = flip sum Idx.In
-outSum = flip sum Idx.Out
+inSum  = flip sum TopoIdx.In
+outSum = flip sum TopoIdx.Out
 
 
 maxEnergy ::
@@ -101,14 +100,11 @@ stOutSum sec =
 storage :: Idx.Boundary -> node -> Storage node
 storage = Idx.ForStorage . StorageIdx.Content
 
-ppos :: node -> node -> Idx.PPos node
-ppos a b = Idx.PPos $ Idx.TopologyEdge a b
+powerFromPPos :: Idx.Section -> TopoIdx.PPos node -> Power node
+powerFromPPos sec (TopoIdx.PPos e) = Idx.InPart sec $ TopoIdx.Power e
 
-powerFromPPos :: Idx.Section -> Idx.PPos node -> Power node
-powerFromPPos sec (Idx.PPos e) = Idx.InPart sec $ Idx.Power e
-
-energyFromPPos :: Idx.Section -> Idx.PPos node -> Energy node
-energyFromPPos sec (Idx.PPos e) = Idx.InPart sec $ Idx.Energy e
+energyFromPPos :: Idx.Section -> TopoIdx.PPos node -> Energy node
+energyFromPPos sec (TopoIdx.PPos e) = Idx.InPart sec $ TopoIdx.Energy e
 
 
 initSection :: Idx.InitOrSection

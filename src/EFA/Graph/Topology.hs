@@ -13,7 +13,7 @@ module EFA.Graph.Topology (
    InOut,
    ) where
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Graph as Graph
 import EFA.Graph (Graph)
 
@@ -57,11 +57,11 @@ plainFromLabeled =
    Graph.mapNode (const ()) . Graph.mapEdge (const ())
 
 
-topologyEdgeFromDirEdge :: Graph.DirEdge node -> Idx.TopologyEdge node
-topologyEdgeFromDirEdge (Graph.DirEdge x y) = Idx.TopologyEdge x y
+topologyEdgeFromDirEdge :: Graph.DirEdge node -> TopoIdx.Edge node
+topologyEdgeFromDirEdge (Graph.DirEdge x y) = TopoIdx.Edge x y
 
-dirEdgeFromTopologyEdge :: Idx.TopologyEdge node -> Graph.DirEdge node
-dirEdgeFromTopologyEdge (Idx.TopologyEdge x y) = Graph.DirEdge x y
+dirEdgeFromTopologyEdge :: TopoIdx.Edge node -> Graph.DirEdge node
+dirEdgeFromTopologyEdge (TopoIdx.Edge x y) = Graph.DirEdge x y
 
 
 data StoreDir = In | Out deriving (Eq, Ord, Show)

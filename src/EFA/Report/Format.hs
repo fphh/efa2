@@ -1,6 +1,7 @@
 module EFA.Report.Format where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified Data.Map as Map
@@ -81,7 +82,7 @@ class Format output where
    section :: Idx.Section -> output
    state :: Idx.State -> output
    sectionNode :: output -> output -> output
-   direction :: Idx.Direction -> output
+   direction :: TopoIdx.Direction -> output
    delta :: output -> output
    energy, maxEnergy, power, xfactor, eta :: output
    dtime, signalSum, scalarSum, storage :: output
@@ -404,10 +405,10 @@ class TopologyIdx idx where
    flowIdent ::
       Format output => Idx.InPart part idx node -> output
 
-instance TopologyIdx Idx.Energy where flowIdent _ = energy
-instance TopologyIdx Idx.Power where flowIdent _ = power
-instance TopologyIdx Idx.Eta where flowIdent _ = eta
-instance TopologyIdx Idx.X where flowIdent _ = xfactor
+instance TopologyIdx TopoIdx.Energy where flowIdent _ = energy
+instance TopologyIdx TopoIdx.Power where flowIdent _ = power
+instance TopologyIdx TopoIdx.Eta where flowIdent _ = eta
+instance TopologyIdx TopoIdx.X where flowIdent _ = xfactor
 
 instance StorageIdx idx => EdgeIdx (Idx.ForStorage idx) where
    edgeIdent = carryIdent
@@ -421,11 +422,11 @@ instance StorageIdx (StorageIdx.Energy sec) where carryIdent _ = energy
 instance StorageIdx (StorageIdx.X sec) where carryIdent _ = xfactor
 
 
-directionShort :: Idx.Direction -> String
+directionShort :: TopoIdx.Direction -> String
 directionShort d =
    case d of
-      Idx.In -> "i" -- Verwirrung mit initial aus der Format-Klasse?
-      Idx.Out -> "o"
+      TopoIdx.In -> "i" -- Verwirrung mit initial aus der Format-Klasse?
+      TopoIdx.Out -> "o"
 
 boundary :: Format output => Idx.Boundary -> output
 boundary (Idx.Following Idx.Init) = initial
