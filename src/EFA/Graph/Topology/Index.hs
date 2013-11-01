@@ -493,15 +493,6 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
    shrink (PPos x) = map PPos $ QC.shrink x
 
 
--- | Variable types of the solver. The solver, in fact, is
--- ignorant of the provenance of the variables. However, to
--- facilitate life, we introduce variable types, that make
--- it easy to express things needed in energy flow analysis,
--- that is:
---
--- * a data record number
--- * two node identifiers to specify a place in the topology
-
 -- | Energy variables.
 newtype Energy node = Energy (TopologyEdge node) deriving (Show, Ord, Eq)
 
