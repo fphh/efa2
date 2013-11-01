@@ -4,7 +4,7 @@ module EFA.Flow.SequenceState.Variable where
 import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Part.Index as PartIdx
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)

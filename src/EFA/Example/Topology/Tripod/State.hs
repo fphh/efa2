@@ -8,8 +8,8 @@ import EFA.Application.Utility
           (seqFlowGraphFromFlowTopos, identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.SequenceState.Index as Idx
 
-import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Graph.Topology (FlowTopology)
 
 import EFA.Equation.Result (Result)

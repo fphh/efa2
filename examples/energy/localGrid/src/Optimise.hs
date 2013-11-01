@@ -26,12 +26,11 @@ import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence.Record as RecSeq
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Index as TopoIdx
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Arithmetic as EqArith
 import EFA.Equation.Result (Result)

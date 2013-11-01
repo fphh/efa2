@@ -3,7 +3,7 @@ module EFA.Flow.Storage.Variable where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Part.Index as PartIdx
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatScalarIndex, formatScalarIndex)

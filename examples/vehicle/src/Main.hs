@@ -15,6 +15,7 @@ import qualified EFA.Flow.Sequence.Absolute as EqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Record as RecSeq
 import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Draw as Draw
 
@@ -25,7 +26,6 @@ import EFA.Signal.Data (Data, Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Equation.Record as EqRecord

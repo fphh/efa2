@@ -4,7 +4,7 @@ import qualified EFA.Flow.Part.Map as PartMap
 import EFA.Flow.Part.Map (PartMap)
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import qualified EFA.Utility.Map as MapU
 import EFA.Utility.Map (Caller)

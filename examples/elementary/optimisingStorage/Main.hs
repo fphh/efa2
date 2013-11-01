@@ -10,10 +10,9 @@ import EFA.Application.Utility (checkDetermined)
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.Absolute ((=.=))
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Arithmetic ((^!))

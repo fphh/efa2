@@ -10,9 +10,8 @@ import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.Part.Map as PartMap
 
 import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
 import EFA.Equation.Unknown (Unknown(unknown))
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified Data.Traversable as Trav
 import qualified Data.Map as Map ; import Data.Map (Map)

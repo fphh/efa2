@@ -96,7 +96,6 @@ Library
     EFA.Report.FormatValue
     EFA.Graph
     EFA.Graph.Topology
-    EFA.Graph.Topology.Index
     EFA.Graph.Topology.Node
     EFA.Graph.Topology.Node.Int
     EFA.Graph.Topology.StateAnalysis
@@ -130,6 +129,7 @@ Library
     EFA.Flow.SequenceState.Variable
     EFA.Flow.SequenceState.Quantity
     EFA.Flow.SequenceState.EquationSystem
+    EFA.Flow.SequenceState.Index
     EFA.Flow.Sequence
     EFA.Flow.Sequence.Index
     EFA.Flow.Sequence.Quantity

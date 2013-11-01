@@ -2,10 +2,10 @@ module EFA.Flow.Part.Map where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Part.Index as PartIdx
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
 import EFA.Flow.SequenceState.Variable ((<#>))
 
 import qualified EFA.Utility.Map as MapU

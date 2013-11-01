@@ -39,12 +39,12 @@ import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
 import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import qualified EFA.Equation.RecordIndex as RecIdx
 
 import EFA.Signal.Signal (SignalIdx(SignalIdx), Range(Range))
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)

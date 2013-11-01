@@ -15,11 +15,10 @@ import EFA.Application.Utility (seqFlowGraphFromFlowTopos)
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.SystemEta (detEtaSys)
 import EFA.Flow.Sequence.Absolute ((.=), (=%%=), (=.=))
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as CT

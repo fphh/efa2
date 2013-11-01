@@ -15,12 +15,12 @@ import EFA.Equation.Stack (Stack)
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Report.Format as Format

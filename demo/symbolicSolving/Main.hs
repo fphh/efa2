@@ -6,12 +6,11 @@ import EFA.Application.Utility (seqFlowGraphFromStates, dirEdge)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.Absolute ((=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import Data.Monoid (mempty)
 

@@ -11,15 +11,14 @@ import qualified Modules.Signals as Signals
 import qualified EFA.Flow.Sequence.Absolute as EqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
-import EFA.Flow.Sequence.Absolute ((.=))
-
 import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
+import EFA.Flow.Sequence.Absolute ((.=))
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 

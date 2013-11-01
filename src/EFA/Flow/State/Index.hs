@@ -3,7 +3,7 @@ module EFA.Flow.State.Index where
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Part.Index as PartIdx
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import Prelude hiding (sum)
 

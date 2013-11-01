@@ -9,6 +9,7 @@ import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Pair as Pair
@@ -16,8 +17,6 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import EFA.Symbolic.SumProduct ( Term )
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue)

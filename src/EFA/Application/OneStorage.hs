@@ -4,9 +4,8 @@ module EFA.Application.OneStorage where
 import qualified EFA.Application.Sweep as Sweep
 
 import qualified EFA.Flow.State.Quantity as StateFlow
-
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)

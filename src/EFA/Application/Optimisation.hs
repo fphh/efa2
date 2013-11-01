@@ -12,6 +12,7 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State.Absolute as EqSysState
+import qualified EFA.Flow.SequenceState.Index as Idx
 import EFA.Flow.State.Absolute ((=.=))
 
 import qualified EFA.Flow.Storage.Variable as StorageVar
@@ -22,7 +23,6 @@ import EFA.Signal.Data (Data(Data), Nil)
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified Data.Foldable as Fold

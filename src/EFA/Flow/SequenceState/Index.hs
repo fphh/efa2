@@ -1,5 +1,5 @@
-module EFA.Graph.Topology.Index (
-   module EFA.Graph.Topology.Index,
+module EFA.Flow.SequenceState.Index (
+   module EFA.Flow.SequenceState.Index,
    module EFA.Flow.Part.Index,
    PartIdx.Boundary(PartIdx.Following),
    PartIdx.AugmentedSection,

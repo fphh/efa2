@@ -11,15 +11,15 @@ import EFA.Utility (Pointed)
 
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
 import EFA.Flow.Sequence.EquationSystem ((.=), (%=), (=%%=))
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Flow.SequenceState.Variable as Var
 
 import qualified UniqueLogic.ST.TF.System as Sys
 

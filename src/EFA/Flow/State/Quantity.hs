@@ -46,6 +46,8 @@ module EFA.Flow.State.Quantity (
 
 import qualified EFA.Flow.State as StateFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
+import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
 import qualified EFA.Flow.Storage.Variable as StorageVar
@@ -61,10 +63,8 @@ import EFA.Flow.State (states, storages)
 import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Unknown (Unknown)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph

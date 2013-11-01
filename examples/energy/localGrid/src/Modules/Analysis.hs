@@ -10,11 +10,11 @@ import qualified Modules.Signals as Signals
 import qualified EFA.Flow.Sequence.Absolute as EqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.SequenceState.Index as Idx
 import EFA.Flow.Sequence.Absolute ((.=))
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Equation.Arithmetic as Arith

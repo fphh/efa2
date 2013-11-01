@@ -6,10 +6,10 @@ oder einfach vordefinierte Knotentypen benützt.
 
 module Main where
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Report.Format as Format
 import qualified EFA.Utility.Stream as Stream
 import EFA.Application.Utility (topologyFromEdges)

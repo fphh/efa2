@@ -8,8 +8,7 @@ import EFA.Application.Utility (checkDetermined)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Record as RecSeq
-
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import EFA.Equation.Result (Result)
 

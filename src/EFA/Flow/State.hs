@@ -3,7 +3,7 @@ module EFA.Flow.State where
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.Storage as Storage
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import Data.Map (Map)
 

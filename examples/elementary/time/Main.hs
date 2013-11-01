@@ -7,15 +7,15 @@ import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.Absolute ((.=), (=.=))
 
-import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Arithmetic ((^!))
 
 import EFA.Utility.Async (concurrentlyMany_)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
 

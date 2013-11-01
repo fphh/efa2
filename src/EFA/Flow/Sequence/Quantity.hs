@@ -45,6 +45,8 @@ import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
+import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology.Index as TopoIdx
@@ -53,16 +55,14 @@ import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
 import EFA.Flow.Topology.Quantity (Topology, Sums(..), Flow(..))
+import EFA.Flow.SequenceState.Variable ((<#>))
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
 
 import qualified EFA.Signal.Sequence as Sequ
 
-import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Unknown (Unknown(unknown))
-import EFA.Flow.SequenceState.Variable ((<#>))
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph

@@ -2,7 +2,7 @@ module EFA.Flow.Topology.Variable where
 
 import qualified EFA.Flow.Topology.Index as Idx
 import qualified EFA.Flow.Part.Index as PartIdx
-import qualified EFA.Graph.Topology.Index as FlowIdx
+import qualified EFA.Flow.SequenceState.Index as FlowIdx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Report.Format as Format

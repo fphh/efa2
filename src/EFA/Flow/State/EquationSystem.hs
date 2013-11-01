@@ -26,12 +26,14 @@ module EFA.Flow.State.EquationSystem (
    ) where
 
 import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
+import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.State.Index as StateIdx
-import qualified EFA.Flow.Topology as FlowTopoPlain
-import qualified EFA.Flow.EquationSystem as EqSys
 import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
 import qualified EFA.Flow.Storage as Storage
+import qualified EFA.Flow.Topology as FlowTopoPlain
+import qualified EFA.Flow.EquationSystem as EqSys
 import qualified EFA.Flow.Part.Map as PartMap
 import EFA.Flow.Part.Map (PartMap)
 import EFA.Flow.Topology.EquationSystem (fromTopology)
@@ -41,7 +43,6 @@ import EFA.Flow.EquationSystem
 import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.SystemRecord as SysRecord
 import EFA.Equation.Result(Result)
@@ -50,7 +51,6 @@ import EFA.Equation.SystemRecord
 import EFA.Equation.Arithmetic
           (Sum, Product, Constant, Integrate, Scalar)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified UniqueLogic.ST.TF.Expression as Expr

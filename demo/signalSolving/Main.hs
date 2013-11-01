@@ -5,13 +5,12 @@ import EFA.Example.Topology.Tripod (Node, node0, node1, node2, node3)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.Absolute ((.=))
 
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data))
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))

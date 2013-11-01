@@ -21,11 +21,12 @@ import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Topology.Variable as TopoVar
 
+import qualified EFA.Flow.SequenceState.Index as Idx
+
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Result as Result
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil)
 

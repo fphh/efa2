@@ -2,8 +2,8 @@
 module EFA.Flow.SequenceState.Quantity where
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.SequenceState.Index as Idx
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 

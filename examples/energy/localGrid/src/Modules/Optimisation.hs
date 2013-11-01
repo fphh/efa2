@@ -22,9 +22,8 @@ import EFA.Equation.Result (Result)
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.SequenceState.Index as Idx
 import EFA.Flow.Sequence.Absolute ( (.=), (=%%=), (=.=) )
-
-import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record

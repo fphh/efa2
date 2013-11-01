@@ -2,7 +2,7 @@
 
 module EFA.Signal.Sequence where
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D

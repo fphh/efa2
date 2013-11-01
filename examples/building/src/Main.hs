@@ -31,9 +31,11 @@ import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.State.Absolute as StateEqAbs
 
+import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
+
 import qualified EFA.Flow.Draw as Draw
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Signal.Signal as Sig; import EFA.Signal.Signal (TC,Scalar)
@@ -49,7 +51,6 @@ import EFA.Signal.Typ (Typ, F, T, A, Tt)
 import qualified EFA.IO.TableParser as Table
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Result (Result)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
