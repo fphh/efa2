@@ -2,7 +2,6 @@
 module EFA.Equation.Variable where
 
 import qualified EFA.Flow.Storage.Variable as StorageVar
-import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
@@ -48,9 +47,9 @@ instance SignalIndex idx => Index (Idx.InPart part idx) where
    type Type (Idx.InPart part idx) = InPartSignal part
    index = Idx.liftInPart signalIndex
 
-instance ScalarIndex idx => Index (Idx.ForStorage idx) where
-   type Type (Idx.ForStorage idx) = ForStorageScalar (ScalarPart idx)
-   index = Idx.liftForStorage scalarIndex
+instance StorageVar.Index idx => Index (Idx.ForStorage idx) where
+   type Type (Idx.ForStorage idx) = ForStorageScalar (StorageVar.Part idx)
+   index = Idx.liftForStorage StorageVar.index
 
 
 class FormatSignalIndex t => SignalIndex t where
@@ -64,39 +63,10 @@ instance SignalIndex Idx.X      where signalIndex = X
 instance SignalIndex Idx.Sum    where signalIndex = Sum
 
 
-class FormatScalarIndex t => ScalarIndex t where
-   type ScalarPart t :: *
-   scalarIndex :: t -> StorageVar.Scalar (ScalarPart t)
-
-instance ScalarIndex StorageIdx.Content where
-   type ScalarPart StorageIdx.Content = Idx.Section
-   scalarIndex = StorageVar.Content
-
-instance ScalarIndex StorageIdx.MaxEnergy where
-   type ScalarPart StorageIdx.MaxEnergy = Idx.Section
-   scalarIndex = StorageVar.MaxEnergy
-
-instance (Format.Part part) => ScalarIndex (StorageIdx.Energy part) where
-   type ScalarPart (StorageIdx.Energy part) = part
-   scalarIndex = StorageVar.Energy
-
-instance (Format.Part part) => ScalarIndex (StorageIdx.X part) where
-   type ScalarPart (StorageIdx.X part) = part
-   scalarIndex = StorageVar.X
-
-instance (Format.Part part) => ScalarIndex (StorageIdx.InSum part) where
-   type ScalarPart (StorageIdx.InSum part) = part
-   scalarIndex = StorageVar.InSum
-
-instance (Format.Part part) => ScalarIndex (StorageIdx.OutSum part) where
-   type ScalarPart (StorageIdx.OutSum part) = part
-   scalarIndex = StorageVar.OutSum
-
-
 (<#>) ::
-   (ScalarIndex idx, ScalarPart idx ~ part) =>
+   (StorageVar.Index idx, StorageVar.Part idx ~ part) =>
    idx -> node -> ForStorageScalar part node
-(<#>) idx node = Idx.ForStorage (scalarIndex idx) node
+(<#>) idx node = Idx.ForStorage (StorageVar.index idx) node
 
 (<~>) ::
    (SignalIndex idx) =>

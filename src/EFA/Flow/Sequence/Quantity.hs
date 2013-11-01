@@ -47,6 +47,7 @@ import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
+import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
 import EFA.Flow.Topology.Quantity (Topology, Sums(..), Flow(..))
@@ -112,10 +113,10 @@ instance StorageQuant.Carry Carry where
    type CarryPart Carry = Idx.Section
    carryVars =
       Carry {
-         carryMaxEnergy = Var.scalarIndex . StorageIdx.MaxEnergy,
-         carryEnergy = Var.scalarIndex . StorageIdx.Energy,
-         carryXOut = Var.scalarIndex . StorageIdx.X . Idx.carryBondFromEdge,
-         carryXIn = Var.scalarIndex . StorageIdx.X . StorageIdx.flip . Idx.carryBondFromEdge
+         carryMaxEnergy = StorageVar.index . StorageIdx.MaxEnergy,
+         carryEnergy = StorageVar.index . StorageIdx.Energy,
+         carryXOut = StorageVar.index . StorageIdx.X . Idx.carryBondFromEdge,
+         carryXIn = StorageVar.index . StorageIdx.X . StorageIdx.flip . Idx.carryBondFromEdge
       }
 
 
@@ -300,7 +301,7 @@ instance
    lookup = lookupSignal
 
 instance
-   (LookupScalar idx, Var.ScalarIndex idx) =>
+   (LookupScalar idx, StorageVar.Index idx) =>
       Lookup (Idx.ForStorage idx) where
    lookup = lookupScalar
 
@@ -328,7 +329,7 @@ instance LookupSignal Idx.Sum where
    lookupSignal = withSection FlowTopo.lookupSum
 
 
-class (Var.ScalarIndex idx) => LookupScalar idx where
+class (StorageVar.Index idx) => LookupScalar idx where
    lookupScalar ::
       (Ord node) => Idx.ForStorage idx node -> Graph node a v -> Maybe a
 

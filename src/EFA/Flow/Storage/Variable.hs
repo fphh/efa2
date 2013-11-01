@@ -17,6 +17,35 @@ data Scalar part =
      deriving (Show, Eq, Ord)
 
 
+class FormatScalarIndex t => Index t where
+   type Part t :: *
+   index :: t -> Scalar (Part t)
+
+instance Index StorageIdx.Content where
+   type Part StorageIdx.Content = Idx.Section
+   index = Content
+
+instance Index StorageIdx.MaxEnergy where
+   type Part StorageIdx.MaxEnergy = Idx.Section
+   index = MaxEnergy
+
+instance (Format.Part part) => Index (StorageIdx.Energy part) where
+   type Part (StorageIdx.Energy part) = part
+   index = Energy
+
+instance (Format.Part part) => Index (StorageIdx.X part) where
+   type Part (StorageIdx.X part) = part
+   index = X
+
+instance (Format.Part part) => Index (StorageIdx.InSum part) where
+   type Part (StorageIdx.InSum part) = part
+   index = InSum
+
+instance (Format.Part part) => Index (StorageIdx.OutSum part) where
+   type Part (StorageIdx.OutSum part) = part
+   index = OutSum
+
+
 ident :: Format output => Scalar t -> output
 ident var =
    case var of
