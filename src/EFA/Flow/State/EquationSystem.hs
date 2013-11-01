@@ -27,6 +27,7 @@ module EFA.Flow.State.EquationSystem (
 
 import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
 import qualified EFA.Flow.State.Quantity as StateFlow
+import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
 import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
@@ -218,20 +219,20 @@ fromStorageSequences ::
       (SysRecord.Expr mode rec s v) ->
    EqSys.System mode s
 fromStorageSequences opts g =
-   let stoutsum sec node =
+   let stoutsum state node =
           checkedLookup "fromStorageSequences inStorages"
-             StateFlow.lookupStOutSum (Idx.ForStorage (Idx.StOutSum sec) node) g
-       stinsum sec node =
+             StateFlow.lookupStOutSum (StateIdx.stOutSum state node) g
+       stinsum state node =
           checkedLookup "fromStorageSequences outStorages"
-             StateFlow.lookupStInSum (Idx.ForStorage (Idx.StInSum sec) node) g
+             StateFlow.lookupStInSum (StateIdx.stInSum state node) g
        f node (Storage.Graph partMap edges) =
           connectCarryFlow opts g node partMap
           <>
           Storage.foldInStorages
-             (\sec -> StorageEqSys.fromInStorages (stoutsum sec node)) edges
+             (\state -> StorageEqSys.fromInStorages (stoutsum state node)) edges
           <>
           Storage.foldOutStorages
-             (\sec -> StorageEqSys.fromOutStorages (stinsum sec node)) edges
+             (\state -> StorageEqSys.fromOutStorages (stinsum state node)) edges
    in  fold $ Map.mapWithKey f $ StateFlow.storages g
 
 connectCarryFlow ::

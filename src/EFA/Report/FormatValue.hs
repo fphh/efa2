@@ -1,5 +1,6 @@
 module EFA.Report.FormatValue where
 
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
@@ -135,8 +136,8 @@ instance FormatSignalIndex Idx.Sum where
          formatPartNode (Idx.PartNode s n)
 
 
-instance FormatScalarIndex Idx.Storage where
-   formatScalarIndex (Idx.Storage bnd) =
+instance FormatScalarIndex StorageIdx.Content where
+   formatScalarIndex (StorageIdx.Content bnd) =
       (Format.storage, Format.boundary bnd)
 
 
@@ -146,11 +147,11 @@ formatCarryEdge ::
 formatCarryEdge (Idx.CarryEdge s0 s1) =
    Format.initOrOther s0 `Format.link` Format.otherOrExit s1
 
-instance FormatScalarIndex Idx.MaxEnergy where
-   formatScalarIndex (Idx.MaxEnergy e) = (Format.maxEnergy, formatCarryEdge e)
+instance FormatScalarIndex StorageIdx.MaxEnergy where
+   formatScalarIndex (StorageIdx.MaxEnergy e) = (Format.maxEnergy, formatCarryEdge e)
 
-instance (Format.Part sec) => FormatScalarIndex (Idx.StEnergy sec) where
-   formatScalarIndex (Idx.StEnergy e) = (Format.energy, formatCarryEdge e)
+instance (Format.Part sec) => FormatScalarIndex (StorageIdx.Energy sec) where
+   formatScalarIndex (StorageIdx.Energy e) = (Format.energy, formatCarryEdge e)
 
 
 formatCarryBond ::
@@ -159,8 +160,8 @@ formatCarryBond ::
 formatCarryBond (Idx.CarryBond s0 s1) =
    Format.augmented s0 `Format.link` Format.augmented s1
 
-instance (Format.Part sec) => FormatScalarIndex (Idx.StX sec) where
-   formatScalarIndex (Idx.StX e) = (Format.xfactor, formatCarryBond e)
+instance (Format.Part sec) => FormatScalarIndex (StorageIdx.X sec) where
+   formatScalarIndex (StorageIdx.X e) = (Format.xfactor, formatCarryBond e)
 
 
 formatStSum ::
@@ -169,12 +170,12 @@ formatStSum ::
 formatStSum dir s =
    (Format.scalarSum, Format.direction dir `Format.connect` s)
 
-instance (Format.Part sec) => FormatScalarIndex (Idx.StInSum sec) where
-   formatScalarIndex (Idx.StInSum s) =
+instance (Format.Part sec) => FormatScalarIndex (StorageIdx.InSum sec) where
+   formatScalarIndex (StorageIdx.InSum s) =
       formatStSum Idx.In (Format.otherOrExit s)
 
-instance (Format.Part sec) => FormatScalarIndex (Idx.StOutSum sec) where
-   formatScalarIndex (Idx.StOutSum s) =
+instance (Format.Part sec) => FormatScalarIndex (StorageIdx.OutSum sec) where
+   formatScalarIndex (StorageIdx.OutSum s) =
       formatStSum Idx.Out (Format.initOrOther s)
 
 

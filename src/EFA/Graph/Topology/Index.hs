@@ -505,13 +505,6 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
 -- | Energy variables.
 newtype Energy node = Energy (TopologyEdge node) deriving (Show, Ord, Eq)
 
-newtype StEnergy sec = StEnergy (CarryEdge sec) deriving (Show, Ord, Eq)
-
-
--- | Energy variables for hypothetical outgoing energies.
--- At storage edges they describe the maximum energy
--- that a storage could deliver.
-newtype MaxEnergy = MaxEnergy (CarryEdge Section) deriving (Show, Ord, Eq)
 
 -- | Power variables.
 newtype Power node = Power (TopologyEdge node) deriving (Show, Ord, Eq)
@@ -522,17 +515,9 @@ newtype Eta node = Eta (TopologyEdge node) deriving (Show, Ord, Eq)
 -- | Splitting factors.
 newtype X node = X (TopologyEdge node) deriving (Show, Ord, Eq)
 
-newtype StX sec = StX (CarryBond sec) deriving (Show, Ord, Eq)
-
-newtype Storage = Storage Boundary deriving (Show, Ord, Eq)
-
 data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum Direction node deriving (Show, Ord, Eq)
-
-data StInSum sec = StInSum (Exit sec) deriving (Show, Ord, Eq)
-
-data StOutSum sec = StOutSum (Init sec) deriving (Show, Ord, Eq)
 
 
 -- * Other indices

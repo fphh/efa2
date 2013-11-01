@@ -1,5 +1,6 @@
 module EFA.Flow.State.Index where
 
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 
 import Prelude hiding (sum)
@@ -12,12 +13,12 @@ type X node         = Idx.InState Idx.X node
 type DTime node     = Idx.InState Idx.DTime node
 type Sum node       = Idx.InState Idx.Sum node
 
-type Storage node   = Idx.ForStorage Idx.Storage node
-type MaxEnergy node = Idx.ForStorage Idx.MaxEnergy node
-type StEnergy node  = Idx.ForStorage (Idx.StEnergy Idx.State) node
-type StX node       = Idx.ForStorage (Idx.StX Idx.State) node
-type StInSum node   = Idx.ForStorage (Idx.StInSum Idx.State) node
-type StOutSum node  = Idx.ForStorage (Idx.StOutSum Idx.State) node
+type Storage node   = Idx.ForStorage StorageIdx.Content node
+type MaxEnergy node = Idx.ForStorage StorageIdx.MaxEnergy node
+type StEnergy node  = Idx.ForStorage (StorageIdx.Energy Idx.State) node
+type StX node       = Idx.ForStorage (StorageIdx.X Idx.State) node
+type StInSum node   = Idx.ForStorage (StorageIdx.InSum Idx.State) node
+type StOutSum node  = Idx.ForStorage (StorageIdx.OutSum Idx.State) node
 
 type PPos = Idx.PPos
 
@@ -41,10 +42,21 @@ topologyEdge ::
 topologyEdge mkIdx s from to =
    Idx.InPart s $ mkIdx $ Idx.TopologyEdge from to
 
-stx ::
+
+stX ::
    Idx.PartNode (Idx.CarryBond sec) node ->
-   Idx.ForStorage (Idx.StX sec) node
-stx = Idx.forStorage Idx.StX
+   Idx.ForStorage (StorageIdx.X sec) node
+stX = Idx.forStorage StorageIdx.X
+
+stInSum ::
+   Idx.StateOrExit -> node -> StInSum node
+stInSum state =
+   Idx.ForStorage (StorageIdx.InSum state)
+
+stOutSum ::
+   Idx.InitOrState -> node -> StOutSum node
+stOutSum state =
+   Idx.ForStorage (StorageIdx.OutSum state)
 
 
 dTime :: Idx.State -> DTime node

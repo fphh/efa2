@@ -1,5 +1,6 @@
 module EFA.Flow.PartMap where
 
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 
@@ -73,12 +74,12 @@ mapWithVar ::
    PartMap sec a1
 mapWithVar lookupDir f node (PartMap i e ps) =
    PartMap
-      (f (Idx.StOutSum Idx.Init <#> node) i)
-      (f (Idx.StInSum  Idx.Exit <#> node) e)
+      (f (StorageIdx.OutSum Idx.Init <#> node) i)
+      (f (StorageIdx.InSum  Idx.Exit <#> node) e)
       (Map.mapWithKey
           (\part a ->
              case lookupDir (Idx.PartNode part node) of
                 Nothing -> error "PartMap.mapWithVar: inactive"
-                Just Topo.In  -> f (Idx.StOutSum (Idx.NoInit part) <#> node) a
-                Just Topo.Out -> f (Idx.StInSum  (Idx.NoExit part) <#> node) a)
+                Just Topo.In  -> f (StorageIdx.OutSum (Idx.NoInit part) <#> node) a
+                Just Topo.Out -> f (StorageIdx.InSum  (Idx.NoExit part) <#> node) a)
           ps)

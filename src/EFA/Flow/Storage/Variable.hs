@@ -1,25 +1,26 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Flow.Storage.Variable where
 
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatScalarIndex, formatScalarIndex)
 
 data Scalar part =
-     Storage Idx.Storage
-   | MaxEnergy Idx.MaxEnergy
-   | Energy (Idx.StEnergy part)
-   | X (Idx.StX part)
-   | InSum (Idx.StInSum part)
-   | OutSum (Idx.StOutSum part)
+     Content StorageIdx.Content
+   | MaxEnergy StorageIdx.MaxEnergy
+   | Energy (StorageIdx.Energy part)
+   | X (StorageIdx.X part)
+   | InSum (StorageIdx.InSum part)
+   | OutSum (StorageIdx.OutSum part)
      deriving (Show, Eq, Ord)
 
 
 ident :: Format output => Scalar t -> output
 ident var =
    case var of
-      Storage _idx -> Format.storage
+      Content _idx -> Format.storage
       MaxEnergy _idx -> Format.maxEnergy
       Energy _idx -> Format.energy
       X _idx -> Format.xfactor
@@ -35,7 +36,7 @@ formatScalarValue ::
    Scalar part -> (output, output)
 formatScalarValue var =
    case var of
-      Storage idx -> formatScalarIndex idx
+      Content idx -> formatScalarIndex idx
       MaxEnergy idx -> formatScalarIndex idx
       Energy idx -> formatScalarIndex idx
       X idx -> formatScalarIndex idx

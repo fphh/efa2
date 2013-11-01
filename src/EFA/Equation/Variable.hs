@@ -2,6 +2,7 @@
 module EFA.Equation.Variable where
 
 import qualified EFA.Flow.Storage.Variable as StorageVar
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
@@ -67,28 +68,28 @@ class FormatScalarIndex t => ScalarIndex t where
    type ScalarPart t :: *
    scalarIndex :: t -> StorageVar.Scalar (ScalarPart t)
 
-instance ScalarIndex Idx.Storage where
-   type ScalarPart Idx.Storage = Idx.Section
-   scalarIndex = StorageVar.Storage
+instance ScalarIndex StorageIdx.Content where
+   type ScalarPart StorageIdx.Content = Idx.Section
+   scalarIndex = StorageVar.Content
 
-instance ScalarIndex Idx.MaxEnergy where
-   type ScalarPart Idx.MaxEnergy = Idx.Section
+instance ScalarIndex StorageIdx.MaxEnergy where
+   type ScalarPart StorageIdx.MaxEnergy = Idx.Section
    scalarIndex = StorageVar.MaxEnergy
 
-instance (Format.Part part) => ScalarIndex (Idx.StEnergy part) where
-   type ScalarPart (Idx.StEnergy part) = part
+instance (Format.Part part) => ScalarIndex (StorageIdx.Energy part) where
+   type ScalarPart (StorageIdx.Energy part) = part
    scalarIndex = StorageVar.Energy
 
-instance (Format.Part part) => ScalarIndex (Idx.StX part) where
-   type ScalarPart (Idx.StX part) = part
+instance (Format.Part part) => ScalarIndex (StorageIdx.X part) where
+   type ScalarPart (StorageIdx.X part) = part
    scalarIndex = StorageVar.X
 
-instance (Format.Part part) => ScalarIndex (Idx.StInSum part) where
-   type ScalarPart (Idx.StInSum part) = part
+instance (Format.Part part) => ScalarIndex (StorageIdx.InSum part) where
+   type ScalarPart (StorageIdx.InSum part) = part
    scalarIndex = StorageVar.InSum
 
-instance (Format.Part part) => ScalarIndex (Idx.StOutSum part) where
-   type ScalarPart (Idx.StOutSum part) = part
+instance (Format.Part part) => ScalarIndex (StorageIdx.OutSum part) where
+   type ScalarPart (StorageIdx.OutSum part) = part
    scalarIndex = StorageVar.OutSum
 
 

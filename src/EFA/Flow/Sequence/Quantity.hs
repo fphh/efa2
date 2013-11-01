@@ -127,10 +127,10 @@ instance StorageQuant.Carry Carry where
    type CarryPart Carry = Idx.Section
    carryVars =
       Carry {
-         carryMaxEnergy = Var.scalarIndex . Idx.MaxEnergy,
-         carryEnergy = Var.scalarIndex . Idx.StEnergy,
-         carryXOut = Var.scalarIndex . Idx.StX . Idx.carryBondFromEdge,
-         carryXIn = Var.scalarIndex . Idx.StX . StorageIdx.flip . Idx.carryBondFromEdge
+         carryMaxEnergy = Var.scalarIndex . StorageIdx.MaxEnergy,
+         carryEnergy = Var.scalarIndex . StorageIdx.Energy,
+         carryXOut = Var.scalarIndex . StorageIdx.X . Idx.carryBondFromEdge,
+         carryXIn = Var.scalarIndex . StorageIdx.X . StorageIdx.flip . Idx.carryBondFromEdge
       }
 
 
@@ -312,25 +312,25 @@ lookupDTime (Idx.InPart sec Idx.DTime) =
 
 lookupStorage ::
    (Ord node) => SeqIdx.Storage node -> Graph node a v -> Maybe a
-lookupStorage (Idx.ForStorage (Idx.Storage bnd) node) g = do
+lookupStorage (Idx.ForStorage (StorageIdx.Content bnd) node) g = do
    (_,stores) <- Map.lookup node $ storages g
    Map.lookup bnd stores
 
 lookupMaxEnergy ::
    (Ord node) => SeqIdx.MaxEnergy node -> Graph node a v -> Maybe a
-lookupMaxEnergy (Idx.ForStorage (Idx.MaxEnergy se) node) g = do
+lookupMaxEnergy (Idx.ForStorage (StorageIdx.MaxEnergy se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
    fmap carryMaxEnergy $ Storage.lookupEdge se sgr
 
 lookupStEnergy ::
    (Ord node) => SeqIdx.StEnergy node -> Graph node a v -> Maybe a
-lookupStEnergy (Idx.ForStorage (Idx.StEnergy se) node) g = do
+lookupStEnergy (Idx.ForStorage (StorageIdx.Energy se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
    fmap carryEnergy $ Storage.lookupEdge se sgr
 
 lookupStX ::
    (Ord node) => SeqIdx.StX node -> Graph node a v -> Maybe a
-lookupStX (Idx.ForStorage (Idx.StX se) node) g = do
+lookupStX (Idx.ForStorage (StorageIdx.X se) node) g = do
    (sgr,_) <- Map.lookup node $ storages g
    Idx.withCarryEdgeFromBond
       (fmap carryXIn  . flip Storage.lookupEdge sgr)
@@ -342,7 +342,7 @@ It is an unchecked error if you lookup StInSum where is only an StOutSum.
 -}
 lookupStInSum ::
    (Ord node) => SeqIdx.StInSum node -> Graph node a v -> Maybe a
-lookupStInSum (Idx.ForStorage (Idx.StInSum aug) node) g = do
+lookupStInSum (Idx.ForStorage (StorageIdx.InSum aug) node) g = do
    (Storage.Graph partMap _, _) <- Map.lookup node $ storages g
    case aug of
       Idx.Exit -> return $ PartMap.exit partMap
@@ -353,7 +353,7 @@ It is an unchecked error if you lookup StOutSum where is only an StInSum.
 -}
 lookupStOutSum ::
    (Ord node) => SeqIdx.StOutSum node -> Graph node a v -> Maybe a
-lookupStOutSum (Idx.ForStorage (Idx.StOutSum aug) node) g = do
+lookupStOutSum (Idx.ForStorage (StorageIdx.OutSum aug) node) g = do
    (Storage.Graph partMap _, _) <- Map.lookup node $ storages g
    case aug of
       Idx.Init -> return $ PartMap.init partMap
@@ -415,22 +415,22 @@ class (Var.ScalarIndex idx) => LookupScalar idx where
    lookupScalar ::
       (Ord node) => Idx.ForStorage idx node -> Graph node a v -> Maybe a
 
-instance LookupScalar Idx.MaxEnergy where
+instance LookupScalar StorageIdx.MaxEnergy where
    lookupScalar = lookupMaxEnergy
 
-instance LookupScalar Idx.Storage where
+instance LookupScalar StorageIdx.Content where
    lookupScalar = lookupStorage
 
-instance LookupScalar (Idx.StEnergy Idx.Section) where
+instance LookupScalar (StorageIdx.Energy Idx.Section) where
    lookupScalar = lookupStEnergy
 
-instance LookupScalar (Idx.StX Idx.Section) where
+instance LookupScalar (StorageIdx.X Idx.Section) where
    lookupScalar = lookupStX
 
-instance LookupScalar (Idx.StInSum Idx.Section) where
+instance LookupScalar (StorageIdx.InSum Idx.Section) where
    lookupScalar = lookupStInSum
 
-instance LookupScalar (Idx.StOutSum Idx.Section) where
+instance LookupScalar (StorageIdx.OutSum Idx.Section) where
    lookupScalar = lookupStOutSum
 
 
@@ -500,7 +500,7 @@ mapStoragesWithVar f gr =
       (\node (sgr, bnds) ->
          (StorageQuant.mapGraphWithVar (flip lookupSums gr) f node sgr,
           Map.mapWithKey
-             (\bnd a -> f (Idx.Storage bnd <#> node) a)
+             (\bnd a -> f (StorageIdx.Content bnd <#> node) a)
              bnds)) $
    storages gr
 

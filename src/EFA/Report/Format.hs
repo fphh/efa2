@@ -1,5 +1,6 @@
 module EFA.Report.Format where
 
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified Data.Map as Map
@@ -415,9 +416,9 @@ class StorageIdx idx where
    storageIdent ::
       Format output => Idx.ForStorage idx node -> output
 
-instance StorageIdx Idx.MaxEnergy where storageIdent _ = maxEnergy
-instance StorageIdx (Idx.StEnergy sec) where storageIdent _ = energy
-instance StorageIdx (Idx.StX sec) where storageIdent _ = xfactor
+instance StorageIdx StorageIdx.MaxEnergy where storageIdent _ = maxEnergy
+instance StorageIdx (StorageIdx.Energy sec) where storageIdent _ = energy
+instance StorageIdx (StorageIdx.X sec) where storageIdent _ = xfactor
 
 
 directionShort :: Idx.Direction -> String

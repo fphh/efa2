@@ -128,9 +128,9 @@ instance StorageQuant.Carry Carry where
    type CarryPart Carry = Idx.State
    carryVars =
       Carry {
-         carryEnergy = Var.scalarIndex . Idx.StEnergy,
-         carryXOut = Var.scalarIndex . Idx.StX . Idx.carryBondFromEdge,
-         carryXIn = Var.scalarIndex . Idx.StX . StorageIdx.flip . Idx.carryBondFromEdge
+         carryEnergy = Var.scalarIndex . StorageIdx.Energy,
+         carryXOut = Var.scalarIndex . StorageIdx.X . Idx.carryBondFromEdge,
+         carryXIn = Var.scalarIndex . StorageIdx.X . StorageIdx.flip . Idx.carryBondFromEdge
       }
 
 
@@ -584,13 +584,13 @@ lookupDTime (Idx.InPart state Idx.DTime) =
 
 lookupStEnergy ::
    (Ord node) => StateIdx.StEnergy node -> Graph node a v -> Maybe a
-lookupStEnergy (Idx.ForStorage (Idx.StEnergy se) node) g = do
+lookupStEnergy (Idx.ForStorage (StorageIdx.Energy se) node) g = do
    sgr <- Map.lookup node $ storages g
    fmap carryEnergy $ Storage.lookupEdge se sgr
 
 lookupStX ::
    (Ord node) => StateIdx.StX node -> Graph node a v -> Maybe a
-lookupStX (Idx.ForStorage (Idx.StX se) node) g = do
+lookupStX (Idx.ForStorage (StorageIdx.X se) node) g = do
    sgr <- Map.lookup node $ storages g
    Idx.withCarryEdgeFromBond
       (fmap carryXIn  . flip Storage.lookupEdge sgr)
@@ -602,7 +602,7 @@ It is an unchecked error if you lookup StInSum where is only an StOutSum.
 -}
 lookupStInSum ::
    (Ord node) => StateIdx.StInSum node -> Graph node a v -> Maybe a
-lookupStInSum (Idx.ForStorage (Idx.StInSum aug) node) g = do
+lookupStInSum (Idx.ForStorage (StorageIdx.InSum aug) node) g = do
    (Storage.Graph partMap _) <- Map.lookup node $ storages g
    case aug of
       Idx.Exit -> return $ PartMap.exit partMap
@@ -613,7 +613,7 @@ It is an unchecked error if you lookup StOutSum where is only an StInSum.
 -}
 lookupStOutSum ::
    (Ord node) => StateIdx.StOutSum node -> Graph node a v -> Maybe a
-lookupStOutSum (Idx.ForStorage (Idx.StOutSum aug) node) g = do
+lookupStOutSum (Idx.ForStorage (StorageIdx.OutSum aug) node) g = do
    (Storage.Graph partMap _) <- Map.lookup node $ storages g
    case aug of
       Idx.Init -> return $ PartMap.init partMap
@@ -675,16 +675,16 @@ class (Var.ScalarIndex idx) => LookupScalar idx where
    lookupScalar ::
       (Ord node) => Idx.ForStorage idx node -> Graph node a v -> Maybe a
 
-instance LookupScalar (Idx.StEnergy Idx.State) where
+instance LookupScalar (StorageIdx.Energy Idx.State) where
    lookupScalar = lookupStEnergy
 
-instance LookupScalar (Idx.StX Idx.State) where
+instance LookupScalar (StorageIdx.X Idx.State) where
    lookupScalar = lookupStX
 
-instance LookupScalar (Idx.StInSum Idx.State) where
+instance LookupScalar (StorageIdx.InSum Idx.State) where
    lookupScalar = lookupStInSum
 
-instance LookupScalar (Idx.StOutSum Idx.State) where
+instance LookupScalar (StorageIdx.OutSum Idx.State) where
    lookupScalar = lookupStOutSum
 
 

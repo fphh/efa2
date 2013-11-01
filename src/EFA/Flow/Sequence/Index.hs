@@ -1,5 +1,6 @@
 module EFA.Flow.Sequence.Index where
 
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Graph.Topology.Index as Idx
 
 import Prelude hiding (sum)
@@ -12,12 +13,12 @@ type X node         = Idx.InSection Idx.X node
 type DTime node     = Idx.InSection Idx.DTime node
 type Sum node       = Idx.InSection Idx.Sum node
 
-type Storage node   = Idx.ForStorage Idx.Storage node
-type MaxEnergy node = Idx.ForStorage Idx.MaxEnergy node
-type StEnergy node  = Idx.ForStorage (Idx.StEnergy Idx.Section) node
-type StX node       = Idx.ForStorage (Idx.StX Idx.Section) node
-type StInSum node   = Idx.ForStorage (Idx.StInSum Idx.Section) node
-type StOutSum node  = Idx.ForStorage (Idx.StOutSum Idx.Section) node
+type Storage node   = Idx.ForStorage StorageIdx.Content node
+type MaxEnergy node = Idx.ForStorage StorageIdx.MaxEnergy node
+type StEnergy node  = Idx.ForStorage (StorageIdx.Energy Idx.Section) node
+type StX node       = Idx.ForStorage (StorageIdx.X Idx.Section) node
+type StInSum node   = Idx.ForStorage (StorageIdx.InSum Idx.Section) node
+type StOutSum node  = Idx.ForStorage (StorageIdx.OutSum Idx.Section) node
 
 type PPos = Idx.PPos
 
@@ -65,9 +66,9 @@ stX ::
    (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
    from -> to -> node -> StX node
 
-maxEnergy = carryEdge Idx.MaxEnergy
-stEnergy  = carryEdge Idx.StEnergy
-stX       = carryBond Idx.StX
+maxEnergy = carryEdge StorageIdx.MaxEnergy
+stEnergy  = carryEdge StorageIdx.Energy
+stX       = carryBond StorageIdx.X
 
 carryEdge ::
    (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
@@ -88,17 +89,17 @@ stInSum ::
    (Idx.ToSectionOrExit sec) =>
    sec -> node -> StInSum node
 stInSum sec =
-   Idx.ForStorage (Idx.StInSum (Idx.sectionOrExit sec))
+   Idx.ForStorage (StorageIdx.InSum (Idx.sectionOrExit sec))
 
 stOutSum ::
    (Idx.ToInitOrSection sec) =>
    sec -> node -> StOutSum node
 stOutSum sec =
-   Idx.ForStorage (Idx.StOutSum (Idx.initOrSection sec))
+   Idx.ForStorage (StorageIdx.OutSum (Idx.initOrSection sec))
 
 
 storage :: Idx.Boundary -> node -> Storage node
-storage = Idx.ForStorage . Idx.Storage
+storage = Idx.ForStorage . StorageIdx.Content
 
 ppos :: node -> node -> Idx.PPos node
 ppos a b = Idx.PPos $ Idx.TopologyEdge a b

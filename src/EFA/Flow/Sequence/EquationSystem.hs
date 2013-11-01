@@ -27,6 +27,7 @@ module EFA.Flow.Sequence.EquationSystem (
 
 import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
 import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
@@ -223,10 +224,10 @@ fromStorageSequences ::
 fromStorageSequences opts g =
    let stoutsum sec node =
           checkedLookup "fromStorageSequences inStorages"
-             SeqFlow.lookupStOutSum (Idx.ForStorage (Idx.StOutSum sec) node) g
+             SeqFlow.lookupStOutSum (SeqIdx.stOutSum sec node) g
        stinsum sec node =
           checkedLookup "fromStorageSequences outStorages"
-             SeqFlow.lookupStInSum (Idx.ForStorage (Idx.StInSum sec) node) g
+             SeqFlow.lookupStInSum (SeqIdx.stInSum sec node) g
        f node (Storage.Graph partMap edges, storageMap) =
           fromStorageSequence opts g node partMap storageMap
           <>
