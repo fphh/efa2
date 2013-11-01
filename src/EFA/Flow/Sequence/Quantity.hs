@@ -61,6 +61,7 @@ import qualified EFA.Flow.SequenceState.Quantity as Env
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.PartMap as PartMap
 import EFA.Flow.Topology.Quantity (Topology, Sums(..), Flow(..))
@@ -129,7 +130,7 @@ instance StorageQuant.Carry Carry where
          carryMaxEnergy = Var.scalarIndex . Idx.MaxEnergy,
          carryEnergy = Var.scalarIndex . Idx.StEnergy,
          carryXOut = Var.scalarIndex . Idx.StX . Idx.carryBondFromEdge,
-         carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.carryBondFromEdge
+         carryXIn = Var.scalarIndex . Idx.StX . StorageIdx.flip . Idx.carryBondFromEdge
       }
 
 

@@ -475,21 +475,11 @@ instance Flip TopologyEdge where
    flip (TopologyEdge x y) = TopologyEdge y x
 
 
-instance Flip idx => Flip (ForStorage idx) where
-   flip (ForStorage idx n) = ForStorage (flip idx) n
-
-instance Flip (CarryBond sec) where
-   flip (CarryBond s0 s1) = CarryBond s1 s0
-
-
 instance Flip Power where
    flip (Power x) = Power $ flip x
 
 instance Flip Energy where
    flip (Energy x) = Energy $ flip x
-
-instance Flip (StX sec) where
-   flip (StX x) = StX $ flip x
 
 instance Flip PPos where
    flip (PPos x) = PPos $ flip x
