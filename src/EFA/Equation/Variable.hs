@@ -9,7 +9,7 @@ import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
           (FormatValue, formatValue,
            FormatSignalIndex, formatSignalIndex,
-           FormatScalarIndex, formatScalarIndex)
+           FormatScalarIndex)
 
 
 data Any part node =
@@ -107,7 +107,7 @@ instance
    (Format.Part part, Node.C node) =>
       FormatValue (Any part node) where
    formatValue (Signal var) = formatSignalValue var
-   formatValue (Scalar var) = StorageVar.formatScalarValue var
+   formatValue (Scalar var) = formatValue var
 
 formatSignalValue ::
    (Format output, Format.Part part, Node.C node) =>
@@ -131,7 +131,7 @@ instance
    formatIndex (Idx.InPart s idx) = formatSignalIndex idx s
 
 instance FormatScalarIndex idx => FormatIndex (Idx.ForStorage idx) where
-   formatIndex (Idx.ForStorage idx n) = formatScalarIndex idx n
+   formatIndex = formatValue
 
 
 instance FormatSignalIndex Signal where

@@ -46,7 +46,14 @@ instance
 instance
    (FormatScalarIndex idx, Node.C node) =>
       FormatValue (Idx.ForStorage idx node) where
-   formatValue (Idx.ForStorage idx n) = formatScalarIndex idx n
+   formatValue (Idx.ForStorage idx n) =
+      formatForStorage (formatScalarIndex idx) n
+
+formatForStorage ::
+   (Format output, Node.C node) =>
+   (output, output) -> node -> output
+formatForStorage (e, idx) n =
+   Format.subscript e $ idx `Format.sectionNode` Node.subscript n
 
 
 class FormatSignalIndex idx where
@@ -55,15 +62,7 @@ class FormatSignalIndex idx where
       idx node -> part -> output
 
 class FormatScalarIndex idx where
-   formatScalarIndex ::
-      (Node.C node, Format output) =>
-      idx -> node -> output
-
-formatBoundaryNode ::
-   (Format output, Node.C node) =>
-   Idx.BndNode node -> output
-formatBoundaryNode (Idx.PartNode s n) =
-   Format.boundary s `Format.sectionNode` Node.subscript n
+   formatScalarIndex :: (Format output) => idx -> (output, output)
 
 formatPartNode ::
    (Format output, Format.Part part, Node.C node) =>
@@ -112,22 +111,6 @@ formatTopologySecEdge e se s =
    Format.subscript e $
    Format.part s `Format.sectionNode` formatTopologyLink se
 
-formatCarryEdge ::
-   (Format.Part sec, Format output, Node.C node) =>
-   output -> Idx.CarryEdge sec -> node -> output
-formatCarryEdge e (Idx.CarryEdge s0 s1) n =
-   Format.subscript e $
-   (Format.initOrOther s0 `Format.link` Format.otherOrExit s1)
-      `Format.sectionNode` Node.subscript n
-
-formatCarryBond ::
-   (Format.Part sec, Format output, Node.C node) =>
-   output -> Idx.CarryBond sec -> node -> output
-formatCarryBond e (Idx.CarryBond s0 s1) n =
-   Format.subscript e $
-   (Format.augmented s0 `Format.link` Format.augmented s1)
-      `Format.sectionNode` Node.subscript n
-
 
 instance FormatSignalIndex Idx.Energy where
    formatSignalIndex (Idx.Energy e) = formatTopologySecEdge Format.energy e
@@ -152,35 +135,48 @@ instance FormatSignalIndex Idx.Sum where
          formatPartNode (Idx.PartNode s n)
 
 
-instance FormatScalarIndex Idx.MaxEnergy where
-   formatScalarIndex (Idx.MaxEnergy e) = formatCarryEdge Format.maxEnergy e
-
 instance FormatScalarIndex Idx.Storage where
-   formatScalarIndex (Idx.Storage bnd) n =
-      Format.subscript Format.storage $
-      formatBoundaryNode (Idx.PartNode bnd n)
+   formatScalarIndex (Idx.Storage bnd) =
+      (Format.storage, Format.boundary bnd)
+
+
+formatCarryEdge ::
+   (Format.Part sec, Format output) =>
+   Idx.CarryEdge sec -> output
+formatCarryEdge (Idx.CarryEdge s0 s1) =
+   Format.initOrOther s0 `Format.link` Format.otherOrExit s1
+
+instance FormatScalarIndex Idx.MaxEnergy where
+   formatScalarIndex (Idx.MaxEnergy e) = (Format.maxEnergy, formatCarryEdge e)
 
 instance (Format.Part sec) => FormatScalarIndex (Idx.StEnergy sec) where
-   formatScalarIndex (Idx.StEnergy e) = formatCarryEdge Format.energy e
+   formatScalarIndex (Idx.StEnergy e) = (Format.energy, formatCarryEdge e)
+
+
+formatCarryBond ::
+   (Format.Part sec, Format output) =>
+   Idx.CarryBond sec -> output
+formatCarryBond (Idx.CarryBond s0 s1) =
+   Format.augmented s0 `Format.link` Format.augmented s1
 
 instance (Format.Part sec) => FormatScalarIndex (Idx.StX sec) where
-   formatScalarIndex (Idx.StX e) = formatCarryBond Format.xfactor e
+   formatScalarIndex (Idx.StX e) = (Format.xfactor, formatCarryBond e)
 
-instance (Format.Part sec) => FormatScalarIndex (Idx.StInSum sec) where
-   formatScalarIndex (Idx.StInSum s) n =
-      formatStSum Idx.In (Format.otherOrExit s) n
-
-instance (Format.Part sec) => FormatScalarIndex (Idx.StOutSum sec) where
-   formatScalarIndex (Idx.StOutSum s) n =
-      formatStSum Idx.Out (Format.initOrOther s) n
 
 formatStSum ::
-   (Format output, Node.C node) =>
-   Idx.Direction -> output -> node -> output
-formatStSum dir s n =
-   Format.subscript Format.scalarSum $
-   Format.direction dir `Format.connect`
-      s `Format.sectionNode` Node.subscript n
+   (Format output) =>
+   Idx.Direction -> output -> (output, output)
+formatStSum dir s =
+   (Format.scalarSum, Format.direction dir `Format.connect` s)
+
+instance (Format.Part sec) => FormatScalarIndex (Idx.StInSum sec) where
+   formatScalarIndex (Idx.StInSum s) =
+      formatStSum Idx.In (Format.otherOrExit s)
+
+instance (Format.Part sec) => FormatScalarIndex (Idx.StOutSum sec) where
+   formatScalarIndex (Idx.StOutSum s) =
+      formatStSum Idx.Out (Format.initOrOther s)
+
 
 formatChar :: Format output => Char -> output
 formatChar = Format.literal . (:[])

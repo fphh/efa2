@@ -2,7 +2,6 @@
 module EFA.Flow.Storage.Variable where
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatScalarIndex, formatScalarIndex)
@@ -32,16 +31,16 @@ instance Format.StorageIdx (Scalar part) where
 
 
 formatScalarValue ::
-   (Format output, Format.Part part, Node.C node) =>
-   Idx.ForStorage (Scalar part) node -> output
-formatScalarValue (Idx.ForStorage var n) =
+   (Format output, Format.Part part) =>
+   Scalar part -> (output, output)
+formatScalarValue var =
    case var of
-      Storage idx -> formatScalarIndex idx n
-      MaxEnergy idx -> formatScalarIndex idx n
-      Energy idx -> formatScalarIndex idx n
-      X idx -> formatScalarIndex idx n
-      InSum idx -> formatScalarIndex idx n
-      OutSum idx -> formatScalarIndex idx n
+      Storage idx -> formatScalarIndex idx
+      MaxEnergy idx -> formatScalarIndex idx
+      Energy idx -> formatScalarIndex idx
+      X idx -> formatScalarIndex idx
+      InSum idx -> formatScalarIndex idx
+      OutSum idx -> formatScalarIndex idx
 
 instance (Format.Part part) => FormatScalarIndex (Scalar part) where
-   formatScalarIndex edge node = formatScalarValue (Idx.ForStorage edge node)
+   formatScalarIndex var = formatScalarValue var
