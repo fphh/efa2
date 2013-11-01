@@ -2,6 +2,7 @@ module EFA.Flow.Sequence.Index where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Graph.Topology.Index as Idx
 
 import Prelude hiding (sum)
@@ -54,15 +55,15 @@ outSum = flip sum TopoIdx.Out
 
 
 maxEnergy ::
-   (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
+   (PartIdx.ToInitOrSection from, PartIdx.ToSectionOrExit to) =>
    from -> to -> node -> MaxEnergy node
 
 stEnergy ::
-   (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
+   (PartIdx.ToInitOrSection from, PartIdx.ToSectionOrExit to) =>
    from -> to -> node -> StEnergy node
 
 stX ::
-   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   (PartIdx.ToAugmentedSection from, PartIdx.ToAugmentedSection to) =>
    from -> to -> node -> StX node
 
 maxEnergy = carryEdge StorageIdx.MaxEnergy
@@ -70,31 +71,31 @@ stEnergy  = carryEdge StorageIdx.Energy
 stX       = carryBond StorageIdx.X
 
 carryEdge ::
-   (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
+   (PartIdx.ToInitOrSection from, PartIdx.ToSectionOrExit to) =>
    (CarryEdge -> idx) ->
    from -> to -> node -> Idx.ForStorage idx node
 carryEdge mkIdx a b =
-   Idx.carryEdge mkIdx (Idx.initOrSection a) (Idx.sectionOrExit b)
+   Idx.carryEdge mkIdx (PartIdx.initOrSection a) (PartIdx.sectionOrExit b)
 
 carryBond ::
-   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   (PartIdx.ToAugmentedSection from, PartIdx.ToAugmentedSection to) =>
    (CarryBond -> idx) ->
    from -> to -> node -> Idx.ForStorage idx node
 carryBond mkIdx a b =
-   Idx.carryBond mkIdx (Idx.augmentSection a) (Idx.augmentSection b)
+   Idx.carryBond mkIdx (PartIdx.augmentSection a) (PartIdx.augmentSection b)
 
 
 stInSum ::
-   (Idx.ToSectionOrExit sec) =>
+   (PartIdx.ToSectionOrExit sec) =>
    sec -> node -> StInSum node
 stInSum sec =
-   Idx.ForStorage (StorageIdx.InSum (Idx.sectionOrExit sec))
+   Idx.ForStorage (StorageIdx.InSum (PartIdx.sectionOrExit sec))
 
 stOutSum ::
-   (Idx.ToInitOrSection sec) =>
+   (PartIdx.ToInitOrSection sec) =>
    sec -> node -> StOutSum node
 stOutSum sec =
-   Idx.ForStorage (StorageIdx.OutSum (Idx.initOrSection sec))
+   Idx.ForStorage (StorageIdx.OutSum (PartIdx.initOrSection sec))
 
 
 storage :: Idx.Boundary -> node -> Storage node
@@ -107,8 +108,8 @@ energyFromPPos :: Idx.Section -> TopoIdx.PPos node -> Energy node
 energyFromPPos sec (TopoIdx.PPos e) = Idx.InPart sec $ TopoIdx.Energy e
 
 
-initSection :: Idx.InitOrSection
-initSection = Idx.Init
+initSection :: PartIdx.InitOrSection
+initSection = PartIdx.Init
 
-exitSection :: Idx.SectionOrExit
-exitSection = Idx.Exit
+exitSection :: PartIdx.SectionOrExit
+exitSection = PartIdx.Exit

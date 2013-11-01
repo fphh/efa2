@@ -2,6 +2,7 @@ module EFA.Flow.State.Index where
 
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Graph.Topology.Index as Idx
 
 import Prelude hiding (sum)
@@ -48,12 +49,12 @@ stX ::
 stX = Idx.forStorage StorageIdx.X
 
 stInSum ::
-   Idx.StateOrExit -> node -> StInSum node
+   PartIdx.StateOrExit -> node -> StInSum node
 stInSum state =
    Idx.ForStorage (StorageIdx.InSum state)
 
 stOutSum ::
-   Idx.InitOrState -> node -> StOutSum node
+   PartIdx.InitOrState -> node -> StOutSum node
 stOutSum state =
    Idx.ForStorage (StorageIdx.OutSum state)
 

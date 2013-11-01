@@ -1,212 +1,36 @@
-module EFA.Graph.Topology.Index where
+module EFA.Graph.Topology.Index (
+   module EFA.Graph.Topology.Index,
+   module EFA.Flow.Part.Index,
+   PartIdx.Boundary(PartIdx.Following),
+   PartIdx.AugmentedSection,
+   PartIdx.AugmentedState,
+   PartIdx.InitOrSection, PartIdx.SectionOrExit,
+   PartIdx.Section(PartIdx.Section),
+   PartIdx.State(PartIdx.State),
+   PartIdx.section0, PartIdx.state0,
+   PartIdx.initial, PartIdx.afterSection,
+   PartIdx.augment,
+   PartIdx.switchAugmented,
+   PartIdx.boundaryFromAugSection,
+   PartIdx.sectionFromBoundary,
+   PartIdx.initSection,
+   PartIdx.exitSection,
+   ) where
 
 import qualified EFA.Flow.Topology.Index as Idx
+import qualified EFA.Flow.Part.Index as PartIdx
+import EFA.Flow.Part.Index
+          (State, Section, Boundary, Augmented,
+           Init(Init, NoInit), maybeInit, allowInit,
+           Exit(Exit, NoExit), maybeExit, allowExit)
 
 import qualified EFA.Utility.TypeConstructor as TC
 
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
-import Data.Word (Word)
 
 import qualified Prelude as P
 import Prelude hiding (init, flip)
-
-
-newtype State = State Word deriving (Show, Eq, Ord)
-
-instance Enum State where
-   toEnum n =
-      if n >=0
-        then State $ fromIntegral n
-        else error "State.toEnum: negative number"
-   fromEnum (State n) =
-      if n <= fromIntegral (maxBound::Int)
-        then fromIntegral n
-        else error "State.fromEnum: number too big"
-
-type InitOrState = Init State
-type StateOrExit = Exit State
-
-
-newtype Section = Section Word deriving (Show, Eq, Ord)
-
-instance Enum Section where
-   toEnum n =
-      if n >=0
-        then Section $ fromIntegral n
-        else error "Section.toEnum: negative number"
-   fromEnum (Section n) =
-      if n <= fromIntegral (maxBound::Int)
-        then fromIntegral n
-        else error "Section.fromEnum: number too big"
-
-data Init a = Init | NoInit a deriving (Show, Eq, Ord)
-data Exit a = NoExit a | Exit deriving (Show, Eq, Ord)
-
-type InitOrSection = Init Section
-type SectionOrExit = Exit Section
-type Augmented sec = Exit (Init sec)
-type AugmentedSection = Augmented Section
-type AugmentedState   = Augmented State
-
-
-instance Functor Init where
-   fmap _ Init = Init
-   fmap f (NoInit a) = NoInit $ f a
-
-instance Functor Exit where
-   fmap _ Exit = Exit
-   fmap f (NoExit a) = NoExit $ f a
-
-
-section :: MaybeSection sec => Word -> sec
-section = fromSection . Section
-
-class MaybeSection sec where
-   fromSection :: Section -> sec
-
-instance MaybeSection Section where
-   fromSection = id
-
-instance MaybeSection sec => MaybeSection (Init sec) where
-   fromSection = NoInit . fromSection
-
-instance MaybeSection sec => MaybeSection (Exit sec) where
-   fromSection = NoExit . fromSection
-
-
-class MaybeSection sec => MaybeInit sec where
-   initSection :: sec
-
-instance MaybeSection sec => MaybeInit (Init sec) where
-   initSection = Init
-
-instance MaybeInit sec => MaybeInit (Exit sec) where
-   initSection = NoExit initSection
-
-
-class MaybeSection sec => MaybeExit sec where
-   exitSection :: sec
-
-instance MaybeSection sec => MaybeExit (Exit sec) where
-   exitSection = Exit
-
-instance MaybeExit sec => MaybeExit (Init sec) where
-   exitSection = NoInit exitSection
-
-
-switchAugmented ::
-   a -> a -> (sec -> a) ->
-   Augmented sec -> a
-switchAugmented init exit secf aug =
-   case aug of
-      Exit -> exit
-      NoExit Init -> init
-      NoExit (NoInit s) -> secf s
-
-fromAugmentedSection ::
-   (MaybeSection sec, MaybeInit sec, MaybeExit sec) =>
-   AugmentedSection -> sec
-fromAugmentedSection =
-   switchAugmented initSection exitSection fromSection
-
-
-class ToAugmentedSection sec where
-   augmentSection :: sec -> AugmentedSection
-
-instance ToAugmentedSection Section where
-   augmentSection = NoExit . NoInit
-
-instance ToSection sec => ToAugmentedSection (Init sec) where
-   augmentSection = NoExit . fmap toSection
-
-instance ToInitOrSection sec => ToAugmentedSection (Exit sec) where
-   augmentSection = fmap initOrSection
-
-
-class ToInitOrSection sec where
-   initOrSection :: sec -> InitOrSection
-
-instance ToInitOrSection Section where
-   initOrSection = NoInit
-
-instance ToSection sec => ToInitOrSection (Init sec) where
-   initOrSection = fmap toSection
-
-
-class ToSectionOrExit sec where
-   sectionOrExit :: sec -> SectionOrExit
-
-instance ToSectionOrExit Section where
-   sectionOrExit = NoExit
-
-instance ToSection sec => ToSectionOrExit (Exit sec) where
-   sectionOrExit = fmap toSection
-
-
-class ToSection sec where
-   toSection :: sec -> Section
-
-instance ToSection Section where
-   toSection = id
-
-
-allowInit :: Exit sec -> Augmented sec
-allowInit = fmap NoInit
-
-allowExit :: Init sec -> Augmented sec
-allowExit = NoExit
-
-augment :: sec -> Augmented sec
-augment = NoExit . NoInit
-
-
-maybeInit :: Augmented sec -> Maybe (Exit sec)
-maybeInit =
-   switchAugmented Nothing (Just Exit) (Just . NoExit)
-
-maybeExit :: Augmented sec -> Maybe (Init sec)
-maybeExit aug =
-   case aug of
-      Exit -> Nothing
-      NoExit sec -> Just sec
-
-
-boundaryFromAugSection :: AugmentedSection -> Maybe Boundary
-boundaryFromAugSection =
-   fmap Following . maybeExit
-
-augSectionFromBoundary :: Boundary -> AugmentedSection
-augSectionFromBoundary (Following bnd) = allowExit bnd
-
-sectionFromBoundary :: Boundary -> Maybe Section
-sectionFromBoundary (Following bnd) =
-   case bnd of
-      Init -> Nothing
-      NoInit sec -> Just sec
-
-
-newtype Boundary = Following (Init Section) deriving (Show, Eq, Ord)
-
-instance Enum Boundary where
-   toEnum n =
-      if n == -1
-        then Following Init
-        else Following $ NoInit $ toEnum n
-   fromEnum (Following Init) = -1
-   fromEnum (Following (NoInit n)) = fromEnum n
-
-initial :: Boundary
-initial = Following Init
-
-afterSection :: Section -> Boundary
-afterSection = Following . NoInit
-
-beforeSection :: Section -> Boundary
-beforeSection s =
-   if s == Section 0
-     then Following Init
-     else Following (NoInit (pred s))
 
 
 data Absolute = Absolute deriving (Show, Eq, Ord)
@@ -256,10 +80,10 @@ secNode :: Section -> node -> SecNode node
 secNode = PartNode
 
 initSecNode :: node -> AugSecNode node
-initSecNode = PartNode initSection
+initSecNode = PartNode PartIdx.initSection
 
 exitSecNode :: node -> AugSecNode node
-exitSecNode = PartNode exitSection
+exitSecNode = PartNode PartIdx.exitSection
 
 initAugNode :: node -> AugNode sec node
 initAugNode = PartNode (NoExit Init)
@@ -268,23 +92,23 @@ exitAugNode :: node -> AugNode sec node
 exitAugNode = PartNode Exit
 
 afterSecNode :: Section -> node -> BndNode node
-afterSecNode s = PartNode $ afterSection s
+afterSecNode s = PartNode $ PartIdx.afterSection s
 
 bndNodeFromSecNode :: SecNode node -> BndNode node
 bndNodeFromSecNode (PartNode sec node) =
-   PartNode (Following (NoInit sec)) node
+   PartNode (PartIdx.Following (NoInit sec)) node
 
 secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
 secNodeFromBndNode (PartNode bnd node) =
-   fmap (P.flip PartNode node) $ sectionFromBoundary bnd
+   fmap (P.flip PartNode node) $ PartIdx.sectionFromBoundary bnd
 
 augNodeFromBndNode :: BndNode node -> AugSecNode node
 augNodeFromBndNode (PartNode bnd node) =
-   PartNode (augSectionFromBoundary bnd) node
+   PartNode (PartIdx.augSectionFromBoundary bnd) node
 
 bndNodeFromAugNode :: AugSecNode node -> Maybe (BndNode node)
 bndNodeFromAugNode (PartNode aug node) =
-   fmap (P.flip PartNode node) $ boundaryFromAugSection aug
+   fmap (P.flip PartNode node) $ PartIdx.boundaryFromAugSection aug
 
 
 maybeInitNode :: AugNode sec node -> Maybe (PartNode (Exit sec) node)
