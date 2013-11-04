@@ -300,6 +300,13 @@ type
 
 
 {- |
+Generate a state flow graph from a sequence flow graph
+by accumulating sections with the same flow state.
+The state numbers are assigned in first-come, first-served basis.
+E.g. if there are states A,B,C
+and there is a sequence with states B,B,A,B,C,
+then we assign: B:0, A:1, C:2.
+
 If allStEdges
   Then: Insert all possible storage edges.
   Else: Insert only the storage edges that have counterparts in the sequence flow graph.
@@ -323,6 +330,17 @@ fromSequenceFlowResult allStEdges gr =
       allStEdges (stateMapFromSequence $ SeqFlow.sequence gr) gr
 
 
+{- |
+This is like 'fromSequenceFlow' but you can specify a state numbering.
+If a section contains a flow state that is not contained in the state map,
+this section will be silently dropped.
+Vice versa, if a state is in the state map but not in the sequence graph,
+it will be dropped as well.
+
+Example: If the state map contains the states 0:A, 1:B, 2:C,
+and you have a sequence with states B,B,A,B,D,
+you will end up with a state flow graph containing states 0:A, 1:B.
+-}
 fromStatesAndSequenceFlow ::
    (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
    Bool ->
