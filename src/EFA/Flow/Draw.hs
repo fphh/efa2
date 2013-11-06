@@ -564,14 +564,14 @@ dotFromFlowTopology ident topo =
    DotSG True (Just (Int ident)) $
    DotStmts
       [GraphAttrs [labelFromString $ show ident]] []
-      (map mkNode $ Graph.labNodes topo)
-      (map mkEdge $ Graph.edges topo)
+      (map dotNode $ Graph.nodes topo)
+      (map dotEdge $ Graph.edges topo)
   where idf x = T.pack $ show ident ++ "_" ++ Node.dotId x
-        mkNode (node, ()) =
+        dotNode node =
            DotNode (idf node)
               (attrsFromNode node $ labelFromUnicode $ formatTypedNode node)
-        mkEdge el =
-           case orientEdge el of
+        dotEdge edge =
+           case orientEdge edge of
               (DirEdge x y, d, _) ->
                  DotEdge (idf x) (idf y) [Viz.Dir d]
 
@@ -967,8 +967,8 @@ graph g =
    DotStmts {
       attrStmts = [],
       subGraphs = [],
-      nodeStmts = map snd $ Graph.labNodes g,
-      edgeStmts = map snd $ Graph.labEdges g
+      nodeStmts = Map.elems $ Graph.nodeLabels g,
+      edgeStmts = Map.elems $ Graph.edgeLabels g
    }
 
 

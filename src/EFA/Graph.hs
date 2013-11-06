@@ -5,7 +5,7 @@ module EFA.Graph (
    isConsistent,
    -- inEdges, outEdges,
    graphMap,
-   nodeLabels,
+   nodeLabels, nodeSet, nodes, nodeEdges,
    edgeLabels, edgeSet, edges,
 
    LNode,
@@ -26,8 +26,6 @@ module EFA.Graph (
    union,
    lookupNode, lookupEdge,
    isEmpty,
-   labNodes,
-   labEdges,
    adjacentEdges,
 
    delNode,
@@ -44,7 +42,6 @@ module EFA.Graph (
    insNode, insNodes,
    insEdge, insEdges, insEdgeSet,
    fromList, fromMap,
-   nodes, nodeSet, nodeEdges,
    InOut,
    isLoop,
    pathExists,
@@ -216,10 +213,8 @@ instance (QC.Arbitrary n, Ord n) => QC.Arbitrary (UnDirEdge n) where
 nodes ::
    (Edge edge, Ord (edge node), Ord node) =>
    Graph node edge nodeLabel edgeLabel ->
-   Map node (Set node, nodeLabel, Set node)
-nodes =
-   fmap (\(ins,n,outs) -> (Set.map from ins, n, Set.map to outs)) .
-   nodeEdges
+   [node]
+nodes = Map.keys . graphMap
 
 nodeEdges ::
    (Edge edge, Ord (edge node), Ord node) =>
@@ -341,7 +336,7 @@ outEdges = fmap thd3 . nodes
 -}
 
 nodeLabels :: (Edge e, Ord (e n), Ord n) => Graph n e nl el -> Map n nl
-nodeLabels = fmap snd3 . nodes
+nodeLabels = fmap snd3 . graphMap
 
 lookupEdge :: (Edge e, Ord (e n), Ord n) => e n -> Graph n e nl el -> Maybe el
 lookupEdge e (Graph g) =
@@ -352,12 +347,6 @@ isEmpty = Map.null . graphMap
 
 lookupNode :: (Ord n) => n -> Graph n e nl el -> Maybe nl
 lookupNode n (Graph g) = fmap snd3 $ Map.lookup n g
-
-labNodes :: (Edge e, Ord (e n), Ord n) => Graph n e nl el -> [LNode n nl]
-labNodes = Map.toList . nodeLabels
-
-labEdges :: (Edge e, Ord (e n), Ord n) => Graph n e nl el -> [LEdge e n el]
-labEdges = Map.toList . edgeLabels
 
 _pre, suc ::
    (Edge e, Ord (e n), Ord n) =>
