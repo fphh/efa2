@@ -45,6 +45,18 @@ type
       EqSys.Expression Verify.Ignore Record.Absolute node s a x
 
 
+withExpressionGraph ::
+   (Node.C node,
+    Verify.GlobalVar mode v RecIdx.Absolute Var.Signal node) =>
+   (FlowTopo.Section node
+       (Expression mode node s v v) ->
+    EquationSystem mode node s v) ->
+   EquationSystem mode node s v
+withExpressionGraph f =
+   EqSys.withExpressionGraph $
+      f . FlowTopo.mapSection (fmap (Record.unAbsolute . EqSys.unwrap))
+
+
 solve ::
    (Arith.Product a, Node.C node) =>
    FlowTopo.Section node (Result a) ->
