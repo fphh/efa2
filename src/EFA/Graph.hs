@@ -1,13 +1,8 @@
 -- remove this using functor Ord class
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Graph (
+   -- * types
    Graph,
-   isConsistent,
-   -- inEdges, outEdges,
-   graphMap,
-   nodeLabels, nodeSet, nodes, nodeEdges,
-   edgeLabels, edgeSet, edges,
-
    LNode,
    Edge(from, to),
    DirEdge(DirEdge),
@@ -15,36 +10,45 @@ module EFA.Graph (
    EitherEdge(EDirEdge,EUnDirEdge),
    LEdge,
 
+   -- * construction
+   empty, fromList, fromMap,
+
+   -- * extract large portions of the graph
+   graphMap,
+   nodeLabels, nodeSet, nodes, nodeEdges,
+   edgeLabels, edgeSet, edges,
+
+   -- * queries
+   isEmpty,
+   lookupNode, lookupEdge,
+   adjacentEdges,
+   isLoop,
+   pathExists,
+   isConsistent,
+
+   -- * manipulate labels
+   mapNode, mapNodeWithKey,
+   mapEdge, mapEdgeWithKey,
+   mapNodeWithInOut, InOut,
+   filterEdgeWithKey,
+   traverseNode, traverseEdge, traverse,
+
+   -- * combine graphs
+   checkedZipWith,
+   union,
+
+   -- * manipulate indices
    reverse,
    reverseEdge,
    mapKeys,
-   mapNode, mapNodeWithInOut, mapNodeWithKey,
-   mapEdge, mapEdgeWithKey,
-   traverseNode, traverseEdge, traverse,
-   checkedZipWith,
-   empty,
-   union,
-   lookupNode, lookupEdge,
-   isEmpty,
-   adjacentEdges,
-
-   delNode,
-   -- delNodes,
-   delNodeSet,
-   delEdge,
-   -- delEdges,
-   -- delEdgeSet,
-   filterEdgeWithKey,
    mapMaybeEdgeKeys,
    mapEdgeKeys,
-   -- elfilter,
-   -- propELFilter,
+
+   -- * insertion and removal
+   delNode, delNodeSet, delEdge,
+
    insNode, insNodes,
    insEdge, insEdges, insEdgeSet,
-   fromList, fromMap,
-   InOut,
-   isLoop,
-   pathExists,
    ) where
 
 import qualified EFA.Utility.TypeConstructor as TC
