@@ -64,7 +64,7 @@ quantityTopology ::
    FlowTopo.Section node v
 quantityTopology topo =
    FlowTopo.sectionFromPlain $
-   let flowTopo = Graph.mapEdgesMaybe (Just . Graph.EDirEdge) topo
+   let flowTopo = Topo.flowFromPlain topo
    in  if StateAnalysis.admissibleTopology flowTopo
          then flowTopo
          else error "quantityTopology: topology has forbidden default edges"

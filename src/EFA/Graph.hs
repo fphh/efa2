@@ -38,7 +38,8 @@ module EFA.Graph (
    -- delEdges,
    -- delEdgeSet,
    filterEdgeWithKey,
-   mapEdgesMaybe,
+   mapMaybeEdgeKeys,
+   mapEdgeKeys,
    -- elfilter,
    -- propELFilter,
    insNode, insNodes,
@@ -504,15 +505,26 @@ You may only use this for filtering edges
 and use more specialised types as a result.
 You must not alter source and target nodes of edges.
 -}
-mapEdgesMaybe ::
+mapMaybeEdgeKeys ::
    (Edge e1, Ord (e1 n), Ord n) =>
    (e0 n -> Maybe (e1 n)) ->
    Graph n e0 nl el -> Graph n e1 nl el
-mapEdgesMaybe f =
+mapMaybeEdgeKeys f =
    Graph .
    fmap
       (\(ins, nl, outs) ->
          (MapU.mapMaybeKeys f ins, nl, MapU.mapMaybeKeys f outs)) .
+   graphMap
+
+mapEdgeKeys ::
+   (Edge e1, Ord (e1 n), Ord n) =>
+   (e0 n -> e1 n) ->
+   Graph n e0 nl el -> Graph n e1 nl el
+mapEdgeKeys f =
+   Graph .
+   fmap
+      (\(ins, nl, outs) ->
+         (Map.mapKeys f ins, nl, Map.mapKeys f outs)) .
    graphMap
 
 {-

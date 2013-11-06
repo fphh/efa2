@@ -84,7 +84,7 @@ dirFromGraph ::
    (Ord n) =>
    Graph n Graph.EitherEdge nl el -> Graph n Graph.DirEdge nl el
 dirFromGraph =
-   Graph.mapEdgesMaybe $ \ee ->
+   Graph.mapMaybeEdgeKeys $ \ee ->
       case ee of
          Graph.EDirEdge de -> Just de
          Graph.EUnDirEdge _ -> Nothing
