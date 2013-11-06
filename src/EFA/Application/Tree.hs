@@ -16,7 +16,7 @@ toGraph :: Tree node () -> Topo.Topology node
 toGraph (Tree _ graph) = graph
 
 cons :: Node.C node => node -> Tree node ()
-cons node = Tree node $ Graph.insNode (node, ()) Graph.empty
+cons node = Tree node $ Graph.insertNode (node, ()) Graph.empty
 
 
 
@@ -38,5 +38,5 @@ attach ::
    Tree node nodeLabel
 attach edge (Tree top graph) (Tree subTop subGraph) =
    Tree top $
-      Graph.insEdge (edge subTop top, ()) $
+      Graph.insertEdge (edge subTop top, ()) $
       graph <> subGraph

@@ -31,7 +31,7 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
    shrink (ArbTopology g) =
       case Graph.nodeSet g of
          ns ->
-            map (ArbTopology . flip Graph.delNodeSet g .
+            map (ArbTopology . flip Graph.deleteNodeSet g .
                  Set.difference ns . Set.fromList) $
             QC.shrink $ Set.toList ns
    arbitrary = do

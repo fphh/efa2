@@ -115,7 +115,7 @@ recoursePrioEdge origTopo =
           case PSQ.minView queue of
              Nothing -> [tq]
              Just (bestEdge PSQ.:-> Alternatives edges, remQueue) -> do
-                newTopo <- map (flip Count.insEdge topo) edges
+                newTopo <- map (flip Count.insertEdge topo) edges
                 recourse
                    (newTopo,
                     Set.foldl
@@ -177,7 +177,7 @@ mergeCluster topo c0 c1 =
           es0 <- clusterEdges c0
           es1 <- clusterEdges c1
           let es2 = Set.union es0 es1
-              g = Count.insEdgeSet es2 topo
+              g = Count.insertEdgeSet es2 topo
           guard $ Fold.all (Count.checkNode g) nodes
           return es2
 
@@ -198,7 +198,7 @@ mergeSmallestClusters topo queue0 =
          case PQ.minView queue1 of
             Nothing ->
                Left $
-               map (\es -> removeCounts $ Count.insEdgeSet es topo) $
+               map (\es -> removeCounts $ Count.insertEdgeSet es topo) $
                clusterEdges c0
             Just (c1, queue2) -> Right $
                let c2 = mergeCluster topo c0 c1
@@ -252,7 +252,7 @@ mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> removeCounts $ Count.insEdgeSet es topo) $
+         map (\es -> removeCounts $ Count.insertEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          Right $
@@ -281,7 +281,7 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> removeCounts $ Count.insEdgeSet es topo) $
+         map (\es -> removeCounts $ Count.insertEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          let (c0,partition1) =
@@ -424,7 +424,7 @@ reducePattern ::
    [(CountTopology node, [Graph.EitherEdge node])]
 reducePattern reducedTopo freeEdges =
    filter (isSingleton . uncurry complement) $
-   map (\e -> (Graph.delEdge e reducedTopo, e:freeEdges)) $
+   map (\e -> (Graph.deleteEdge e reducedTopo, e:freeEdges)) $
    Graph.edges reducedTopo
 
 reducePatterns ::

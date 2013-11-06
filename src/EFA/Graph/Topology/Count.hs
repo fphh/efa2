@@ -12,8 +12,8 @@ module EFA.Graph.Topology.Count (
    admissibleTopology,
    nodeDegrees,
    removeCounts,
-   insEdge,
-   insEdgeSet,
+   insertEdge,
+   insertEdgeSet,
    expand,
    ) where
 
@@ -77,15 +77,15 @@ admissibleTopology =
    Fold.and . Map.mapWithKey (checkInOut . Node.typ) . Graph.graphMap
 
 
-insEdge ::
+insertEdge ::
    Ord node =>
    Graph.EitherEdge node -> CountTopology node -> CountTopology node
-insEdge e = Graph.insEdge (e, ())
+insertEdge e = Graph.insertEdge (e, ())
 
-insEdgeSet ::
+insertEdgeSet ::
    Ord node =>
    Set (Graph.EitherEdge node) -> CountTopology node -> CountTopology node
-insEdgeSet e = Graph.insEdgeSet (MapU.fromSet (const ()) e)
+insertEdgeSet e = Graph.insertEdgeSet (MapU.fromSet (const ()) e)
 
 
 edgeOrients ::
@@ -106,7 +106,7 @@ admissibleEdges ::
    [(Graph.EitherEdge node, CountTopology node)]
 admissibleEdges e0 g0 = do
    e1 <- edgeOrients e0
-   let g1 = insEdge e1 g0
+   let g1 = insertEdge e1 g0
    guard $ Fold.all (checkNode g1) e0
    return (e1, g1)
 

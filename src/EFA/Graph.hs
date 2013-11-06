@@ -45,10 +45,8 @@ module EFA.Graph (
    mapEdgeKeys,
 
    -- * insertion and removal
-   delNode, delNodeSet, delEdge,
-
-   insNode, insNodes,
-   insEdge, insEdges, insEdgeSet,
+   deleteNode, deleteNodeSet, deleteEdge,
+   insertNode, insertEdge, insertEdgeSet,
    ) where
 
 import qualified EFA.Utility.TypeConstructor as TC
@@ -380,11 +378,11 @@ applyMap f x =
 {- |
 Node to be deleted must be contained in the graph.
 -}
-delNode ::
+deleteNode ::
    (Edge e, Ord (e n), Ord n) =>
    n -> Graph n e nl el -> Graph n e nl el
-delNode n (Graph ns) =
-   case Map.findWithDefault (error "delNode: unknown node") n ns of
+deleteNode n (Graph ns) =
+   case Map.findWithDefault (error "deleteNode: unknown node") n ns of
       (ins, _nl, outs) ->
          Graph $
          applyMap (Map.mapKeys from $ Map.mapWithKey (\e _ -> mapThd3 $ Map.delete e) ins)  $
@@ -394,10 +392,10 @@ delNode n (Graph ns) =
 {- |
 Could be implemented more efficiently.
 -}
-delNodeSet ::
+deleteNodeSet ::
    (Edge e, Ord (e n), Ord n) =>
    Set n -> Graph n e nl el -> Graph n e nl el
-delNodeSet delNs g = Set.foldl (flip delNode) g delNs
+deleteNodeSet delNs g = Set.foldl (flip deleteNode) g delNs
 
 {-
 nodeEdges ::
@@ -414,35 +412,35 @@ setMapMaybe ::
 setMapMaybe p =
    Set.fromList . mapMaybe p . Set.toList
 
-delNodes ::
+deleteNodes ::
    (ConsEdge e, Ord (e n), Ord n) =>
    [n] -> Graph n e nl el -> Graph n e nl el
-delNodes nsl = delNodeSet $ Set.fromList nsl
+deleteNodes nsl = deleteNodeSet $ Set.fromList nsl
 -}
 
-delEdge ::
+deleteEdge ::
    (Edge e, Ord (e n), Ord n) =>
    e n -> Graph n e nl el -> Graph n e nl el
-delEdge e (Graph ns) =
+deleteEdge e (Graph ns) =
    Graph $
    Map.adjust (mapThd3 $ Map.delete e) (from e) $
    Map.adjust (mapFst3 $ Map.delete e) (to e) $
    ns
 
 {-
-delEdgeSet ::
+deleteEdgeSet ::
    (Edge e, Ord (e n), Ord n) =>
    Set (e n) -> Graph n e nl el -> Graph n e nl el
-delEdgeSet es g =
-   delEdgeHelp g
+deleteEdgeSet es g =
+   deleteEdgeHelp g
       (MapU.differenceSet (edgeLabels g) es,
        Set.toList es)
 
-delEdges ::
+deleteEdges ::
    (Edge e, Ord (e n), Ord n) =>
    [e n] -> Graph n e nl el -> Graph n e nl el
-delEdges es g =
-   delEdgeHelp g
+deleteEdges es g =
+   deleteEdgeHelp g
       (MapU.differenceSet (edgeLabels g) $ Set.fromList es, es)
 
 elfilter ::
@@ -450,7 +448,7 @@ elfilter ::
    (el -> Bool) ->
    Graph n e nl el -> Graph n e nl el
 elfilter f g =
-   delEdgeHelp g $ mapSnd Map.keys $ Map.partition f $ edgeLabels g
+   deleteEdgeHelp g $ mapSnd Map.keys $ Map.partition f $ edgeLabels g
 -}
 
 filterEdgeWithKey ::
@@ -493,10 +491,10 @@ mapEdgeKeys f =
    graphMap
 
 {-
-delEdgeHelp ::
+deleteEdgeHelp ::
    (Edge e, Ord n) =>
    Graph n e nl el -> (Map (e n) el, [e n]) -> Graph n e nl el
-delEdgeHelp (Graph ns _els) (kept, deleted) =
+deleteEdgeHelp (Graph ns _els) (kept, deleted) =
    Graph
       (fmap
          (\(ins, n, outs) delIns delOuts ->
@@ -528,28 +526,19 @@ and existing edges are maintained.
 However, I think we should better have an extra function for this purpose
 and you should not rely on this behavior.
 -}
-insNode ::
+insertNode ::
    (Ord n) => LNode n nl -> Graph n e nl el -> Graph n e nl el
-insNode (n,nl) =
+insertNode (n,nl) =
    Graph .
    Map.insertWith
       (\_ (ins, _, outs) -> (ins, nl, outs))
       n (Map.empty, nl, Map.empty) .
    graphMap
 
-insNodes ::
-   (Ord n) => [LNode n nl] -> Graph n e nl el -> Graph n e nl el
-insNodes = flip (foldl (flip insNode))
-
-insEdge ::
+insertEdge ::
    (Edge e, Ord (e n), Ord n) =>
    LEdge e n el -> Graph n e nl el -> Graph n e nl el
-insEdge es = insEdges [es]
-
-insEdges ::
-   (Edge e, Ord (e n), Ord n) =>
-   [LEdge e n el] -> Graph n e nl el -> Graph n e nl el
-insEdges es = insEdgeSet (Map.fromList es)
+insertEdge es = insertEdgeSet $ uncurry Map.singleton es
 
 {- |
 In the current implementation
@@ -557,10 +546,10 @@ existing edges are replaced with new labels.
 However, I think we should better have an extra function for this purpose
 and you should not rely on this behavior.
 -}
-insEdgeSet ::
+insertEdgeSet ::
    (Edge e, Ord (e n), Ord n) =>
    Map (e n) el -> Graph n e nl el -> Graph n e nl el
-insEdgeSet es =
+insertEdgeSet es =
    let ess = Map.mapWithKey Map.singleton es
    in  Graph .
        applyMap (fmap (\new -> mapFst3 (Map.union new)) $ Map.mapKeysWith Map.union to   ess) .
@@ -717,5 +706,5 @@ pathExists src dst =
    let go topo a =
           not (isEmpty topo) &&
           (a==dst ||
-           (any (go (delNode a topo)) $ suc topo a))
+           (any (go (deleteNode a topo)) $ suc topo a))
    in  flip go src
