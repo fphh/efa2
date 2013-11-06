@@ -80,7 +80,7 @@ admissibleTopology =
 insertEdge ::
    Ord node =>
    Graph.EitherEdge node -> CountTopology node -> CountTopology node
-insertEdge e = Graph.insertEdge (e, ())
+insertEdge e = Graph.insertEdge e ()
 
 insertEdgeSet ::
    Ord node =>

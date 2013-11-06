@@ -454,8 +454,8 @@ However, I think we should better have an extra function for this purpose
 and you should not rely on this behavior.
 -}
 insertNode ::
-   (Ord n) => LNode n nl -> Graph n e nl el -> Graph n e nl el
-insertNode (n,nl) =
+   (Ord n) => n -> nl -> Graph n e nl el -> Graph n e nl el
+insertNode n nl =
    Graph .
    Map.insertWith
       (\_ (ins, _, outs) -> (ins, nl, outs))
@@ -464,8 +464,8 @@ insertNode (n,nl) =
 
 insertEdge ::
    (Edge e, Ord (e n), Ord n) =>
-   LEdge e n el -> Graph n e nl el -> Graph n e nl el
-insertEdge es = insertEdgeSet $ uncurry Map.singleton es
+   e n -> el -> Graph n e nl el -> Graph n e nl el
+insertEdge e el = insertEdgeSet $ Map.singleton e el
 
 {- |
 In the current implementation
