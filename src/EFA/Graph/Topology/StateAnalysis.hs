@@ -121,7 +121,7 @@ recoursePrioEdge origTopo =
                     Set.foldl
                        (\q e -> PSQ.adjust (const $ alternatives e newTopo) e q)
                        remQueue $
-                    Fold.foldMap (Graph.adjEdges origTopo) bestEdge)
+                    Fold.foldMap (Graph.adjacentEdges origTopo) bestEdge)
    in  recourse
 
 

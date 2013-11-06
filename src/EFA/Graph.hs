@@ -28,7 +28,7 @@ module EFA.Graph (
    isEmpty,
    labNodes,
    labEdges,
-   adjEdges,
+   adjacentEdges,
    pre, -- lpre, preEdgeLabels,
    suc, -- lsuc, sucEdgeLabels,
    delNode,
@@ -397,12 +397,12 @@ filterLEdges els edge =
 -}
 
 
-adjEdges ::
+adjacentEdges ::
    (Edge e, Ord (e n), Ord n) =>
    Graph n e nl el -> n -> Set (e n)
-adjEdges g n =
+adjacentEdges g n =
    (\(ins,_nl,outs) -> Map.keysSet ins `Set.union` Map.keysSet outs) $
-   Map.findWithDefault (error "adjEdges: unknown node") n $
+   Map.findWithDefault (error "adjacentEdges: unknown node") n $
    graphMap g
 
 {-
