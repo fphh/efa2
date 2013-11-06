@@ -22,6 +22,7 @@ module EFA.Flow.State.EquationSystem (
    (?=), Result(..),
    variable,
    variableRecord,
+   withExpressionGraph,
 
    ) where
 
@@ -263,6 +264,24 @@ connectCarryFlow opts g node partMap =
          maybe (error "charge: missing sum") id $
          StateFlow.lookupSums (Idx.stateNode state node) g) $
    PartMap.parts partMap
+
+
+withExpressionGraph ::
+   (Node.C node, Record rec,
+    Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageStateScalar node,
+    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node) =>
+   (StateFlow.Graph node
+       (RecordExpression mode rec node s a v a)
+       (RecordExpression mode rec node s a v v) ->
+    EquationSystem mode rec node s a v) ->
+   EquationSystem mode rec node s a v
+withExpressionGraph f =
+   EqSys.VariableSystem $
+      EqSys.runVariableSystem . f .
+      StateFlow.mapGraph (EqSys.Context . pure) (EqSys.Context . pure) .
+      expressionGraph
+         =<< MR.ask
+
 
 
 variables ::

@@ -24,6 +24,7 @@ module EFA.Flow.Topology.EquationSystem (
    (?=), Result(..),
    variable,
    variableRecord,
+   withExpressionGraph,
 
    ) where
 
@@ -248,6 +249,20 @@ splitFactors dtime varsum energy xfactor =
    .
    NonEmpty.fetch
 
+
+
+withExpressionGraph ::
+   (Node.C node, Record rec,
+    Verify.GlobalVar mode v (Record.ToIndex rec) Var.Signal node) =>
+   (FlowTopo.Section node
+       (RecordExpression mode rec node s v v) ->
+    EquationSystem mode rec node s v) ->
+   EquationSystem mode rec node s v
+withExpressionGraph f =
+   EqSys.VariableSystem $
+      EqSys.runVariableSystem . f .
+      FlowTopo.mapSection (EqSys.Context . pure . SysRecord.exprFromVariable)
+         =<< MR.ask
 
 
 variables ::
