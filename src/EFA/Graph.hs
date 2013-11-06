@@ -17,7 +17,7 @@ module EFA.Graph (
 
    reverse,
    reverseEdge,
-   ixmap,
+   mapKeys,
    mapNode, mapNodeWithInOut, mapNodeWithKey,
    mapEdge, mapEdgeWithKey,
    traverseNode, traverseEdge, traverse,
@@ -278,18 +278,18 @@ Also the node and edge index maps must be consistent, i.e.
 Strictly spoken, we would need the node map only for isolated nodes,
 but we use it for all nodes for simplicity.
 -}
-ixmap ::
+mapKeys ::
    (Ord (edge1 node1), Ord node0, Ord node1) =>
    (node0 -> node1) ->
    (edge0 node0 -> edge1 node1) ->
    Graph node0 edge0 nodeLabel edgeLabel ->
    Graph node1 edge1 nodeLabel edgeLabel
-ixmap f g =
+mapKeys f g =
    Graph .
    fmap
       (\(ins,nl,outs) ->
          (Map.mapKeys g ins, nl, Map.mapKeys g outs)) .
-   Map.mapKeysWith (error "Graph.ixmap: node map is not injective") f .
+   Map.mapKeysWith (error "Graph.mapKeys: node map is not injective") f .
    graphMap
 
 empty :: Graph node edge nodeLabel edgeLabel
