@@ -41,13 +41,12 @@ type LabeledTopology node = Graph node Graph.DirEdge String String
 
 
 flowFromPlain :: (Ord node) => Topology node -> FlowTopology node
-flowFromPlain = Graph.mapMaybeEdgeKeys (Just . Graph.EDirEdge)
+flowFromPlain = Graph.mapEdgeKeys Graph.EDirEdge
 
 plainFromFlow :: (Ord node) => FlowTopology node -> Topology node
 plainFromFlow =
-   Graph.mapMaybeEdgeKeys
+   Graph.mapEdgeKeys
       (\e ->
-         Just $
          case e of
             Graph.EDirEdge de -> de
             Graph.EUnDirEdge ue -> Graph.DirEdge (Graph.from ue) (Graph.to ue))
