@@ -173,15 +173,6 @@ independentInOutSums opts =
    opts { optInOutSums = const $ const mempty }
 
 
-fromGraph ::
-   (Verify.LocalVar mode a, Constant a, Record rec, Node.C node) =>
-   Options mode rec s a ->
-   CumFlow.Graph node (SysRecord.Variable mode rec s a) ->
-   EqSys.System mode s
-fromGraph opts =
-   fromTopology opts .
-   CumFlow.mapGraph SysRecord.exprFromVariable
-
 fromTopology ::
    (Verify.LocalVar mode a, Constant a, Record rec, Node.C node) =>
    Options mode rec s a ->
@@ -285,7 +276,8 @@ setup opts gr given = do
    (vars, System eqs) <-
       runWriterT $ do
          vars <- variables gr
-         EqSys.runSystem $ fromGraph opts vars
+         EqSys.runSystem $ fromTopology opts $
+            CumFlow.mapGraph SysRecord.exprFromVariable vars
          runReaderT (EqSys.runVariableSystem given) vars
          return vars
    return (vars, eqs)

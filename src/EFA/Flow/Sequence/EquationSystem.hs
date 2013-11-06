@@ -210,19 +210,17 @@ fromGraph ::
     Record rec, Node.C node) =>
    SeqStateEqSys.Options mode rec s a v ->
    SeqFlow.Graph node
-      (SysRecord.Variable mode rec s a)
-      (SysRecord.Variable mode rec s v) ->
+      (SysRecord.Expr mode rec s a)
+      (SysRecord.Expr mode rec s v) ->
    EqSys.System mode s
-fromGraph opts gv =
-   case expressionGraph gv of
-      g ->
-         mconcat $
-            foldMap
-               (fromTopology (SeqStateEqSys.optTopology opts) .
-                FlowTopoPlain.dirSectionFromFlowGraph . snd)
-               (SeqFlow.sequence g) :
-            fromStorageSequences opts g :
-            []
+fromGraph opts g =
+   mconcat $
+      foldMap
+         (fromTopology (SeqStateEqSys.optTopology opts) .
+          FlowTopoPlain.dirSectionFromFlowGraph . snd)
+         (SeqFlow.sequence g) :
+      fromStorageSequences opts g :
+      []
 
 fromStorageSequences ::
    (Verify.LocalVar mode a, Constant a,
@@ -391,7 +389,7 @@ setup opts gr given = do
    (vars, System eqs) <-
       runWriterT $ do
          vars <- variables gr
-         EqSys.runSystem $ fromGraph opts vars
+         EqSys.runSystem $ fromGraph opts $ expressionGraph vars
          runReaderT (EqSys.runVariableSystem given) vars
          return vars
    return (vars, eqs)
