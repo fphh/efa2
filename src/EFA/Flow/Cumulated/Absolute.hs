@@ -46,6 +46,17 @@ type
       EqSys.Expression Verify.Ignore Record.Absolute node s a x
 
 
+withExpressionGraph ::
+   (Node.C node,
+    Verify.GlobalVar mode v RecIdx.Absolute CumVar.Any node) =>
+   (CumFlow.Graph node (Expression mode node s v v) ->
+    EquationSystem mode node s v) ->
+   EquationSystem mode node s v
+withExpressionGraph f =
+   EqSys.withExpressionGraph $
+      f . CumFlow.mapGraph (fmap (Record.unAbsolute . EqSys.unwrap))
+
+
 solve ::
    (Eq a, Arith.Constant a, Node.C node) =>
    CumFlow.Graph node (Result a) ->

@@ -22,6 +22,7 @@ module EFA.Flow.Sequence.EquationSystem (
    (?=), Result(..),
    variable,
    variableRecord,
+   withExpressionGraph,
 
    ) where
 
@@ -190,6 +191,19 @@ variable (RecIdx.Record recIdx idx) =
    variableRecord idx
 
 
+expressionGraph ::
+   (Record rec) =>
+   SeqFlow.Graph node
+      (SysRecord.Variable mode rec s a)
+      (SysRecord.Variable mode rec s v) ->
+   SeqFlow.Graph node
+      (SysRecord.Expr mode rec s a)
+      (SysRecord.Expr mode rec s v)
+expressionGraph =
+   SeqFlow.mapGraph
+      SysRecord.exprFromVariable
+      SysRecord.exprFromVariable
+
 fromGraph ::
    (Verify.LocalVar mode a, Constant a, a ~ Scalar v,
     Verify.LocalVar mode v, Product v, Integrate v,
@@ -200,10 +214,7 @@ fromGraph ::
       (SysRecord.Variable mode rec s v) ->
    EqSys.System mode s
 fromGraph opts gv =
-   case
-      SeqFlow.mapGraph
-         (SysRecord.exprFromVariable)
-         (SysRecord.exprFromVariable) gv of
+   case expressionGraph gv of
       g ->
          mconcat $
             foldMap
@@ -312,6 +323,23 @@ fromOutStorages stinsum ins =
       StorageEqSys.splitFactors s SeqFlow.carryMaxEnergy SeqFlow.carryXIn ins)
    <>
    StorageEqSys.fromOutStorages stinsum ins
+
+
+withExpressionGraph ::
+   (Node.C node, Record rec,
+    Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageSectionScalar node,
+    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node) =>
+   (SeqFlow.Graph node
+       (RecordExpression mode rec node s a v a)
+       (RecordExpression mode rec node s a v v) ->
+    EquationSystem mode rec node s a v) ->
+   EquationSystem mode rec node s a v
+withExpressionGraph f =
+   EqSys.VariableSystem $
+      EqSys.runVariableSystem . f .
+      SeqFlow.mapGraph (EqSys.Context . pure) (EqSys.Context . pure) .
+      expressionGraph
+         =<< MR.ask
 
 
 variables ::

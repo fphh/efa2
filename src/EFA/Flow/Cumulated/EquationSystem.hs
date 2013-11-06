@@ -21,6 +21,7 @@ module EFA.Flow.Cumulated.EquationSystem (
    (?=), Result(..),
    variable,
    variableRecord,
+   withExpressionGraph,
 
    ) where
 
@@ -236,6 +237,20 @@ fromSums opts s =
    let sumIn  = CumFlow.sumIn s
        sumOut = CumFlow.sumOut s
    in  fold $ liftA2 (optInOutSums opts) sumIn sumOut
+
+
+withExpressionGraph ::
+   (Node.C node, Record rec,
+    Verify.GlobalVar mode v (Record.ToIndex rec) Var.Any node) =>
+   (CumFlow.Graph node
+       (RecordExpression mode rec node s v v) ->
+    EquationSystem mode rec node s v) ->
+   EquationSystem mode rec node s v
+withExpressionGraph f =
+   EqSys.VariableSystem $
+      EqSys.runVariableSystem . f .
+      CumFlow.mapGraph (EqSys.Context . pure . SysRecord.exprFromVariable)
+         =<< MR.ask
 
 
 variables ::

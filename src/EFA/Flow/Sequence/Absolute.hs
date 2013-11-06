@@ -59,6 +59,24 @@ type
       EqSys.Expression Verify.Ignore Record.Absolute node s a v x
 
 
+
+withExpressionGraph ::
+   (Node.C node,
+    Verify.GlobalVar mode a RecIdx.Absolute Var.ForStorageSectionScalar node,
+    Verify.GlobalVar mode v RecIdx.Absolute Var.InSectionSignal node) =>
+   (SeqFlow.Graph node
+       (Expression mode node s a v a)
+       (Expression mode node s a v v) ->
+    EquationSystem mode node s a v) ->
+   EquationSystem mode node s a v
+withExpressionGraph f =
+   EqSys.withExpressionGraph $
+      f .
+      SeqFlow.mapGraph
+         (fmap (Record.unAbsolute . EqSys.unwrap))
+         (fmap (Record.unAbsolute . EqSys.unwrap))
+
+
 solve ::
    (Arith.Constant a, a ~ Arith.Scalar v,
     Arith.Product v, Arith.Integrate v,
