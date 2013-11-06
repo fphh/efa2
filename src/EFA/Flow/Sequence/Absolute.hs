@@ -6,6 +6,7 @@ module EFA.Flow.Sequence.Absolute (
    EqSys.optionsDefault,
    EqSys.equalInOutSums, EqSys.independentInOutSums,
    EqSys.integrateStInOutSums, EqSys.equalStInOutSums,
+   Abs.liftF, Abs.liftF2,
    (=.=),
    ) where
 
@@ -14,6 +15,7 @@ import qualified EFA.Symbolic.Variable as SymVar
 import qualified EFA.Flow.Sequence.Symbolic as Symbolic
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Absolute as Abs
 import EFA.Flow.Sequence.EquationSystem ((=.=))
 
 import qualified EFA.Flow.SequenceState.Variable as Var
@@ -27,12 +29,10 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import EFA.Utility (Pointed)
 
-import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
 
 import qualified Control.Monad.Exception.Synchronous as ME
 
-import Control.Applicative (liftA, liftA2)
 import Data.Monoid ((<>))
 import Data.Tuple.HT (mapFst)
 
@@ -109,22 +109,6 @@ variable ::
     SeqFlow.Lookup idx, Node.C node) =>
    idx node -> Expression mode node s a v x
 variable = EqSys.variable . RecIdx.absolute
-
-
-liftF ::
-   (Arith.Sum y, Sys.Value mode y) =>
-   (x -> y) ->
-   Expression mode node s a v x ->
-   Expression mode node s a v y
-liftF = liftA . Expr.fromRule2 . Sys.assignment2
-
-liftF2 ::
-   (Arith.Sum z, Sys.Value mode z) =>
-   (x -> y -> z) ->
-   Expression mode node s a v x ->
-   Expression mode node s a v y ->
-   Expression mode node s a v z
-liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3
 
 
 type SignalTerm term node = Symbolic.SignalTerm RecIdx.Absolute term node

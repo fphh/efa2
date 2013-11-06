@@ -6,28 +6,28 @@ module EFA.Flow.State.Absolute (
    EqSys.optionsDefault,
    EqSys.equalInOutSums, EqSys.independentInOutSums,
    EqSys.integrateStInOutSums, EqSys.equalStInOutSums,
+   Abs.liftF, Abs.liftF2,
    (=.=),
    ) where
 
 import qualified EFA.Flow.State.EquationSystem as EqSys
 import qualified EFA.Flow.State.Quantity as StateFlow
+import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.Absolute as Abs
 import EFA.Flow.State.EquationSystem ((=.=))
 
 import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result(Result)
 
 import qualified EFA.Graph.Topology.Node as Node
 
-import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
 
 import qualified Control.Monad.Exception.Synchronous as ME
 
-import Control.Applicative (liftA, liftA2)
 import Data.Tuple.HT (mapFst)
 
 
@@ -121,22 +121,6 @@ variable ::
     StateFlow.Lookup idx, Node.C node) =>
    idx node -> Expression mode node s a v x
 variable = EqSys.variable . RecIdx.absolute
-
-
-liftF ::
-   (Arith.Sum y, Sys.Value mode y) =>
-   (x -> y) ->
-   Expression mode node s a v x ->
-   Expression mode node s a v y
-liftF = liftA . Expr.fromRule2 . Sys.assignment2
-
-liftF2 ::
-   (Arith.Sum z, Sys.Value mode z) =>
-   (x -> y -> z) ->
-   Expression mode node s a v x ->
-   Expression mode node s a v y ->
-   Expression mode node s a v z
-liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3
 
 
 infix 0 .=, =%%=

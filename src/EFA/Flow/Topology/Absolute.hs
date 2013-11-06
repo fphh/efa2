@@ -2,12 +2,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Flow.Topology.Absolute (
    module EFA.Flow.Topology.Absolute,
+   Abs.liftF, Abs.liftF2,
    (=.=),
    ) where
 
 import qualified EFA.Flow.Topology.EquationSystem as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Variable as Var
+import qualified EFA.Flow.Absolute as Abs
 import EFA.Flow.Topology.EquationSystem ((=.=))
 
 import qualified EFA.Equation.RecordIndex as RecIdx
@@ -18,12 +20,10 @@ import EFA.Equation.Result(Result)
 
 import qualified EFA.Graph.Topology.Node as Node
 
-import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
 
 import qualified Control.Monad.Exception.Synchronous as ME
 
-import Control.Applicative (liftA, liftA2)
 import Data.Tuple.HT (mapFst)
 
 
@@ -89,22 +89,6 @@ variable ::
    (Sys.Value mode a, FlowTopo.Lookup idx, Node.C node) =>
    idx node -> Expression mode node s a a
 variable = EqSys.variable . RecIdx.absolute
-
-
-liftF ::
-   (Arith.Sum y, Sys.Value mode y) =>
-   (x -> y) ->
-   Expression mode node s a x ->
-   Expression mode node s a y
-liftF = liftA . Expr.fromRule2 . Sys.assignment2
-
-liftF2 ::
-   (Arith.Sum z, Sys.Value mode z) =>
-   (x -> y -> z) ->
-   Expression mode node s a x ->
-   Expression mode node s a y ->
-   Expression mode node s a z
-liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3
 
 
 infix 0 .=, =%%=
