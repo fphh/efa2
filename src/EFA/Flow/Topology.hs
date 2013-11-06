@@ -19,6 +19,13 @@ data
       }
       deriving (Eq)
 
+mapLabel ::
+   (sectionLabel0 -> sectionLabel1) ->
+   Section node edge sectionLabel0 nodeLabel edgeLabel ->
+   Section node edge sectionLabel1 nodeLabel edgeLabel
+mapLabel f (Section lab topo) =
+   Section (f lab) topo
+
 mapNode ::
    (nodeLabel0 -> nodeLabel1) ->
    Section node edge sectionLabel nodeLabel0 edgeLabel ->
