@@ -55,7 +55,6 @@ import EFA.Equation.Arithmetic
 
 import qualified EFA.Graph.Topology.Node as Node
 
-import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
 
 import qualified Data.Accessor.Basic as Accessor
@@ -179,7 +178,7 @@ variableRecord ::
 variableRecord idx =
    EqSys.Context $
    MR.asks
-      (Wrap . fmap Expr.fromVariable .
+      (SysRecord.exprFromVariable .
        checkedLookup "variableRecord: unknown variable" lookup idx)
 
 variable ::
@@ -203,8 +202,8 @@ fromGraph ::
 fromGraph opts gv =
    case
       SeqFlow.mapGraph
-         (Wrap . fmap Expr.fromVariable)
-         (Wrap . fmap Expr.fromVariable) gv of
+         (SysRecord.exprFromVariable)
+         (SysRecord.exprFromVariable) gv of
       g ->
          mconcat $
             foldMap

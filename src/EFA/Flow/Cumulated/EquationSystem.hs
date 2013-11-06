@@ -49,7 +49,6 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
-import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
 
 import qualified Data.Accessor.Basic as Accessor
@@ -132,7 +131,7 @@ variableRecord ::
 variableRecord idx =
    EqSys.Context $
    MR.asks
-      (Wrap . fmap Expr.fromVariable .
+      (SysRecord.exprFromVariable .
        Var.checkedLookup "variableRecord: unknown variable" CumFlow.lookup idx)
 
 variable ::
@@ -180,7 +179,7 @@ fromGraph ::
    EqSys.System mode s
 fromGraph opts =
    fromTopology opts .
-   CumFlow.mapGraph (Wrap . fmap Expr.fromVariable)
+   CumFlow.mapGraph SysRecord.exprFromVariable
 
 fromTopology ::
    (Verify.LocalVar mode a, Constant a, Record rec, Node.C node) =>

@@ -53,7 +53,6 @@ import EFA.Equation.Arithmetic
 
 import qualified EFA.Graph.Topology.Node as Node
 
-import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
 
 import qualified Data.Accessor.Basic as Accessor
@@ -175,7 +174,7 @@ variableRecord ::
 variableRecord idx =
    EqSys.Context $
    MR.asks
-      (Wrap . fmap Expr.fromVariable .
+      (SysRecord.exprFromVariable .
        checkedLookup "variableRecord: unknown variable" lookup idx)
 
 variable ::
@@ -187,6 +186,19 @@ variable (RecIdx.Record recIdx idx) =
    variableRecord idx
 
 
+expressionGraph ::
+   (Record rec) =>
+   StateFlow.Graph node
+      (SysRecord.Variable mode rec s a)
+      (SysRecord.Variable mode rec s v) ->
+   StateFlow.Graph node
+      (SysRecord.Expr mode rec s a)
+      (SysRecord.Expr mode rec s v)
+expressionGraph =
+   StateFlow.mapGraph
+      SysRecord.exprFromVariable
+      SysRecord.exprFromVariable
+
 fromGraph ::
    (Verify.LocalVar mode a, Constant a, a ~ Scalar v,
     Verify.LocalVar mode v, Product v, Integrate v,
@@ -197,10 +209,7 @@ fromGraph ::
       (SysRecord.Variable mode rec s v) ->
    EqSys.System mode s
 fromGraph opts gv =
-   case
-      StateFlow.mapGraph
-         (Wrap . fmap Expr.fromVariable)
-         (Wrap . fmap Expr.fromVariable) gv of
+   case expressionGraph gv of
       g ->
          mconcat $
             foldMap

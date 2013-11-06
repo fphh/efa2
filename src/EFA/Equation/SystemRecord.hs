@@ -36,6 +36,12 @@ type Variable mode rec s x = rec (Sys.Variable mode s x)
 type Expr mode rec s x = Wrap rec (Expr.T mode s x)
 
 
+exprFromVariable ::
+   (Record rec) =>
+   Variable mode rec s x -> Expr mode rec s x
+exprFromVariable = Wrap . fmap Expr.fromVariable
+
+
 newtype System mode s = System (Sys.T mode s ())
 
 instance Monoid (System mode s) where

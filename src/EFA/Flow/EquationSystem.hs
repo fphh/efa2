@@ -100,7 +100,7 @@ withLocalVar ::
    System mode s
 withLocalVar f = System $ do
    v <- localVariable
-   case f $ Wrap $ fmap Expr.fromVariable v of
+   case f $ SysRecord.exprFromVariable v of
       System act -> act
 
 

@@ -51,7 +51,6 @@ import EFA.Equation.Arithmetic
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 
-import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
 
 import qualified Data.Accessor.Basic as Accessor
@@ -146,7 +145,7 @@ variableRecord ::
 variableRecord idx =
    EqSys.Context $
    MR.asks
-      (Wrap . fmap Expr.fromVariable .
+      (SysRecord.exprFromVariable .
        checkedLookup "variableRecord: unknown variable" lookup idx)
 
 variable ::
@@ -288,7 +287,7 @@ setup opts gr given = do
          vars <- variables gr
          EqSys.runSystem $ fromTopology opts $
             FlowTopoPlain.dirSectionFromFlowGraph $
-            FlowTopo.mapSection (Wrap . fmap Expr.fromVariable) vars
+            FlowTopo.mapSection SysRecord.exprFromVariable vars
          runReaderT (EqSys.runVariableSystem given) vars
          return vars
    return (vars, eqs)
