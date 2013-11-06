@@ -3,12 +3,12 @@
 module EFA.Graph (
    -- * types
    Graph,
-   LNode,
+   LabeledNode,
+   LabeledEdge,
    Edge(from, to),
    DirEdge(DirEdge),
    UnDirEdge(UnDirEdge), unDirEdge,
    EitherEdge(EDirEdge,EUnDirEdge),
-   LEdge,
 
    -- * construction
    empty, fromList, fromMap,
@@ -108,7 +108,7 @@ isConsistent (Graph ns) =
          Fold.all ((n==) . from) (Map.keysSet outs))
 
 
-type LNode n label = (n, label)
+type LabeledNode n label = (n, label)
 
 
 class (Foldable edge) => Edge edge where
@@ -151,7 +151,7 @@ instance ConsEdge UnDirEdge where
 
 
 
-type LEdge edge node label = (edge node, label)
+type LabeledEdge edge node label = (edge node, label)
 
 
 data DirEdge node = DirEdge node node
@@ -485,7 +485,7 @@ insertEdgeSet es =
 
 fromList ::
    (Edge e, Ord (e n), Ord n) =>
-   [LNode n nl] -> [LEdge e n el] -> Graph n e nl el
+   [LabeledNode n nl] -> [LabeledEdge e n el] -> Graph n e nl el
 fromList ns es =
    fromMap (Map.fromList ns) $ Map.fromList es
 
@@ -525,7 +525,9 @@ nodeSet :: Graph n e nl el -> Set n
 nodeSet = Map.keysSet . graphMap
 
 
-type InOut n e nl el = ([LEdge e n el], LNode n nl, [LEdge e n el])
+type
+   InOut n e nl el =
+      ([LabeledEdge e n el], LabeledNode n nl, [LabeledEdge e n el])
 
 mapNodeWithInOut ::
    (Edge e, Ord (e n), Ord n) =>
