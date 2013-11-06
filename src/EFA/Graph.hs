@@ -37,7 +37,7 @@ module EFA.Graph (
    delEdge,
    -- delEdges,
    -- delEdgeSet,
-   lefilter,
+   filterEdgeWithKey,
    mapEdgesMaybe,
    -- elfilter,
    -- propELFilter,
@@ -487,16 +487,16 @@ elfilter f g =
    delEdgeHelp g $ mapSnd Map.keys $ Map.partition f $ edgeLabels g
 -}
 
-lefilter ::
+filterEdgeWithKey ::
    (Edge e, Ord (e n), Ord n) =>
-   (LEdge e n el -> Bool) ->
+   (e n -> el -> Bool) ->
    Graph n e nl el -> Graph n e nl el
-lefilter f =
+filterEdgeWithKey f =
    Graph .
    fmap
       (\(ins, nl, outs) ->
-         (Map.filterWithKey (curry f) ins, nl,
-          Map.filterWithKey (curry f) outs)) .
+         (Map.filterWithKey f ins, nl,
+          Map.filterWithKey f outs)) .
    graphMap
 
 {- |
