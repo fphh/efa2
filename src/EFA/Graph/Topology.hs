@@ -51,9 +51,8 @@ plainFromFlow =
             Graph.EDirEdge de -> de
             Graph.EUnDirEdge ue -> Graph.DirEdge (Graph.from ue) (Graph.to ue))
 
-plainFromLabeled :: (Ord node) => LabeledTopology node -> Topology node
-plainFromLabeled =
-   Graph.mapNode (const ()) . Graph.mapEdge (const ())
+plainFromLabeled :: Graph node edge nl el -> Graph node edge () ()
+plainFromLabeled = Graph.mapNode (const ()) . Graph.mapEdge (const ())
 
 
 topologyEdgeFromDirEdge :: Graph.DirEdge node -> TopoIdx.Edge node

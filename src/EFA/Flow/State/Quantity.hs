@@ -272,9 +272,7 @@ stateMap =
 unitLabels ::
    FlowTopoPlain.Section n e sl nl el -> Graph.Graph n e () ()
 unitLabels =
-   Graph.mapEdge (const ()) .
-   Graph.mapNode (const ()) .
-   FlowTopo.topology
+   Topo.plainFromLabeled . FlowTopo.topology
 
 stateMapFromSequence ::
    (Ord node) =>
