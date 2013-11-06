@@ -33,6 +33,7 @@ module EFA.Flow.Topology.Quantity (
    lookupSum,
    lookupDTime,
    lookupSums,
+   lookupAutoDirSection,
 
    Lookup, lookup,
 
@@ -169,19 +170,19 @@ lookupX =
 
 lookupAutoDirSection ::
    Ord node =>
-   (Flow v -> v) ->
-   (Flow v -> v) ->
+   (Flow v -> x) ->
+   (Flow v -> x) ->
    (idx -> Idx.Edge node) ->
-   idx -> Section node v -> Maybe v
+   idx -> Section node v -> Maybe x
 lookupAutoDirSection fieldOut fieldIn unpackIdx idx =
    lookupAutoDir fieldOut fieldIn unpackIdx idx . FlowTopo.topology
 
 lookupAutoDir ::
    Ord node =>
-   (Flow v -> v) ->
-   (Flow v -> v) ->
+   (Flow v -> x) ->
+   (Flow v -> x) ->
    (idx -> Idx.Edge node) ->
-   idx -> Topology node v -> Maybe v
+   idx -> Topology node v -> Maybe x
 lookupAutoDir fieldOut fieldIn unpackIdx idx topo =
    case unpackIdx idx of
       se ->
