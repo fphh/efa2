@@ -29,8 +29,7 @@ module EFA.Graph (
    labNodes,
    labEdges,
    adjacentEdges,
-   pre, -- lpre, preEdgeLabels,
-   suc, -- lsuc, sucEdgeLabels,
+
    delNode,
    -- delNodes,
    delNodeSet,
@@ -360,42 +359,15 @@ labNodes = Map.toList . nodeLabels
 labEdges :: (Edge e, Ord (e n), Ord n) => Graph n e nl el -> [LEdge e n el]
 labEdges = Map.toList . edgeLabels
 
-pre, suc ::
+_pre, suc ::
    (Edge e, Ord (e n), Ord n) =>
    Graph n e nl el -> n -> [n]
-pre g n =
+_pre g n =
    Set.toList . Set.map from . Map.keysSet . fst3 .
    Map.findWithDefault (error "pre: unknown node") n . graphMap $ g
 suc g n =
    Set.toList . Set.map to . Map.keysSet . thd3 .
    Map.findWithDefault (error "suc: unknown node") n . graphMap $ g
-
-{-
-lpre, lsuc ::
-   (ConsEdge e, Ord (e n), Ord n) =>
-   Graph n e nl el -> n -> [LNode n el]
-lpre g@(Graph ns _els) n =
-   preEdgeLabels g n $
-   fst3 $ Map.findWithDefault (error "lpre: unknown node") n ns
-
-lsuc g@(Graph ns _els) n =
-   sucEdgeLabels g n $
-   thd3 $ Map.findWithDefault (error "lsuc: unknown node") n ns
-
-preEdgeLabels, sucEdgeLabels ::
-   (ConsEdge e, Ord (e n), Ord n) =>
-   Graph n e nl el -> n -> Set n -> [LNode n el]
-preEdgeLabels g n = filterLEdges (edgeLabels g) (flip Edge n)
-sucEdgeLabels g n = filterLEdges (edgeLabels g) (Edge n)
-
-filterLEdges ::
-   (Ord n, Ord e) =>
-   Map e el -> (n -> e) -> Set n -> [(n, el)]
-filterLEdges els edge =
-   Map.elems . Map.intersectionWith (flip (,)) els .
-   Map.mapKeys edge . MapU.fromSet id
--}
-
 
 adjacentEdges ::
    (Edge e, Ord (e n), Ord n) =>
