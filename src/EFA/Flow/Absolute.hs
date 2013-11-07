@@ -2,9 +2,10 @@ module EFA.Flow.Absolute (
    Expression, ExpressionIgnore,
    VariableSystem, VariableSystemIgnore,
    liftF, liftF2,
+   (=.=),
    ) where
 
-import EFA.Flow.EquationSystem (Expression, VariableSystem)
+import EFA.Flow.EquationSystem (Expression, VariableSystem, (=.=))
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
