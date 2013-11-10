@@ -88,7 +88,7 @@ plotList = [
   ("house", Signals.house)
   ]
 
-etaList :: [(String,(XIdx.PPos System.Node,XIdx.PPos System.Node,XIdx.PPos System.Node))]
+etaList :: [(String,(XIdx.Position System.Node,XIdx.Position System.Node,XIdx.Position System.Node))]
 etaList = [
   ("Coal", Signals.etaCoal),
   ("Gas", Signals.etaGas),

@@ -38,10 +38,10 @@ topologyFromEdges es =
 
 -- @HT neue Utility Funktionen für Topologie-Definition, bitte prüfen
 type EdgeLabel = String
-type PPosLabel = String
+type PositionLabel = String
 
-type LabeledEdgeList node = [(node, node, EdgeLabel, PPosLabel, PPosLabel)]
-type PPosLabelMap node = Map (TopoIdx.PPos node) String
+type LabeledEdgeList node = [(node, node, EdgeLabel, PositionLabel, PositionLabel)]
+type PositionLabelMap node = Map (TopoIdx.Position node) String
 
 
 topologyFromLabeledEdges ::

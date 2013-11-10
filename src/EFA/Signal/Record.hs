@@ -93,20 +93,20 @@ data Record s1 s2 t1 t2 id v d1 d2 =
 
 type SignalRecord v d = Record Signal Signal (Typ A T Tt) (Typ UT UT UT) SigId v d d
 
-type PowerRecord n v d = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (Idx.PPos n) v d d
+type PowerRecord n v d = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (Idx.Position n) v d d
 
-type FlowRecord n v d = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (Idx.PPos n) v d d
+type FlowRecord n v d = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (Idx.Position n) v d d
 
--- type CumFlowRecord n v d = Record Scalar Scalar (Typ A T Tt) (Typ A F Tt) (Idx.PPos n) v d d
+-- type CumFlowRecord n v d = Record Scalar Scalar (Typ A T Tt) (Typ A F Tt) (Idx.Position n) v d d
 
-type DTimeFlowRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (Idx.PPos n) v d d
+type DTimeFlowRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (Idx.Position n) v d d
 
-type DTimePowerRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A P Tt) (Idx.PPos n) v d d
+type DTimePowerRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A P Tt) (Idx.Position n) v d d
 
 
-type DistRecord n v d = Record FDistrib FDistrib (Typ UT UT UT) (Typ A F Tt) (Idx.PPos n) v ([S.Class d], [S.SignalIdx]) d
+type DistRecord n v d = Record FDistrib FDistrib (Typ UT UT UT) (Typ A F Tt) (Idx.Position n) v ([S.Class d], [S.SignalIdx]) d
 
--- data DistRecord n v d = DistRecord (UTDistr v ([S.Class d], [S.SignalIdx])) (Map (Idx.PPos n) (FDistr v d))
+-- data DistRecord n v d = DistRecord (UTDistr v ([S.Class d], [S.SignalIdx])) (Map (Idx.Position n) (FDistr v d))
 
 
 class (Ord id) => Index id where
@@ -115,8 +115,8 @@ class (Ord id) => Index id where
 instance Index SigId where
    formatIndex (SigId str) = str
 
-instance Node.C node => Index (Idx.PPos node) where
-   formatIndex (Idx.PPos se) =
+instance Node.C node => Index (Idx.Position node) where
+   formatIndex (Idx.Position se) =
       Format.unUnicode $
       formatTopologyEdge (Format.literal "ppos") se
 
@@ -279,7 +279,7 @@ genPowerRecord ::
   ( Show (v d), V.Zipper v, V.Walker v,
     V.Storage v d, Product d, Ord node) =>
   TSignal v d ->
-  [(Idx.PPos node, UTSignal v d, UTSignal v d)] ->
+  [(Idx.Position node, UTSignal v d, UTSignal v d)] ->
   PowerRecord node v d
 genPowerRecord time =
    Record time .
@@ -654,7 +654,7 @@ powerToSignal (Record time m) =
 -- | Plot Records with readible keys
 powerToSignalWithFunct ::
    (Ord node, Show node, Show (v d)) =>
-   (Idx.PPos node -> SigId) -> PowerRecord node v d -> SignalRecord v d
+   (Idx.Position node -> SigId) -> PowerRecord node v d -> SignalRecord v d
 powerToSignalWithFunct funct rec = map S.untype $ mapKeys funct rec
 
 -- | Combine a power and a signal record together in a signal record (plotting)
@@ -666,7 +666,7 @@ combinePowerAndSignalWithFunction :: (Eq (v d),
                                       Ord node,
                                       Show (v d),
                                       Show node) =>
-                                     (Idx.PPos node -> SigId) -> PowerRecord node v d -> SignalRecord v d -> SignalRecord v d
+                                     (Idx.Position node -> SigId) -> PowerRecord node v d -> SignalRecord v d -> SignalRecord v d
 combinePowerAndSignalWithFunction funct pr sr = union (powerToSignalWithFunct funct pr) sr
 
 -- | Add Record name to SigId -- can be used for plotting multiple records in one window
@@ -696,7 +696,7 @@ distribution :: (V.FromList v,
                  Constant d,
                  V.Find v,
                  Node.C n,
-                 Show (v d)) => FlowRecord n v d -> [Idx.PPos n] -> d -> d -> DistRecord n v d
+                 Show (v d)) => FlowRecord n v d -> [Idx.Position n] -> d -> d -> DistRecord n v d
 distribution rec@(Record _ pMap) xs interval offset = Record classification energyDistribution
   where classification =
            S.combineDistributions $

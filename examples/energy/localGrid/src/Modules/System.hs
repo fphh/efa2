@@ -74,19 +74,19 @@ edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
             (Sun, LocalNetwork, "SolarPlant", "SunLight", "elSolar")]
 
 
-powerPositonNames :: Map (XIdx.PPos Node) SigId
+powerPositonNames :: Map (XIdx.Position Node) SigId
 powerPositonNames = Map.fromList $ concat $ map f edgeList
   where f (n1,n2,_,l1,l2) = [(XIdx.ppos n1 n2, SigId $ "Power-"++l1),
                              (XIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
-showPowerId :: XIdx.PPos Node -> String
+showPowerId :: XIdx.Position Node -> String
 showPowerId ppos = f (Map.lookup ppos powerPositonNames)
   where
     f (Just sid) = show sid
     f Nothing = show ppos
 
 
-convertPowerId :: XIdx.PPos Node -> SigId
+convertPowerId :: XIdx.Position Node -> SigId
 convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
   where
     f (Just sid) = sid

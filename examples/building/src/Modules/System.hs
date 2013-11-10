@@ -65,7 +65,7 @@ edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
                (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
 
 
-powerPositonNames :: Map (TopoIdx.PPos Node) SigId
+powerPositonNames :: Map (TopoIdx.Position Node) SigId
 powerPositonNames = Map.fromList $ concatMap f edgeList
   where f (n1,n2,_,l1,l2) = [(TopoIdx.ppos n1 n2, SigId $ "Power-"++l1),
                              (TopoIdx.ppos n2 n1, SigId $ "Power-"++l2)]

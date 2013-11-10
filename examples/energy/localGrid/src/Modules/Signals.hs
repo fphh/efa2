@@ -221,21 +221,21 @@ xyMotor :: (SigId,SigId)
 xyMotor = (SigId "motor._speed_log", SigId "motor._torque_log")
 -}
 
-etaWind :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaWind :: (XIdx.Position Node,XIdx.Position Node,XIdx.Position Node)
 etaWind = (XIdx.ppos Wind Network, XIdx.ppos Network Wind, XIdx.ppos Wind Network)
 
-etaSolar :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaSolar :: (XIdx.Position Node,XIdx.Position Node,XIdx.Position Node)
 etaSolar = (XIdx.ppos Sun LocalNetwork, XIdx.ppos LocalNetwork Sun, XIdx.ppos Sun LocalNetwork)
 
-etaWater :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaWater :: (XIdx.Position Node,XIdx.Position Node,XIdx.Position Node)
 etaWater = (XIdx.ppos Water Network, XIdx.ppos Network Water, XIdx.ppos Water Network)
 
-etaGas :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaGas :: (XIdx.Position Node,XIdx.Position Node,XIdx.Position Node)
 etaGas = (XIdx.ppos Gas Network, XIdx.ppos Network Gas, XIdx.ppos Gas Network)
 
-etaCoal :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaCoal :: (XIdx.Position Node,XIdx.Position Node,XIdx.Position Node)
 etaCoal = (XIdx.ppos Coal Network, XIdx.ppos Network Coal, XIdx.ppos Coal Network)
 
-etaTransformer :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaTransformer :: (XIdx.Position Node,XIdx.Position Node,XIdx.Position Node)
 etaTransformer = (XIdx.ppos Network LocalNetwork, XIdx.ppos LocalNetwork Network, XIdx.ppos Network LocalNetwork)
 

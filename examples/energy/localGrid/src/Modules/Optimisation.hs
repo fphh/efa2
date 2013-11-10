@@ -198,7 +198,7 @@ givenSimulate etaAssign etaFunc sf =
            <> etaGiven (etaAssign sec) etaFunc
            <> Fold.fold
                 (Map.mapWithKey (\ppos p ->
-                  XIdx.powerFromPPos sec ppos .= Sig.unpack p) xs)
+                  XIdx.powerFromPosition sec ppos .= Sig.unpack p) xs)
 
 
 -- | Avoid invalid solution by assigning NaN, which hits last in maximum

@@ -66,8 +66,8 @@ sum :: Idx.State -> TopoIdx.Direction -> node -> Sum node
 sum sec dir = Idx.InPart sec . TopoIdx.Sum dir
 
 
-powerFromPPos :: Idx.State -> TopoIdx.PPos node -> Power node
-powerFromPPos state (TopoIdx.PPos e) = Idx.InPart state $ TopoIdx.Power e
+powerFromPosition :: Idx.State -> TopoIdx.Position node -> Power node
+powerFromPosition state (TopoIdx.Position e) = Idx.InPart state $ TopoIdx.Power e
 
 
 initSection :: Idx.Init Idx.State

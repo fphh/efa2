@@ -85,7 +85,7 @@ plotList = [
   ]
 
 -- List of Operation Point Plots
-etaList :: [(String,(TopoIdx.PPos System.Node,TopoIdx.PPos System.Node,TopoIdx.PPos System.Node))]
+etaList :: [(String,(TopoIdx.Position System.Node,TopoIdx.Position System.Node,TopoIdx.Position System.Node))]
 etaList = [
   ("Engine and Generator", Signals.etaEngineGenerator),
   ("Motor and Gearbox", Signals.etaMotorGearbox)

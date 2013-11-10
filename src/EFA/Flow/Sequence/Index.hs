@@ -101,11 +101,11 @@ stOutSum sec =
 storage :: Idx.Boundary -> node -> Storage node
 storage = Idx.ForStorage . StorageIdx.Content
 
-powerFromPPos :: Idx.Section -> TopoIdx.PPos node -> Power node
-powerFromPPos sec (TopoIdx.PPos e) = Idx.InPart sec $ TopoIdx.Power e
+powerFromPosition :: Idx.Section -> TopoIdx.Position node -> Power node
+powerFromPosition sec (TopoIdx.Position e) = Idx.InPart sec $ TopoIdx.Power e
 
-energyFromPPos :: Idx.Section -> TopoIdx.PPos node -> Energy node
-energyFromPPos sec (TopoIdx.PPos e) = Idx.InPart sec $ TopoIdx.Energy e
+energyFromPosition :: Idx.Section -> TopoIdx.Position node -> Energy node
+energyFromPosition sec (TopoIdx.Position e) = Idx.InPart sec $ TopoIdx.Energy e
 
 
 initSection :: PartIdx.InitOrSection

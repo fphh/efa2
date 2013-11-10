@@ -168,15 +168,15 @@ optimalEtasWithPowers params forceFactor env =
         etaMap = One.etaMap params
 
         f :: Idx.State ->
-             [TopoIdx.PPos Node] ->
-             Map (TopoIdx.PPos Node) (Map (Param2 Double) (Double, Double))
+             [TopoIdx.Position Node] ->
+             Map (TopoIdx.Position Node) (Map (Param2 Double) (Double, Double))
         f state = Map.fromList . map (\p -> (p, h p optEtaEnv))
           where h ppos =
                    Map.mapMaybe (fmap (fmap
                       (AppUt.checkDetermined "optimalEtasWithPowers" .
                        Var.checkedLookup "optimalEtasWithPowers"
                        StateFlow.lookup
-                          (StateIdx.powerFromPPos state ppos))))
+                          (StateIdx.powerFromPosition state ppos))))
 
                 solveFunc :: Optimisation.Param2x2 Double -> EnvResult Double
                 solveFunc =
@@ -244,10 +244,10 @@ to2DMatrix =
   Map.mapKeysWith (++) NonEmpty.head . fmap (:[])
 
 optimalMaps :: (Ord a, Ord (f a), Ord node) =>
-  Map Idx.State (Map (TopoIdx.PPos node) (Map (NonEmpty.T f a) (a, a))) ->
+  Map Idx.State (Map (TopoIdx.Position node) (Map (NonEmpty.T f a) (a, a))) ->
   ( Sig.NSignal2 V.Vector V.Vector a,
     Sig.UTSignal2 V.Vector V.Vector Idx.State,
-    Map (TopoIdx.PPos node) (Sig.PSignal2 V.Vector V.Vector a) )
+    Map (TopoIdx.Position node) (Sig.PSignal2 V.Vector V.Vector a) )
 optimalMaps =
   (\(eta, st, power) -> (head $ Map.elems eta, head $ Map.elems st, power))
   . unzip3Map
@@ -263,7 +263,7 @@ optimalMaps =
 givenSignals ::
   Ord node =>
   Sig.TSignal [] Double ->
-  Map (TopoIdx.PPos node) (Sig.PSignal [] Double) ->
+  Map (TopoIdx.Position node) (Sig.PSignal [] Double) ->
   Record.PowerRecord node [] Double
 givenSignals time =
   Chop.addZeroCrossings . Record.Record time
@@ -293,7 +293,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap stateFlowGraph = do
       (_optEta, _optState, optPower) = optimalMaps optEtaWithPowers
 
       optPowerInterp ::
-        Map (TopoIdx.PPos Node) (Sig.PSignal [] Double)
+        Map (TopoIdx.Position Node) (Sig.PSignal [] Double)
       optPowerInterp =
         for optPower $ \powerStateOpt ->
           Sig.tzipWith

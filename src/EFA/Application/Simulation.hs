@@ -73,7 +73,7 @@ givenSimulate topo etaAssign etaFunc (Record.Record t xs) =
    <> makeEtaFuncGiven topo etaAssign etaFunc
    <> Fold.fold (Map.mapWithKey f xs)
    where
-     f ppos p  =  XIdx.powerFromPPos ppos .= Sig.unpack p
+     f ppos p  =  XIdx.powerFromPosition ppos .= Sig.unpack p
 
 
 -- | Generate given equations using efficiency curves or functions for a specified section

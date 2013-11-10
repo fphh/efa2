@@ -40,7 +40,7 @@ s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
 n :: Int
 n = 2
 
-pMap :: Map (XIdx.PPos Int) PSigL
+pMap :: Map (XIdx.Position Int) PSigL
 pMap =
    Map.fromListWith (error "duplicate keys") $
       (XIdx.ppos 0 1, mkSigEnd n s01) :

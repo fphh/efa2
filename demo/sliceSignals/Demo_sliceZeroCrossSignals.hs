@@ -34,7 +34,7 @@ t = "zero crossing"
 p :: Signal.TC s t (Data ([] :> Nil) Double)
 p = Signal.fromList [2, 2, 2, -2, -2]
 
-pmap :: Map (XIdx.PPos Node) (Signal.TC s t (Data ([] :> Nil) Double))
+pmap :: Map (XIdx.Position Node) (Signal.TC s t (Data ([] :> Nil) Double))
 pmap = Map.fromListWith
          (error "duplicate keys")
          [(XIdx.ppos node0 node1,  p)]
@@ -43,7 +43,7 @@ pmap = Map.fromListWith
 titleList :: [String]
 titleList = [t]
 
-pmapList :: [Map (XIdx.PPos Node) (Signal.TC s t (Data ([] :> Nil) Double))]
+pmapList :: [Map (XIdx.Position Node) (Signal.TC s t (Data ([] :> Nil) Double))]
 pmapList = [pmap]
 
 recList :: [PowerRecord Node [] Double]

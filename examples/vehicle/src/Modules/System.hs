@@ -71,15 +71,15 @@ edgeList = [(Tank, ConBattery, "Engine&Generator", "Fuel","GeneratorClamps"),
             (Chassis, VehicleInertia,"ToIntertia","ToInertia", "ToInertia")]
 
 
-powerPositonNames :: Map (TopoIdx.PPos Node) SigId
+powerPositonNames :: Map (TopoIdx.Position Node) SigId
 powerPositonNames = Map.fromList $ concat $ map f edgeList
   where f (n1,n2,_,l1,l2) = [(TopoIdx.ppos n1 n2, SigId $ "Power-"++l1),
                              (TopoIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
-showPowerId :: TopoIdx.PPos Node -> String
+showPowerId :: TopoIdx.Position Node -> String
 showPowerId ppos =
   maybe (show ppos) show $ Map.lookup  ppos powerPositonNames
 
-convertPowerId :: TopoIdx.PPos Node -> SigId
+convertPowerId :: TopoIdx.Position Node -> SigId
 convertPowerId ppos =
   Map.findWithDefault (SigId $ show ppos) ppos powerPositonNames

@@ -33,7 +33,7 @@ data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 data DTime node = DTime deriving (Show, Ord, Eq)
 
 -- | Indices for Power Position
-newtype PPos node = PPos (Edge node) deriving (Show, Read, Ord, Eq)
+newtype Position node = Position (Edge node) deriving (Show, Read, Ord, Eq)
 
 
 data Edge node = Edge node node
@@ -53,8 +53,8 @@ instance Flip Power where
 instance Flip Energy where
    flip (Energy p) = Energy $ flip p
 
-instance Flip PPos where
-   flip (PPos p) = PPos $ flip p
+instance Flip Position where
+   flip (Position p) = Position $ flip p
 
 
 instance TC.Eq Edge where eq = (==)
@@ -66,9 +66,9 @@ instance (QC.Arbitrary node) => QC.Arbitrary (Edge node) where
    shrink (Edge from to) =
       map (uncurry Edge) $ QC.shrink (from, to)
 
-instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
-   arbitrary = fmap PPos QC.arbitrary
-   shrink (PPos p) = map PPos $ QC.shrink p
+instance (QC.Arbitrary node) => QC.Arbitrary (Position node) where
+   arbitrary = fmap Position QC.arbitrary
+   shrink (Position p) = map Position $ QC.shrink p
 
 
 energy :: node -> node -> Energy node
@@ -99,14 +99,14 @@ inSum  = sum In
 outSum = sum Out
 
 
-ppos :: node -> node -> PPos node
-ppos a b = PPos $ Edge a b
+ppos :: node -> node -> Position node
+ppos a b = Position $ Edge a b
 
-powerFromPPos :: PPos node -> Power node
-powerFromPPos (PPos e) = Power e
+powerFromPosition :: Position node -> Power node
+powerFromPosition (Position e) = Power e
 
-energyFromPPos :: PPos node -> Energy node
-energyFromPPos (PPos e) = Energy e
+energyFromPosition :: Position node -> Energy node
+energyFromPosition (Position e) = Energy e
 
 
 class Identifier idx where

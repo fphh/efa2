@@ -168,7 +168,7 @@ calculatePower rec = pRec
 -- ## Signalgroups for Plotting
 
 
-vehPowers :: [XIdx.PPos Node]
+vehPowers :: [XIdx.Position Node]
 vehPowers = [XIdx.ppos Chassis VehicleInertia,
              XIdx.ppos Chassis RearBrakes,
              XIdx.ppos ConFrontBrakes FrontBrakes,
@@ -251,14 +251,14 @@ xyMotor :: (SigId,SigId)
 xyMotor = (SigId "motor._speed_log", SigId "motor._torque_log")
 
 etaEngineGenerator ::
-   (XIdx.PPos Node, XIdx.PPos Node, XIdx.PPos Node)
+   (XIdx.Position Node, XIdx.Position Node, XIdx.Position Node)
 etaEngineGenerator =
    (XIdx.ppos Tank ConBattery,
     XIdx.ppos ConBattery Tank,
     XIdx.ppos ConBattery Tank)
 
 etaMotorGearbox ::
-   (XIdx.PPos Node, XIdx.PPos Node, XIdx.PPos Node)
+   (XIdx.Position Node, XIdx.Position Node, XIdx.Position Node)
 etaMotorGearbox =
    (XIdx.ppos ConES ConFrontBrakes,
     XIdx.ppos ConFrontBrakes ConES,

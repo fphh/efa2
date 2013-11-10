@@ -500,7 +500,7 @@ etaDistr1DimfromRecordList ::
     SV.Singleton v) =>
    String  -> d -> d ->
    [(Record.Name, Record.DTimeFlowRecord node v d)] ->
-   (String, (TopoIdx.PPos node, TopoIdx.PPos node, TopoIdx.PPos node)) -> IO ()
+   (String, (TopoIdx.Position node, TopoIdx.Position node, TopoIdx.Position node)) -> IO ()
 
 etaDistr1DimfromRecordList ti  interval offset rList  (plotTitle, (idIn,idOut,idAbscissa)) = mapM_ f rList
   where f (Record.Name recTitle, rec) = do

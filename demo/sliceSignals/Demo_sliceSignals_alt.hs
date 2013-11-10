@@ -31,7 +31,7 @@ p1, p2 :: S.TC s t (Data ([] :> Nil) Double)
 p1 = S.fromList [1,0,0,1,0,0]
 p2 = S.fromList [1,0,1,1,1,0]
 
-pmap :: Map (XIdx.PPos Node) (S.TC s t (Data ([] :> Nil) Double))
+pmap :: Map (XIdx.Position Node) (S.TC s t (Data ([] :> Nil) Double))
 pmap = Map.fromListWith
          (error "duplicate keys")
          [(XIdx.ppos node0 node1, p1),(XIdx.ppos node1 node0, p2)]
