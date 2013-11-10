@@ -58,15 +58,15 @@ checkedZipWith caller f g h
       (Graph.checkedZipWith caller g h gr0 gr1)
 
 
-lookupEdge ::
+lookupPosition ::
    Ord n =>
    (el -> a) ->
-   TopoIdx.Edge n ->
+   TopoIdx.Position n ->
    Graph n Graph.EitherEdge nl (Maybe el) ->
    Maybe a
-lookupEdge f se =
-   fmap (maybe (error "lookupEdge: directed edge must have Just label") f) .
-   Graph.lookupEdge (Graph.EDirEdge $ Topo.dirEdgeFromTopologyEdge se)
+lookupPosition f se =
+   fmap (maybe (error "lookupPosition: directed edge must have Just label") f) .
+   Graph.lookupEdge (Graph.EDirEdge $ Topo.dirEdgeFromPosition se)
 
 
 liftEdgeFlow ::

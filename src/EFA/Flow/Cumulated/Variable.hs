@@ -5,7 +5,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
-          (FormatValue, formatValue, formatTopologyLink)
+          (FormatValue, formatValue, formatTopologySubscript)
 
 import Data.Maybe (fromMaybe)
 
@@ -64,19 +64,19 @@ instance FormatIndex Idx.Sum where
 
 instance FormatIndex Idx.DTime where
    formatIndex (Idx.DTime e) =
-      Format.subscript Format.dtime $ formatTopologyLink e
+      Format.subscript Format.dtime $ formatTopologySubscript e
 
 instance FormatIndex Idx.Eta where
    formatIndex (Idx.Eta se) =
-      Format.subscript Format.eta $ formatTopologyLink se
+      Format.subscript Format.eta $ formatTopologySubscript se
 
 
 formatEdge ::
    (Format output, Node.C node) =>
-   output -> Idx.Direction -> Idx.Edge node -> output
+   output -> Idx.Direction -> Idx.Position node -> output
 formatEdge e d se =
    Format.subscript e $
-   Idx.formatDirection d `Format.connect` formatTopologyLink se
+   Idx.formatDirection d `Format.connect` formatTopologySubscript se
 
 
 checkedLookup ::

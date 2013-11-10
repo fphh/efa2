@@ -76,29 +76,29 @@ formatPartNode (Idx.PartNode s n) =
    PartIdx.format s `Format.sectionNode` Node.subscript n
 
 
-formatTopologyLink ::
+formatTopologySubscript ::
    (Format output, Node.C node) =>
-   TopoIdx.Edge node -> output
-formatTopologyLink (TopoIdx.Edge x y) =
+   TopoIdx.Position node -> output
+formatTopologySubscript (TopoIdx.Position x y) =
    Node.subscript x `Format.link` Node.subscript y
 
-formatTopologyEdge ::
+formatTopologyPosition ::
    (Format output, Node.C node) =>
-   output -> TopoIdx.Edge node -> output
-formatTopologyEdge e se =
-   Format.subscript e $ formatTopologyLink se
+   output -> TopoIdx.Position node -> output
+formatTopologyPosition e se =
+   Format.subscript e $ formatTopologySubscript se
 
 instance (Node.C node) => FormatValue (TopoIdx.Energy node) where
-   formatValue (TopoIdx.Energy e) = formatTopologyEdge Format.energy e
+   formatValue (TopoIdx.Energy e) = formatTopologyPosition Format.energy e
 
 instance (Node.C node) => FormatValue (TopoIdx.Power node) where
-   formatValue (TopoIdx.Power e) = formatTopologyEdge Format.power e
+   formatValue (TopoIdx.Power e) = formatTopologyPosition Format.power e
 
 instance (Node.C node) => FormatValue (TopoIdx.Eta node) where
-   formatValue (TopoIdx.Eta e) = formatTopologyEdge Format.eta e
+   formatValue (TopoIdx.Eta e) = formatTopologyPosition Format.eta e
 
 instance (Node.C node) => FormatValue (TopoIdx.X node) where
-   formatValue (TopoIdx.X e) = formatTopologyEdge Format.xfactor e
+   formatValue (TopoIdx.X e) = formatTopologyPosition Format.xfactor e
 
 instance (Node.C node) => FormatValue (TopoIdx.DTime node) where
    formatValue TopoIdx.DTime = Format.dtime
@@ -111,10 +111,10 @@ instance (Node.C node) => FormatValue (TopoIdx.Sum node) where
 
 formatTopologySecEdge ::
    (Format output, PartIdx.Format part, Node.C node) =>
-   output -> TopoIdx.Edge node -> part -> output
+   output -> TopoIdx.Position node -> part -> output
 formatTopologySecEdge e se s =
    Format.subscript e $
-   PartIdx.format s `Format.sectionNode` formatTopologyLink se
+   PartIdx.format s `Format.sectionNode` formatTopologySubscript se
 
 
 instance FormatSignalIndex TopoIdx.Energy where

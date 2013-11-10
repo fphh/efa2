@@ -13,16 +13,16 @@ import Prelude hiding (init, flip, sum)
 
 
 -- | Energy variables
-newtype Energy node = Energy (Edge node) deriving (Show, Ord, Eq)
+newtype Energy node = Energy (Position node) deriving (Show, Ord, Eq)
 
 -- | Power variables
-newtype Power node = Power (Edge node) deriving (Show, Ord, Eq)
+newtype Power node = Power (Position node) deriving (Show, Ord, Eq)
 
 -- | Efficiency variables
-newtype Eta node = Eta (Edge node) deriving (Show, Ord, Eq)
+newtype Eta node = Eta (Position node) deriving (Show, Ord, Eq)
 
 -- | Splitting factors
-newtype X node = X (Edge node) deriving (Show, Ord, Eq)
+newtype X node = X (Position node) deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
@@ -32,19 +32,15 @@ data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 -- | Delta time variables
 data DTime node = DTime deriving (Show, Ord, Eq)
 
--- | Indices for Power Position
-newtype Position node = Position (Edge node) deriving (Show, Read, Ord, Eq)
+-- | Index for Measurement Position
+data Position node = Position node node deriving (Show, Read, Eq, Ord)
 
 
-data Edge node = Edge node node
-   deriving (Show, Read, Eq, Ord)
+class Flip pos where
+   flip :: pos node -> pos node
 
-
-class Flip edge where
-   flip :: edge node -> edge node
-
-instance Flip Edge where
-   flip (Edge from to) = Edge to from
+instance Flip Position where
+   flip (Position from to) = Position to from
 
 
 instance Flip Power where
@@ -53,22 +49,15 @@ instance Flip Power where
 instance Flip Energy where
    flip (Energy p) = Energy $ flip p
 
-instance Flip Position where
-   flip (Position p) = Position $ flip p
 
-
-instance TC.Eq Edge where eq = (==)
-instance TC.Ord Edge where cmp = compare
-instance TC.Show Edge where showsPrec = showsPrec
-
-instance (QC.Arbitrary node) => QC.Arbitrary (Edge node) where
-   arbitrary = liftM2 Edge QC.arbitrary QC.arbitrary
-   shrink (Edge from to) =
-      map (uncurry Edge) $ QC.shrink (from, to)
+instance TC.Eq Position where eq = (==)
+instance TC.Ord Position where cmp = compare
+instance TC.Show Position where showsPrec = showsPrec
 
 instance (QC.Arbitrary node) => QC.Arbitrary (Position node) where
-   arbitrary = fmap Position QC.arbitrary
-   shrink (Position p) = map Position $ QC.shrink p
+   arbitrary = liftM2 Position QC.arbitrary QC.arbitrary
+   shrink (Position from to) =
+      map (uncurry Position) $ QC.shrink (from, to)
 
 
 energy :: node -> node -> Energy node
@@ -76,16 +65,16 @@ power :: node -> node -> Power node
 eta :: node -> node -> Eta node
 x :: node -> node -> X node
 
-energy    = edge Energy
-power     = edge Power
-eta       = edge Eta
-x         = edge X
+energy    = position Energy
+power     = position Power
+eta       = position Eta
+x         = position X
 
-edge ::
-   (Edge node -> idx node) ->
+position ::
+   (Position node -> idx node) ->
    node -> node -> idx node
-edge mkIdx from to =
-   mkIdx $ Edge from to
+position mkIdx from to =
+   mkIdx $ Position from to
 
 
 dTime :: DTime node
@@ -100,13 +89,13 @@ outSum = sum Out
 
 
 ppos :: node -> node -> Position node
-ppos a b = Position $ Edge a b
+ppos = Position
 
 powerFromPosition :: Position node -> Power node
-powerFromPosition (Position e) = Power e
+powerFromPosition = Power
 
 energyFromPosition :: Position node -> Energy node
-energyFromPosition (Position e) = Energy e
+energyFromPosition = Energy
 
 
 class Identifier idx where

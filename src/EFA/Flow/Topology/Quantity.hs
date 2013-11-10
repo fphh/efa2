@@ -172,7 +172,7 @@ lookupAutoDirSection ::
    Ord node =>
    (Flow v -> x) ->
    (Flow v -> x) ->
-   (idx -> Idx.Edge node) ->
+   (idx -> Idx.Position node) ->
    idx -> Section node v -> Maybe x
 lookupAutoDirSection fieldOut fieldIn unpackIdx idx =
    lookupAutoDir fieldOut fieldIn unpackIdx idx . FlowTopo.topology
@@ -181,18 +181,18 @@ lookupAutoDir ::
    Ord node =>
    (Flow v -> x) ->
    (Flow v -> x) ->
-   (idx -> Idx.Edge node) ->
+   (idx -> Idx.Position node) ->
    idx -> Topology node v -> Maybe x
 lookupAutoDir fieldOut fieldIn unpackIdx idx topo =
    case unpackIdx idx of
       se ->
          mplus
-            (FlowTopo.lookupEdge fieldOut se topo)
-            (FlowTopo.lookupEdge fieldIn (Idx.flip se) topo)
+            (FlowTopo.lookupPosition fieldOut se topo)
+            (FlowTopo.lookupPosition fieldIn (Idx.flip se) topo)
 
 
 lookupEta :: (Ord node) => Idx.Eta node -> Section node v -> Maybe v
-lookupEta (Idx.Eta se) = FlowTopo.lookupEdge flowEta se . FlowTopo.topology
+lookupEta (Idx.Eta se) = FlowTopo.lookupPosition flowEta se . FlowTopo.topology
 
 lookupSum :: (Ord node) => Idx.Sum node -> Section node v -> Maybe v
 lookupSum (Idx.Sum dir node) s = do
@@ -260,7 +260,7 @@ mapFlowWithVar ::
    Graph.DirEdge node -> Flow v0 -> Flow v1
 mapFlowWithVar f e =
    liftA2 f
-      (flowVars <*> pure (Topo.topologyEdgeFromDirEdge e))
+      (flowVars <*> pure (Topo.positionFromDirEdge e))
 
 
 sectionFromPlain ::
@@ -364,7 +364,7 @@ traverseSums f (Sums i o) =
       (traverse f o)
 
 
-flowVars :: Flow (Idx.Edge node -> Var.Signal node)
+flowVars :: Flow (Idx.Position node -> Var.Signal node)
 flowVars =
    Flow {
       flowPowerOut = Var.index . Idx.Power,

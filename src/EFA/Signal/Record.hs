@@ -45,7 +45,7 @@ import qualified EFA.Flow.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (formatTopologyEdge)
+import EFA.Report.FormatValue (formatTopologyPosition)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import EFA.Report.Typ (TDisp, getDisplayTypName)
@@ -116,9 +116,9 @@ instance Index SigId where
    formatIndex (SigId str) = str
 
 instance Node.C node => Index (Idx.Position node) where
-   formatIndex (Idx.Position se) =
-      Format.unUnicode $
-      formatTopologyEdge (Format.literal "ppos") se
+   formatIndex =
+      Format.unUnicode .
+      formatTopologyPosition (Format.literal "pos")
 
 formatIndexSet :: (Index id) => Set id -> String
 formatIndexSet =

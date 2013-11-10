@@ -114,12 +114,12 @@ main =
                 Map.mapWithKey
                    (FlowTopo.liftEdgeFlow $
                     \e flow ->
-                       case Topo.topologyEdgeFromDirEdge e of
-                          se ->
-                             Map.singleton (XIdx.Position se)
+                       case Topo.positionFromDirEdge e of
+                          pos ->
+                             Map.singleton pos
                                 (FlowTopo.flowEnergyOut flow)
                              <>
-                             Map.singleton (XIdx.Position $ XIdx.flip se)
+                             Map.singleton (XIdx.flip pos)
                                 (FlowTopo.flowEnergyIn flow)) $
                 Graph.edgeLabels flowTopo
 

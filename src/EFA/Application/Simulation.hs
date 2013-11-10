@@ -33,7 +33,7 @@ import Data.Map (Map)
 import Data.Monoid((<>))
 
 
-type EtaAssignMap node = Map (XIdx.Edge node) (String, String)
+type EtaAssignMap node = Map (XIdx.Position node) (String, String)
 
 solve :: (Node.C node,
           Eq (v a), Show (v a),
@@ -97,7 +97,7 @@ makeEtaFuncGiven topo etaAssign etaFunc =
 
 etaFromEdge ::
    Node.C node =>
-   FlowTopo.Section node v -> XIdx.Edge node -> XIdx.Eta node
+   FlowTopo.Section node v -> XIdx.Position node -> XIdx.Eta node
 etaFromEdge topo se =
    let etaF = XIdx.Eta se
        etaB = XIdx.Eta $ XIdx.flip se

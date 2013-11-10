@@ -31,16 +31,16 @@ power :: Idx.Section -> node -> node -> Power node
 eta :: Idx.Section -> node -> node -> Eta node
 x :: Idx.Section -> node -> node -> X node
 
-energy    = topologyEdge TopoIdx.Energy
-power     = topologyEdge TopoIdx.Power
-eta       = topologyEdge TopoIdx.Eta
-x         = topologyEdge TopoIdx.X
+energy    = position TopoIdx.Energy
+power     = position TopoIdx.Power
+eta       = position TopoIdx.Eta
+x         = position TopoIdx.X
 
-topologyEdge ::
-   (TopoIdx.Edge node -> idx node) ->
+position ::
+   (TopoIdx.Position node -> idx node) ->
    Idx.Section -> node -> node -> Idx.InSection idx node
-topologyEdge mkIdx s from to =
-   Idx.InPart s $ mkIdx $ TopoIdx.Edge from to
+position mkIdx s from to =
+   Idx.InPart s $ mkIdx $ TopoIdx.Position from to
 
 
 dTime :: Idx.Section -> DTime node
@@ -102,10 +102,10 @@ storage :: Idx.Boundary -> node -> Storage node
 storage = Idx.ForStorage . StorageIdx.Content
 
 powerFromPosition :: Idx.Section -> TopoIdx.Position node -> Power node
-powerFromPosition sec (TopoIdx.Position e) = Idx.InPart sec $ TopoIdx.Power e
+powerFromPosition sec e = Idx.InPart sec $ TopoIdx.Power e
 
 energyFromPosition :: Idx.Section -> TopoIdx.Position node -> Energy node
-energyFromPosition sec (TopoIdx.Position e) = Idx.InPart sec $ TopoIdx.Energy e
+energyFromPosition sec e = Idx.InPart sec $ TopoIdx.Energy e
 
 
 initSection :: PartIdx.InitOrSection

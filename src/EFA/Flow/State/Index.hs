@@ -31,16 +31,16 @@ power :: Idx.State -> node -> node -> Power node
 eta :: Idx.State -> node -> node -> Eta node
 x :: Idx.State -> node -> node -> X node
 
-energy    = topologyEdge TopoIdx.Energy
-power     = topologyEdge TopoIdx.Power
-eta       = topologyEdge TopoIdx.Eta
-x         = topologyEdge TopoIdx.X
+energy    = position TopoIdx.Energy
+power     = position TopoIdx.Power
+eta       = position TopoIdx.Eta
+x         = position TopoIdx.X
 
-topologyEdge ::
-   (TopoIdx.Edge node -> idx node) ->
+position ::
+   (TopoIdx.Position node -> idx node) ->
    Idx.State -> node -> node -> Idx.InState idx node
-topologyEdge mkIdx s from to =
-   Idx.InPart s $ mkIdx $ TopoIdx.Edge from to
+position mkIdx s from to =
+   Idx.InPart s $ mkIdx $ TopoIdx.Position from to
 
 
 stX ::
@@ -67,7 +67,7 @@ sum sec dir = Idx.InPart sec . TopoIdx.Sum dir
 
 
 powerFromPosition :: Idx.State -> TopoIdx.Position node -> Power node
-powerFromPosition state (TopoIdx.Position e) = Idx.InPart state $ TopoIdx.Power e
+powerFromPosition state pos = Idx.InPart state $ TopoIdx.Power pos
 
 
 initSection :: Idx.Init Idx.State

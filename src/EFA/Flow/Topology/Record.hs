@@ -97,10 +97,10 @@ sectionToPowerRecord (FlowTopoPlain.Section time topo) =
    Map.elems $
    Map.mapWithKey
       (\e flow ->
-         let se = Topo.topologyEdgeFromDirEdge e
+         let pos = Topo.positionFromDirEdge e
          in  Map.fromList $
-                (Idx.Position se, Signal.TC $ FlowTopo.flowPowerOut flow) :
-                (Idx.Position $ Idx.flip se, Signal.TC $ FlowTopo.flowPowerIn flow) :
+                (pos, Signal.TC $ FlowTopo.flowPowerOut flow) :
+                (Idx.flip pos, Signal.TC $ FlowTopo.flowPowerIn flow) :
                 []) $
    Graph.edgeLabels $
    FlowTopoPlain.dirFromFlowGraph topo
