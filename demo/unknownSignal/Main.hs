@@ -106,6 +106,16 @@ main =
    case FlowTopo.topology $ EqSys.solve (quantityTopology topoTripod) given of
       flowTopo -> do
 
+         {-
+         @PG:
+         Theoretisch kann man hier
+
+             rec = TopoRecord.sectionResultToPowerRecord flowTopo
+
+         schreiben, jedoch muss man danach die Zeitachse integrieren
+         und dabei stellt man fest,
+         dass die Typargumente fuer die Ableitungen nicht konsistent gesetzt sind.
+         -}
          let rec :: Rec.PowerRecord Node.Int [] Double
              rec =
                 Rec.Record time $
