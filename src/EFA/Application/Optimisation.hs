@@ -4,28 +4,22 @@
 
 module EFA.Application.Optimisation where
 
-import EFA.Application.Simulation (EtaAssignMap, checkFoundPair, absEtaFunction)
+import qualified EFA.Flow.State.Quantity as StateFlow
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
-import qualified EFA.Flow.State.Quantity as StateFlow
-import qualified EFA.Flow.State.Index as StateIdx
-import qualified EFA.Flow.State.Absolute as EqSysState
-import qualified EFA.Flow.SequenceState.Index as Idx
-import EFA.Flow.State.Absolute ((=.=))
-
 import qualified EFA.Flow.Storage.Variable as StorageVar
 
-import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil)
 
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Result as Result
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.Graph.Topology.Node as Node
 
-import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import Data.Map (Map)
 
@@ -55,55 +49,27 @@ etaOverPowerOut =
 givenAverageWithoutState ::
    (Arith.Sum a, Arith.Sum v, Node.C node) =>
    Idx.State ->
+   Map (TopoIdx.Power node) v ->
    StateFlow.Graph node (Result a) (Result v) ->
    StateFlow.Graph node (Result a) (Result v)
-givenAverageWithoutState stateToRemove =
+givenAverageWithoutState focus given =
    StateFlow.mapGraphWithVar
       (\(Idx.ForStorage var _) a ->
          case var of
             StorageVar.X _ -> a
             _ -> Undetermined)
       (\(Idx.InPart state var) v ->
-         if state == stateToRemove
-           then Undetermined
+         if state == focus
+           then
+              case var of
+                 TopoVar.Power idx -> Result.fromMaybe $ Map.lookup idx given
+                 _ -> Undetermined
            else
               case var of
                  TopoVar.DTime _ -> v
                  TopoVar.Eta _ -> v
                  TopoVar.X _ -> v
                  _ -> Undetermined)
-
-
-makeEtaFuncGiven ::
-   (Node.C node, Show a, Ord a, Arith.Constant a,
-    Data.ZipWith c, Data.Storage c a) =>
-   Idx.State ->
-   StateFlow.Graph node (Result a0) (Result v0) ->
-   EtaAssignMap node ->
-   Map String (a -> a) ->
-   EqSysState.EquationSystemIgnore node s x (Data c a)
-makeEtaFuncGiven state flowGraph etaAssign etaFunc =
-   Fold.fold $
-   Map.mapWithKey
-      (\se (strP, strN) ->
-         EqSysState.variable (etaFromEdge flowGraph state se)
-         =.=
-         EqSysState.liftF
-            (Data.map (absEtaFunction strP strN etaFunc))
-            (EqSysState.variable (Idx.InPart state $ TopoIdx.Power se)))
-      etaAssign
-
-etaFromEdge ::
-   Node.C node =>
-   StateFlow.Graph node a0 v0 ->
-   Idx.State -> TopoIdx.Position node -> StateIdx.Eta node
-etaFromEdge flowGraph state se =
-   let etaF = Idx.InPart state $ TopoIdx.Eta se
-       etaB = Idx.InPart state $ TopoIdx.Eta $ TopoIdx.flip se
-   in  checkFoundPair etaF etaB
-          (StateFlow.lookup etaF flowGraph,
-           StateFlow.lookup etaB flowGraph)
-
 
 initialEnv ::
    (Ord node, Arith.Constant d) =>

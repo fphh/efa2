@@ -9,8 +9,9 @@ import EFA.Application.Utility (quantityTopology)
 import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as XIdx
-
 import EFA.Flow.Topology.Absolute ( (.=), (=.=) )
+
+import qualified EFA.Flow.Absolute as EqAbs
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
@@ -23,9 +24,6 @@ import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil,(:>))
-
-import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
@@ -52,25 +50,23 @@ solve :: (Node.C node,
          Record.PowerRecord node v a ->
          FlowTopo.Section node (Result (Data (v :> Nil) a))
 solve topology etaAssign etaFunc powerRecord =
-   let qtopo = quantityTopology topology
-   in  EqSys.solve qtopo $
-       givenSimulate qtopo etaAssign etaFunc powerRecord
+   EqSys.solve (quantityTopology topology) $
+   givenSimulate etaAssign etaFunc powerRecord
 
 
 givenSimulate ::
    (Node.C node, Show a, Ord a, Arith.Constant a,
     SV.Zipper v, SV.Walker v,
     SV.Len (v a), SV.FromList v, SV.Storage v a) =>
-   FlowTopo.Section node (Result v0) ->
    EtaAssignMap node ->
    Map String (a -> a) ->
    Record.PowerRecord node v a ->
    (forall s. EqSys.EquationSystemIgnore node s (Data (v :> Nil) a))
 
-givenSimulate topo etaAssign etaFunc (Record.Record t xs) =
+givenSimulate etaAssign etaFunc (Record.Record t xs) =
    (XIdx.dTime .=
      (Data $ SV.fromList $ replicate (Sig.len t) $ Arith.one))
-   <> makeEtaFuncGiven topo etaAssign etaFunc
+   <> EqSys.withExpressionGraph (makeEtaFuncGiven etaAssign etaFunc)
    <> Fold.fold (Map.mapWithKey f xs)
    where
      f ppos p  =  XIdx.powerFromPosition ppos .= Sig.unpack p
@@ -80,44 +76,26 @@ givenSimulate topo etaAssign etaFunc (Record.Record t xs) =
 makeEtaFuncGiven ::
    (Node.C node, Show a, Ord a, Arith.Constant a,
     Data.ZipWith c, Data.Storage c a) =>
-   FlowTopo.Section node (Result v0) ->
    EtaAssignMap node ->
    Map String (a -> a) ->
-   EqSys.EquationSystemIgnore node s (Data c a)
-makeEtaFuncGiven topo etaAssign etaFunc =
+   FlowTopo.Section node (EqAbs.ExpressionIgnore vars s (Data c a)) ->
+   EqAbs.VariableSystemIgnore vars s
+makeEtaFuncGiven etaAssign etaFunc topo =
    Fold.fold $
    Map.mapWithKey
       (\se (strP, strN) ->
-         EqSys.variable (etaFromEdge topo se)
-         =.=
-         EqSys.liftF
-            (Data.map (absEtaFunction strP strN etaFunc))
-            (EqSys.variable $ XIdx.Power se))
+         Fold.foldMap
+            (\(eta, power) ->
+               eta
+               =.=
+               EqAbs.liftF
+                  (Data.map (absEtaFunction strP strN etaFunc))
+                  power)
+            (FlowTopo.lookupAutoDirSection
+               (\flow -> (FlowTopo.flowEta flow, FlowTopo.flowPowerOut flow))
+               (\flow -> (FlowTopo.flowEta flow, FlowTopo.flowPowerIn  flow))
+               id se topo))
       etaAssign
-
-etaFromEdge ::
-   Node.C node =>
-   FlowTopo.Section node v -> XIdx.Position node -> XIdx.Eta node
-etaFromEdge topo se =
-   let etaF = XIdx.Eta se
-       etaB = XIdx.Eta $ XIdx.flip se
-   in  checkFoundPair etaF etaB
-          (FlowTopo.lookupEta etaF topo, FlowTopo.lookupEta etaB topo)
-
-checkFoundPair ::
-   FormatValue a =>
-   a -> a -> (Maybe b, Maybe b) -> a
-checkFoundPair etaF etaB ee =
-   case ee of
-      (Just _, Nothing) -> etaF
-      (Nothing, Just _) -> etaB
-      (Nothing, Nothing) ->
-         error $ "found neither " ++ Format.unUnicode (formatValue etaF) ++
-                 " nor " ++ Format.unUnicode (formatValue etaB)
-      (Just _,  Just _) ->
-         error $ "found both " ++ Format.unUnicode (formatValue etaF) ++
-                 " and " ++ Format.unUnicode (formatValue etaB)
-
 
 absEtaFunction ::
    (Ord k, Show k, Ord a, Show a, Arith.Constant a, Arith.Product b) =>

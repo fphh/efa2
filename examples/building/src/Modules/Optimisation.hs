@@ -10,7 +10,7 @@ import qualified Modules.System as System
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
 import EFA.Application.Utility (checkDetermined)
-import EFA.Application.Simulation (EtaAssignMap)
+import EFA.Application.Simulation (EtaAssignMap, makeEtaFuncGiven)
 
 import qualified EFA.Flow.State.Absolute as EqSys
 import qualified EFA.Flow.State.Quantity as StateFlow
@@ -33,16 +33,16 @@ import EFA.Signal.Data (Data(Data), Nil)
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Empty as Empty
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
+import Data.NonEmpty ((!:))
 import Data.Map (Map)
 import Data.Maybe (mapMaybe)
-import Data.Monoid (mconcat, (<>))
 import Data.Foldable (foldMap)
-
-
+import Data.Monoid ((<>))
 
 state0, state1, state2, state3 :: Idx.State
 state0 :~ state1 :~ state2 :~ state3 :~ _ = Stream.enumFrom $ Idx.state0
@@ -66,33 +66,34 @@ solve ::
   Map String (a -> a) ->
   Idx.State ->
   Param2x2 a -> EnvResult a
-solve stateFlowGraph etaAssign etaFunc state (Sweep.Pair load dof) =
+solve stateFlowGraph etaAssign etaFunc state params =
   envGetData $
     EqSys.solveOpts
-      (EqSys.equalInOutSums EqSys.optionsDefault)
-      (AppOpt.givenAverageWithoutState state stateFlowGraph) $
-    (AppOpt.makeEtaFuncGiven state stateFlowGraph etaAssign etaFunc
-      <> commonGiven
-      <> givenSecLoad state (fmap Data load)
-      <> givenSecDOF state (fmap Data dof))
 
-givenSecLoad ::
-   (Arith.Sum a, Eq a) =>
-   Idx.State -> Param2 (Data Nil a) -> EqSystemData a
-givenSecLoad state (NonEmpty.Cons pLocal (NonEmpty.Cons pRest Empty.Cons)) =
-   mconcat $
-   (XIdx.power state System.LocalRest System.LocalNetwork .= pLocal) :
-   (XIdx.power state System.Rest System.Network .= pRest) :
-   []
+      (EqSys.equalStInOutSums EqSys.optionsDefault)
+      (AppOpt.givenAverageWithoutState state
+          (Map.fromList $ Fold.toList $
+           NonEmptyC.zip idxParams (fmap Data params))
+          stateFlowGraph)
+      ((EqSys.withExpressionGraph $
+           Fold.foldMap (makeEtaFuncGiven etaAssign etaFunc) .
+           Map.lookup state . StateFlow.states)
+       <> commonGiven)
 
-givenSecDOF ::
-   (Arith.Sum a, Eq a) =>
-   Idx.State -> Param2 (Data Nil a) -> EqSystemData a
-givenSecDOF state (NonEmpty.Cons pWater (NonEmpty.Cons pGas Empty.Cons)) =
-   mconcat $
-   (XIdx.power state System.Network System.Water .= pWater) :
-   (XIdx.power state System.LocalNetwork System.Gas .= pGas) :
-   []
+idxParams :: Param2x2 (TopoIdx.Power System.Node)
+idxParams = Sweep.Pair idxLoad idxDOF
+
+idxLoad :: Param2 (TopoIdx.Power System.Node)
+idxLoad =
+   TopoIdx.power System.LocalRest System.LocalNetwork !:
+   TopoIdx.power System.Rest System.Network !:
+   Empty.Cons
+
+idxDOF :: Param2 (TopoIdx.Power System.Node)
+idxDOF =
+   TopoIdx.power System.Network System.Water !:
+   TopoIdx.power System.LocalNetwork System.Gas !:
+   Empty.Cons
 
 
 --  @HT wir können leider keine Speicherenergien für den Stateflow definieren
