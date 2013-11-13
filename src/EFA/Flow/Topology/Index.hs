@@ -1,5 +1,7 @@
 module EFA.Flow.Topology.Index where
 
+import qualified EFA.Graph as Graph
+
 import qualified EFA.Utility.TypeConstructor as TC
 
 import qualified EFA.Report.Format as Format
@@ -87,6 +89,9 @@ inSum, outSum :: node -> Sum node
 inSum  = sum In
 outSum = sum Out
 
+
+edge :: node -> node -> Graph.DirEdge node
+edge = Graph.DirEdge
 
 ppos :: node -> node -> Position node
 ppos = Position

@@ -103,61 +103,61 @@ calculatePower rec = pRec
       pRec = genPowerRecord time
 
               -- engine
-             [(XIdx.ppos Tank ConBattery,
+             [(XIdx.edge Tank ConBattery,
                g "engine1._fuelPower_log",
                generatorElectricPower
               ),
 
               -- connection
-              (XIdx.ppos ConBattery ConES,
+              (XIdx.edge ConBattery ConES,
                generatorElectricPower .- batteryClampsPower,
                generatorElectricPower .- batteryClampsPower
               ),
 
               -- --motor
-              (XIdx.ppos ConES ConFrontBrakes,
+              (XIdx.edge ConES ConFrontBrakes,
                (g "motor._current_log".* voltage),
                g "gearbox1._torqueOutputShaft_log".* g "gearbox1._speedOutputShaft_log"
               ),
 
               -- front wheels
-              (XIdx.ppos ConFrontBrakes Chassis,
+              (XIdx.edge ConFrontBrakes Chassis,
                g "_frontWheelsTorque_log".* g "_frontBrakesSpeed_log",
                g "_frontWheelsForce_log".* speed
               ),
 
               -- driving Resistance
-              (XIdx.ppos Chassis Resistance,
+              (XIdx.edge Chassis Resistance,
                g "chassis1._resistanceForce_log".* speed,
                g "chassis1._resistanceForce_log".* speed
              ),
 
               -- battery
-              (XIdx.ppos ConBattery Battery,
+              (XIdx.edge ConBattery Battery,
                batteryClampsPower,
                batteryInternalPower
               ),
 
               -- DCDC
-              (XIdx.ppos ConES ElectricSystem,
+              (XIdx.edge ConES ElectricSystem,
                powerEVS,
                powerEVS
               ),
 
               -- Front brake
-              (XIdx.ppos ConFrontBrakes FrontBrakes,
+              (XIdx.edge ConFrontBrakes FrontBrakes,
                g "_frontBrakesLossPower_log",
                g "_frontBrakesLossPower_log"
               ),
 
               --Rear brake
-              (XIdx.ppos Chassis RearBrakes,
+              (XIdx.edge Chassis RearBrakes,
                g "_rearWheelsTorque_log".* g "_rearBrakesSpeed_log",
                g "_rearWheelsForce_log".* speed
               ),
 
               --kinetic power
-              (XIdx.ppos Chassis VehicleInertia,
+              (XIdx.edge Chassis VehicleInertia,
                kineticPower,
                kineticPower
 

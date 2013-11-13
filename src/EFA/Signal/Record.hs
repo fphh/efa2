@@ -43,6 +43,8 @@ import EFA.Equation.Arithmetic
 
 import qualified EFA.Flow.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph as Graph
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatTopologyPosition)
@@ -279,15 +281,15 @@ genPowerRecord ::
   ( Show (v d), V.Zipper v, V.Walker v,
     V.Storage v d, Product d, Ord node) =>
   TSignal v d ->
-  [(Idx.Position node, UTSignal v d, UTSignal v d)] ->
+  [(Graph.DirEdge node, UTSignal v d, UTSignal v d)] ->
   PowerRecord node v d
 genPowerRecord time =
    Record time .
       foldMap
-         (\(pposIdx, sigA, sigB) ->
+         (\(e, sigOut, sigIn) ->
             Map.fromList
-               [(pposIdx, S.setType sigA),
-                (Idx.flip pposIdx, S.setType sigB)])
+               [(Topo.outPosFromDirEdge e, S.setType sigOut),
+                (Topo.inPosFromDirEdge  e, S.setType sigIn)])
 
 
 addSignals ::

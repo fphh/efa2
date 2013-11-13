@@ -92,43 +92,43 @@ calculatePower rec = pRec
       time = getTime rec
       pRec = genPowerRecord time
               -- engine
-             [(XIdx.ppos Coal Network,
+             [(XIdx.edge Coal Network,
                g "coalpowerplant1.powersourcedemand1._powerIn_log",
                g "coalpowerplant1.powersourcedemand1._powerElectric_log"
               ),
 
               -- connection
-              (XIdx.ppos Gas Network,
+              (XIdx.edge Gas Network,
                g "gaspowerplant1.powersourcedemand1._powerIn_log",
                g "gaspowerplant1.powersourcedemand1._powerElectric_log"
               ),
 
-              (XIdx.ppos Water Network,
+              (XIdx.edge Water Network,
                g "storageplant1.storage1._powerInternal_log",
                g "storageplant1.storage1._powerExternal_log"
               ),
 
-              (XIdx.ppos Network LocalNetwork,
+              (XIdx.edge Network LocalNetwork,
                g "transformer1.electricefficiency1._powerElectric1_log",
                g "transformer1.electricefficiency1._powerElectric2_log"
               ),
 
-              (XIdx.ppos Wind Network,
+              (XIdx.edge Wind Network,
                g "wind1.powersourcesupply1._powerSupply_log",
                g "wind1.powersourcesupply1._powerElectric_log"
                ),
 
-              (XIdx.ppos Sun LocalNetwork,
+              (XIdx.edge Sun LocalNetwork,
                g "solar1.powersourcesupply1._powerSupply_log",
                g "solar1.powersourcesupply1._powerElectric_log"
               ),
 
-              (XIdx.ppos HouseHold LocalNetwork,
+              (XIdx.edge HouseHold LocalNetwork,
                g "household1.powersink1._powerDemand_log",
                g "household1.powersink1._power_log"
                ),
 
-              (XIdx.ppos Industry LocalNetwork,
+              (XIdx.edge Industry LocalNetwork,
                g "industry1.powersink1._powerDemand_log",
                g "industry1.powersink1._power_log"
               )]
