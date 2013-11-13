@@ -43,11 +43,6 @@ position mkIdx s from to =
    Idx.InPart s $ mkIdx $ TopoIdx.Position from to
 
 
-stX ::
-   Idx.PartNode (StorageIdx.Position sec) node ->
-   Idx.ForStorage (StorageIdx.X sec) node
-stX = Idx.forStorage StorageIdx.X
-
 stInSum ::
    PartIdx.StateOrExit -> node -> StInSum node
 stInSum state =
