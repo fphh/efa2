@@ -19,6 +19,7 @@ import EFA.Signal.Signal (fromScalar)
 import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Signal.Base (Sign(Positive, Negative, Zero))
 
+import qualified EFA.Equation.Result as Result
 import EFA.Equation.Result (Result(Determined, Undetermined))
 import EFA.Equation.Arithmetic (Sum, Constant)
 
@@ -93,13 +94,31 @@ sectionToPowerRecord ::
    Record.PowerRecord node v a
 sectionToPowerRecord (FlowTopoPlain.Section time topo) =
    Record.Record (Signal.TC time) $
+   fmap Signal.TC $ topologyToPowerMap topo
+
+sectionResultToPowerRecord ::
+   (Ord node) =>
+   FlowTopo.Section node (Result (Data (v :> Nil) a)) ->
+   Record.PowerRecord node v a
+sectionResultToPowerRecord (FlowTopoPlain.Section rtime topo) =
+   Record.Record
+      (Signal.TC $
+       case rtime of
+          Undetermined -> error "sectionResultToPowerRecord"
+          Determined time -> time) $
+   fmap Signal.TC $ Map.mapMaybe Result.toMaybe $ topologyToPowerMap topo
+
+topologyToPowerMap ::
+   (Ord node) =>
+   FlowTopo.Topology node a -> Map.Map (Idx.Position node) a
+topologyToPowerMap topo =
    Map.unionsWith (error "envToPowerRecord: duplicate edges") $
    Map.elems $
    Map.mapWithKey
       (\e flow ->
          Map.fromList $
-            (Topo.outPosFromDirEdge e, Signal.TC $ FlowTopo.flowPowerOut flow) :
-            (Topo.inPosFromDirEdge e,  Signal.TC $ FlowTopo.flowPowerIn flow) :
+            (Topo.outPosFromDirEdge e, FlowTopo.flowPowerOut flow) :
+            (Topo.inPosFromDirEdge e,  FlowTopo.flowPowerIn flow) :
             []) $
    Graph.edgeLabels $
    FlowTopoPlain.dirFromFlowGraph topo
