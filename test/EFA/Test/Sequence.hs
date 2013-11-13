@@ -18,10 +18,10 @@ import Test.QuickCheck.All (quickCheckAll)
 type Node = Node.Int
 
 
-failing_prop_genSequ :: PowerRecord Node [] Double -> Bool
-failing_prop_genSequ prec =
+prop_genSequ :: PowerRecord Node [] Double -> Bool
+prop_genSequ prec =
    Chop.approxSequPwrRecord (1e-8)
-      (Chop.genSequ prec)
+      (Chop.genSequ $ Chop.addZeroCrossings prec)
 --      (Chop.chopAtZeroCrossingsPowerRecord prec)
       (Chop.chopAtZeroCrossingsPowerRecord False prec)
 
