@@ -2,6 +2,7 @@
 module EFA.Application.OneStorage where
 
 import qualified EFA.Application.Sweep as Sweep
+import EFA.Application.Simulation (Name)
 
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.SequenceState.Index as Idx
@@ -43,7 +44,7 @@ optimalPower = Map.fromList
 type OptimalEtaWithEnv node f v = Map Idx.State (Map (TopoIdx.Position node) (Map (f v) (v, v)))
 
 data OptimalEnvParams node f g v = OptimalEnvParams {
-  etaMap :: Map String (v -> v),
+  etaMap :: Map Name (v -> v),
   points :: Sweep.Points f g v,
   optimalPowers :: OptimalPower node
   }

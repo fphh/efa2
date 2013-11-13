@@ -16,6 +16,7 @@ import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.Simulation as AppSim
 import qualified EFA.Application.Plot as PlotIO
 import qualified EFA.Application.Utility as AppUt
+import EFA.Application.Simulation (Name(Name))
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -91,14 +92,14 @@ legend 0 = "Laden"
 legend 1 = "Entladen"
 legend _ = "Undefined"
 
-scaleTableEta :: Map String (Double, Double)
+scaleTableEta :: Map Name (Double, Double)
 scaleTableEta = Map.fromList $
-  ("storage",     (3, 1)) :
-  ("gas",         (3, 0.4)) :
-  ("transformer", (3.0, 0.95)) :
-  ("coal",        (10, 0.46)) :
-  ("local",       (1, 1)) :
-  ("rest",        (1, 1)) :
+  (System.storage,     (3, 1)) :
+  (System.gas,         (3, 0.4)) :
+  (System.transformer, (3.0, 0.95)) :
+  (System.coal,        (10, 0.46)) :
+  (System.local,       (1, 1)) :
+  (System.rest,        (1, 1)) :
   []
 
 restScale, localScale :: Double
@@ -272,7 +273,7 @@ solveAndCalibrateAvgEffWithGraph ::
   Sig.TSignal [] Double ->
   Sig.PSignal [] Double ->
   Sig.PSignal [] Double ->
-  Map String (Double -> Double) ->
+  Map Name (Double -> Double) ->
   EnvResultData Double ->
   IO (EnvResultData Double)
 solveAndCalibrateAvgEffWithGraph time prest plocal etaMap stateFlowGraph = do
@@ -369,8 +370,12 @@ main = do
   tabEta <- Table.read "../maps/eta.txt"
   tabPower <- Table.read "../maps/power.txt"
 
-  let etaMap = CT.makeEtaFunctions2D scaleTableEta tabEta
 
+  let etaMap =
+         Map.mapKeys Name $
+         CT.makeEtaFunctions2D
+            (Map.mapKeys (\(Name str) -> str) scaleTableEta)
+            tabEta
 
       (time,
        NonEmpty.Cons pwind

@@ -31,7 +31,11 @@ import Data.Map (Map)
 import Data.Monoid((<>))
 
 
-type EtaAssignMap node = Map (XIdx.Position node) (String, String)
+type EtaAssignMap node = Map (XIdx.Position node) (Name, Name)
+
+newtype Name = Name String
+   deriving (Eq, Ord)
+
 
 solve :: (Node.C node,
           Eq (v a), Show (v a),
@@ -46,7 +50,7 @@ solve :: (Node.C node,
           SV.FromList v) =>
          Topo.Topology node ->
          EtaAssignMap node ->
-         Map String (a -> a) ->
+         Map Name (a -> a) ->
          Record.PowerRecord node v a ->
          FlowTopo.Section node (Result (Data (v :> Nil) a))
 solve topology etaAssign etaFunc powerRecord =
@@ -59,7 +63,7 @@ givenSimulate ::
     SV.Zipper v, SV.Walker v,
     SV.Len (v a), SV.FromList v, SV.Storage v a) =>
    EtaAssignMap node ->
-   Map String (a -> a) ->
+   Map Name (a -> a) ->
    Record.PowerRecord node v a ->
    (forall s. EqSys.EquationSystemIgnore node s (Data (v :> Nil) a))
 
@@ -77,7 +81,7 @@ makeEtaFuncGiven ::
    (Node.C node, Show a, Ord a, Arith.Constant a,
     Data.ZipWith c, Data.Storage c a) =>
    EtaAssignMap node ->
-   Map String (a -> a) ->
+   Map Name (a -> a) ->
    FlowTopo.Section node (EqAbs.ExpressionIgnore vars s (Data c a)) ->
    EqAbs.VariableSystemIgnore vars s
 makeEtaFuncGiven etaAssign etaFunc topo =
@@ -98,12 +102,12 @@ makeEtaFuncGiven etaAssign etaFunc topo =
       etaAssign
 
 absEtaFunction ::
-   (Ord k, Show k, Ord a, Show a, Arith.Constant a, Arith.Product b) =>
-   k -> k -> Map k (a -> b) -> a -> b
+   (Ord a, Show a, Arith.Constant a, Arith.Product b) =>
+   Name -> Name -> Map Name (a -> b) -> a -> b
 absEtaFunction strP strN etaFunc =
    let fpos = check strP id  $ Map.lookup strP etaFunc
        fneg = check strN rev $ Map.lookup strN etaFunc
        rev h = Arith.recip . h . Arith.negate
-       check str =
-          maybe (\x -> error ("not defined: " ++ show str ++ " for " ++ show x))
+       check (Name str) =
+          maybe (\x -> error ("not defined: '" ++ str ++ "' for " ++ show x))
    in  \x -> if x >= Arith.zero then fpos x else fneg x

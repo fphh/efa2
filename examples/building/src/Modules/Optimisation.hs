@@ -10,7 +10,7 @@ import qualified Modules.System as System
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
 import EFA.Application.Utility (checkDetermined)
-import EFA.Application.Simulation (EtaAssignMap, makeEtaFuncGiven)
+import EFA.Application.Simulation (EtaAssignMap, Name, makeEtaFuncGiven)
 
 import qualified EFA.Flow.State.Absolute as EqSys
 import qualified EFA.Flow.State.Quantity as StateFlow
@@ -63,7 +63,7 @@ solve ::
   (Ord a, Show a, Arith.Constant a) =>
   EnvResultData a ->
   EtaAssignMap System.Node ->
-  Map String (a -> a) ->
+  Map Name (a -> a) ->
   Idx.State ->
   Param2x2 a -> EnvResult a
 solve stateFlowGraph etaAssign etaFunc state params =

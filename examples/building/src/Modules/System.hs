@@ -2,7 +2,7 @@ module Modules.System where
 
 import qualified EFA.Application.Utility as AppUt
 
-import EFA.Application.Simulation (EtaAssignMap)
+import EFA.Application.Simulation (EtaAssignMap, Name(Name))
 import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.State.Quantity as StateFlow
@@ -95,10 +95,18 @@ etaAssign from to name =
 
 etaAssignMap :: EtaAssignMap Node
 etaAssignMap = Map.fromList $
-   etaAssign Network Water "storage" :
-   etaAssign Network Coal "coal" :
-   etaAssign LocalNetwork Gas "gas" :
-   etaAssign LocalNetwork Network "transformer" :
-   etaAssign LocalRest LocalNetwork "local" :
-   etaAssign Rest Network "rest" :
+   etaAssign Network Water storage :
+   etaAssign Network Coal coal :
+   etaAssign LocalNetwork Gas gas :
+   etaAssign LocalNetwork Network transformer :
+   etaAssign LocalRest LocalNetwork local :
+   etaAssign Rest Network rest :
    []
+
+storage, coal, gas, transformer, local, rest :: Name
+storage     = Name "storage"
+coal        = Name "coal"
+gas         = Name "gas"
+transformer = Name "transformer"
+local       = Name "local"
+rest        = Name "rest"
