@@ -5,8 +5,8 @@ module EFA.Graph.Topology (
    flowFromPlain,
    plainFromFlow,
    plainFromLabeled,
-   dirEdgeFromPosition,
    outPosFromDirEdge, inPosFromDirEdge,
+   dirEdgeFromOutPos, dirEdgeFromInPos,
    isActive,
    anyActive,
    StoreDir(..),
@@ -60,8 +60,10 @@ outPosFromDirEdge, inPosFromDirEdge ::
 outPosFromDirEdge (Graph.DirEdge x y) = TopoIdx.Position x y
 inPosFromDirEdge (Graph.DirEdge x y) = TopoIdx.Position y x
 
-dirEdgeFromPosition :: TopoIdx.Position node -> Graph.DirEdge node
-dirEdgeFromPosition (TopoIdx.Position x y) = Graph.DirEdge x y
+dirEdgeFromOutPos, dirEdgeFromInPos ::
+   TopoIdx.Position node -> Graph.DirEdge node
+dirEdgeFromOutPos (TopoIdx.Position x y) = Graph.DirEdge x y
+dirEdgeFromInPos  (TopoIdx.Position x y) = Graph.DirEdge y x
 
 
 data StoreDir = In | Out deriving (Eq, Ord, Show)

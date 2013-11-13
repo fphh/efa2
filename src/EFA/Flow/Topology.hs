@@ -1,7 +1,5 @@
 module EFA.Flow.Topology where
 
-import qualified EFA.Flow.Topology.Index as TopoIdx
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 import EFA.Graph (Graph)
 
@@ -58,15 +56,15 @@ checkedZipWith caller f g h
       (Graph.checkedZipWith caller g h gr0 gr1)
 
 
-lookupPosition ::
+lookupEdge ::
    Ord n =>
    (el -> a) ->
-   TopoIdx.Position n ->
+   Graph.DirEdge n ->
    Graph n Graph.EitherEdge nl (Maybe el) ->
    Maybe a
-lookupPosition f se =
-   fmap (maybe (error "lookupPosition: directed edge must have Just label") f) .
-   Graph.lookupEdge (Graph.EDirEdge $ Topo.dirEdgeFromPosition se)
+lookupEdge f e =
+   fmap (maybe (error "lookupEdge: directed edge must have Just label") f) .
+   Graph.lookupEdge (Graph.EDirEdge e)
 
 
 liftEdgeFlow ::

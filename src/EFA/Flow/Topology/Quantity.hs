@@ -185,14 +185,15 @@ lookupAutoDir ::
    idx -> Topology node v -> Maybe x
 lookupAutoDir fieldOut fieldIn unpackIdx idx topo =
    case unpackIdx idx of
-      se ->
+      e ->
          mplus
-            (FlowTopo.lookupPosition fieldOut se topo)
-            (FlowTopo.lookupPosition fieldIn (Idx.flip se) topo)
+            (FlowTopo.lookupEdge fieldOut (Topo.dirEdgeFromOutPos e) topo)
+            (FlowTopo.lookupEdge fieldIn  (Topo.dirEdgeFromInPos  e) topo)
 
 
 lookupEta :: (Ord node) => Idx.Eta node -> Section node v -> Maybe v
-lookupEta (Idx.Eta se) = FlowTopo.lookupPosition flowEta se . FlowTopo.topology
+lookupEta (Idx.Eta e) =
+   FlowTopo.lookupEdge flowEta (Topo.dirEdgeFromOutPos e) . FlowTopo.topology
 
 lookupSum :: (Ord node) => Idx.Sum node -> Section node v -> Maybe v
 lookupSum (Idx.Sum dir node) s = do
