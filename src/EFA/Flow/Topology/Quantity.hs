@@ -259,8 +259,7 @@ mapFlowWithVar ::
    (Var.Signal node -> v0 -> v1) ->
    Graph.DirEdge node -> Flow v0 -> Flow v1
 mapFlowWithVar f e =
-   liftA2 f
-      (flowVars <*> pure (Topo.positionFromDirEdge e))
+   liftA2 f (flowVars <*> pure e)
 
 
 sectionFromPlain ::
@@ -364,16 +363,16 @@ traverseSums f (Sums i o) =
       (traverse f o)
 
 
-flowVars :: Flow (Idx.Position node -> Var.Signal node)
+flowVars :: Flow (Graph.DirEdge node -> Var.Signal node)
 flowVars =
    Flow {
-      flowPowerOut = Var.index . Idx.Power,
-      flowPowerIn = Var.index . Idx.Power . Idx.flip,
-      flowEnergyOut = Var.index . Idx.Energy,
-      flowEnergyIn = Var.index . Idx.Energy . Idx.flip,
-      flowXOut = Var.index . Idx.X,
-      flowXIn = Var.index . Idx.X . Idx.flip,
-      flowEta = Var.index . Idx.Eta
+      flowPowerOut = Var.index . Idx.Power . Topo.outPosFromDirEdge,
+      flowPowerIn = Var.index . Idx.Power . Topo.inPosFromDirEdge,
+      flowEnergyOut = Var.index . Idx.Energy . Topo.outPosFromDirEdge,
+      flowEnergyIn = Var.index . Idx.Energy . Topo.inPosFromDirEdge,
+      flowXOut = Var.index . Idx.X . Topo.outPosFromDirEdge,
+      flowXIn = Var.index . Idx.X . Topo.inPosFromDirEdge,
+      flowEta = Var.index . Idx.Eta . Topo.outPosFromDirEdge
    }
 
 

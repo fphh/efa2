@@ -26,7 +26,6 @@ module EFA.Flow.Cumulated.EquationSystem (
    ) where
 
 import qualified EFA.Flow.Cumulated.Quantity as CumFlow
-import qualified EFA.Flow.Cumulated.Index as CumIdx
 import qualified EFA.Flow.Cumulated.Variable as Var
 
 import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
@@ -47,7 +46,6 @@ import EFA.Equation.Arithmetic
           (Sum, Product, Constant, (~+), (~*))
 
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
 import qualified UniqueLogic.ST.TF.System as Sys
@@ -185,8 +183,7 @@ fromTopology opts topo =
    <>
    (EqSys.withLocalVar $ \totalTime ->
       (foldMap (totalTime =&=) $
-       Map.mapKeysWith (~+)
-          ((\e -> min e (CumIdx.flip e)) . Topo.positionFromDirEdge) $
+       Map.mapKeysWith (~+) (\e -> min e (Graph.reverseEdge e)) $
        fmap CumFlow.flowDTime $
        Graph.edgeLabels topo)
       <>

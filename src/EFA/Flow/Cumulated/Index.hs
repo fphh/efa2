@@ -7,19 +7,23 @@ module EFA.Flow.Cumulated.Index (
    DTime(..),
 
    Direction(..),
-   Position(..),
+   Graph.DirEdge(..),
    TopoIdx.flip,
    TopoIdx.formatDirection,
    ) where
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
-import EFA.Flow.Topology.Index (Eta(..), Sum(..), Direction(..), Position(..))
+import EFA.Flow.Topology.Index (Sum(..), Direction(..))
+
+import qualified EFA.Graph as Graph
 
 
-data Energy node = Energy Direction (Position node) deriving (Show, Ord, Eq)
+data Energy node = Energy Direction (Graph.DirEdge node) deriving (Show, Ord, Eq)
 
-data Power node = Power Direction (Position node) deriving (Show, Ord, Eq)
+data Power node = Power Direction (Graph.DirEdge node) deriving (Show, Ord, Eq)
 
-data X node = X Direction (Position node) deriving (Show, Ord, Eq)
+data X node = X Direction (Graph.DirEdge node) deriving (Show, Ord, Eq)
 
-newtype DTime node = DTime (Position node) deriving (Show, Ord, Eq)
+newtype Eta node = Eta (Graph.DirEdge node) deriving (Show, Ord, Eq)
+
+newtype DTime node = DTime (Graph.DirEdge node) deriving (Show, Ord, Eq)

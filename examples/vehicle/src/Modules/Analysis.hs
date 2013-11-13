@@ -177,7 +177,7 @@ modifyPredictionEnergy ::
    Graph.DirEdge System.Node ->
    Result a -> Result a
 modifyPredictionEnergy edge energy =
-   if filterCriterion $ TopoIdx.Energy $ Topo.positionFromDirEdge edge
+   if filterCriterion $ TopoIdx.Energy $ Topo.outPosFromDirEdge edge
      then
         case edge of
            Graph.DirEdge System.Resistance System.Chassis ->

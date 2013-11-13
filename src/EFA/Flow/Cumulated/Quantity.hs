@@ -34,7 +34,6 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
 import qualified EFA.Utility.Map as MapU
@@ -194,7 +193,7 @@ lookupAutoDir ::
    (Flow a -> a) ->
    (Flow a -> a) ->
    CumIdx.Direction ->
-   CumIdx.Position node ->
+   CumIdx.DirEdge node ->
    Graph node a -> Maybe a
 lookupAutoDir fieldOut fieldIn dir =
    lookupEdge
@@ -212,11 +211,11 @@ lookupDTime (CumIdx.DTime se) = lookupEdge flowDTime se
 lookupEdge ::
    Ord n =>
    (el -> a) ->
-   CumIdx.Position n ->
+   CumIdx.DirEdge n ->
    Graph.Graph n Graph.DirEdge nl el ->
    Maybe a
-lookupEdge f se =
-   fmap f . Graph.lookupEdge (Topo.dirEdgeFromPosition se)
+lookupEdge f e =
+   fmap f . Graph.lookupEdge e
 
 
 lookupSum :: (Ord node) => CumIdx.Sum node -> Graph node a -> Maybe a
@@ -276,9 +275,7 @@ mapGraphWithVar f =
       (\n -> liftA2 f (sumsVars <*> pure n))
    .
    Graph.mapEdgeWithKey
-      (\e ->
-         liftA2 f
-            (flowVars <*> pure (Topo.positionFromDirEdge e)))
+      (\e -> liftA2 f (flowVars <*> pure e))
 
 
 sumsVars :: Sums (node -> CumVar.Any node)
@@ -288,7 +285,7 @@ sumsVars =
       sumIn  = Just $ CumVar.index . CumIdx.Sum CumIdx.In
    }
 
-flowVars :: Flow (CumIdx.Position node -> CumVar.Any node)
+flowVars :: Flow (Graph.DirEdge node -> CumVar.Any node)
 flowVars =
    Flow {
       flowPowerOut = CumVar.index . CumIdx.Power CumIdx.Out,

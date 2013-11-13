@@ -114,13 +114,11 @@ main =
                 Map.mapWithKey
                    (FlowTopo.liftEdgeFlow $
                     \e flow ->
-                       case Topo.positionFromDirEdge e of
-                          pos ->
-                             Map.singleton pos
-                                (FlowTopo.flowEnergyOut flow)
-                             <>
-                             Map.singleton (XIdx.flip pos)
-                                (FlowTopo.flowEnergyIn flow)) $
+                        Map.singleton (Topo.outPosFromDirEdge e)
+                           (FlowTopo.flowEnergyOut flow)
+                        <>
+                        Map.singleton (Topo.inPosFromDirEdge e)
+                           (FlowTopo.flowEnergyIn flow)) $
                 Graph.edgeLabels flowTopo
 
          concurrentlyMany_ [

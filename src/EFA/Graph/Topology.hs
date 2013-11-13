@@ -6,7 +6,7 @@ module EFA.Graph.Topology (
    plainFromFlow,
    plainFromLabeled,
    dirEdgeFromPosition,
-   positionFromDirEdge,
+   outPosFromDirEdge, inPosFromDirEdge,
    isActive,
    anyActive,
    StoreDir(..),
@@ -55,8 +55,10 @@ plainFromLabeled :: Graph node edge nl el -> Graph node edge () ()
 plainFromLabeled = Graph.mapNode (const ()) . Graph.mapEdge (const ())
 
 
-positionFromDirEdge :: Graph.DirEdge node -> TopoIdx.Position node
-positionFromDirEdge (Graph.DirEdge x y) = TopoIdx.Position x y
+outPosFromDirEdge, inPosFromDirEdge ::
+   Graph.DirEdge node -> TopoIdx.Position node
+outPosFromDirEdge (Graph.DirEdge x y) = TopoIdx.Position x y
+inPosFromDirEdge (Graph.DirEdge x y) = TopoIdx.Position y x
 
 dirEdgeFromPosition :: TopoIdx.Position node -> Graph.DirEdge node
 dirEdgeFromPosition (TopoIdx.Position x y) = Graph.DirEdge x y

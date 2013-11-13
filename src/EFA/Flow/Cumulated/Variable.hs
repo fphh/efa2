@@ -4,8 +4,7 @@ import qualified EFA.Flow.Cumulated.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
-import EFA.Report.FormatValue
-          (FormatValue, formatValue, formatTopologySubscript)
+import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import Data.Maybe (fromMaybe)
 
@@ -64,19 +63,25 @@ instance FormatIndex Idx.Sum where
 
 instance FormatIndex Idx.DTime where
    formatIndex (Idx.DTime e) =
-      Format.subscript Format.dtime $ formatTopologySubscript e
+      Format.subscript Format.dtime $ formatEdgeSubscript e
 
 instance FormatIndex Idx.Eta where
    formatIndex (Idx.Eta se) =
-      Format.subscript Format.eta $ formatTopologySubscript se
+      Format.subscript Format.eta $ formatEdgeSubscript se
 
 
 formatEdge ::
    (Format output, Node.C node) =>
-   output -> Idx.Direction -> Idx.Position node -> output
+   output -> Idx.Direction -> Idx.DirEdge node -> output
 formatEdge e d se =
    Format.subscript e $
-   Idx.formatDirection d `Format.connect` formatTopologySubscript se
+   Idx.formatDirection d `Format.connect` formatEdgeSubscript se
+
+formatEdgeSubscript ::
+   (Format output, Node.C node) =>
+   Idx.DirEdge node -> output
+formatEdgeSubscript (Idx.DirEdge x y) =
+   Node.subscript x `Format.link` Node.subscript y
 
 
 checkedLookup ::
