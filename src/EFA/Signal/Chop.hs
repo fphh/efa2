@@ -396,22 +396,25 @@ zeroCrossingsPerInterval =
          ys :
          [])
 
-chopAtZeroCrossingsRSig :: (Constant a, Ord a) => RSigX a -> [RSigX a]
-chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
+chopAtZeroCrossingsRSig ::
+   (Constant a, Ord a) =>
+   Bool -> RSigX a -> [RSigX a]
+chopAtZeroCrossingsRSig duplicates (TC (Data times), TC (Data vectorSignal)) =
    map (mapPair (TC . Data, TC . Data)) $
    map unzip $
    filter (ListHT.lengthAtLeast 2) $
---   map (removeDuplicates fst) $
+   map (if duplicates then id else removeDuplicates fst) $
    chopAtZeroCrossings $
    zip times vectorSignal
 
 chopAtZeroCrossingsPowerRecord ::
    (V.Convert [] v, V.Storage v a, Constant a, Ord a, Ord node) =>
+   Bool ->
    PowerRecord node [] a -> Sequ.List (PowerRecord node v a)
-chopAtZeroCrossingsPowerRecord rSig =
+chopAtZeroCrossingsPowerRecord duplicates rSig =
    Sequ.fromLengthList $
    map (\r -> (List.length $ S.unconsData $ fst r, rsig2SecRecord rSig r)) $
-   chopAtZeroCrossingsRSig $
+   chopAtZeroCrossingsRSig duplicates $
    record2RSig rSig
 
 concatPowerRecords ::

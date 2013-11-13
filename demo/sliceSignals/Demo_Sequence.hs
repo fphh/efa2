@@ -59,7 +59,7 @@ pRec0 = Chop.addZeroCrossings pRec
 sequRecA, sequRecB :: Sequ.List (PowerRecord Int [] Double)
 sequRecA = Chop.genSequ pRec0
 
-sequRecB = Chop.chopAtZeroCrossingsPowerRecord pRec
+sequRecB = Chop.chopAtZeroCrossingsPowerRecord True pRec
 
 
 main :: IO ()

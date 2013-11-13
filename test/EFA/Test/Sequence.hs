@@ -23,19 +23,19 @@ failing_prop_genSequ prec =
    Chop.approxSequPwrRecord (1e-8)
       (Chop.genSequ prec)
 --      (Chop.chopAtZeroCrossingsPowerRecord prec)
-      (Chop.chopAtZeroCrossingsPowerRecord prec)
+      (Chop.chopAtZeroCrossingsPowerRecord False prec)
 
 
 prop_chopMatchingCutsApprox ::
-   PowerRecord Node [] Double -> Bool
-prop_chopMatchingCutsApprox prec =
+   Bool -> PowerRecord Node [] Double -> Bool
+prop_chopMatchingCutsApprox duplicates prec =
    eqAdjacent
       (\(Record xt xm)
         (Record yt ym) ->
           fmap snd (Signal.viewR xt) == fmap fst (Signal.viewL yt)
           &&
           fmap (fmap snd . Signal.viewR) xm == fmap (fmap fst . Signal.viewL) ym)
-      (Chop.chopAtZeroCrossingsPowerRecord prec
+      (Chop.chopAtZeroCrossingsPowerRecord duplicates prec
          :: Sequ.List (PowerRecord Node [] Double))
 
 
@@ -43,33 +43,34 @@ prop_chopProjectiveApprox ::
    PowerRecord Node [] Double -> Bool
 prop_chopProjectiveApprox prec =
    let secs :: Sequ.List (PowerRecord Node [] Double)
-       secs = Chop.chopAtZeroCrossingsPowerRecord prec
+       secs = Chop.chopAtZeroCrossingsPowerRecord False prec
    in  Chop.approxSequPwrRecord (1e-8)
           secs
-          (Chop.chopAtZeroCrossingsPowerRecord $
+          (Chop.chopAtZeroCrossingsPowerRecord False $
            Chop.concatPowerRecords secs)
 
 prop_chopMatchingCutsExact ::
-   PowerRecord Node [] Rational -> Bool
-prop_chopMatchingCutsExact prec =
+   Bool -> PowerRecord Node [] Rational -> Bool
+prop_chopMatchingCutsExact duplicates prec =
    eqAdjacent
       (\(Record xt xm)
         (Record yt ym) ->
           fmap snd (Signal.viewR xt) == fmap fst (Signal.viewL yt)
           &&
           fmap (fmap snd . Signal.viewR) xm == fmap (fmap fst . Signal.viewL) ym)
-      (Chop.chopAtZeroCrossingsPowerRecord prec
+      (Chop.chopAtZeroCrossingsPowerRecord duplicates prec
          :: Sequ.List (PowerRecord Node [] Rational))
 
 prop_chopProjectiveExact ::
    PowerRecord Node [] Rational -> Bool
 prop_chopProjectiveExact prec =
    let secs :: Sequ.List (PowerRecord Node [] Rational)
-       secs = Chop.chopAtZeroCrossingsPowerRecord prec
+       secs = Chop.chopAtZeroCrossingsPowerRecord False prec
    in  secs
        ==
-       (Chop.chopAtZeroCrossingsPowerRecord $
+       (Chop.chopAtZeroCrossingsPowerRecord False $
         Chop.concatPowerRecords secs)
+
 
 eqAdjacent :: (a -> a -> Bool) -> Sequ.List a -> Bool
 eqAdjacent f =
