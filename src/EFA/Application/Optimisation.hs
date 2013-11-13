@@ -31,10 +31,13 @@ import Data.Map (Map)
 Function to specify that an efficiency function in etaAssign
 is to be looked up with input power
 -}
+{-# DEPRECATED etaOverPowerIn, etaOverPowerOut "not needed, adapt to EFA.Application.Simulation.EtaAssignMap style" #-}
 etaOverPowerIn ::
    Idx.InPart part TopoIdx.Eta node -> Idx.InPart part TopoIdx.Power node
 etaOverPowerIn =
-   Idx.liftInPart $ \(TopoIdx.Eta e) -> TopoIdx.Power $ TopoIdx.flip e
+   Idx.liftInPart $
+      \(TopoIdx.Eta (TopoIdx.Position from to)) ->
+         TopoIdx.Power $ TopoIdx.Position to from
 
 {- |
 Function to specify that an efficiency function in etaAssign
@@ -43,7 +46,7 @@ is to be looked up with output power
 etaOverPowerOut ::
    Idx.InPart part TopoIdx.Eta node -> Idx.InPart part TopoIdx.Power node
 etaOverPowerOut =
-   Idx.liftInPart $ \(TopoIdx.Eta e) -> TopoIdx.Power e
+   Idx.liftInPart $ \(TopoIdx.Eta pos) -> TopoIdx.Power pos
 
 
 givenAverageWithoutState ::
