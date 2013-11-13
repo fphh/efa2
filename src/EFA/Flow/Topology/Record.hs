@@ -1,5 +1,13 @@
 {-# LANGUAGE TypeOperators #-}
-module EFA.Flow.Topology.Record where
+module EFA.Flow.Topology.Record (
+   Flow(..),
+   Section,
+   flowTopologyFromRecord,
+   fromSection,
+   fullFlow,
+   sectionToPowerRecord,
+   sectionResultToPowerRecord,
+   ) where
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as Idx
