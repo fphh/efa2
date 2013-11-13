@@ -38,20 +38,6 @@ data DTime node = DTime deriving (Show, Ord, Eq)
 data Position node = Position node node deriving (Show, Read, Eq, Ord)
 
 
-class Flip pos where
-   flip :: pos node -> pos node
-
-instance Flip Position where
-   flip (Position from to) = Position to from
-
-
-instance Flip Power where
-   flip (Power p) = Power $ flip p
-
-instance Flip Energy where
-   flip (Energy p) = Energy $ flip p
-
-
 instance TC.Eq Position where eq = (==)
 instance TC.Ord Position where cmp = compare
 instance TC.Show Position where showsPrec = showsPrec

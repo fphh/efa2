@@ -8,7 +8,6 @@ module EFA.Flow.Cumulated.Index (
 
    Direction(..),
    Graph.DirEdge(..),
-   TopoIdx.flip,
    TopoIdx.formatDirection,
    ) where
 
