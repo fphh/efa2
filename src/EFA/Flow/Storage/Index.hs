@@ -14,18 +14,6 @@ import EFA.Report.Format (Format)
 import Prelude hiding (flip)
 
 
-class Flip edge where
-   flip :: edge -> edge
-
-
-instance Flip (X part) where
-   flip (X x) = X $ flip x
-
-instance Flip (Position part) where
-   flip (Position p0 p1) = Position p1 p0
-
-
-
 newtype Content = Content Idx.Boundary deriving (Show, Ord, Eq)
 
 {- |

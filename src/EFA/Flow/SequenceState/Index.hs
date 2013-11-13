@@ -197,10 +197,6 @@ carryPositionTo   (ForStorage (StorageIdx.Position _ sec) n) = PartNode sec n
 instance TopoIdx.Flip idx => TopoIdx.Flip (InPart part idx) where
    flip (InPart s idx) = InPart s (TopoIdx.flip idx)
 
-instance StorageIdx.Flip idx => StorageIdx.Flip (ForStorage idx node) where
-   flip (ForStorage idx n) = ForStorage (StorageIdx.flip idx) n
-
-
 
 class Identifier idx where
    identifier :: Format output => idx node -> output
