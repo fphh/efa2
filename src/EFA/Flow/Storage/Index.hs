@@ -21,8 +21,8 @@ class Flip edge where
 instance Flip (X part) where
    flip (X x) = X $ flip x
 
-instance Flip (Bond part) where
-   flip (Bond p0 p1) = Bond p1 p0
+instance Flip (Position part) where
+   flip (Position p0 p1) = Position p1 p0
 
 
 
@@ -37,7 +37,7 @@ newtype MaxEnergy = MaxEnergy (Edge Idx.Section) deriving (Show, Ord, Eq)
 
 newtype Energy sec = Energy (Edge sec) deriving (Show, Ord, Eq)
 
-newtype X sec = X (Bond sec) deriving (Show, Ord, Eq)
+newtype X sec = X (Position sec) deriving (Show, Ord, Eq)
 
 data InSum sec = InSum (Idx.Exit sec) deriving (Show, Ord, Eq)
 
@@ -53,29 +53,31 @@ and register two split factors per edge.
 data Edge sec = Edge (Init sec) (Exit sec)
    deriving (Show, Eq, Ord)
 
-data Bond sec = Bond (Augmented sec) (Augmented sec)
+data Position sec = Position (Augmented sec) (Augmented sec)
    deriving (Show, Eq, Ord)
 
 instance TC.Eq Edge where eq = (==)
-instance TC.Eq Bond where eq = (==)
+instance TC.Eq Position where eq = (==)
 
 instance TC.Ord Edge where cmp = compare
-instance TC.Ord Bond where cmp = compare
+instance TC.Ord Position where cmp = compare
 
 instance TC.Show Edge where showsPrec = showsPrec
-instance TC.Show Bond where showsPrec = showsPrec
+instance TC.Show Position where showsPrec = showsPrec
 
 
-bondFromEdge :: Edge part -> Bond part
-bondFromEdge (Edge s0 s1) =
-   Bond (allowExit s0) (allowInit s1)
+outPosFromEdge, inPosFromEdge :: Edge part -> Position part
+outPosFromEdge (Edge s0 s1) =
+   Position (allowExit s0) (allowInit s1)
+inPosFromEdge (Edge s0 s1) =
+   Position (allowInit s1) (allowExit s0)
 
-withEdgeFromBond ::
+withEdgeFromPosition ::
    Ord part =>
    (Edge part -> a) ->
    (Edge part -> a) ->
-   Bond part -> a
-withEdgeFromBond fIn fOut (Bond stFrom stTo) =
+   Position part -> a
+withEdgeFromPosition fIn fOut (Position stFrom stTo) =
    case (stFrom, stTo) of
       (NoExit from, Exit) ->
          fOut $ Edge from Exit

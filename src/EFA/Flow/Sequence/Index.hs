@@ -23,7 +23,7 @@ type StInSum node   = Idx.ForStorage (StorageIdx.InSum Idx.Section) node
 type StOutSum node  = Idx.ForStorage (StorageIdx.OutSum Idx.Section) node
 
 type CarryEdge = StorageIdx.Edge Idx.Section
-type CarryBond = StorageIdx.Bond Idx.Section
+type CarryPosition = StorageIdx.Position Idx.Section
 
 
 energy :: Idx.Section -> node -> node -> Energy node
@@ -68,7 +68,7 @@ stX ::
 
 maxEnergy = carryEdge StorageIdx.MaxEnergy
 stEnergy  = carryEdge StorageIdx.Energy
-stX       = carryBond StorageIdx.X
+stX       = carryPosition StorageIdx.X
 
 carryEdge ::
    (PartIdx.ToInitOrSection from, PartIdx.ToSectionOrExit to) =>
@@ -77,12 +77,12 @@ carryEdge ::
 carryEdge mkIdx a b =
    Idx.carryEdge mkIdx (PartIdx.initOrSection a) (PartIdx.sectionOrExit b)
 
-carryBond ::
+carryPosition ::
    (PartIdx.ToAugmentedSection from, PartIdx.ToAugmentedSection to) =>
-   (CarryBond -> idx) ->
+   (CarryPosition -> idx) ->
    from -> to -> node -> Idx.ForStorage idx node
-carryBond mkIdx a b =
-   Idx.carryBond mkIdx (PartIdx.augmentSection a) (PartIdx.augmentSection b)
+carryPosition mkIdx a b =
+   Idx.carryPosition mkIdx (PartIdx.augmentSection a) (PartIdx.augmentSection b)
 
 
 stInSum ::

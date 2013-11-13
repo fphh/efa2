@@ -158,14 +158,14 @@ instance (PartIdx.Format part) => FormatScalarIndex (StorageIdx.Energy part) whe
    formatScalarIndex (StorageIdx.Energy e) = (Format.energy, formatCarryEdge e)
 
 
-formatCarryBond ::
+formatCarryPosition ::
    (PartIdx.Format part, Format output) =>
-   StorageIdx.Bond part -> output
-formatCarryBond (StorageIdx.Bond s0 s1) =
+   StorageIdx.Position part -> output
+formatCarryPosition (StorageIdx.Position s0 s1) =
    PartIdx.formatAugmented s0 `Format.link` PartIdx.formatAugmented s1
 
 instance (PartIdx.Format part) => FormatScalarIndex (StorageIdx.X part) where
-   formatScalarIndex (StorageIdx.X e) = (Format.xfactor, formatCarryBond e)
+   formatScalarIndex (StorageIdx.X e) = (Format.xfactor, formatCarryPosition e)
 
 
 formatStSum ::

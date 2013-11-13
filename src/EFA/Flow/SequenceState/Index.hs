@@ -176,11 +176,11 @@ carryEdge ::
 carryEdge mkIdx s0 s1 n =
    ForStorage (mkIdx $ StorageIdx.Edge s0 s1) n
 
-carryBond ::
-   (StorageIdx.Bond sec -> idx) ->
+carryPosition ::
+   (StorageIdx.Position sec -> idx) ->
    Augmented sec -> Augmented sec -> node -> ForStorage idx node
-carryBond mkIdx s0 s1 n =
-   ForStorage (mkIdx $ StorageIdx.Bond s0 s1) n
+carryPosition mkIdx s0 s1 n =
+   ForStorage (mkIdx $ StorageIdx.Position s0 s1) n
 
 
 carryEdgeFrom, carryEdgeTo ::
@@ -188,10 +188,10 @@ carryEdgeFrom, carryEdgeTo ::
 carryEdgeFrom (ForStorage (StorageIdx.Edge sec _) n) = PartNode (allowExit sec) n
 carryEdgeTo   (ForStorage (StorageIdx.Edge _ sec) n) = PartNode (allowInit sec) n
 
-carryBondFrom, carryBondTo ::
-   ForStorage (StorageIdx.Bond sec) node -> AugNode sec node
-carryBondFrom (ForStorage (StorageIdx.Bond sec _) n) = PartNode sec n
-carryBondTo   (ForStorage (StorageIdx.Bond _ sec) n) = PartNode sec n
+carryPositionFrom, carryPositionTo ::
+   ForStorage (StorageIdx.Position sec) node -> AugNode sec node
+carryPositionFrom (ForStorage (StorageIdx.Position sec _) n) = PartNode sec n
+carryPositionTo   (ForStorage (StorageIdx.Position _ sec) n) = PartNode sec n
 
 
 instance TopoIdx.Flip idx => TopoIdx.Flip (InPart part idx) where

@@ -23,7 +23,7 @@ type StInSum node   = Idx.ForStorage (StorageIdx.InSum Idx.State) node
 type StOutSum node  = Idx.ForStorage (StorageIdx.OutSum Idx.State) node
 
 type CarryEdge = StorageIdx.Edge Idx.State
-type CarryBond = StorageIdx.Bond Idx.State
+type CarryPosition = StorageIdx.Position Idx.State
 
 
 energy :: Idx.State -> node -> node -> Energy node
@@ -44,7 +44,7 @@ position mkIdx s from to =
 
 
 stX ::
-   Idx.PartNode (StorageIdx.Bond sec) node ->
+   Idx.PartNode (StorageIdx.Position sec) node ->
    Idx.ForStorage (StorageIdx.X sec) node
 stX = Idx.forStorage StorageIdx.X
 

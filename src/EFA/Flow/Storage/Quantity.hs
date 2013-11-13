@@ -116,7 +116,7 @@ lookupX ::
    (Carry carry, CarryPart carry ~ part, Ord part) =>
    StorageIdx.X part -> Graph carry a -> Maybe a
 lookupX (StorageIdx.X se) sgr =
-   StorageIdx.withEdgeFromBond
+   StorageIdx.withEdgeFromPosition
       (fmap carryXIn  . flip Storage.lookupEdge sgr)
       (fmap carryXOut . flip Storage.lookupEdge sgr)
       se
