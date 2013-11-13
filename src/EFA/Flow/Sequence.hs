@@ -13,22 +13,22 @@ import Prelude hiding (sequence)
 
 
 type
-   Storages node storageLabel boundaryLabel carryEdgeLabel =
+   Storages node storageLabel boundaryLabel carryLabel =
       Map node
-         (Storage.Graph Idx.Section storageLabel carryEdgeLabel,
+         (Storage.Graph Idx.Section storageLabel carryLabel,
           Map Idx.Boundary boundaryLabel)
 
 type
-   Sequence node structEdge sectionLabel nodeLabel structLabel =
+   Sequence node edge sectionLabel nodeLabel flowLabel =
       Sequ.Map
-         (FlowTopo.Section node structEdge sectionLabel nodeLabel structLabel)
+         (FlowTopo.Section node edge sectionLabel nodeLabel flowLabel)
 
 data
-   Graph node structEdge
+   Graph node edge
          sectionLabel nodeLabel storageLabel boundaryLabel
-         structLabel carryEdgeLabel =
+         flowLabel carryLabel =
       Graph {
-         storages :: Storages node storageLabel boundaryLabel carryEdgeLabel,
-         sequence :: Sequence node structEdge sectionLabel nodeLabel structLabel
+         storages :: Storages node storageLabel boundaryLabel carryLabel,
+         sequence :: Sequence node edge sectionLabel nodeLabel flowLabel
       }
    deriving (Eq)

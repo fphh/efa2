@@ -9,20 +9,20 @@ import Data.Map (Map)
 
 
 type
-   Storages node storageLabel carryEdgeLabel =
+   Storages node storageLabel carryLabel =
       Map node
-         (Storage.Graph Idx.State storageLabel carryEdgeLabel)
+         (Storage.Graph Idx.State storageLabel carryLabel)
 
 type
-   States node structEdge stateLabel nodeLabel structLabel =
+   States node edge stateLabel nodeLabel flowLabel =
       Map Idx.State
-         (FlowTopo.Section node structEdge stateLabel nodeLabel structLabel)
+         (FlowTopo.Section node edge stateLabel nodeLabel flowLabel)
 
 data
-   Graph node structEdge
+   Graph node edge
          stateLabel nodeLabel storageLabel
-         structLabel carryEdgeLabel =
+         flowLabel carryLabel =
       Graph {
-         storages :: Storages node storageLabel carryEdgeLabel,
-         states :: States node structEdge stateLabel nodeLabel structLabel
+         storages :: Storages node storageLabel carryLabel,
+         states :: States node edge stateLabel nodeLabel flowLabel
       }
