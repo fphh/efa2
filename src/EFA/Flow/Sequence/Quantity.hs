@@ -59,13 +59,13 @@ import EFA.Flow.SequenceState.Variable ((<#>))
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
 
-import qualified EFA.Signal.Sequence as Sequ
-
-import EFA.Equation.Unknown (Unknown(unknown))
-
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
+
+import qualified EFA.Signal.Sequence as Sequ
+
+import EFA.Equation.Unknown (Unknown(unknown))
 
 import EFA.Report.FormatValue (FormatValue, formatAssign)
 import EFA.Report.Format (Format)

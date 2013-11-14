@@ -42,13 +42,13 @@ module EFA.Flow.Topology.Quantity (
 
 import qualified EFA.Flow.Topology.Variable as Var
 import qualified EFA.Flow.Topology.AssignMap as AssignMap
+import qualified EFA.Flow.Topology.Index as Idx
 import qualified EFA.Flow.Topology as FlowTopo
 import EFA.Flow.Topology.AssignMap (AssignMap)
 import EFA.Flow.Topology (label, topology)
 
 import EFA.Equation.Unknown (Unknown(unknown))
 
-import qualified EFA.Flow.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph

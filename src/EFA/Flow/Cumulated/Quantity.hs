@@ -30,14 +30,13 @@ import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import EFA.Flow.Topology.Quantity (Sums(..))
 
+import qualified EFA.Graph as Graph
+
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
-import qualified EFA.Graph as Graph
-
 import qualified EFA.Utility.Map as MapU
-
 import qualified Data.Map as Map
 
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<|>))

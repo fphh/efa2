@@ -33,23 +33,22 @@ import qualified EFA.Flow.Topology.Quantity as FlowTopoQuant
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.Part.Map as PartMap
-
-import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
-import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
-
 import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.SequenceState.Index as Idx
-
-import qualified EFA.Equation.RecordIndex as RecIdx
-
-import EFA.Signal.Signal (SignalIdx(SignalIdx), Range(Range))
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 import EFA.Graph.Topology (FlowTopology)
 import EFA.Graph (DirEdge(DirEdge))
+
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
+import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
+
+import qualified EFA.Equation.RecordIndex as RecIdx
+
+import EFA.Signal.Signal (SignalIdx(SignalIdx), Range(Range))
 
 import qualified EFA.Utility.Map as MapU
 import EFA.Utility ((>>!))

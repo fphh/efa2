@@ -62,14 +62,13 @@ import EFA.Flow.Part.Map (PartMap)
 import EFA.Flow.State (states, storages)
 import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 
-import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Unknown (Unknown)
-
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
+import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
+import EFA.Equation.Unknown (Unknown)
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.Signal.Sequence as Sequ
