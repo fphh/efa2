@@ -102,7 +102,7 @@ type
 
 data Carry a =
    Carry {
-      carryMaxEnergy, carryEnergy, carryXOut, carryXIn :: a
+      carryMaxEnergy, carryXOut, carryEnergy, carryXIn :: a
    }
    deriving (Eq)
 
@@ -123,8 +123,8 @@ instance StorageQuant.Carry Carry where
 
 
 instance Functor Carry where
-   fmap f (Carry me e xout xin) =
-      Carry (f me) (f e) (f xout) (f xin)
+   fmap f (Carry me xout e xin) =
+      Carry (f me) (f xout) (f e) (f xin)
 
 
 instance Foldable Carry where
@@ -132,14 +132,14 @@ instance Foldable Carry where
 
 
 instance Traversable Carry where
-   traverse f (Carry me e xout xin) =
-      pure Carry <*> f me <*> f e <*> f xout <*> f xin
+   traverse f (Carry me xout e xin) =
+      pure Carry <*> f me <*> f xout <*> f e <*> f xin
 
 
 instance Applicative Carry where
    pure a = Carry a a a a
-   Carry fme fe fxout fxin <*> Carry me e xout xin =
-      Carry (fme me) (fe e) (fxout xout) (fxin xin)
+   Carry fme fxout fe fxin <*> Carry me xout e xin =
+      Carry (fme me) (fxout xout) (fe e) (fxin xin)
 
 
 mapGraph ::

@@ -301,23 +301,23 @@ data Sums v =
 
 
 instance Functor Flow where
-   fmap f (Flow pout eout xout eta xin ein pin) =
-      Flow (f pout) (f eout) (f xout) (f eta) (f xin) (f ein) (f pin)
+   fmap f (Flow xout pout eout eta ein pin xin) =
+      Flow (f xout) (f pout) (f eout) (f eta) (f ein) (f pin) (f xin)
 
 instance Foldable Flow where
    foldMap = foldMapDefault
 
 instance Traversable Flow where
-   traverse f (Flow pout eout xout eta xin ein pin) =
-      pure Flow <*> f pout <*> f eout <*> f xout <*> f eta <*> f xin <*> f ein <*> f pin
+   traverse f (Flow xout pout eout eta ein pin xin) =
+      pure Flow <*> f xout <*> f pout <*> f eout <*> f eta <*> f ein <*> f pin <*> f xin
 
 instance Applicative Flow where
    pure a = Flow a a a a a a a
-   Flow fpout feout fxout feta fxin fein fpin
-         <*> Flow pout eout xout eta xin ein pin =
+   Flow fxout fpout feout feta fein fpin fxin
+         <*> Flow xout pout eout eta ein pin xin =
       Flow
-         (fpout pout) (feout eout) (fxout xout)
-         (feta eta) (fxin xin) (fein ein) (fpin pin)
+         (fxout xout) (fpout pout) (feout eout)
+         (feta eta) (fein ein) (fpin pin) (fxin xin)
 
 
 instance Functor Sums where

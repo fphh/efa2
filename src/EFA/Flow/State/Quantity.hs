@@ -107,7 +107,7 @@ type
 
 data Carry a =
    Carry {
-      carryEnergy, carryXOut, carryXIn :: a
+      carryXOut, carryEnergy, carryXIn :: a
    }
 
 

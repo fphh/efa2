@@ -55,32 +55,32 @@ type
 data Flow a =
    Flow {
       flowDTime,
-      flowPowerOut, flowEnergyOut, flowXOut,
+      flowXOut, flowPowerOut, flowEnergyOut,
       flowEta,
-      flowXIn, flowEnergyIn, flowPowerIn :: a
+      flowEnergyIn, flowPowerIn, flowXIn :: a
    }
 
 
 instance Functor Flow where
-   fmap f (Flow time pout eout xout eta xin ein pin) =
-      Flow (f time) (f pout) (f eout) (f xout) (f eta) (f xin) (f ein) (f pin)
+   fmap f (Flow time xout pout eout eta ein pin xin) =
+      Flow (f time) (f xout) (f pout) (f eout) (f eta) (f ein) (f pin) (f xin)
 
 instance Foldable Flow where
    foldMap = foldMapDefault
 
 instance Traversable Flow where
-   traverse f (Flow time pout eout xout eta xin ein pin) =
+   traverse f (Flow time xout pout eout eta ein pin xin) =
       pure Flow <*> f time
-         <*> f pout <*> f eout <*> f xout
-         <*> f eta <*> f xin <*> f ein <*> f pin
+         <*> f xout <*> f pout <*> f eout
+         <*> f eta <*> f ein <*> f pin <*> f xin
 
 instance Applicative Flow where
    pure a = Flow a a a a a a a a
-   Flow ftime fpout feout fxout feta fxin fein fpin
-         <*> Flow time pout eout xout eta xin ein pin =
+   Flow ftime fxout fpout feout feta fein fpin fxin
+         <*> Flow time xout pout eout eta ein pin xin =
       Flow (ftime time)
-         (fpout pout) (feout eout) (fxout xout)
-         (feta eta) (fxin xin) (fein ein) (fpin pin)
+         (fxout xout) (fpout pout) (feout eout)
+         (feta eta) (fein ein) (fpin pin) (fxin xin)
 
 
 mapGraph ::

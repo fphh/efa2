@@ -890,11 +890,11 @@ topologyEdgeShowCompact mlabels =
    case fmap (fmap (uncurry Format.assign)) mlabels of
       Nothing -> []
       Just labels ->
-         FlowTopoQuant.flowEnergyOut labels :
          FlowTopoQuant.flowXOut labels :
+         FlowTopoQuant.flowEnergyOut labels :
          FlowTopoQuant.flowEta labels :
-         FlowTopoQuant.flowXIn labels :
          FlowTopoQuant.flowEnergyIn labels :
+         FlowTopoQuant.flowXIn labels :
          []
 
 topologyEdgeShowEta ::
@@ -907,13 +907,13 @@ topologyEdgeShowEta mlabels =
          case fmap (uncurry Format.assign) flow of
             labels ->
                Triple
-                  (FlowTopoQuant.flowEnergyOut labels :
-                   FlowTopoQuant.flowXOut labels :
+                  (FlowTopoQuant.flowXOut labels :
+                   FlowTopoQuant.flowEnergyOut labels :
                    [])
                   (snd (FlowTopoQuant.flowEta flow) :
                    [])
-                  (FlowTopoQuant.flowXIn labels :
-                   FlowTopoQuant.flowEnergyIn labels :
+                  (FlowTopoQuant.flowEnergyIn labels :
+                   FlowTopoQuant.flowXIn labels :
                    [])
 
 
@@ -928,13 +928,13 @@ cumulatedFlow =
       (\e flow ->
          dotFromCumEdge e (CumFlowQuant.flowDTime flow) $
          map ($flow) $
+            CumFlowQuant.flowXOut :
             CumFlowQuant.flowPowerOut :
             CumFlowQuant.flowEnergyOut :
-            CumFlowQuant.flowXOut :
             CumFlowQuant.flowEta :
-            CumFlowQuant.flowXIn :
             CumFlowQuant.flowEnergyIn :
             CumFlowQuant.flowPowerIn :
+            CumFlowQuant.flowXIn :
             []) .
    CumFlowQuant.mapGraphWithVar formatAssign
 
