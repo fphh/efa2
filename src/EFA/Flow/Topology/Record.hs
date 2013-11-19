@@ -62,10 +62,10 @@ flowTopologyFromRecord topo (Record time fs) =
    Map.unionsWith (error "flowTopologyFromRecord: duplicate edges") $
    Map.elems $
    Map.mapWithKey
-      (\(DirEdge idx1 idx2) () ->
+      (\e@(DirEdge idx1 idx2) () ->
          let look = MapU.checkedLookup "Flow.flowTopologyFromRecord" fs
-             normal   = look $ Idx.ppos idx1 idx2
-             opposite = look $ Idx.ppos idx2 idx1
+             normal   = look $ Topo.outPosFromDirEdge e
+             opposite = look $ Topo.inPosFromDirEdge e
          in  case fromScalar $ Signal.sign $ Signal.sum normal of
                 Positive ->
                    Map.singleton
