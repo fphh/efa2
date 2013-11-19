@@ -25,11 +25,11 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.Record (Record(Record), FlowRecord)
 import EFA.Signal.Signal (fromScalar)
 import EFA.Signal.Data (Data, Nil, (:>))
-import EFA.Signal.Base (Sign(Positive, Negative, Zero))
 
 import qualified EFA.Equation.Result as Result
 import EFA.Equation.Result (Result(Determined, Undetermined))
-import EFA.Equation.Arithmetic (Sum, Constant)
+import EFA.Equation.Arithmetic
+          (Sum, Constant, Sign(Positive, Negative, Zero))
 
 import qualified EFA.Utility.Map as MapU
 

@@ -5,7 +5,7 @@
 module EFA.Report.Base where
 
 import EFA.Signal.Data (Data, (:>), Nil, subData)
-import EFA.Signal.Base (Sign)
+import EFA.Equation.Arithmetic (Sign)
 
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV

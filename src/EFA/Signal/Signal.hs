@@ -12,12 +12,14 @@ module EFA.Signal.Signal where
 
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
-import qualified EFA.Signal.Base as B
-import EFA.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L)
+import EFA.Signal.Data
+          (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList,
+           Vec2, UVec, UVec2, UVec2L)
 import EFA.Signal.Typ
 
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Arithmetic (Sum, (~+), (~-), Product, (~*), (~/), Constant)
+import EFA.Equation.Arithmetic
+          (Sum, (~+), (~-), Product, (~*), (~/), Constant, Sign)
 
 import EFA.Report.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
 import EFA.Report.Base
@@ -823,9 +825,9 @@ instance D.All c => All s c where
 -- signal sign
 
 sign ::
-   (Ord d, Constant d, D.Map c, D.Storage c d, D.Storage c B.Sign) =>
-   TC s typ (Data c d) -> TC s typ (Data c B.Sign)
-sign x = map B.sign x
+   (Ord d, Constant d, D.Map c, D.Storage c d, D.Storage c Sign) =>
+   TC s typ (Data c d) -> TC s typ (Data c Sign)
+sign x = map Arith.sign x
 
 -- | Convert between List and different Vector formats
 convert ::
@@ -1017,7 +1019,7 @@ abs ::
 abs x = map Arith.abs x
 
 
-hasSignChange :: (SV.Storage v1 B.Sign,
+hasSignChange :: (SV.Storage v1 Sign,
                   SV.Walker v1,
                   SV.Storage v1 d,
                   SV.Singleton v1,

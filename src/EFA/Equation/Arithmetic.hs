@@ -6,6 +6,7 @@ import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.Rule as Rule
 import qualified UniqueLogic.ST.TF.System as Sys
 
+import Data.Bool.HT (if')
 import Data.Ratio (Ratio)
 
 import qualified Prelude as P
@@ -191,3 +192,20 @@ x^!n =
 
 abs :: (Sum a, Ord a) => a -> a
 abs x = max x $ negate x
+
+
+data Sign = Negative | Zero | Positive deriving (Show, Eq, Enum)
+
+
+sign :: (Ord a, Constant a) => a -> Sign
+sign x =
+   case compare x zero of
+      LT -> Negative
+      EQ -> Zero
+      GT -> Positive
+
+signApprox :: (Ord a, Constant a) => a -> a -> Sign
+signApprox eps x =
+   if' (x > eps) Positive $
+   if' (x < negate eps) Negative $
+   Zero

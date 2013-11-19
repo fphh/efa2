@@ -13,8 +13,6 @@ import qualified EFA.Signal.Record as Record
 
 import EFA.Signal.Record (Record(Record), PowerRecord, FlowRecord)
 
-import EFA.Signal.Base
-          (Sign(Positive, Negative, Zero))
 import EFA.Signal.Signal
           (TC(TC), TSigL, TSamp, PSamp, PSigL,
            DTSamp, PSamp2LL, Samp, Samp1L,
@@ -26,7 +24,9 @@ import EFA.Signal.Typ (Typ, STy, Tt, T, P, A)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Arithmetic (Sum, (~+), (~-), (~*), (~/), abs, Constant)
+import EFA.Equation.Arithmetic
+          (Sum, (~+), (~-), (~*), (~/), abs, Constant,
+           Sign(Positive, Negative, Zero))
 
 import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
