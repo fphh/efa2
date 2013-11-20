@@ -69,10 +69,10 @@ class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec wher
    rules ::
       (Sys.Value mode a, Sum a) =>
       Variable mode rec s a -> System mode s
-   equal ::
+   equalR ::
       (Sys.Value mode a) =>
-      Expr mode rec s a ->
-      Expr mode rec s a ->
+      rec (Expr.T mode s a) ->
+      rec (Expr.T mode s a) ->
       System mode s
    liftR0 :: (Sum x) => x -> rec x
    liftR1 ::
@@ -89,7 +89,7 @@ instance Record Record.Absolute where
 
    rules _ = mempty
 
-   equal (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
+   equalR (Record.Absolute x) (Record.Absolute y) =
       System (x =:= y)
 
    liftR0 = Record.Absolute
@@ -108,7 +108,7 @@ instance Record Record.Delta where
    {-
    I omit equality on the delta part since it would be redundant.
    -}
-   equal (Wrap recX) (Wrap recY) =
+   equalR recX recY =
       System (Record.before recX =:= Record.before recY) <>
       System (Record.after  recX =:= Record.after  recY)
 
@@ -148,9 +148,9 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
    {-
    I omit equality on the delta part since it would be redundant.
    -}
-   equal (Wrap recX) (Wrap recY) =
-      equal (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY) <>
-      equal (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY)
+   equalR recX recY =
+      equalR (Record.extBefore recX) (Record.extBefore recY) <>
+      equalR (Record.extAfter  recX) (Record.extAfter  recY)
 
    liftR0 x = extDeltaCons (liftR0 x) (liftR0 x)
 
@@ -192,6 +192,13 @@ instance
       Scale (Wrap rec v) where
    scale = lift2 scale
 
+
+equal ::
+   (Record rec, Sys.Value mode a) =>
+   Expr mode rec s a ->
+   Expr mode rec s a ->
+   System mode s
+equal (Wrap recX) (Wrap recY) = equalR recX recY
 
 equalResult ::
    (Record rec, Sys.Value mode a) =>
