@@ -49,6 +49,22 @@ instance Monoid (System mode s) where
    mappend (System x) (System y) = System $ x >>! y
 
 
+lift0 :: (Record rec, Sum x) => x -> Wrap rec x
+lift0 = Wrap . liftR0
+
+lift1 ::
+   (Record rec, Sum y) =>
+   (x -> y) ->
+   Wrap rec x -> Wrap rec y
+lift1 f (Wrap x) = Wrap $ liftR1 f x
+
+lift2 ::
+   (Record rec, Sum z) =>
+   (x -> y -> z) ->
+   Wrap rec x -> Wrap rec y -> Wrap rec z
+lift2 f (Wrap x) (Wrap y) = Wrap $ liftR2 f x y
+
+
 class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec where
    rules ::
       (Sys.Value mode a, Sum a) =>
@@ -58,15 +74,15 @@ class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec wher
       Expr mode rec s a ->
       Expr mode rec s a ->
       System mode s
-   lift0 :: (Sum x) => x -> Wrap rec x
-   lift1 ::
+   liftR0 :: (Sum x) => x -> rec x
+   liftR1 ::
       (Sum y) =>
       (x -> y) ->
-      Wrap rec x -> Wrap rec y
-   lift2 ::
+      rec x -> rec y
+   liftR2 ::
       (Sum z) =>
       (x -> y -> z) ->
-      Wrap rec x -> Wrap rec y -> Wrap rec z
+      rec x -> rec y -> rec z
 
 
 instance Record Record.Absolute where
@@ -76,12 +92,12 @@ instance Record Record.Absolute where
    equal (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
       System (x =:= y)
 
-   lift0 = Wrap . Record.Absolute
+   liftR0 = Record.Absolute
 
-   lift1 f (Wrap (Record.Absolute x)) = Wrap $ Record.Absolute $ f x
+   liftR1 f (Record.Absolute x) = Record.Absolute $ f x
 
-   lift2 f (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
-      Wrap $ Record.Absolute $ f x y
+   liftR2 f (Record.Absolute x) (Record.Absolute y) =
+      Record.Absolute $ f x y
 
 
 instance Record Record.Delta where
@@ -96,26 +112,24 @@ instance Record Record.Delta where
       System (Record.before recX =:= Record.before recY) <>
       System (Record.after  recX =:= Record.after  recY)
 
-   lift0 x = Wrap $ Record.deltaCons x x
+   liftR0 x = Record.deltaCons x x
 
-   lift1 f (Wrap rec) =
-      Wrap $
+   liftR1 f rec =
       Record.deltaCons (f $ Record.before rec) (f $ Record.after rec)
 
-   lift2 f (Wrap recX) (Wrap recY) =
-      Wrap $
+   liftR2 f recX recY =
       Record.deltaCons
          (f (Record.before recX) (Record.before recY))
          (f (Record.after  recX) (Record.after  recY))
 
 
 extDeltaCons ::
-   (Record f, Sum a) => Wrap f a -> Wrap f a -> Record.ExtDelta f a
+   (Record rec, Sum a) => rec a -> rec a -> Record.ExtDelta rec a
 extDeltaCons b a =
    Record.ExtDelta {
-      Record.extBefore = unwrap b,
-      Record.extAfter = unwrap a,
-      Record.extDelta = unwrap (a ~- b)
+      Record.extBefore = b,
+      Record.extAfter = a,
+      Record.extDelta = liftR2 (~-) a b
    }
 
 
@@ -138,19 +152,17 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
       equal (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY) <>
       equal (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY)
 
-   lift0 x = Wrap $ extDeltaCons (lift0 x) (lift0 x)
+   liftR0 x = extDeltaCons (liftR0 x) (liftR0 x)
 
-   lift1 f (Wrap rec) =
-      Wrap $
+   liftR1 f rec =
       extDeltaCons
-         (lift1 f $ Wrap $ Record.extBefore rec)
-         (lift1 f $ Wrap $ Record.extAfter rec)
+         (liftR1 f $ Record.extBefore rec)
+         (liftR1 f $ Record.extAfter rec)
 
-   lift2 f (Wrap recX) (Wrap recY) =
-      Wrap $
+   liftR2 f recX recY =
       extDeltaCons
-         (lift2 f (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY))
-         (lift2 f (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY))
+         (liftR2 f (Record.extBefore recX) (Record.extBefore recY))
+         (liftR2 f (Record.extAfter  recX) (Record.extAfter  recY))
 
 
 instance (Record rec, Sum a) => Sum (Wrap rec a) where
