@@ -289,9 +289,9 @@ unknownTopologyNodes =
 
 data Flow v =
    Flow {
-      flowPowerOut, flowEnergyOut, flowXOut,
+      flowXOut, flowPowerOut, flowEnergyOut,
       flowEta,
-      flowXIn, flowEnergyIn, flowPowerIn :: v
+      flowEnergyIn, flowPowerIn, flowXIn :: v
    }
    deriving (Eq)
 
