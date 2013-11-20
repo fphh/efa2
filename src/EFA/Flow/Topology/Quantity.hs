@@ -82,7 +82,7 @@ type
       Graph.Graph node Graph.EitherEdge (Sums v) (Maybe (Flow v))
 
 type
-   DirTopology node a v =
+   DirTopology node v =
       Graph.Graph node Graph.DirEdge (Sums v) (Flow v)
 
 
