@@ -2,10 +2,13 @@ module Main where
 
 import EFA.Application.Utility ( topologyFromEdges )
 
+import qualified EFA.Flow.State.Quantity as StateFlow
+
 import qualified EFA.Flow.Topology.EquationSystem as EqSys
 import qualified EFA.Flow.Topology.AssignMap as AssignMap
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as XIdx
+import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Topology.EquationSystem ((.=))
 
@@ -15,16 +18,20 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
-import EFA.Equation.Result(Result)
+import EFA.Equation.Result (Result)
+import EFA.Equation.Unknown (unknown)
+import EFA.Equation.Arithmetic ((~+))
 
 import qualified EFA.Report.Format as Format
 
 import qualified EFA.Utility.FixedLength as FL
+import EFA.Utility.Async (concurrentlyMany_)
+
+import Control.Applicative (liftA2, pure)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Empty as Empty
-
-import Data.Monoid (Monoid, mconcat)
+import Data.Monoid (Monoid, mconcat, mempty)
 
 
 data Node = Source0 | Source1 | Crossing | Sink0 | Sink1
@@ -103,8 +110,8 @@ sinkMixSystem =
    (RecIdx.mixComponent FL.i1 (XIdx.power crossing sink0) .= 0) :
    (RecIdx.mixComponent FL.i0 (XIdx.power crossing sink1) .= 0) :
 
-   (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.25) :
-   (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.5) :
+   (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.3) :
+   (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.6) :
    (RecIdx.mixSum (XIdx.eta crossing sink0) .= 0.75) :
    (RecIdx.mixSum (XIdx.eta crossing sink1) .= 0.8) :
    []
@@ -116,12 +123,28 @@ sinkMixSolution =
       sinkMixSystem
 
 
+cumulatedSolution :: FlowTopo.Section Node (Mix (Result Double))
+cumulatedSolution =
+   FlowTopoPlain.mapEdge (fmap StateFlow.flowResultFromCumResult) $
+   FlowTopoPlain.checkedZipWith "cumulatedSolution"
+      (liftA2 (liftA2 (~+)))
+      (const $ const $ pure unknown)
+      (liftA2 (liftA2 (liftA2 (liftA2 (~+)))))
+      (FlowTopoPlain.mapEdge (fmap StateFlow.cumFromFlow) sourceMixSolution)
+      (FlowTopoPlain.mapEdge (fmap StateFlow.cumFromFlow) sinkMixSolution)
+
+
 main :: IO ()
 main = do
    mapM_ (putStrLn . Format.unUnicode) $
       AssignMap.format $ FlowTopo.toAssignMap sourceMixSolution
-   Draw.xterm $ Draw.flowTopology Draw.optionsDefault $
-      FlowTopo.topology sourceMixSolution
 
-   Draw.xterm $ Draw.flowTopology Draw.optionsDefault $
-      FlowTopo.topology sinkMixSolution
+   concurrentlyMany_ $
+      map
+         (Draw.xterm . Draw.flowTopology Draw.optionsDefault .
+          FlowTopo.topology) $
+      sourceMixSolution :
+      sinkMixSolution :
+      cumulatedSolution :
+      EqSys.solve cumulatedSolution mempty :
+      []
