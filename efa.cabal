@@ -69,6 +69,7 @@ Library
     EFA.Utility.Async
     EFA.Utility.Bifunctor
     EFA.Utility.Map
+    EFA.Utility.FixedLength
     EFA.Utility.Stream
     EFA.Utility.TotalMap
     EFA.Utility.Trace
@@ -677,6 +678,17 @@ Executable demo-distribution
     Build-Depends:
       efa,
       containers,
+      base
+  Else
+    Buildable: False
+
+Executable demo-mix
+  Main-Is: demo/mix/Main.hs
+  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      non-empty,
       base
   Else
     Buildable: False

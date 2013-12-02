@@ -1,18 +1,21 @@
 module EFA.Report.Format where
 
 import qualified EFA.Equation.RecordIndex as RecIdx
+import qualified EFA.Utility.FixedLength as FixedLength
 
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import Data.Map (Map)
 
 import Data.Bool.HT (if')
 import Data.List (intercalate)
 import Data.Ratio (Ratio, numerator, denominator)
+import Data.Foldable (Foldable, foldr1)
 
 import Text.Printf (PrintfArg, printf)
 
 import qualified Prelude as P
-import Prelude hiding (words, lines, sum, negate)
+import Prelude hiding (words, lines, sum, negate, foldr1)
 
 
 -- * special Unicode characters
@@ -76,6 +79,9 @@ class Format output where
    function :: Function -> output -> output
    integral :: output -> output
    recordDelta :: RecIdx.Delta -> output -> output
+   mixComponent :: output -> output -> output
+   mixPair :: output -> output -> output
+   mix :: Foldable f => output -> NonEmpty.T f output -> output
    initial, exit :: output
    sectionNode :: output -> output -> output
    directionIn, directionOut :: output
@@ -130,6 +136,11 @@ instance Format ASCII where
          RecIdx.Before -> "[0]"
          RecIdx.After -> "[1]"
          RecIdx.Delta -> "d"
+   mixComponent (ASCII c) (ASCII x) = ASCII $ c ++ "?" ++ x
+   mixPair (ASCII x) (ASCII y) = ASCII $ x ++ "," ++ y
+   mix (ASCII s) xs =
+      case foldr1 mixPair xs of
+         ASCII v -> ASCII $ s ++ " [" ++ v ++ "]"
    initial = ASCII "init"
    exit = ASCII "exit"
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
@@ -203,6 +214,11 @@ instance Format Unicode where
          RecIdx.Before -> "\x2070"
          RecIdx.After -> "\xb9"
          RecIdx.Delta -> [deltaChar]
+   mixComponent (Unicode c) (Unicode x) = Unicode $ c ++ "?" ++ x
+   mixPair (Unicode x) (Unicode y) = Unicode $ x ++ "," ++ y
+   mix (Unicode s) xs =
+      case foldr1 mixPair xs of
+         Unicode v -> Unicode $ s ++ " [" ++ v ++ "]"
    initial = Unicode "init"
    exit = Unicode "exit"
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
@@ -321,6 +337,11 @@ instance Format Latex where
          RecIdx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
          RecIdx.After -> "\\leftexp{1}{" ++ rest ++ "}"
          RecIdx.Delta -> "\\Delta " ++ rest
+   mixComponent (Latex c) (Latex x) = Latex $ c ++ "?" ++ x
+   mixPair (Latex x) (Latex y) = Latex $ x ++ "," ++ y
+   mix (Latex s) xs =
+      case foldr1 mixPair xs of
+         Latex v -> Latex $ s ++ " [" ++ v ++ "]"
    initial = Latex "\\mbox{init}"
    exit = Latex "\\mbox{exit}"
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
@@ -385,6 +406,18 @@ instance Record RecIdx.Delta where
 
 instance Record rec => Record (RecIdx.ExtDelta rec) where
    record (RecIdx.ExtDelta d r) = recordDelta d . record r
+
+
+class MixRecord len where
+   mixRecord :: Format output => RecIdx.Mix len -> output -> output
+
+instance (FixedLength.C list) => MixRecord (FixedLength.WrapPos list) where
+   mixRecord RecIdx.MixSum = id
+   mixRecord (RecIdx.MixComponent pos) =
+      mixComponent (integer $ fromIntegral $ FixedLength.numFromPos pos)
+
+instance (MixRecord len) => Record (RecIdx.Mix len) where
+   record = mixRecord
 
 
 

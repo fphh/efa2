@@ -13,6 +13,7 @@ import EFA.Equation.Arithmetic
            Integrate, Scalar, integrate,
            Scale, scale)
 
+import qualified EFA.Utility.FixedLength as FixedLength
 import EFA.Utility ((>>!))
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
@@ -22,6 +23,7 @@ import UniqueLogic.ST.TF.Expression ((=:=))
 
 import Control.Applicative (Applicative, pure, liftA2, liftA3)
 
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable)
 import Data.Foldable (Foldable)
@@ -69,6 +71,9 @@ class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec wher
    rules ::
       (Sys.Value mode a, Sum a) =>
       Variable mode rec s a -> System mode s
+   mixSumRules, mixFactorRules ::
+      (Sys.Value mode a, Sum a) =>
+      rec (Expr.T mode s a) -> System mode s
    equalR ::
       (Sys.Value mode a) =>
       rec (Expr.T mode s a) ->
@@ -88,6 +93,8 @@ class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec wher
 instance Record Record.Absolute where
 
    rules _ = mempty
+   mixSumRules _ = mempty
+   mixFactorRules _ = mempty
 
    equalR (Record.Absolute x) (Record.Absolute y) =
       System (x =:= y)
@@ -104,6 +111,8 @@ instance Record Record.Delta where
 
    rules vars = System $
       Arith.ruleAdd (Record.before vars) (Record.delta vars) (Record.after vars)
+   mixSumRules _ = mempty
+   mixFactorRules _ = mempty
 
    {-
    I omit equality on the delta part since it would be redundant.
@@ -145,6 +154,16 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
             (Record.extDelta vars)
             (Record.extAfter vars))
 
+   mixSumRules vars =
+      mixSumRules (Record.extBefore vars) <>
+      mixSumRules (Record.extDelta vars) <>
+      mixSumRules (Record.extAfter vars)
+
+   mixFactorRules vars =
+      mixFactorRules (Record.extBefore vars) <>
+      mixFactorRules (Record.extDelta vars) <>
+      mixFactorRules (Record.extAfter vars)
+
    {-
    I omit equality on the delta part since it would be redundant.
    -}
@@ -163,6 +182,26 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
       extDeltaCons
          (liftR2 f (Record.extBefore recX) (Record.extBefore recY))
          (liftR2 f (Record.extAfter  recX) (Record.extAfter  recY))
+
+
+instance (FixedLength.C f) => Record (Record.Mix f) where
+
+   rules _ = mempty
+
+   mixSumRules (Record.Mix s (NonEmpty.Cons p ps)) =
+      System (s =:= Fold.foldl (~+) p (FixedLength.Wrap ps))
+
+   mixFactorRules (Record.Mix s ps) =
+      Fold.foldMap (\p -> System (s =:= p)) (FixedLength.Wrap ps)
+
+   equalR recX recY =
+      Fold.foldMap System $ liftA2 (=:=) recX recY
+
+   liftR0 x = pure x
+
+   liftR1 f rec = fmap f rec
+
+   liftR2 f recX recY = liftA2 f recX recY
 
 
 instance (Record rec, Sum a) => Sum (Wrap rec a) where

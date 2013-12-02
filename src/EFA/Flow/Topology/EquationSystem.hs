@@ -6,7 +6,7 @@ module EFA.Flow.Topology.EquationSystem (
 
    solve, solveOpts, solveTracked,
 
-   Options, optionsDefault,
+   Options, optionsDefault, optionsSourceMix, optionsSinkMix,
    equalInOutSums, independentInOutSums,
    fromTopology,
 
@@ -60,7 +60,7 @@ import qualified Control.Monad.Exception.Synchronous as ME
 import qualified Control.Monad.Trans.Reader as MR
 import qualified Control.Monad.Trans.Class as MT
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.Monad.Trans.Writer (runWriterT)
+import Control.Monad.Trans.Writer (runWriterT, tell)
 
 import Control.Monad.ST (ST, runST)
 
@@ -162,8 +162,11 @@ variable (RecIdx.Record recIdx idx) =
 data Options mode rec s v =
    Options {
       optInOutSums ::
-         SysRecord.Expr mode rec s v ->
-         SysRecord.Expr mode rec s v ->
+         Expr mode rec s v ->
+         Expr mode rec s v ->
+         EqSys.System mode s,
+      optEqualFactorsOut, optEqualFactorsIn, optEqualEta ::
+         Expr mode rec s v ->
          EqSys.System mode s
    }
 
@@ -171,7 +174,42 @@ optionsDefault ::
    (Verify.LocalVar mode v, Record rec) =>
    Options mode rec s v
 optionsDefault =
-   Options { optInOutSums = (=&=) }
+   Options {
+      optInOutSums = (=&=),
+      optEqualFactorsOut = const mempty,
+      optEqualFactorsIn = const mempty,
+      optEqualEta = const mempty
+   }
+
+optionsSourceMix ::
+   (Verify.LocalVar mode v, Sum v, Record rec) =>
+   Options mode rec s v
+optionsSourceMix =
+   Options {
+      optInOutSums = (=&=),
+      optEqualFactorsOut = mixFactorRules,
+      optEqualFactorsIn = const mempty,
+      optEqualEta = mixFactorRules
+   }
+
+optionsSinkMix ::
+   (Verify.LocalVar mode v, Sum v, Record rec) =>
+   Options mode rec s v
+optionsSinkMix =
+   Options {
+      optInOutSums = (=&=),
+      optEqualFactorsOut = const mempty,
+      optEqualFactorsIn = mixFactorRules,
+      optEqualEta = mixFactorRules
+   }
+
+mixSumRules, mixFactorRules ::
+   (Sys.Value mode v, Sum v, Record rec) =>
+   Expr mode rec s v -> EqSys.System mode s
+mixSumRules =
+   EqSys.System . tell . SysRecord.mixSumRules . unwrap
+mixFactorRules =
+   EqSys.System . tell . SysRecord.mixFactorRules . unwrap
 
 
 equalInOutSums ::
@@ -195,7 +233,7 @@ fromTopology ::
    FlowTopo.DirSection node (Expr mode rec s v) ->
    EqSys.System mode s
 fromTopology opts (FlowTopoPlain.Section dtime topo) =
-   foldMap (fromEdge dtime) (Graph.edgeLabels topo)
+   foldMap (fromEdge opts dtime) (Graph.edgeLabels topo)
    <>
    foldMap (fromSums opts) (Graph.nodeLabels topo)
    <>
@@ -212,20 +250,31 @@ fromTopology opts (FlowTopoPlain.Section dtime topo) =
 
 fromEdge ::
    (Verify.LocalVar mode v, Product v, Record rec) =>
+   Options mode rec s v ->
    Expr mode rec s v ->
    FlowTopo.Flow (Expr mode rec s v) ->
    EqSys.System mode s
-fromEdge dtime
+fromEdge opts dtime
       (FlowTopo.Flow {
+         FlowTopo.flowXOut = xout,
          FlowTopo.flowEnergyOut = eout,
          FlowTopo.flowPowerOut = pout,
+         FlowTopo.flowXIn = xin,
          FlowTopo.flowEnergyIn = ein,
          FlowTopo.flowPowerIn = pin,
          FlowTopo.flowEta = eta
       }) =
    (eout =&= dtime ~* pout) <>
    (ein  =&= dtime ~* pin)  <>
-   (pin  =&= eta ~* pout)
+   (pin  =&= eta ~* pout) <>
+   mixSumRules pout <>
+   mixSumRules pin <>
+   mixSumRules eout <>
+   mixSumRules ein <>
+   mixFactorRules dtime <>
+   optEqualFactorsOut opts xout <>
+   optEqualFactorsIn opts xin <>
+   optEqualEta opts eta
 
 fromSums ::
    (Verify.LocalVar mode v, rv ~ Expr mode rec s v, Record rec) =>
