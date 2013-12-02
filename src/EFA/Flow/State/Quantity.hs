@@ -68,8 +68,8 @@ import qualified EFA.Graph as Graph
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
-import EFA.Equation.Unknown (Unknown)
-import EFA.Equation.Result (Result(Determined, Undetermined))
+import EFA.Equation.Unknown (Unknown(unknown))
+import EFA.Equation.Result (Result(Determined))
 
 import qualified EFA.Signal.Sequence as Sequ
 
@@ -438,21 +438,22 @@ flowResultFromCum :: Cum v -> Flow (Result v)
 flowResultFromCum =
    flowResultFromCumResult . fmap Determined
 
-flowResultFromCumResult :: Cum (Result v) -> Flow (Result v)
+flowResultFromCumResult :: Unknown v => Cum v -> Flow v
 flowResultFromCumResult cum =
-   (pure Undetermined) {
+   (pure unknown) {
       SeqFlow.flowEnergyOut = cumEnergyOut cum,
       SeqFlow.flowEnergyIn  = cumEnergyIn  cum
    }
 
-carryResultFromResult :: Result a -> Carry (Result a)
+carryResultFromResult :: Unknown a => a -> Carry a
 carryResultFromResult e =
-   (pure Undetermined) {
+   (pure unknown) {
       carryEnergy = e
    }
 
 graphFromCumResult ::
-   CumGraph node (Result a) -> Graph node (Result a) (Result a)
+   Unknown a =>
+   CumGraph node a -> Graph node a a
 graphFromCumResult gr =
    StateFlow.Graph {
       StateFlow.storages =
