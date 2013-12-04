@@ -3,9 +3,13 @@ module EFA.Flow.SequenceState.Quantity where
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Flow.Storage as Storage
+import qualified EFA.Flow.Part.Map as PartMap
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
+
+import qualified EFA.Utility.Map as MapU
 
 import qualified Data.Map as Map; import Data.Map (Map)
 
@@ -46,3 +50,15 @@ storageSequences =
          fmap (Map.singleton s) $
          Map.filterWithKey (const . Node.isStorage . Node.typ) $
          Graph.nodeLabels topo)
+
+
+storageSums ::
+   (Ord part, Node.C node) =>
+   Map node (Storage.Graph part a carryLabel) ->
+   Map part (FlowTopo.Section node v) ->
+   Map node (Map part (FlowTopo.Sums (a,v)))
+storageSums storages sections =
+   Map.intersectionWith
+      (Map.intersectionWith (\carrySum -> fmap ((,) carrySum)))
+      (fmap (PartMap.parts . Storage.nodes) storages)
+      (MapU.flip $ fmap (Graph.nodeLabels . FlowTopo.topology) sections)

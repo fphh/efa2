@@ -27,15 +27,16 @@ module EFA.Flow.Sequence.EquationSystem (
    ) where
 
 import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
+import qualified EFA.Flow.SequenceState.Quantity as SeqState
 import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
 import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Part.Map as PartMap
-import EFA.Flow.Part.Map (PartMap)
 import EFA.Flow.Topology.EquationSystem (fromTopology)
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join,
@@ -230,8 +231,9 @@ fromStorageSequences ::
       (SysRecord.Expr mode rec s v) ->
    EqSys.System mode s
 fromStorageSequences opts g =
-   let f node (sg@(Storage.Graph partMap _), storageMap) =
-          fromStorageSequence opts g node partMap storageMap
+   let f sumMap (sg@(Storage.Graph partMap _), storageMap) =
+          fromStorageSequence opts sumMap
+             (PartMap.init partMap, PartMap.exit partMap) storageMap
           <>
           foldMap
              (\(s, ns) -> fromInStorages s $ Map.elems ns)
@@ -240,49 +242,46 @@ fromStorageSequences opts g =
           foldMap
              (\(s, ns) -> fromOutStorages s $ Map.elems ns)
              (Storage.inEdges sg)
-   in  fold $ Map.mapWithKey f $ SeqFlow.storages g
+   in  fold $
+       Map.intersectionWith f
+          (SeqState.storageSums
+              (fmap fst $ SeqFlow.storages g) (fmap snd $ SeqFlow.sequence g))
+          (SeqFlow.storages g)
 
 fromStorageSequence ::
    (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
     Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
-    Sum a, Record rec, Node.C node) =>
+    Sum a, Record rec) =>
    SeqStateEqSys.Options mode rec s a v ->
-   SeqFlow.Graph node ra rv ->
-   node ->
-   PartMap Idx.Section ra ->
+   Map Idx.Section (FlowTopo.Sums (ra,rv)) ->
+   (ra, ra) ->
    Map Idx.Boundary ra ->
    EqSys.System mode s
-fromStorageSequence opts g node partMap storageMap =
+fromStorageSequence opts sumMap (init, exit) storageMap =
    let storages = Map.toList storageMap
    in  mconcat $
        zipWith
-          (charge opts g node partMap)
-          (PartMap.init partMap : map snd storages)
+          (charge opts sumMap)
+          (init : map snd storages)
           (map (mapFst Idx.sectionFromBoundary) storages
            ++
-           [(Nothing, PartMap.exit partMap)])
+           [(Nothing, exit)])
 
 charge ::
    (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
     Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
-    Sum a, Record rec, Node.C node) =>
+    Sum a, Record rec) =>
    SeqStateEqSys.Options mode rec s a v ->
-   SeqFlow.Graph node ra rv ->
-   node ->
-   PartMap Idx.Section ra ->
+   Map Idx.Section (FlowTopo.Sums (ra,rv)) ->
    ra -> (Maybe Idx.Section, ra) ->
    EqSys.System mode s
-charge opts g node partMap old (aug, now) =
-   let carrySum sec =
-          maybe (error "charge: missing section") id $
-          PartMap.lookup sec partMap
-       sums =
+charge opts sumMap old (aug, now) =
+   let sums =
           case aug of
              Nothing -> SeqFlow.Sums Nothing Nothing
              Just sec ->
-                fmap ((,) (carrySum sec)) $
                 maybe (error "charge: missing sum") id $
-                SeqFlow.lookupSums (Idx.secNode sec node) g
+                Map.lookup sec sumMap
    in  SeqStateEqSys.fromStorageSums opts sums
        <>
        (condSum now (SeqFlow.sumOut sums)

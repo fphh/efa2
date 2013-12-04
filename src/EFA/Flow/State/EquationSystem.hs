@@ -27,15 +27,13 @@ module EFA.Flow.State.EquationSystem (
    ) where
 
 import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
+import qualified EFA.Flow.SequenceState.Quantity as SeqState
 import qualified EFA.Flow.SequenceState.Variable as Var
-import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
-import qualified EFA.Flow.Part.Map as PartMap
-import EFA.Flow.Part.Map (PartMap)
 import EFA.Flow.Topology.EquationSystem (fromTopology)
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join, (=%=), (=.=))
@@ -227,9 +225,7 @@ fromStorageSequences ::
       (SysRecord.Expr mode rec s v) ->
    EqSys.System mode s
 fromStorageSequences opts g =
-   let f node sg@(Storage.Graph partMap _) =
-          connectCarryFlow opts g node partMap
-          <>
+   let f sg =
           foldMap
              (\(s, ns) -> StorageEqSys.fromInStorages s $ Map.elems ns)
              (Storage.outEdges sg)
@@ -237,26 +233,10 @@ fromStorageSequences opts g =
           foldMap
              (\(s, ns) -> StorageEqSys.fromOutStorages s $ Map.elems ns)
              (Storage.inEdges sg)
-   in  fold $ Map.mapWithKey f $ StateFlow.storages g
-
-connectCarryFlow ::
-   (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
-    Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
-    Record rec, Node.C node) =>
-   SeqStateEqSys.Options mode rec s a v ->
-   StateFlow.Graph node ra rv ->
-   node ->
-   PartMap Idx.State ra ->
-   EqSys.System mode s
-connectCarryFlow opts g node partMap =
-   fold $
-   Map.mapWithKey
-      (\state carrySum ->
-         SeqStateEqSys.fromStorageSums opts $
-         fmap ((,) carrySum) $
-         maybe (error "charge: missing sum") id $
-         StateFlow.lookupSums (Idx.stateNode state node) g) $
-   PartMap.parts partMap
+   in  (foldMap f $ StateFlow.storages g)
+       <>
+       (foldMap (foldMap (SeqStateEqSys.fromStorageSums opts)) $
+        SeqState.storageSums (StateFlow.storages g) (StateFlow.states g))
 
 
 withExpressionGraph ::
