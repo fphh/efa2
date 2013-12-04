@@ -39,7 +39,6 @@ module EFA.Flow.State.Quantity (
    lookupSums,
 
    Lookup, lookup,
-   LookupScalar, lookupScalar,
    Env.TypeOf, Env.Element, Env.switchPart,
    ) where
 
@@ -541,13 +540,6 @@ stateLookup ::
 stateLookup state = Map.lookup state . states
 
 
-withStorage ::
-   (Ord node) =>
-   (idx -> StorageQuant.Graph Carry a -> Maybe a) ->
-   Idx.ForStorage idx node -> Graph node a v -> Maybe a
-withStorage look (Idx.ForStorage idx node) =
-   look idx <=< Map.lookup node . storages
-
 class
    (Env.Type (Env.TypeOf idx), Var.Index idx, Var.FormatIndex idx) =>
       Lookup idx where
@@ -560,26 +552,10 @@ instance (FlowTopo.Lookup idx) => Lookup (Idx.InState idx) where
       FlowTopo.lookup idx =<< stateLookup state g
 
 instance
-   (LookupScalar idx, StorageVar.Index idx) =>
+   (StorageQuant.Lookup idx, StorageVar.Part idx ~ Idx.State) =>
       Lookup (Idx.ForStorage idx) where
-   lookup = lookupScalar
-
-
-class (StorageVar.Index idx) => LookupScalar idx where
-   lookupScalar ::
-      (Ord node) => Idx.ForStorage idx node -> Graph node a v -> Maybe a
-
-instance LookupScalar (StorageIdx.Energy Idx.State) where
-   lookupScalar = withStorage StorageQuant.lookupEnergy
-
-instance LookupScalar (StorageIdx.X Idx.State) where
-   lookupScalar = withStorage StorageQuant.lookupX
-
-instance LookupScalar (StorageIdx.InSum Idx.State) where
-   lookupScalar = withStorage StorageQuant.lookupInSum
-
-instance LookupScalar (StorageIdx.OutSum Idx.State) where
-   lookupScalar = withStorage StorageQuant.lookupOutSum
+   lookup (Idx.ForStorage idx node) =
+      StorageQuant.lookup idx <=< Map.lookup node . storages
 
 
 mapGraphWithVar ::

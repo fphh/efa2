@@ -142,3 +142,21 @@ lookupOutSum (StorageIdx.OutSum aug) (Storage.Graph partMap _) =
    case aug of
       Idx.Init -> return $ PartMap.init partMap
       Idx.NoInit sec -> Map.lookup sec $ PartMap.parts partMap
+
+
+class (StorageVar.Index idx) => Lookup idx where
+   lookup ::
+      (Carry carry, CarryPart carry ~ StorageVar.Part idx) =>
+      idx -> Graph carry a -> Maybe a
+
+instance (PartIdx.Format sec, Ord sec) => Lookup (StorageIdx.Energy sec) where
+   lookup = lookupEnergy
+
+instance (PartIdx.Format sec, Ord sec) => Lookup (StorageIdx.X sec) where
+   lookup = lookupX
+
+instance (PartIdx.Format sec, Ord sec) => Lookup (StorageIdx.InSum sec) where
+   lookup = lookupInSum
+
+instance (PartIdx.Format sec, Ord sec) => Lookup (StorageIdx.OutSum sec) where
+   lookup = lookupOutSum

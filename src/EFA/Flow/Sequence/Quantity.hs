@@ -34,7 +34,7 @@ module EFA.Flow.Sequence.Quantity (
    lookupSums,
 
    Lookup, lookup,
-   LookupScalar, lookupScalar,
+   LookupScalar,
    Env.TypeOf, Env.Element, Env.switchPart,
 
    formatAssigns,
@@ -289,9 +289,7 @@ instance (FlowTopo.Lookup idx) => Lookup (Idx.InSection idx) where
    lookup (Idx.InPart sec idx) g =
       FlowTopo.lookup idx =<< seqLookup sec g
 
-instance
-   (LookupScalar idx, StorageVar.Index idx) =>
-      Lookup (Idx.ForStorage idx) where
+instance (LookupScalar idx) => Lookup (Idx.ForStorage idx) where
    lookup = lookupScalar
 
 
@@ -306,16 +304,16 @@ instance LookupScalar StorageIdx.Content where
    lookupScalar = lookupStorage
 
 instance LookupScalar (StorageIdx.Energy Idx.Section) where
-   lookupScalar = withStorage StorageQuant.lookupEnergy
+   lookupScalar = withStorage StorageQuant.lookup
 
 instance LookupScalar (StorageIdx.X Idx.Section) where
-   lookupScalar = withStorage StorageQuant.lookupX
+   lookupScalar = withStorage StorageQuant.lookup
 
 instance LookupScalar (StorageIdx.InSum Idx.Section) where
-   lookupScalar = withStorage StorageQuant.lookupInSum
+   lookupScalar = withStorage StorageQuant.lookup
 
 instance LookupScalar (StorageIdx.OutSum Idx.Section) where
-   lookupScalar = withStorage StorageQuant.lookupOutSum
+   lookupScalar = withStorage StorageQuant.lookup
 
 
 data Irrelevant = Irrelevant
