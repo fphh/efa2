@@ -4,9 +4,11 @@ module EFA.Flow.Storage.Variable where
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
-import EFA.Report.FormatValue (FormatScalarIndex, formatScalarIndex)
+import EFA.Report.FormatValue (FormatScalarIndex, formatScalarIndex, formatValue)
 
 data Scalar part =
      Content StorageIdx.Content
@@ -75,3 +77,13 @@ formatScalarValue var =
 
 instance (PartIdx.Format part) => FormatScalarIndex (Scalar part) where
    formatScalarIndex var = formatScalarValue var
+
+
+checkedLookup ::
+   (Node.C node, FormatScalarIndex idx) =>
+   String -> (idx -> t -> Maybe b) -> node -> idx -> t -> b
+checkedLookup name lk node idx =
+   maybe (error $
+             "Storage." ++ name ++
+             " " ++ Format.unUnicode (formatValue (Idx.ForStorage idx node))) id .
+   lk idx
