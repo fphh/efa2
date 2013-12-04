@@ -14,16 +14,73 @@ import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Verify as Verify
+import qualified EFA.Equation.Result as Result
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue)
+import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Report.Format (Format)
 
 import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Control.Monad.Exception.Synchronous as ME
 
 import System.Exit (exitFailure)
-import Data.Foldable (forM_)
+
+import qualified Data.List.HT as ListHT
+import Control.Monad (when)
+import Data.Monoid (All(All), getAll)
+import Data.Foldable (forM_, foldMap)
+
+
+completelyDetermined ::
+  Node.C node =>
+  SeqFlow.Graph node (Result a) (Result v) -> Bool
+completelyDetermined =
+  getAll .
+  SeqFlow.foldMap (All . Result.isDetermined) (All . Result.isDetermined)
+
+undeterminedFromGraph ::
+  (Node.C node, Format output) =>
+  SeqFlow.Graph node (Result a) (Result v) ->
+  [output]
+undeterminedFromGraph =
+  SeqFlow.fold .
+  SeqFlow.mapGraphWithVar
+    (\var -> Result.switch [formatValue var] (const []))
+    (\var -> Result.switch [formatValue var] (const []))
+
+solveIncomplete ::
+  [Given.Equation Verify.Ignore Rational Rational] ->
+  Given.ResultGraph Rational Rational
+solveIncomplete eqs =
+  EqSys.solve Given.flowGraph (foldMap Given.getEquation eqs)
+
+
+determinateness :: IO ()
+determinateness =
+  Test.singleIO "Check whether all quantities can be determined." $ do
+    let undetermined =
+          undeterminedFromGraph $ solveIncomplete Given.originalEquations
+        allDetermined = null $ undetermined
+    when (not allDetermined) $ do
+      putStrLn $ "undetermined variables:\n" ++
+        unlines (map Format.unUnicode undetermined)
+    return allDetermined
+
+minimalDeterminateness :: IO ()
+minimalDeterminateness =
+  Test.singleIO "Check whether the set of given equations is minimal." $ do
+    let redundantEqs =
+          map fst $
+          filter (completelyDetermined . solveIncomplete . snd) $
+          zip [(0::Int) .. ] $ map snd $
+          ListHT.removeEach Given.originalEquations
+        minimal = null redundantEqs
+    when (not minimal) $ putStrLn $
+      "at least one of the following equations is redundant: " ++
+      show redundantEqs
+    return minimal
 
 
 checkException ::
@@ -90,8 +147,11 @@ consistency =
   -- showDifferences testEnv env
   return $ testEnv == env
 
+
 runTests :: IO ()
 runTests = do
+  determinateness
+  minimalDeterminateness
   correctness
   consistency
 

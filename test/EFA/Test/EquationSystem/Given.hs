@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE Rank2Types #-}
 
 module EFA.Test.EquationSystem.Given where
 
@@ -19,7 +20,6 @@ import EFA.Equation.Result (Result(Determined, Undetermined))
 import EFA.Symbolic.SumProduct ( Term )
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue)
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -28,6 +28,7 @@ import qualified Control.Monad.Exception.Synchronous as ME
 
 import Data.Tuple.HT (mapFst)
 import Data.Monoid (Endo(Endo), appEndo, mconcat)
+import Data.Foldable (foldMap)
 
 
 sec0, sec1, sec2 :: Idx.Section
@@ -97,10 +98,9 @@ numericEnv =
 infix 0 .=
 
 (.=) ::
-   (Arith.Constant x, FormatValue x, Verify.LabeledNumber x,
-    x ~ SeqFlow.Element idx TrackedScalar TrackedSignal,
-    SeqFlow.Lookup idx) =>
-   idx Node -> Rational -> EquationSystem s
+   (Arith.Constant x, Verify.LocalVar mode x,
+    x ~ SeqFlow.Element idx a v, SeqFlow.Lookup idx) =>
+   idx Node -> Rational -> EqSys.EquationSystem mode Node s a v
 evar .= val  =
    evar EqSys..= Arith.fromRational val
 
@@ -113,39 +113,49 @@ type EquationSystem s =
            (Verify.Track Format.Unicode)
            Node s TrackedScalar TrackedSignal
 
+data
+   Equation mode a v =
+      Equation {
+         getEquation :: forall s.
+            EqSys.EquationSystem mode Node s a v
+      }
+
 originalGiven :: EquationSystem s
-originalGiven =
-   mconcat $
+originalGiven = foldMap getEquation originalEquations
 
-   (XIdx.dTime sec0 .= 1 / 1) :
-   (XIdx.dTime sec1 .= 2 / 1) :
-   (XIdx.dTime sec2 .= 1 / 1) :
+originalEquations ::
+   (Verify.LocalVar mode a, Arith.Constant a,
+    Verify.LocalVar mode v, Arith.Constant v) =>
+   [Equation mode a v]
+originalEquations =
+   Equation (XIdx.dTime sec0 .= 1 / 1) :
+   Equation (XIdx.dTime sec1 .= 2 / 1) :
+   Equation (XIdx.dTime sec2 .= 1 / 1) :
 
-   (XIdx.storage (Idx.afterSection sec2) node3 .= 10 / 1) :
+   Equation (XIdx.storage (Idx.afterSection sec2) node3 .= 10 / 1) :
 
-   (XIdx.x sec0 node2 node3 .= 8 / 25) :
+   Equation (XIdx.x sec0 node2 node3 .= 8 / 25) :
 
-   (XIdx.power sec0 node2 node3 .= 4 / 1) :
-   (XIdx.power sec1 node3 node2 .= 5 / 1) :
-   (XIdx.power sec2 node3 node2 .= 6 / 1) :
+   Equation (XIdx.power sec0 node2 node3 .= 4 / 1) :
+   Equation (XIdx.power sec1 node3 node2 .= 5 / 1) :
+   Equation (XIdx.power sec2 node3 node2 .= 6 / 1) :
 
-   (XIdx.eta sec0 node3 node2 .= 1 / 4) :
-   (XIdx.eta sec0 node2 node1 .= 1 / 2) :
-   (XIdx.eta sec0 node0 node2 .= 3 / 4) :
+   Equation (XIdx.eta sec0 node3 node2 .= 1 / 4) :
+   Equation (XIdx.eta sec0 node2 node1 .= 1 / 2) :
+   Equation (XIdx.eta sec0 node0 node2 .= 3 / 4) :
 
-   (XIdx.eta sec1 node0 node2 .= 2 / 5) :
-   (XIdx.eta sec1 node2 node3 .= 3 / 5) :
+   Equation (XIdx.eta sec1 node0 node2 .= 2 / 5) :
+   Equation (XIdx.eta sec1 node2 node3 .= 3 / 5) :
 
-   (XIdx.eta sec2 node0 node2 .= 7 / 10) :
-   (XIdx.eta sec2 node3 node2 .= 9 / 10) :
-   (XIdx.eta sec2 node2 node1 .= 1 / 1) :
+   Equation (XIdx.eta sec2 node0 node2 .= 7 / 10) :
+   Equation (XIdx.eta sec2 node3 node2 .= 9 / 10) :
+   Equation (XIdx.eta sec2 node2 node1 .= 1 / 1) :
 
-   (XIdx.x sec1 node2 node3 .= 2 / 5) :
+   Equation (XIdx.x sec1 node2 node3 .= 2 / 5) :
 
-   (XIdx.x sec2 node2 node0 .= 3 / 10) :
+   Equation (XIdx.x sec2 node2 node0 .= 3 / 10) :
 
-
-   (XIdx.inSum sec1 node1 .= 20) :
+   Equation (XIdx.inSum sec1 node1 .= 20) :
 
    []
 
