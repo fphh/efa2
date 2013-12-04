@@ -73,7 +73,6 @@ toTestGiven gr =
             Undetermined -> showString "?"
 
 
--- Nicht alle Werte sind von originalGiven berechenbar.
 testEnv, solvedEnv ::
    (ME.Exceptional
       (Verify.Exception Format.Unicode)
@@ -148,9 +147,10 @@ originalGiven =
 
    (XIdx.x sec2 node2 node0 .= 3 / 10) :
 
+
+   (XIdx.inSum sec1 node1 .= 20) :
+
    []
-
-
 
 
 testGiven :: EquationSystem s
@@ -162,9 +162,7 @@ testGiven = mconcat $
   (XIdx.power sec0 node2 node3 .= 4 / 1) :
   (XIdx.power sec0 node3 node2 .= 16 / 1) :
   (XIdx.power sec1 node0 node2 .= 625 / 12) :
-
---  (XIdx.power sec1 node1 node2 .= ?) :
-
+  (XIdx.power sec1 node1 node2 .= 10) :
   (XIdx.power sec1 node2 node0 .= 125 / 6) :
   (XIdx.power sec1 node2 node1 .= 25 / 2) :
   (XIdx.power sec1 node2 node3 .= 25 / 3) :
@@ -175,6 +173,7 @@ testGiven = mconcat $
   (XIdx.power sec2 node2 node1 .= 54 / 7) :
   (XIdx.power sec2 node2 node3 .= 27 / 5) :
   (XIdx.power sec2 node3 node2 .= 6 / 1) :
+
   (XIdx.energy sec0 node0 node2 .= 34 / 3) :
   (XIdx.energy sec0 node1 node2 .= 25 / 4) :
   (XIdx.energy sec0 node2 node0 .= 17 / 2) :
@@ -182,9 +181,7 @@ testGiven = mconcat $
   (XIdx.energy sec0 node2 node3 .= 4 / 1) :
   (XIdx.energy sec0 node3 node2 .= 16 / 1) :
   (XIdx.energy sec1 node0 node2 .= 625 / 6) :
-
---  (XIdx.energy sec1 node1 node2 .= ?) :
-
+  (XIdx.energy sec1 node1 node2 .= 20) :
   (XIdx.energy sec1 node2 node0 .= 125 / 3) :
   (XIdx.energy sec1 node2 node1 .= 25 / 1) :
   (XIdx.energy sec1 node2 node3 .= 50 / 3) :
@@ -195,20 +192,21 @@ testGiven = mconcat $
   (XIdx.energy sec2 node2 node1 .= 54 / 7) :
   (XIdx.energy sec2 node2 node3 .= 27 / 5) :
   (XIdx.energy sec2 node3 node2 .= 6 / 1) :
+
   (XIdx.eta sec0 node0 node2 .= 3 / 4) :
   (XIdx.eta sec0 node2 node1 .= 1 / 2) :
   (XIdx.eta sec0 node3 node2 .= 1 / 4) :
   (XIdx.eta sec1 node0 node2 .= 2 / 5) :
-
---  (XIdx.eta sec1 node2 node1 .= ?) :
-
+  (XIdx.eta sec1 node2 node1 .= 4/5) :
   (XIdx.eta sec1 node2 node3 .= 3 / 5) :
   (XIdx.eta sec2 node0 node2 .= 7 / 10) :
   (XIdx.eta sec2 node2 node1 .= 1 / 1) :
   (XIdx.eta sec2 node3 node2 .= 9 / 10) :
+
   (XIdx.dTime sec0 .= 1 / 1) :
   (XIdx.dTime sec1 .= 2 / 1) :
   (XIdx.dTime sec2 .= 1 / 1) :
+
   (XIdx.x sec0 node0 node2 .= 1 / 1) :
   (XIdx.x sec0 node1 node2 .= 1 / 1) :
   (XIdx.x sec0 node2 node0 .= 17 / 25) :
@@ -227,14 +225,13 @@ testGiven = mconcat $
   (XIdx.x sec2 node2 node1 .= 1 / 1) :
   (XIdx.x sec2 node2 node3 .= 7 / 10) :
   (XIdx.x sec2 node3 node2 .= 1 / 1) :
+
   (XIdx.inSum sec0 node1 .= 25 / 4) :
   (XIdx.inSum sec0 node2 .= 25 / 2) :
   (XIdx.outSum sec0 node0 .= 34 / 3) :
   (XIdx.outSum sec0 node2 .= 25 / 2) :
   (XIdx.outSum sec0 node3 .= 16 / 1) :
-
---  (XIdx.inSum sec1 node1 .= ?) :
-
+  (XIdx.inSum sec1 node1 .= 20) :
   (XIdx.inSum sec1 node2 .= 125 / 3) :
   (XIdx.inSum sec1 node3 .= 10 / 1) :
   (XIdx.outSum sec1 node0 .= 625 / 6) :
@@ -244,6 +241,7 @@ testGiven = mconcat $
   (XIdx.outSum sec2 node0 .= 162 / 49) :
   (XIdx.outSum sec2 node2 .= 54 / 7) :
   (XIdx.outSum sec2 node3 .= 6 / 1) :
+
   (XIdx.maxEnergy seci sec0 node3 .= 22 / 1) :
   (XIdx.maxEnergy seci sec2 node3 .= 6 / 1) :
   (XIdx.maxEnergy sec1 sec2 node3 .= 10 / 1) :
