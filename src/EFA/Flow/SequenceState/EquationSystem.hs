@@ -3,13 +3,7 @@ module EFA.Flow.SequenceState.EquationSystem where
 
 import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
-import qualified EFA.Flow.Storage.Quantity as StorageQuant
-import qualified EFA.Flow.Storage.Variable as StorageVar
-import qualified EFA.Flow.Storage.Index as StorageIdx
-import qualified EFA.Flow.Part.Index as PartIdx
 import EFA.Flow.EquationSystem (System, (=&=))
-
-import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
@@ -127,22 +121,3 @@ fromStorageSums opts sums =
    foldMap (uncurry $ optStInOutSums opts) (FlowTopo.sumIn sums)
    <>
    foldMap (uncurry $ optStInOutSums opts) (FlowTopo.sumOut sums)
-
-
-checkedLookupOutSum ::
-   (Node.C node, Ord part, PartIdx.Format part,
-    part ~ StorageQuant.CarryPart carry, StorageQuant.Carry carry) =>
-   StorageQuant.Graph carry a ->
-   node -> PartIdx.Init part -> a
-checkedLookupOutSum sg node state =
-   StorageVar.checkedLookup "fromStorageSequences inStorages"
-      StorageQuant.lookup node (StorageIdx.OutSum state) sg
-
-checkedLookupInSum ::
-   (Node.C node, Ord part, PartIdx.Format part,
-    part ~ StorageQuant.CarryPart carry, StorageQuant.Carry carry) =>
-   StorageQuant.Graph carry a ->
-   node -> PartIdx.Exit part -> a
-checkedLookupInSum sg node state =
-   StorageVar.checkedLookup "fromStorageSequences outStorages"
-      StorageQuant.lookup node (StorageIdx.InSum state) sg
