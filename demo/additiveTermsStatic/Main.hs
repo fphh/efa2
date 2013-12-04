@@ -151,8 +151,8 @@ mainSymbolic = do
       FlowTopoAssignMap.format $ FlowTopo.toAssignMap $
       FlowTopo.mapSection simplifiedSummands solved
 
-   Draw.xterm $ Draw.flowTopology Draw.optionsDefault $
-      FlowTopo.topology $ FlowTopo.mapSection simplifiedSummands solved
+   Draw.xterm $ Draw.flowSection Draw.optionsDefault $
+      FlowTopo.mapSection simplifiedSummands solved
 
 
 type

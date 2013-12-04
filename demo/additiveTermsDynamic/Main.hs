@@ -90,8 +90,7 @@ mainSymbolic = do
    putStrLn $ Format.unUnicode $ Format.lines $
       FlowTopoAssignMap.format $ FlowTopo.toAssignMap solved
 
-   Draw.xterm $ Draw.flowTopology Draw.optionsDefault $
-      FlowTopo.topology solved
+   Draw.xterm $ Draw.flowSection Draw.optionsDefault solved
 
 
 type

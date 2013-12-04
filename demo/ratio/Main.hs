@@ -61,5 +61,4 @@ main :: IO ()
 main = do
    putStrLn $ unlines $ map solve enRange
 
-   Draw.xterm $ Draw.flowTopology Draw.optionsDefault $
-      FlowTopo.topology $ solveGraph 0.5
+   Draw.xterm $ Draw.flowSection Draw.optionsDefault $ solveGraph 0.5

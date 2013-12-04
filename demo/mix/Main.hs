@@ -140,9 +140,7 @@ main = do
       AssignMap.format $ FlowTopo.toAssignMap sourceMixSolution
 
    concurrentlyMany_ $
-      map
-         (Draw.xterm . Draw.flowTopology Draw.optionsDefault .
-          FlowTopo.topology) $
+      map (Draw.xterm . Draw.flowSection Draw.optionsDefault) $
       sourceMixSolution :
       sinkMixSolution :
       cumulatedSolution :

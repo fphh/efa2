@@ -19,6 +19,8 @@ module EFA.Flow.Draw (
 
    topology,
    labeledTopology,
+
+   flowSection,
    flowTopology,
    flowTopologies,
    ) where
@@ -702,6 +704,29 @@ flowTopology ::
 flowTopology opts =
    dotDirGraph .
    uncurry (DotStmts [] []) .
+   dotNodesEdgesFromTopology opts
+
+flowSection ::
+   (FormatValue v, Node.C node) =>
+   Options Unicode -> FlowTopoQuant.Section node v -> DotGraph T.Text
+flowSection opts (FlowTopo.Section dt gr) =
+   dotDirGraph .
+   (\sgr ->
+       DotStmts {
+          subGraphs = [sgr],
+          attrStmts = [],
+          nodeStmts = [],
+          edgeStmts = []
+       }) $
+   DotSG True Nothing $
+   uncurry (DotStmts [GraphAttrs [labelFromString $ formatTime dt]] []) $
+   dotNodesEdgesFromTopology opts gr
+
+dotNodesEdgesFromTopology ::
+   (FormatValue v, Node.C node) =>
+   Options Unicode -> FlowTopoQuant.Topology node v ->
+   ([DotNode T.Text], [DotEdge T.Text])
+dotNodesEdgesFromTopology opts =
    dotNodesEdgesFromPartGraph .
    Graph.mapNodeWithKey
       (\node sums ->
@@ -735,7 +760,7 @@ seqFlowGraph opts gr =
              (,) (Idx.afterSection sec) $
              (show sec ++
               " / Range " ++ formatRange rng ++
-              " / Time " ++ unUnicode (formatValue dt),
+              " / " ++ formatTime dt,
               Graph.mapNodeWithKey
                  (\node sums ->
                     let (Storage.Graph partMap _, stores) =
@@ -811,7 +836,7 @@ stateFlowGraph opts gr =
        StateFlowQuant.storages gr)
       (Map.mapWithKey
           (\state (FlowTopo.Section dt topo) ->
-             (show state ++ " / Time " ++ unUnicode (formatValue dt),
+             (show state ++ " / " ++ formatTime dt,
               Graph.mapNodeWithKey
                  (\node _sums ->
                     stateNodeShow node $ PartMap.lookup state $
@@ -980,6 +1005,10 @@ dotDirGraph stmts =
       graphStatements = stmts
    }
 
+
+formatTime :: FormatValue a => a -> String
+formatTime dt =
+   "Time " ++ unUnicode (formatValue dt)
 
 formatAssignWithOpts ::
    (Node.C node, Var.FormatIndex idx, Idx.Identifier idx,

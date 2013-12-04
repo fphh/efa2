@@ -103,7 +103,7 @@ given =
 
 main :: IO ()
 main =
-   case FlowTopo.topology $ EqSys.solve (quantityTopology topoTripod) given of
+   case EqSys.solve (quantityTopology topoTripod) given of
       flowTopo -> do
 
          {-
@@ -129,7 +129,7 @@ main =
                         <>
                         Map.singleton (Topo.inPosFromDirEdge e)
                            (FlowTopo.flowEnergyIn flow)) $
-                Graph.edgeLabels flowTopo
+                Graph.edgeLabels $ FlowTopo.topology flowTopo
 
          concurrentlyMany_ [
             PlotIO.record "Power Signals" DefaultTerm.cons show id rec,
@@ -139,4 +139,4 @@ main =
                  XIdx.ppos node1 node2,
                  XIdx.ppos node1 node3 ],
 
-            Draw.xterm $ Draw.flowTopology Draw.optionsDefault flowTopo ]
+            Draw.xterm $ Draw.flowSection Draw.optionsDefault flowTopo ]
