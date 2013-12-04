@@ -40,16 +40,12 @@ type instance TypeOf (Idx.ForStorage idx) = Scalar
 
 storageSequences ::
    (Ord part, Node.C node) =>
-   [(part, Graph.Graph node Graph.EitherEdge (FlowTopo.Sums v) edgeLabel)] ->
+   [(part, FlowTopo.Topology node v)] ->
    Map node (Map part (FlowTopo.Sums v))
 storageSequences =
    Map.unionsWith (Map.unionWith (error "duplicate section for node"))
    .
-   map
-      (\(s, topo) ->
-         fmap (Map.singleton s) $
-         Map.filterWithKey (const . Node.isStorage . Node.typ) $
-         Graph.nodeLabels topo)
+   map (\(s, topo) -> fmap (Map.singleton s) $ storageNodeLabels topo)
 
 
 storageSums ::
@@ -58,7 +54,14 @@ storageSums ::
    Map part (FlowTopo.Section node v) ->
    Map node (Map part (FlowTopo.Sums (a,v)))
 storageSums storages sections =
-   Map.intersectionWith
-      (Map.intersectionWith (\carrySum -> fmap ((,) carrySum)))
+   MapU.checkedZipWith "storageSums.nodes"
+      (MapU.checkedZipWith "storageSums.parts"
+          (\carrySum -> fmap ((,) carrySum)))
       (fmap (PartMap.parts . Storage.nodes) storages)
-      (MapU.flip $ fmap (Graph.nodeLabels . FlowTopo.topology) sections)
+      (MapU.flip $ fmap (storageNodeLabels . FlowTopo.topology) sections)
+
+storageNodeLabels ::
+   (Node.C node) =>
+   Graph.Graph node Graph.EitherEdge nl el -> Map node nl
+storageNodeLabels =
+   Map.filterWithKey (const . Node.isStorage . Node.typ) . Graph.nodeLabels
