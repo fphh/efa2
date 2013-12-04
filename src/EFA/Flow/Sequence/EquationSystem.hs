@@ -56,6 +56,8 @@ import EFA.Equation.Arithmetic
 
 import qualified EFA.Graph.Topology.Node as Node
 
+import qualified EFA.Utility.Map as MapU
+
 import qualified UniqueLogic.ST.TF.System as Sys
 
 import qualified Data.Accessor.Basic as Accessor
@@ -76,7 +78,6 @@ import Data.Map (Map)
 import Data.Traversable (Traversable, traverse)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mconcat)
-import Data.Tuple.HT (mapFst)
 
 import qualified Prelude as P
 import Prelude hiding (lookup, init)
@@ -258,35 +259,34 @@ fromStorageSequence ::
    Map Idx.Boundary ra ->
    EqSys.System mode s
 fromStorageSequence opts sumMap (init, exit) storageMap =
-   let storages = Map.toList storageMap
+   let noSum = SeqFlow.Sums Nothing Nothing
+       storages =
+          Map.elems $
+          MapU.checkedZipWith
+             "Sequence.EquationSystem.fromStorageSequence"
+             (,)
+             (Map.insert Idx.initial noSum $
+              Map.mapKeys Idx.afterSection sumMap)
+             storageMap
    in  mconcat $
        zipWith
-          (charge opts sumMap)
+          (charge opts)
           (init : map snd storages)
-          (map (mapFst Idx.sectionFromBoundary) storages
-           ++
-           [(Nothing, exit)])
+          (storages ++ [(noSum, exit)])
 
 charge ::
    (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
     Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
     Sum a, Record rec) =>
    SeqStateEqSys.Options mode rec s a v ->
-   Map Idx.Section (FlowTopo.Sums (ra,rv)) ->
-   ra -> (Maybe Idx.Section, ra) ->
+   ra -> (FlowTopo.Sums (ra,rv), ra) ->
    EqSys.System mode s
-charge opts sumMap old (aug, now) =
-   let sums =
-          case aug of
-             Nothing -> SeqFlow.Sums Nothing Nothing
-             Just sec ->
-                maybe (error "charge: missing sum") id $
-                Map.lookup sec sumMap
-   in  SeqStateEqSys.fromStorageSums opts sums
-       <>
-       (condSum now (SeqFlow.sumOut sums)
-        =&=
-        condSum old (SeqFlow.sumIn  sums))
+charge opts old (sums, now) =
+   SeqStateEqSys.fromStorageSums opts sums
+   <>
+   (condSum now (SeqFlow.sumOut sums)
+    =&=
+    condSum old (SeqFlow.sumIn  sums))
 
 condSum :: (Sum a) => a -> Maybe (a,v) -> a
 condSum x = maybe x (\(s,_) -> x ~+ s)
