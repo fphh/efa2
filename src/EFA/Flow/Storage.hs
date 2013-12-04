@@ -13,8 +13,6 @@ import qualified Data.Traversable as Trav
 import qualified Data.Map as Map ; import Data.Map (Map)
 
 import Control.Applicative (Applicative, liftA2)
-import Data.Foldable (Foldable, fold)
-import Data.Monoid (Monoid)
 
 
 {- |
@@ -84,20 +82,32 @@ checkedZipWith name f g
       (MapU.checkedZipWith (name++".edges") g edges0 edges1)
 
 
-foldInStorages ::
-   (Ord part, Monoid m) =>
-   (Idx.Init part -> [a] -> m) -> Map (StorageIdx.Edge part) a -> m
-foldInStorages f =
-   fold .
-   Map.mapWithKey (\sec outs -> f sec (Map.elems outs)) .
-   MapU.curry "foldInStorages"
-      (\(StorageIdx.Edge from to) -> (from, to))
+inEdges ::
+   (Ord part) =>
+   Graph part nodeLabel edgeLabel ->
+   Map (Idx.Exit part) (nodeLabel, Map (Idx.Init part) edgeLabel)
+inEdges (Graph ns es) =
+   let nodeMap =
+          Map.insert Idx.Exit (PartMap.exit ns) $
+          Map.mapKeys Idx.NoExit $ PartMap.parts ns
+       edgeMap =
+          MapU.curry "Storage.inEdges"
+             (\(StorageIdx.Edge from to) -> (to, from)) es
+   in  if Map.isSubmapOfBy (const $ const True) edgeMap nodeMap
+         then Map.intersectionWith (,) nodeMap edgeMap
+         else error "Storage.inEdges: edges without nodes"
 
-foldOutStorages ::
-   (Ord part, Monoid m) =>
-   (Idx.Exit part -> [a] -> m) -> Map (StorageIdx.Edge part) a -> m
-foldOutStorages f =
-   fold .
-   Map.mapWithKey (\sec ins -> f sec (Map.elems ins)) .
-   MapU.curry "foldOutStorages"
-      (\(StorageIdx.Edge from to) -> (to, from))
+outEdges ::
+   (Ord part) =>
+   Graph part nodeLabel edgeLabel ->
+   Map (Idx.Init part) (nodeLabel, Map (Idx.Exit part) edgeLabel)
+outEdges (Graph ns es) =
+   let nodeMap =
+          Map.insert Idx.Init (PartMap.init ns) $
+          Map.mapKeys Idx.NoInit $ PartMap.parts ns
+       edgeMap =
+          MapU.curry "Storage.outEdges"
+             (\(StorageIdx.Edge from to) -> (from, to)) es
+   in  if Map.isSubmapOfBy (const $ const True) edgeMap nodeMap
+         then Map.intersectionWith (,) nodeMap edgeMap
+         else error "Storage.outEdges: edges without nodes"
