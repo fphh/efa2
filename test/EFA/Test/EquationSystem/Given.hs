@@ -44,7 +44,9 @@ bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ _ =
    Stream.enumFrom $ Idx.initial
 
 
-flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
+type ResultGraph a v = SeqFlow.Graph Node (Result a) (Result v)
+
+flowGraph :: ResultGraph a v
 flowGraph = TripodGiven.seqFlowGraph
 
 
@@ -55,8 +57,7 @@ flowGraph = TripodGiven.seqFlowGraph
 {-
 ME.switch undefined (putStrLn . toTestGiven) $ fst testEnv
 -}
-toTestGiven ::
-   SeqFlow.Graph Node (Result Rational) (Result Rational) -> String
+toTestGiven :: ResultGraph Rational Rational -> String
 toTestGiven gr =
    "testGiven :: EquationSystem s\n" ++
    "testGiven = mconcat $\n" ++
@@ -76,7 +77,7 @@ toTestGiven gr =
 testEnv, solvedEnv ::
    (ME.Exceptional
       (Verify.Exception Format.Unicode)
-      (SeqFlow.Graph Node (Result Rational) (Result Rational)),
+      (ResultGraph Rational Rational),
     Verify.Assigns Format.Unicode)
 testEnv =
    mapFst (fmap numericEnv) $
@@ -87,12 +88,8 @@ solvedEnv =
    EqSys.solveTracked flowGraph originalGiven
 
 numericEnv ::
-   SeqFlow.Graph node
-      (Result (Pair.T at an))
-      (Result (Pair.T vt vn)) ->
-   SeqFlow.Graph node
-      (Result an)
-      (Result vn)
+   ResultGraph (Pair.T at an) (Pair.T vt vn) ->
+   ResultGraph an vn
 numericEnv =
    SeqFlow.mapGraph (fmap Pair.second) (fmap Pair.second)
 
