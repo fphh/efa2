@@ -11,10 +11,11 @@ import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.Absolute ((=.=))
 
-import qualified EFA.Flow.SequenceState.Variable as Var
 import EFA.Equation.Arithmetic ((^!))
 import EFA.Equation.Result (Result)
 
@@ -104,14 +105,13 @@ solve nPar y p = EqSys.solve flowGraph (given y p nPar)
 
 -- | Checked Lookup
 getSignalVar ::
-   (SeqFlow.LookupSignal idx,
-    Show a, UV.Unbox a) =>
+   (FlowTopo.Lookup idx, Show a, UV.Unbox a) =>
    [[SeqFlow.Graph Node (Result a) (Result a)]] ->
    Idx.InSection idx Node -> Test2 (Typ A u Tt) a
 getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
    map (map (checkDetermined "getSignalVar" .
-             Var.checkedLookup "getSignalVar" SeqFlow.lookupSignal idx)) $
+             Var.checkedLookup "getSignalVar" SeqFlow.lookup idx)) $
    varEnvs
 
 

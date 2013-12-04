@@ -40,7 +40,6 @@ module EFA.Flow.State.Quantity (
 
    Lookup, lookup,
    LookupScalar, lookupScalar,
-   LookupSignal, lookupSignal,
    Env.TypeOf, Env.Element, Env.switchPart,
    ) where
 
@@ -54,8 +53,6 @@ import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
-import qualified EFA.Flow.Topology.Variable as TopoVar
-import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Part.Map as PartMap
 import EFA.Flow.Part.Map (PartMap)
@@ -533,14 +530,6 @@ mapCarryEdge caller secMap (StorageIdx.Edge from to) =
       (fmap (MapU.checkedLookup (caller ++ " to")   secMap) to)
 
 
-withSection ::
-   (idx node -> FlowTopo.Section node v -> Maybe r) ->
-   Idx.InState idx node ->
-   Graph node a v ->
-   Maybe r
-withSection f (Idx.InPart state idx) g =
-   f idx =<< seqLookup state g
-
 lookupSums ::
    (Ord node) =>
    Idx.StateNode node -> Graph node a v -> Maybe (Sums v)
@@ -567,38 +556,14 @@ class
       (Ord node) =>
       idx node -> Graph node a v -> Maybe (Env.Element idx a v)
 
-instance
-   (LookupSignal idx, TopoVar.Index idx) =>
-      Lookup (Idx.InState idx) where
-   lookup = lookupSignal
+instance (FlowTopo.Lookup idx) => Lookup (Idx.InState idx) where
+   lookup (Idx.InPart state idx) g =
+      FlowTopo.lookup idx =<< seqLookup state g
 
 instance
    (LookupScalar idx, StorageVar.Index idx) =>
       Lookup (Idx.ForStorage idx) where
    lookup = lookupScalar
-
-
-class (TopoVar.Index idx) => LookupSignal idx where
-   lookupSignal ::
-      (Ord node) => Idx.InState idx node -> Graph node a v -> Maybe v
-
-instance LookupSignal TopoIdx.Energy where
-   lookupSignal = withSection FlowTopo.lookupEnergy
-
-instance LookupSignal TopoIdx.Power where
-   lookupSignal = withSection FlowTopo.lookupPower
-
-instance LookupSignal TopoIdx.Eta where
-   lookupSignal = withSection FlowTopo.lookupEta
-
-instance LookupSignal TopoIdx.DTime where
-   lookupSignal = withSection FlowTopo.lookupDTime
-
-instance LookupSignal TopoIdx.X where
-   lookupSignal = withSection FlowTopo.lookupX
-
-instance LookupSignal TopoIdx.Sum where
-   lookupSignal = withSection FlowTopo.lookupSum
 
 
 class (StorageVar.Index idx) => LookupScalar idx where
