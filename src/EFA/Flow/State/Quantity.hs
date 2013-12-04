@@ -534,11 +534,11 @@ lookupSums ::
    (Ord node) =>
    Idx.StateNode node -> Graph node a v -> Maybe (Sums v)
 lookupSums (Idx.PartNode state node) =
-   Graph.lookupNode node . FlowTopo.topology <=< seqLookup state
+   Graph.lookupNode node . FlowTopo.topology <=< stateLookup state
 
-seqLookup ::
+stateLookup ::
    Idx.State -> Graph node a v -> Maybe (FlowTopo.Section node v)
-seqLookup state = Map.lookup state . states
+stateLookup state = Map.lookup state . states
 
 
 withStorage ::
@@ -547,7 +547,6 @@ withStorage ::
    Idx.ForStorage idx node -> Graph node a v -> Maybe a
 withStorage look (Idx.ForStorage idx node) =
    look idx <=< Map.lookup node . storages
-
 
 class
    (Env.Type (Env.TypeOf idx), Var.Index idx, Var.FormatIndex idx) =>
@@ -558,7 +557,7 @@ class
 
 instance (FlowTopo.Lookup idx) => Lookup (Idx.InState idx) where
    lookup (Idx.InPart state idx) g =
-      FlowTopo.lookup idx =<< seqLookup state g
+      FlowTopo.lookup idx =<< stateLookup state g
 
 instance
    (LookupScalar idx, StorageVar.Index idx) =>
