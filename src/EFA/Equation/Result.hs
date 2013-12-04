@@ -39,7 +39,15 @@ fromMaybe :: Maybe a -> Result a
 fromMaybe Nothing = Undetermined
 fromMaybe (Just x) = Determined x
 
-{-# DEPRECATED isDet "Using isDet you risk non-total functions. Better use Result.toMaybe or pattern matching." #-}
-isDet :: Result a -> Bool
-isDet (Determined _) = True
-isDet _ = False
+switch :: b -> (a -> b) -> Result a -> b
+switch b _ Undetermined = b
+switch _ b (Determined a) = b a
+
+{- |
+This is only useful for testing!
+In application code you risk non-total functions.
+Better use Result.toMaybe or pattern matching.
+-}
+isDetermined :: Result a -> Bool
+isDetermined (Determined _) = True
+isDetermined _ = False
