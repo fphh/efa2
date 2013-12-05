@@ -162,6 +162,7 @@ Library
     EFA.Application.Sweep
     EFA.Application.Simulation
     EFA.Application.OneStorage
+    EFA.Application.StateAnalysis
     EFA.Example.Topology.LinearOne
     EFA.Example.Topology.LinearTwo
     EFA.Example.Topology.Tripod
