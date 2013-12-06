@@ -9,6 +9,7 @@ module EFA.Flow.Cumulated.Quantity (
 
    fromSequenceFlow,
    fromSequenceFlowResult,
+   fromSequenceFlowRecordResult,
 
    flowResultFromCum,
    flowResultFromCumResult,
@@ -34,7 +35,8 @@ import qualified EFA.Graph as Graph
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
-import EFA.Equation.Result (Result(Determined, Undetermined))
+import EFA.Equation.Unknown (Unknown(unknown))
+import EFA.Equation.Result (Result(Determined))
 
 import qualified EFA.Utility.Map as MapU
 import qualified Data.Map as Map
@@ -132,9 +134,9 @@ flowResultFromCum :: Cum a -> Flow (Result a)
 flowResultFromCum =
    flowResultFromCumResult . fmap Determined
 
-flowResultFromCumResult :: Cum (Result a) -> Flow (Result a)
+flowResultFromCumResult :: (Unknown a) => Cum a -> Flow a
 flowResultFromCumResult cum =
-   (pure Undetermined) {
+   (pure unknown) {
       flowEnergyOut = cumEnergyOut cum,
       flowEnergyIn  = cumEnergyIn  cum,
       flowDTime     = cumDTime cum
@@ -262,6 +264,14 @@ fromSequenceFlowResult ::
    CumGraph node (Result a)
 fromSequenceFlowResult =
    fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+))
+
+fromSequenceFlowRecordResult ::
+   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v,
+    Applicative rec) =>
+   SeqFlow.Sequence node (rec (Result v)) ->
+   CumGraph node (rec (Result a))
+fromSequenceFlowRecordResult =
+   fromSequenceFlowGen (fmap $ fmap Arith.integrate) (liftA2 $ liftA2 (~+))
 
 
 mapGraphWithVar ::
