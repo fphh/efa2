@@ -23,15 +23,18 @@ module EFA.Flow.State.EquationSystem (
    variable,
    variableRecord,
    withExpressionGraph,
+   fromStateSystem,
 
    ) where
 
 import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
 import qualified EFA.Flow.SequenceState.Quantity as SeqState
 import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
 import qualified EFA.Flow.Storage as Storage
+import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.Topology.EquationSystem (fromTopology)
@@ -50,6 +53,8 @@ import EFA.Equation.Arithmetic
           (Sum, Product, Constant, Integrate, Scalar)
 
 import qualified EFA.Graph.Topology.Node as Node
+
+import qualified EFA.Utility.Map as MapU
 
 import qualified UniqueLogic.ST.TF.System as Sys
 
@@ -254,6 +259,18 @@ withExpressionGraph f =
       StateFlow.mapGraph (EqSys.Context . pure) (EqSys.Context . pure) .
       expressionGraph
          =<< MR.ask
+
+fromStateSystem ::
+   Idx.State ->
+   TopoEqSys.EquationSystem mode rec node s v ->
+   EquationSystem mode rec node s a v
+fromStateSystem sec (EqSys.VariableSystem topoSys) =
+   EqSys.VariableSystem $ do
+      stateFlowGraph <- MR.ask
+      MT.lift $ MR.runReaderT topoSys $
+         MapU.checkedLookup
+            "Sequence.EquationSystem.fromSectionSystem"
+            (StateFlow.states stateFlowGraph) sec
 
 
 

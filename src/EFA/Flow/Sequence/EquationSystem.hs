@@ -23,6 +23,7 @@ module EFA.Flow.Sequence.EquationSystem (
    variable,
    variableRecord,
    withExpressionGraph,
+   fromSectionSystem,
 
    ) where
 
@@ -31,6 +32,7 @@ import qualified EFA.Flow.SequenceState.Quantity as SeqState
 import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.EquationSystem as EqSys
@@ -332,6 +334,18 @@ withExpressionGraph f =
       SeqFlow.mapGraph (EqSys.Context . pure) (EqSys.Context . pure) .
       expressionGraph
          =<< MR.ask
+
+fromSectionSystem ::
+   Idx.Section ->
+   TopoEqSys.EquationSystem mode rec node s v ->
+   EquationSystem mode rec node s a v
+fromSectionSystem sec (EqSys.VariableSystem topoSys) =
+   EqSys.VariableSystem $ do
+      seqFlowGraph <- MR.ask
+      MT.lift $ MR.runReaderT topoSys $ snd $
+         MapU.checkedLookup
+            "Sequence.EquationSystem.fromSectionSystem"
+            (SeqFlow.sequence seqFlowGraph) sec
 
 
 variables ::
