@@ -110,6 +110,7 @@ instance StorageQuant.Carry Carry where
    carryEnergy = carryEnergy
    carryXOut   = carryXOut
    carryXIn    = carryXIn
+   foldEnergy f e = f $ carryEnergy e
 
    type CarryPart Carry = Idx.State
    carryVars =

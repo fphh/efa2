@@ -18,12 +18,14 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
 import Data.Foldable (Foldable)
+import Data.Monoid (Monoid)
 
 
 type Graph carry a = Storage.Graph (CarryPart carry) a (carry a)
 
 class (Applicative f, Foldable f) => Carry f where
    carryEnergy, carryXOut, carryXIn :: f a -> a
+   foldEnergy :: (Monoid m) => (a -> m) -> f a -> m
 
    type CarryPart f :: *
    carryVars ::

@@ -6,9 +6,9 @@ module EFA.Flow.State.EquationSystem (
 
    solve, solveOpts, solveTracked,
 
-   SeqStateEqSys.Options, SeqStateEqSys.optionsDefault,
-   SeqStateEqSys.equalInOutSums, SeqStateEqSys.independentInOutSums,
-   SeqStateEqSys.integrateStInOutSums, SeqStateEqSys.equalStInOutSums,
+   Options, optionsDefault,
+   equalInOutSums, independentInOutSums,
+   integrateStInOutSums, equalStInOutSums,
 
    constant,
    constantRecord,
@@ -189,6 +189,57 @@ variable (RecIdx.Record recIdx idx) =
    variableRecord idx
 
 
+data Options mode rec s a v =
+   Options {
+      optTopology :: TopoEqSys.Options mode rec s v,
+      optStorage :: StorageEqSys.Options mode rec s a,
+      optCoupling :: SeqStateEqSys.Options mode rec s a v
+   }
+
+optionsDefault ::
+   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
+    Verify.LocalVar mode v, Integrate v,
+    Record rec) =>
+   Options mode rec s a v
+optionsDefault =
+   Options {
+      optTopology = TopoEqSys.optionsDefault,
+      optStorage = StorageEqSys.optionsDefault,
+      optCoupling = SeqStateEqSys.optionsDefault
+   }
+
+
+equalInOutSums ::
+   (Verify.LocalVar mode v, Record rec) =>
+   Options mode rec s a v ->
+   Options mode rec s a v
+equalInOutSums opts =
+   opts { optTopology = TopoEqSys.equalInOutSums $ optTopology opts }
+
+independentInOutSums ::
+   Options mode rec s a v ->
+   Options mode rec s a v
+independentInOutSums opts =
+   opts { optTopology = TopoEqSys.independentInOutSums $ optTopology opts }
+
+
+integrateStInOutSums ::
+   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
+    Verify.LocalVar mode v, Integrate v,
+    Record rec) =>
+   Options mode rec s a v ->
+   Options mode rec s a v
+integrateStInOutSums opts =
+   opts { optCoupling = SeqStateEqSys.integrateStInOutSums $ optCoupling opts }
+
+equalStInOutSums ::
+   (Verify.LocalVar mode a, Product a, Record rec) =>
+   Options mode rec s a a ->
+   Options mode rec s a a
+equalStInOutSums opts =
+   opts { optCoupling = SeqStateEqSys.equalStInOutSums $ optCoupling opts }
+
+
 expressionGraph ::
    (Record rec) =>
    StateFlow.Graph node
@@ -206,7 +257,7 @@ fromGraph ::
    (Verify.LocalVar mode a, Constant a, a ~ Scalar v,
     Verify.LocalVar mode v, Product v, Integrate v,
     Record rec, Node.C node) =>
-   SeqStateEqSys.Options mode rec s a v ->
+   Options mode rec s a v ->
    StateFlow.Graph node
       (SysRecord.Expr mode rec s a)
       (SysRecord.Expr mode rec s v) ->
@@ -214,7 +265,7 @@ fromGraph ::
 fromGraph opts g =
    mconcat $
       foldMap
-         (fromTopology (SeqStateEqSys.optTopology opts) .
+         (fromTopology (optTopology opts) .
           FlowTopoPlain.dirSectionFromFlowGraph)
          (StateFlow.states g) :
       fromStorageSequences opts g :
@@ -224,13 +275,16 @@ fromStorageSequences ::
    (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
     Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
     Constant a, Record rec, Node.C node) =>
-   SeqStateEqSys.Options mode rec s a v ->
+   Options mode rec s a v ->
    StateFlow.Graph node
       (SysRecord.Expr mode rec s a)
       (SysRecord.Expr mode rec s v) ->
    EqSys.System mode s
 fromStorageSequences opts g =
    let f sg =
+          StorageEqSys.fromCarryEdges
+             (optStorage opts) (Storage.edges sg)
+          <>
           foldMap
              (\(s, ns) -> StorageEqSys.fromInStorages s $ Map.elems ns)
              (Storage.outEdges sg)
@@ -240,7 +294,7 @@ fromStorageSequences opts g =
              (Storage.inEdges sg)
    in  (foldMap f $ StateFlow.storages g)
        <>
-       (foldMap (foldMap (SeqStateEqSys.fromStorageSums opts)) $
+       (foldMap (foldMap (SeqStateEqSys.fromStorageSums (optCoupling opts))) $
         SeqState.storageSums (StateFlow.storages g) (StateFlow.states g))
 
 
@@ -311,7 +365,7 @@ setup ::
     Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   SeqStateEqSys.Options mode rec s a v ->
+   Options mode rec s a v ->
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EquationSystem mode rec node s a v ->
    ST s
@@ -332,7 +386,7 @@ solveOpts ::
    (Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   (forall s. SeqStateEqSys.Options Verify.Ignore rec s a v) ->
+   (forall s. Options Verify.Ignore rec s a v) ->
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    StateFlow.Graph node (rec (Result a)) (rec (Result v))
@@ -348,7 +402,7 @@ solve ::
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    StateFlow.Graph node (rec (Result a)) (rec (Result v))
-solve = solveOpts SeqStateEqSys.optionsDefault
+solve = solveOpts optionsDefault
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForStorageStateScalar node,
@@ -363,7 +417,7 @@ solveTracked ::
       (StateFlow.Graph node (rec (Result a)) (rec (Result v))),
     Verify.Assigns output)
 solveTracked gr sys = runST $ do
-   (vars, eqs) <- setup SeqStateEqSys.optionsDefault gr sys
+   (vars, eqs) <- setup optionsDefault gr sys
    runWriterT $ ME.runExceptionalT $ Verify.runTrack $ do
       Sys.solveBreadthFirst eqs
       MT.lift $ query vars

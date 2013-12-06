@@ -1,14 +1,20 @@
 module Main where
 
-import EFA.Application.Utility ( topologyFromEdges )
+import EFA.Application.Utility
+          (topologyFromEdges, seqFlowGraphFromStates, dirEdge)
 
 import qualified EFA.Flow.State.Quantity as StateFlow
+
+import qualified EFA.Flow.Sequence.EquationSystem as SeqEqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Flow.Topology.EquationSystem as EqSys
 import qualified EFA.Flow.Topology.AssignMap as AssignMap
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as XIdx
 import qualified EFA.Flow.Topology as FlowTopoPlain
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Topology.EquationSystem ((.=))
 
@@ -25,6 +31,8 @@ import EFA.Equation.Arithmetic ((~+))
 import qualified EFA.Report.Format as Format
 
 import qualified EFA.Utility.FixedLength as FL
+import qualified EFA.Utility.Stream as Stream
+import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility.Async (concurrentlyMany_)
 
 import Control.Applicative (liftA2, pure)
@@ -34,21 +42,21 @@ import qualified Data.Empty as Empty
 import Data.Monoid (Monoid, mconcat, mempty)
 
 
-data Node = Source0 | Source1 | Crossing | Sink0 | Sink1
+data Node = Source0 | Source1 | Crossing | Storage | Sink
    deriving (Show, Eq, Ord, Enum)
 
-source0, source1, crossing, sink0, sink1 :: Node
+source0, source1, crossing, storage, sink :: Node
 source0  = Source0
 source1  = Source1
-sink0    = Sink0
-sink1    = Sink1
+storage  = Storage
+sink     = Sink
 crossing = Crossing
 
 instance Node.C Node where
    display Source0  = Format.literal "Quelle0"
    display Source1  = Format.literal "Quelle1"
-   display Sink0    = Format.literal "Senke0"
-   display Sink1    = Format.literal "Senke1"
+   display Storage  = Format.literal "Speicher"
+   display Sink     = Format.literal "Senke"
    display Crossing = Format.literal "Kreuzung"
 
    subscript = Format.integer . fromIntegral . fromEnum
@@ -56,8 +64,8 @@ instance Node.C Node where
 
    typ Source0  = Node.Source
    typ Source1  = Node.Source
-   typ Sink0    = Node.Sink
-   typ Sink1    = Node.Sink
+   typ Storage  = Node.Storage
+   typ Sink     = Node.Sink
    typ Crossing = Node.Crossing
 
 
@@ -65,7 +73,7 @@ topology :: Topo.Topology Node
 topology =
    topologyFromEdges
       [(source0, crossing), (source1, crossing),
-       (crossing, sink0), (crossing, sink1)]
+       (crossing, storage), (crossing, sink)]
 
 
 type Mix = Record.Mix (NonEmpty.T Empty.T)
@@ -81,12 +89,12 @@ sourceMixSystem =
    (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
    (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 3) :
 
-   (RecIdx.mixSum (XIdx.power crossing sink0) .= 0.9) :
+   (RecIdx.mixSum (XIdx.power crossing storage) .= 0.9) :
 
    (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.25) :
    (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.5) :
-   (RecIdx.mixSum (XIdx.eta crossing sink0) .= 0.75) :
-   (RecIdx.mixSum (XIdx.eta crossing sink1) .= 0.8) :
+   (RecIdx.mixSum (XIdx.eta crossing storage) .= 0.75) :
+   (RecIdx.mixSum (XIdx.eta crossing sink) .= 0.8) :
 
    []
 
@@ -107,13 +115,13 @@ sinkMixSystem =
    (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 3) :
    (RecIdx.mixSum (XIdx.power source1 crossing) .= 5) :
 
-   (RecIdx.mixComponent FL.i1 (XIdx.power crossing sink0) .= 0) :
-   (RecIdx.mixComponent FL.i0 (XIdx.power crossing sink1) .= 0) :
+   (RecIdx.mixComponent FL.i1 (XIdx.power crossing storage) .= 0) :
+   (RecIdx.mixComponent FL.i0 (XIdx.power crossing sink) .= 0) :
 
    (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.3) :
    (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.6) :
-   (RecIdx.mixSum (XIdx.eta crossing sink0) .= 0.75) :
-   (RecIdx.mixSum (XIdx.eta crossing sink1) .= 0.8) :
+   (RecIdx.mixSum (XIdx.eta crossing storage) .= 0.75) :
+   (RecIdx.mixSum (XIdx.eta crossing sink) .= 0.8) :
    []
 
 sinkMixSolution :: FlowTopo.Section Node (Mix (Result Double))
@@ -134,15 +142,79 @@ cumulatedSolution =
       (FlowTopoPlain.mapEdge (fmap StateFlow.cumFromFlow) sinkMixSolution)
 
 
+
+seqFlowGraph :: SeqFlow.Graph Node (Mix (Result a)) (Mix (Result v))
+seqFlowGraph =
+   let state0 =
+          [dirEdge source0 crossing, dirEdge source1 crossing,
+           dirEdge crossing storage, dirEdge crossing sink]
+       state1 =
+          [dirEdge source0 crossing, dirEdge source1 crossing,
+           dirEdge storage crossing]
+
+   in  seqFlowGraphFromStates topology [state0, state1, state0]
+
+
+sec0, sec1, sec2 :: PartIdx.Section
+sec0 :~ sec1 :~ sec2 :~ _ = Stream.enumFrom $ PartIdx.section0
+
+seqSourceMixSystem ::
+   SeqEqSys.EquationSystem Verify.Ignore Mix Node s Double Double
+seqSourceMixSystem =
+   mconcat $
+
+   (RecIdx.mixComponent FL.i0 (SeqIdx.stOutSum SeqIdx.initSection storage) SeqEqSys..= 0.1) :
+   (RecIdx.mixComponent FL.i1 (SeqIdx.stOutSum SeqIdx.initSection storage) SeqEqSys..= 0.2) :
+
+   SeqEqSys.fromSectionSystem sec0 sourceMixSystem :
+
+   (RecIdx.mixSum (SeqIdx.stEnergy sec0 sec1 storage) SeqEqSys..= 0.2) :
+
+   (SeqEqSys.fromSectionSystem sec1 $ mconcat $
+      (RecIdx.mixSum XIdx.dTime .= 0.3) :
+      (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 5) :
+      (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 0) :
+      (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
+      (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 7) :
+      (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.3) :
+      (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.4) :
+      (RecIdx.mixSum (XIdx.eta storage crossing) .= 0.9) :
+      (RecIdx.mixSum (XIdx.eta crossing sink) .= 0.7) :
+      []) :
+
+   (SeqEqSys.fromSectionSystem sec2 $ mconcat $
+      (RecIdx.mixSum XIdx.dTime .= 0.6) :
+      (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 4) :
+      (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 0) :
+      (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
+      (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 4) :
+      (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.7) :
+      (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.2) :
+      (RecIdx.mixSum (XIdx.eta crossing storage) .= 0.1) :
+      (RecIdx.mixSum (XIdx.eta crossing sink) .= 0.6) :
+      (RecIdx.mixSum (XIdx.x crossing storage) .= 0.5) :
+      []) :
+
+   []
+
+seqSourceMixSolution ::
+   SeqFlow.Graph Node (Mix (Result Double)) (Mix (Result Double))
+seqSourceMixSolution =
+   SeqEqSys.solveOpts
+      (SeqEqSys.equalStInOutSums SeqEqSys.optionsSourceMix)
+      seqFlowGraph seqSourceMixSystem
+
 main :: IO ()
 main = do
    mapM_ (putStrLn . Format.unUnicode) $
       AssignMap.format $ FlowTopo.toAssignMap sourceMixSolution
 
    concurrentlyMany_ $
-      map (Draw.xterm . Draw.flowSection Draw.optionsDefault) $
-      sourceMixSolution :
-      sinkMixSolution :
-      cumulatedSolution :
-      EqSys.solve cumulatedSolution mempty :
-      []
+      (map (Draw.xterm . Draw.flowSection Draw.optionsDefault) $
+          sourceMixSolution :
+          sinkMixSolution :
+          cumulatedSolution :
+          EqSys.solve cumulatedSolution mempty :
+          [])
+      ++
+      [Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault seqSourceMixSolution]

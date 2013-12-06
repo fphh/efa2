@@ -79,7 +79,7 @@ import qualified Data.Foldable as Fold
 
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
-import Data.Monoid (Monoid)
+import Data.Monoid (Monoid, (<>))
 import Data.Tuple.HT (mapPair, mapSnd)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
@@ -108,6 +108,7 @@ instance StorageQuant.Carry Carry where
    carryEnergy = carryEnergy
    carryXOut   = carryXOut
    carryXIn    = carryXIn
+   foldEnergy f e = f (carryMaxEnergy e) <> f (carryEnergy e)
 
    type CarryPart Carry = Idx.Section
    carryVars =

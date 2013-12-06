@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Flow.SequenceState.EquationSystem where
 
-import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import EFA.Flow.EquationSystem (System, (=&=))
 
@@ -21,7 +20,6 @@ import Prelude hiding (sqrt)
 
 data Options mode rec s a v =
    Options {
-      optTopology :: TopoEqSys.Options mode rec s v,
       optStInOutSums ::
          Expr mode rec s a ->
          Expr mode rec s v ->
@@ -35,23 +33,8 @@ optionsDefault ::
    Options mode rec s a v
 optionsDefault =
    Options {
-      optTopology = TopoEqSys.optionsDefault,
       optStInOutSums = integrateSum
    }
-
-
-equalInOutSums ::
-   (Verify.LocalVar mode v, Record rec) =>
-   Options mode rec s a v ->
-   Options mode rec s a v
-equalInOutSums opts =
-   opts { optTopology = TopoEqSys.equalInOutSums $ optTopology opts }
-
-independentInOutSums ::
-   Options mode rec s a v ->
-   Options mode rec s a v
-independentInOutSums opts =
-   opts { optTopology = TopoEqSys.independentInOutSums $ optTopology opts }
 
 
 {- |
