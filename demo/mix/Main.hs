@@ -3,6 +3,7 @@ module Main where
 import EFA.Application.Utility
           (topologyFromEdges, seqFlowGraphFromStates, dirEdge)
 
+import qualified EFA.Flow.State.EquationSystem as StateEqSys
 import qualified EFA.Flow.State.Quantity as StateFlow
 
 import qualified EFA.Flow.Sequence.EquationSystem as SeqEqSys
@@ -204,6 +205,15 @@ seqSourceMixSolution =
       (SeqEqSys.equalStInOutSums SeqEqSys.optionsSourceMix)
       seqFlowGraph seqSourceMixSystem
 
+stateSourceMixSolution ::
+   StateFlow.Graph Node (Mix (Result Double)) (Mix (Result Double))
+stateSourceMixSolution =
+   StateEqSys.solve
+      (StateFlow.graphFromCumResult $
+       StateFlow.fromSequenceFlowRecordResult False seqSourceMixSolution)
+      mempty
+
+
 main :: IO ()
 main = do
    mapM_ (putStrLn . Format.unUnicode) $
@@ -218,3 +228,5 @@ main = do
           [])
       ++
       [Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault seqSourceMixSolution]
+      ++
+      [Draw.xterm $ Draw.stateFlowGraph Draw.optionsDefault stateSourceMixSolution]

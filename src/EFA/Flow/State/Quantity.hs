@@ -25,8 +25,10 @@ module EFA.Flow.State.Quantity (
 
    fromSequenceFlow,
    fromSequenceFlowResult,
+   fromSequenceFlowRecordResult,
    fromStatesAndSequenceFlow,
    fromStatesAndSequenceFlowResult,
+   fromStatesAndSequenceFlowRecordResult,
 
    cumFromFlow,
    flowResultFromCum,
@@ -323,6 +325,18 @@ fromSequenceFlowResult allStEdges gr =
    fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+)) (pure Arith.zero)
       allStEdges (stateMapFromSequence $ SeqFlow.sequence gr) gr
 
+fromSequenceFlowRecordResult ::
+   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v,
+    Applicative rec) =>
+   Bool ->
+   SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
+   CumGraph node (rec (Result a))
+fromSequenceFlowRecordResult allStEdges gr =
+   fromSequenceFlowGen
+      (fmap $ fmap Arith.integrate) (liftA2 $ liftA2 (~+))
+      (pure $ pure Arith.zero)
+      allStEdges (stateMapFromSequence $ SeqFlow.sequence gr) gr
+
 
 {- |
 This is like 'fromSequenceFlow' but you can specify a state numbering.
@@ -353,6 +367,19 @@ fromStatesAndSequenceFlowResult ::
    CumGraph node (Result a)
 fromStatesAndSequenceFlowResult allStEdges sts gr =
    fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+)) (pure Arith.zero)
+      allStEdges (stateMapFromStatesAndSequence sts $ SeqFlow.sequence gr) gr
+
+fromStatesAndSequenceFlowRecordResult ::
+   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v,
+    Applicative rec) =>
+   Bool ->
+   States node v0 ->
+   SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
+   CumGraph node (rec (Result a))
+fromStatesAndSequenceFlowRecordResult allStEdges sts gr =
+   fromSequenceFlowGen
+      (fmap $ fmap Arith.integrate) (liftA2 $ liftA2 (~+))
+      (pure $ pure Arith.zero)
       allStEdges (stateMapFromStatesAndSequence sts $ SeqFlow.sequence gr) gr
 
 
