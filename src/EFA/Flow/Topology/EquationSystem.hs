@@ -226,6 +226,8 @@ fromTopology ::
    FlowTopo.DirSection node (Expr mode rec s v) ->
    EqSys.System mode s
 fromTopology opts (FlowTopoPlain.Section dtime topo) =
+   mixFactorRules dtime
+   <>
    foldMap (fromEdge opts dtime) (Graph.edgeLabels topo)
    <>
    foldMap (fromSums opts) (Graph.nodeLabels topo)
@@ -264,7 +266,6 @@ fromEdge opts dtime
    mixSumRules pin <>
    mixSumRules eout <>
    mixSumRules ein <>
-   mixFactorRules dtime <>
    optEqualFactorsOut opts xout <>
    optEqualFactorsIn opts xin <>
    optEqualEta opts eta
