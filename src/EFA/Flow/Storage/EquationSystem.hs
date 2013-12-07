@@ -3,16 +3,12 @@ module EFA.Flow.Storage.EquationSystem where
 
 import qualified EFA.Flow.Storage.Quantity as Quant
 import qualified EFA.Flow.EquationSystem as EqSys
+import EFA.Flow.EquationSystem (mixSumRules, mixFactorRules)
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.SystemRecord as SysRecord
-import EFA.Equation.SystemRecord (Record, Wrap(unwrap), Expr)
+import EFA.Equation.SystemRecord (Record, Expr)
 import EFA.Equation.Arithmetic (Sum, Constant)
-
-import qualified UniqueLogic.ST.TF.System as Sys
-
-import Control.Monad.Trans.Writer (tell)
 
 import qualified Data.NonEmpty as NonEmpty
 import Data.Foldable (Foldable, foldMap)
@@ -52,14 +48,6 @@ optionsSinkMix =
       optEqualFactorsOut = const mempty,
       optEqualFactorsIn = mixFactorRules
    }
-
-mixSumRules, mixFactorRules ::
-   (Sys.Value mode v, Sum v, Record rec) =>
-   Expr mode rec s v -> EqSys.System mode s
-mixSumRules =
-   EqSys.System . tell . SysRecord.mixSumRules . unwrap
-mixFactorRules =
-   EqSys.System . tell . SysRecord.mixFactorRules . unwrap
 
 
 fromCarryEdges ::

@@ -36,6 +36,7 @@ import EFA.Flow.Topology.Quantity (lookup)
 import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join,
+           mixSumRules, mixFactorRules,
            (=&=), (=%=), (=.=))
 
 import qualified EFA.Equation.RecordIndex as RecIdx
@@ -60,7 +61,7 @@ import qualified Control.Monad.Exception.Synchronous as ME
 import qualified Control.Monad.Trans.Reader as MR
 import qualified Control.Monad.Trans.Class as MT
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.Monad.Trans.Writer (runWriterT, tell)
+import Control.Monad.Trans.Writer (runWriterT)
 
 import Control.Monad.ST (ST, runST)
 
@@ -202,14 +203,6 @@ optionsSinkMix =
       optEqualFactorsIn = mixFactorRules,
       optEqualEta = mixFactorRules
    }
-
-mixSumRules, mixFactorRules ::
-   (Sys.Value mode v, Sum v, Record rec) =>
-   Expr mode rec s v -> EqSys.System mode s
-mixSumRules =
-   EqSys.System . tell . SysRecord.mixSumRules . unwrap
-mixFactorRules =
-   EqSys.System . tell . SysRecord.mixFactorRules . unwrap
 
 
 equalInOutSums ::
