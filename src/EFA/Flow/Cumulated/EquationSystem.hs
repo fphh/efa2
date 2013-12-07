@@ -32,6 +32,7 @@ import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
 import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join,
+           mixSumRules, mixFactorRules,
            (=%=), (=.=), (=&=))
 
 import qualified EFA.Equation.RecordIndex as RecIdx
@@ -213,7 +214,12 @@ fromEdge
       }) =
    (eout =&= dtime ~* pout) <>
    (ein  =&= dtime ~* pin)  <>
-   (pin  =&= eta ~* pout)
+   (pin  =&= eta ~* pout) <>
+   mixSumRules pout <>
+   mixSumRules pin <>
+   mixSumRules eout <>
+   mixSumRules ein <>
+   mixFactorRules dtime
 
 
 fromSums ::

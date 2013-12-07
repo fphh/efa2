@@ -10,6 +10,9 @@ import qualified EFA.Flow.Sequence.EquationSystem as SeqEqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
+import qualified EFA.Flow.Cumulated.EquationSystem as CumEqSys
+import qualified EFA.Flow.Cumulated.Quantity as CumFlow
+
 import qualified EFA.Flow.Topology.EquationSystem as EqSys
 import qualified EFA.Flow.Topology.AssignMap as AssignMap
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -21,6 +24,7 @@ import EFA.Flow.Topology.EquationSystem ((.=))
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph as Graph
 
 import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
@@ -213,6 +217,13 @@ stateSourceMixSolution =
        StateFlow.fromSequenceFlowRecordResult False seqSourceMixSolution)
       mempty
 
+seqCumulatedSolution ::
+   CumFlow.Graph Node (Mix (Result Double))
+seqCumulatedSolution =
+   Graph.mapEdge CumFlow.flowResultFromCumResult $
+   CumFlow.fromSequenceFlowRecordResult $
+   SeqFlow.sequence seqSourceMixSolution
+
 
 main :: IO ()
 main = do
@@ -230,3 +241,8 @@ main = do
       [Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault seqSourceMixSolution]
       ++
       [Draw.xterm $ Draw.stateFlowGraph Draw.optionsDefault stateSourceMixSolution]
+      ++
+      [Draw.xterm $ Draw.cumulatedFlow seqCumulatedSolution]
+      ++
+      [Draw.xterm $ Draw.cumulatedFlow $
+       CumEqSys.solve seqCumulatedSolution mempty]
