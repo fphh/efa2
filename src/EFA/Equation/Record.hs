@@ -119,11 +119,11 @@ instance (Traversable rec) => Traversable (ExtDelta rec) where
    sequenceA (ExtDelta d) = fmap ExtDelta $ traverse sequenceA d
 
 
-data Mix f a = Mix {mixSum :: a, mix :: NonEmpty.T f a} deriving (Show)
+data Mix f a = Mix {total :: a, mix :: NonEmpty.T f a} deriving (Show)
 
 instance (FixedLength.C f, FormatValue a) => FormatValue (Mix f a) where
    formatValue rec =
-      Format.mix (formatValue $ mixSum rec) $
+      Format.mix (formatValue $ total rec) $
       fmap formatValue $ NonEmpty.mapTail FixedLength.Wrap $ mix rec
 
 instance (FixedLength.C f) => Functor (Mix f) where
@@ -150,7 +150,7 @@ instance
    (FormatValue (rec a), FixedLength.C f, FormatValue a) =>
       FormatValue (ExtMix f rec a) where
    formatValue (ExtMix rec) =
-      Format.mix (formatValue $ mixSum rec) $
+      Format.mix (formatValue $ total rec) $
       fmap formatValue $ NonEmpty.mapTail FixedLength.Wrap $ mix rec
 
 instance (FixedLength.C f, Functor rec) => Functor (ExtMix f rec) where
@@ -203,7 +203,7 @@ instance (FixedLength.C f) => C (Mix f) where
            Mix f
    access idx =
       case idx of
-         RecIdx.MixSum -> Accessor.fromSetGet (\a m -> m{mixSum  = a}) mixSum
+         RecIdx.MixTotal -> Accessor.fromSetGet (\a m -> m{total = a}) total
          RecIdx.MixComponent k ->
             Accessor.fromSetGet
                (\a m -> m{mix = FixedLength.update (const a) k $ mix m})
@@ -236,7 +236,7 @@ instance IndexSet rec => IndexSet (ExtDelta rec) where
 instance (FixedLength.C f) => IndexSet (Mix f) where
    indices =
       Mix {
-         mixSum = RecIdx.MixSum,
+         total = RecIdx.MixTotal,
          mix = FixedLength.map RecIdx.MixComponent FixedLength.indices
       }
 

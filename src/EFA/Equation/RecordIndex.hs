@@ -7,7 +7,7 @@ data Delta = Before | Delta | After deriving (Show, Eq, Ord)
 
 data ExtDelta rec = ExtDelta Delta rec deriving (Show, Eq, Ord)
 
-data Mix pos = MixSum | MixComponent pos deriving (Show, Eq, Ord)
+data Mix pos = MixTotal | MixComponent pos deriving (Show, Eq, Ord)
 
 data ExtMix pos rec = ExtMix (Mix pos) rec deriving (Show, Eq, Ord)
 
@@ -37,8 +37,8 @@ after :: idx -> Record Delta idx
 after = Record After
 
 
-mixSum :: idx -> Record (Mix pos) idx
-mixSum = Record MixSum
+mixTotal :: idx -> Record (Mix pos) idx
+mixTotal = Record MixTotal
 
 mixComponent :: pos -> idx -> Record (Mix pos) idx
 mixComponent = Record . MixComponent

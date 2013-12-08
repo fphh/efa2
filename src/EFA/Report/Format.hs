@@ -412,7 +412,7 @@ class MixRecord len where
    mixRecord :: Format output => RecIdx.Mix len -> output -> output
 
 instance (FixedLength.C list) => MixRecord (FixedLength.WrapPos list) where
-   mixRecord RecIdx.MixSum = id
+   mixRecord RecIdx.MixTotal = id
    mixRecord (RecIdx.MixComponent pos) =
       mixComponent (integer $ fromIntegral $ FixedLength.numFromPos pos)
 

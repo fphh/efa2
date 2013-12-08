@@ -89,18 +89,18 @@ sourceMixSystem ::
 sourceMixSystem =
    mconcat $
 
-   (RecIdx.mixSum XIdx.dTime .= 0.5) :
+   (RecIdx.mixTotal XIdx.dTime .= 0.5) :
    (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 4) :
    (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 0) :
    (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
    (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 3) :
 
-   (RecIdx.mixSum (XIdx.power crossing storage) .= 0.9) :
+   (RecIdx.mixTotal (XIdx.power crossing storage) .= 0.9) :
 
-   (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.25) :
-   (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.5) :
-   (RecIdx.mixSum (XIdx.eta crossing storage) .= 0.75) :
-   (RecIdx.mixSum (XIdx.eta crossing sink) .= 0.8) :
+   (RecIdx.mixTotal (XIdx.eta source0 crossing) .= 0.25) :
+   (RecIdx.mixTotal (XIdx.eta source1 crossing) .= 0.5) :
+   (RecIdx.mixTotal (XIdx.eta crossing storage) .= 0.75) :
+   (RecIdx.mixTotal (XIdx.eta crossing sink) .= 0.8) :
 
    []
 
@@ -116,18 +116,18 @@ sinkMixSystem ::
 sinkMixSystem =
    mconcat $
 
-   (RecIdx.mixSum XIdx.dTime .= 0.5) :
+   (RecIdx.mixTotal XIdx.dTime .= 0.5) :
    (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 4) :
    (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 3) :
-   (RecIdx.mixSum (XIdx.power source1 crossing) .= 5) :
+   (RecIdx.mixTotal (XIdx.power source1 crossing) .= 5) :
 
    (RecIdx.mixComponent FL.i1 (XIdx.power crossing storage) .= 0) :
    (RecIdx.mixComponent FL.i0 (XIdx.power crossing sink) .= 0) :
 
-   (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.3) :
-   (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.6) :
-   (RecIdx.mixSum (XIdx.eta crossing storage) .= 0.75) :
-   (RecIdx.mixSum (XIdx.eta crossing sink) .= 0.8) :
+   (RecIdx.mixTotal (XIdx.eta source0 crossing) .= 0.3) :
+   (RecIdx.mixTotal (XIdx.eta source1 crossing) .= 0.6) :
+   (RecIdx.mixTotal (XIdx.eta crossing storage) .= 0.75) :
+   (RecIdx.mixTotal (XIdx.eta crossing sink) .= 0.8) :
    []
 
 sinkMixSolution :: FlowTopo.Section Node (Mix (Result Double))
@@ -174,31 +174,31 @@ seqSourceMixSystem =
 
    SeqEqSys.fromSectionSystem sec0 sourceMixSystem :
 
-   (RecIdx.mixSum (SeqIdx.stEnergy sec0 sec1 storage) SeqEqSys..= 0.2) :
+   (RecIdx.mixTotal (SeqIdx.stEnergy sec0 sec1 storage) SeqEqSys..= 0.2) :
 
    (SeqEqSys.fromSectionSystem sec1 $ mconcat $
-      (RecIdx.mixSum XIdx.dTime .= 0.3) :
+      (RecIdx.mixTotal XIdx.dTime .= 0.3) :
       (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 5) :
       (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 0) :
       (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
       (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 7) :
-      (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.3) :
-      (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.4) :
-      (RecIdx.mixSum (XIdx.eta storage crossing) .= 0.9) :
-      (RecIdx.mixSum (XIdx.eta crossing sink) .= 0.7) :
+      (RecIdx.mixTotal (XIdx.eta source0 crossing) .= 0.3) :
+      (RecIdx.mixTotal (XIdx.eta source1 crossing) .= 0.4) :
+      (RecIdx.mixTotal (XIdx.eta storage crossing) .= 0.9) :
+      (RecIdx.mixTotal (XIdx.eta crossing sink) .= 0.7) :
       []) :
 
    (SeqEqSys.fromSectionSystem sec2 $ mconcat $
-      (RecIdx.mixSum XIdx.dTime .= 0.6) :
+      (RecIdx.mixTotal XIdx.dTime .= 0.6) :
       (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 4) :
       (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 0) :
       (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
       (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 4) :
-      (RecIdx.mixSum (XIdx.eta source0 crossing) .= 0.7) :
-      (RecIdx.mixSum (XIdx.eta source1 crossing) .= 0.2) :
-      (RecIdx.mixSum (XIdx.eta crossing storage) .= 0.1) :
-      (RecIdx.mixSum (XIdx.eta crossing sink) .= 0.6) :
-      (RecIdx.mixSum (XIdx.x crossing storage) .= 0.5) :
+      (RecIdx.mixTotal (XIdx.eta source0 crossing) .= 0.7) :
+      (RecIdx.mixTotal (XIdx.eta source1 crossing) .= 0.2) :
+      (RecIdx.mixTotal (XIdx.eta crossing storage) .= 0.1) :
+      (RecIdx.mixTotal (XIdx.eta crossing sink) .= 0.6) :
+      (RecIdx.mixTotal (XIdx.x crossing storage) .= 0.5) :
       []) :
 
    []
@@ -228,8 +228,8 @@ seqCumulatedSolution =
 
 type MultiMix = Record.ExtMix (NonEmpty.T Empty.T) Mix
 
-idxMixSum :: RecIdx.Mix pos
-idxMixSum = RecIdx.MixSum
+idxMixTotal :: RecIdx.Mix pos
+idxMixTotal = RecIdx.MixTotal
 
 idxMix0 :: RecIdx.Mix (FL.WrapPos (FL.GE1 list))
 idxMix0 = RecIdx.MixComponent FL.i0
@@ -243,32 +243,32 @@ idxMultiMix ::
 idxMultiMix a b =
    RecIdx.Record (RecIdx.ExtMix a b)
 
-idxMultiMixSum ::
+idxMultiMixTotal ::
    idx -> RecIdx.Record (RecIdx.ExtMix pos0 (RecIdx.Mix pos1)) idx
-idxMultiMixSum = idxMultiMix idxMixSum idxMixSum
+idxMultiMixTotal = idxMultiMix idxMixTotal idxMixTotal
 
 multiMixSystem ::
    EqSys.EquationSystem Verify.Ignore MultiMix Node s Double
 multiMixSystem =
    mconcat $
 
-   (idxMultiMixSum XIdx.dTime .= 0.5) :
+   (idxMultiMixTotal XIdx.dTime .= 0.5) :
 
-   (idxMultiMix idxMix0 idxMixSum (XIdx.power crossing source0) .= 4) :
+   (idxMultiMix idxMix0 idxMixTotal (XIdx.power crossing source0) .= 4) :
    (idxMultiMix idxMix1 idxMix0   (XIdx.power crossing source0) .= 0) :
    (idxMultiMix idxMix1 idxMix1   (XIdx.power crossing source0) .= 0) :
 
-   (idxMultiMix idxMix1 idxMixSum (XIdx.power crossing source1) .= 3) :
+   (idxMultiMix idxMix1 idxMixTotal (XIdx.power crossing source1) .= 3) :
    (idxMultiMix idxMix0 idxMix0   (XIdx.power crossing source1) .= 0) :
    (idxMultiMix idxMix0 idxMix1   (XIdx.power crossing source1) .= 0) :
 
-   (idxMultiMix idxMixSum idxMix0 (XIdx.power sink crossing) .= 5) :
+   (idxMultiMix idxMixTotal idxMix0 (XIdx.power sink crossing) .= 5) :
    (idxMultiMix idxMix0   idxMix1 (XIdx.power sink crossing) .= 0) :
 
-   (idxMultiMixSum (XIdx.eta source0 crossing) .= 0.25) :
-   (idxMultiMixSum (XIdx.eta source1 crossing) .= 0.5) :
-   (idxMultiMixSum (XIdx.eta crossing storage) .= 0.75) :
-   (idxMultiMixSum (XIdx.eta crossing sink) .= 0.8) :
+   (idxMultiMixTotal (XIdx.eta source0 crossing) .= 0.25) :
+   (idxMultiMixTotal (XIdx.eta source1 crossing) .= 0.5) :
+   (idxMultiMixTotal (XIdx.eta crossing storage) .= 0.75) :
+   (idxMultiMixTotal (XIdx.eta crossing sink) .= 0.8) :
    []
 
 multiMixSolution :: FlowTopo.Section Node (MultiMix (Result Double))
