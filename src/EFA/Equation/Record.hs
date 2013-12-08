@@ -237,11 +237,13 @@ instance IndexSet Delta where
 
 instance IndexSet rec => IndexSet (ExtDelta rec) where
    indices =
-      ExtDelta {
-         extDelta  = fmap (RecIdx.ExtDelta RecIdx.Delta)  indices,
-         extBefore = fmap (RecIdx.ExtDelta RecIdx.Before) indices,
-         extAfter  = fmap (RecIdx.ExtDelta RecIdx.After)  indices
-      }
+      case indices of
+         subIndices ->
+            ExtDelta {
+               extDelta  = fmap (RecIdx.ExtDelta RecIdx.Delta)  subIndices,
+               extBefore = fmap (RecIdx.ExtDelta RecIdx.Before) subIndices,
+               extAfter  = fmap (RecIdx.ExtDelta RecIdx.After)  subIndices
+            }
 
 instance (FixedLength.C f) => IndexSet (Mix f) where
    indices =
