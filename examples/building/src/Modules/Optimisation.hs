@@ -30,11 +30,11 @@ import EFA.Equation.Result (Result)
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data), Nil)
 
+import qualified EFA.Utility.FixedLength as FL
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
 import qualified Data.NonEmpty.Class as NonEmptyC
-import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Empty as Empty
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
@@ -55,7 +55,7 @@ type EnvResultData a = EnvResult (Data Nil a)
 type EqSystemData a =
   forall s. EqSys.EquationSystemIgnore System.Node s (Data Nil a) (Data Nil a)
 
-type Param2 = NonEmpty.T (NonEmpty.T Empty.T)
+type Param2 = FL.N2
 
 type Param2x2 = Sweep.Pair Param2 Param2
 

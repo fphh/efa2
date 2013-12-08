@@ -9,7 +9,9 @@ module EFA.Utility.FixedLength (
    Zero, Succ(Stop, Succ),
    map, zipWith, sequenceA, repeat,
    index, update, indices, numFromPos,
-   i0, i1, i2, i3, i4,
+   N0, N1, N2, N3, N4, N5, N6, N7, N8,
+   GE1, GE2, GE3, GE4, GE5, GE6, GE7, GE8,
+   i0, i1, i2, i3, i4, i5, i6, i7,
    ) where
 
 import qualified Data.NonEmpty as NonEmpty
@@ -194,17 +196,36 @@ instance (C list) => Ord (WrapPos list) where
                 (Succ _, Stop) -> GT)
 
 
-i0 :: WrapPos (NonEmpty.T list)
+type N0 = Empty.T
+type N1 = GE1 Empty.T; type GE1 list = NonEmpty.T list
+type N2 = GE2 Empty.T; type GE2 list = NonEmpty.T (GE1 list)
+type N3 = GE3 Empty.T; type GE3 list = NonEmpty.T (GE2 list)
+type N4 = GE4 Empty.T; type GE4 list = NonEmpty.T (GE3 list)
+type N5 = GE5 Empty.T; type GE5 list = NonEmpty.T (GE4 list)
+type N6 = GE6 Empty.T; type GE6 list = NonEmpty.T (GE5 list)
+type N7 = GE7 Empty.T; type GE7 list = NonEmpty.T (GE6 list)
+type N8 = GE8 Empty.T; type GE8 list = NonEmpty.T (GE7 list)
+
+i0 :: WrapPos (GE1 list)
 i0 = WrapPos Stop
 
-i1 :: WrapPos (NonEmpty.T (NonEmpty.T list))
+i1 :: WrapPos (GE2 list)
 i1 = WrapPos $ Succ Stop
 
-i2 :: WrapPos (NonEmpty.T (NonEmpty.T (NonEmpty.T list)))
+i2 :: WrapPos (GE3 list)
 i2 = WrapPos $ Succ $ Succ Stop
 
-i3 :: WrapPos (NonEmpty.T (NonEmpty.T (NonEmpty.T (NonEmpty.T list))))
+i3 :: WrapPos (GE4 list)
 i3 = WrapPos $ Succ $ Succ $ Succ Stop
 
-i4 :: WrapPos (NonEmpty.T (NonEmpty.T (NonEmpty.T (NonEmpty.T (NonEmpty.T list)))))
+i4 :: WrapPos (GE5 list)
 i4 = WrapPos $ Succ $ Succ $ Succ $ Succ Stop
+
+i5 :: WrapPos (GE6 list)
+i5 = WrapPos $ Succ $ Succ $ Succ $ Succ $ Succ Stop
+
+i6 :: WrapPos (GE7 list)
+i6 = WrapPos $ Succ $ Succ $ Succ $ Succ $ Succ $ Succ Stop
+
+i7 :: WrapPos (GE8 list)
+i7 = WrapPos $ Succ $ Succ $ Succ $ Succ $ Succ $ Succ $ Succ Stop

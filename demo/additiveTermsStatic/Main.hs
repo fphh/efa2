@@ -34,6 +34,8 @@ import qualified EFA.Symbolic.OperatorTree as Op
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
+import qualified EFA.Utility.FixedLength as FL
+
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
@@ -70,9 +72,7 @@ absolute = NestedDelta.getAbsoluteRecord params
 
 params ::
    (Arith.Sum a) =>
-   ParameterRecord
-      (NonEmpty.T (NonEmpty.T (NonEmpty.T Empty.T)))
-      RecMultiDelta a
+   ParameterRecord FL.N3 RecMultiDelta a
 params =
    beforeDelta &&> beforeDelta &&> beforeDelta &&> NestedDelta.parameterStart
 
