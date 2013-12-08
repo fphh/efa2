@@ -19,6 +19,7 @@ import EFA.Equation.Arithmetic
 
 import EFA.Report.FormatValue (FormatValue)
 
+import qualified EFA.Utility.FixedLength as FixedLength
 import EFA.Utility ((>>!))
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
@@ -123,7 +124,7 @@ mixSumRules, mixFactorRules ::
 mixSumRules =
    System . tell . SysRecord.mixSumRules . unwrap
 mixFactorRules =
-   System . tell . SysRecord.mixLevelRules SysRecord.allLevels . unwrap
+   System . tell . SysRecord.mixLevelRules (FixedLength.repeat True) . unwrap
 
 
 data MixOrientation = None | Source | Sink

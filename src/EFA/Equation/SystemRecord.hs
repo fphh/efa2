@@ -56,10 +56,6 @@ mwhen True t = t
 mwhen False _ = mempty
 
 
-allLevels :: FixedLength.C list => list Bool
-allLevels = FixedLength.repeat True
-
-
 lift0 :: (Record rec, Sum x) => x -> Wrap rec x
 lift0 = Wrap . liftR0
 
