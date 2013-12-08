@@ -80,39 +80,43 @@ instance Traversable Delta where
    sequenceA (Delta d b a) = liftA3 Delta d b a
 
 
-data ExtDelta f a = ExtDelta {extDelta, extBefore, extAfter :: f a} deriving (Show)
+data ExtDelta f a = ExtDelta {getExtDelta :: Delta (f a)} deriving (Show)
+
+accessExtDelta :: Accessor.T (ExtDelta f a) (Delta (f a))
+accessExtDelta = Accessor.fromWrapper ExtDelta getExtDelta
 
 extDeltaCons :: Sum (f a) => f a -> f a -> ExtDelta f a
-extDeltaCons b a = ExtDelta {extBefore = b, extAfter = a, extDelta = a~-b}
+extDeltaCons b a = ExtDelta $ Delta {before = b, after = a, delta = a~-b}
+
+extBefore, extDelta, extAfter :: ExtDelta f a -> f a
+extBefore = before . getExtDelta
+extDelta  = delta  . getExtDelta
+extAfter  = after  . getExtDelta
 
 instance FormatValue (f a) => FormatValue (ExtDelta f a) where
-   formatValue rec =
+   formatValue (ExtDelta rec) =
       let assign idx sel =
              Format.assign
                 (Format.recordDelta idx Format.empty)
                 (formatValue $ sel rec)
       in  Format.list $
-             assign RecIdx.Delta  extDelta  :
-             assign RecIdx.Before extBefore :
-             assign RecIdx.After  extAfter  :
+             assign RecIdx.Delta  delta  :
+             assign RecIdx.Before before :
+             assign RecIdx.After  after  :
              []
 
 instance Functor f => Functor (ExtDelta f) where
-   fmap f (ExtDelta d b a) = ExtDelta (fmap f d) (fmap f b) (fmap f a)
+   fmap f (ExtDelta d) = ExtDelta (fmap (fmap f) d)
 
 instance (Applicative f) => Applicative (ExtDelta f) where
-   pure a = ExtDelta (pure a) (pure a) (pure a)
-   ExtDelta fd fb fa <*> ExtDelta d b a =
-      ExtDelta (fd <*> d) (fb <*> b) (fa <*> a)
+   pure a = ExtDelta $ pure $ pure a
+   ExtDelta fd <*> ExtDelta d = ExtDelta (liftA2 (<*>) fd d)
 
 instance (Foldable f) => Foldable (ExtDelta f) where
-   foldMap f (ExtDelta d b a) =
-      foldMap f d <> foldMap f b <> foldMap f a
+   foldMap f (ExtDelta d) = foldMap (foldMap f) d
 
 instance (Traversable f) => Traversable (ExtDelta f) where
-   sequenceA (ExtDelta d b a) =
-      liftA3 ExtDelta (sequenceA d) (sequenceA b) (sequenceA a)
-
+   sequenceA (ExtDelta d) = fmap ExtDelta $ traverse sequenceA d
 
 
 data Mix f a = Mix {mixSum :: a, mix :: NonEmpty.T f a} deriving (Show)
@@ -188,11 +192,9 @@ instance C Delta where
 instance C rec => C (ExtDelta rec) where
    type ToIndex (ExtDelta rec) = RecIdx.ExtDelta (ToIndex rec)
    type FromIndex (RecIdx.ExtDelta idx) = ExtDelta (FromIndex idx)
+
    access (RecIdx.ExtDelta idx sub) =
-      case idx of
-         RecIdx.Delta  -> access sub . Accessor.fromSetGet (\a d -> d{extDelta  = a}) extDelta
-         RecIdx.Before -> access sub . Accessor.fromSetGet (\a d -> d{extBefore = a}) extBefore
-         RecIdx.After  -> access sub . Accessor.fromSetGet (\a d -> d{extAfter  = a}) extAfter
+      access sub . access idx . accessExtDelta
 
 instance (FixedLength.C f) => C (Mix f) where
    type ToIndex (Mix f) =
@@ -229,13 +231,7 @@ instance IndexSet Delta where
 
 instance IndexSet rec => IndexSet (ExtDelta rec) where
    indices =
-      case indices of
-         subIndices ->
-            ExtDelta {
-               extDelta  = fmap (RecIdx.ExtDelta RecIdx.Delta)  subIndices,
-               extBefore = fmap (RecIdx.ExtDelta RecIdx.Before) subIndices,
-               extAfter  = fmap (RecIdx.ExtDelta RecIdx.After)  subIndices
-            }
+      ExtDelta $ liftA2 (fmap . RecIdx.ExtDelta) indices (pure indices)
 
 instance (FixedLength.C f) => IndexSet (Mix f) where
    indices =
@@ -259,10 +255,10 @@ instance Assigns Delta where
    assigns r = (RecIdx.Before, before r) !: (RecIdx.Delta, delta r) : []
 
 instance Assigns rec => Assigns (ExtDelta rec) where
-   assigns r =
+   assigns (ExtDelta r) =
       NonEmptyC.append
-         (fmap (mapFst (RecIdx.ExtDelta RecIdx.Before)) $ assigns (extBefore r))
-         (fmap (mapFst (RecIdx.ExtDelta RecIdx.Delta))  $ assigns (extDelta r))
+         (fmap (mapFst (RecIdx.ExtDelta RecIdx.Before)) $ assigns (before r))
+         (fmap (mapFst (RecIdx.ExtDelta RecIdx.Delta))  $ assigns (delta r))
 
 
 {- |

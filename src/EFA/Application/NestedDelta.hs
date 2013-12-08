@@ -44,16 +44,16 @@ beforeDelta :: (Applicative f, Arith.Sum a) => Extruder f a
 beforeDelta =
    Extruder {
       extrudeOuter = \x ->
-         Record.ExtDelta {
-            Record.extBefore = x,
-            Record.extAfter = pure Undetermined,
-            Record.extDelta = fmap (fmap Arith.clear) x
+         Record.ExtDelta $ Record.Delta {
+            Record.before = x,
+            Record.after = pure Undetermined,
+            Record.delta = fmap (fmap Arith.clear) x
          },
       extrudeInner = \cons x y ->
-         Record.ExtDelta {
-            Record.extBefore = cons x,
-            Record.extAfter = pure Undetermined,
-            Record.extDelta = cons y
+         Record.ExtDelta $ Record.Delta {
+            Record.before = cons x,
+            Record.after = pure Undetermined,
+            Record.delta = cons y
          }
    }
 
@@ -61,16 +61,16 @@ beforeAfter :: (Applicative f, Arith.Sum a) => Extruder f a
 beforeAfter =
    Extruder {
       extrudeOuter = \x ->
-         Record.ExtDelta {
-            Record.extBefore = x,
-            Record.extAfter = fmap (fmap Arith.clear) x,
-            Record.extDelta = pure Undetermined
+         Record.ExtDelta $ Record.Delta {
+            Record.before = x,
+            Record.after = fmap (fmap Arith.clear) x,
+            Record.delta = pure Undetermined
          },
       extrudeInner = \cons x y ->
-         Record.ExtDelta {
-            Record.extBefore = cons x,
-            Record.extAfter = cons y,
-            Record.extDelta = pure Undetermined
+         Record.ExtDelta $ Record.Delta {
+            Record.before = cons x,
+            Record.after = cons y,
+            Record.delta = pure Undetermined
          }
    }
 
@@ -78,16 +78,16 @@ afterDelta :: (Applicative f, Arith.Sum a) => Extruder f a
 afterDelta =
    Extruder {
       extrudeOuter = \x ->
-         Record.ExtDelta {
-            Record.extBefore = pure Undetermined,
-            Record.extAfter = x,
-            Record.extDelta = fmap (fmap Arith.clear) x
+         Record.ExtDelta $ Record.Delta {
+            Record.before = pure Undetermined,
+            Record.after = x,
+            Record.delta = fmap (fmap Arith.clear) x
          },
       extrudeInner = \cons x y ->
-         Record.ExtDelta {
-            Record.extBefore = pure Undetermined,
-            Record.extAfter = cons x,
-            Record.extDelta = cons y
+         Record.ExtDelta $ Record.Delta {
+            Record.before = pure Undetermined,
+            Record.after = cons x,
+            Record.delta = cons y
          }
    }
 

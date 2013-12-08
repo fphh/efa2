@@ -21,7 +21,7 @@ import qualified UniqueLogic.ST.TF.Rule as Rule
 import qualified UniqueLogic.ST.TF.System as Sys
 import UniqueLogic.ST.TF.Expression ((=:=))
 
-import Control.Applicative (Applicative, pure, liftA2, liftA3)
+import Control.Applicative (Applicative, pure, liftA2)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Empty as Empty
@@ -155,34 +155,20 @@ instance Record Record.Delta where
 extDeltaCons ::
    (Record rec, Sum a) => rec a -> rec a -> Record.ExtDelta rec a
 extDeltaCons b a =
-   Record.ExtDelta {
-      Record.extBefore = b,
-      Record.extAfter = a,
-      Record.extDelta = liftR2 (~-) a b
-   }
+   Record.ExtDelta $ fmap unwrap $ Record.deltaCons (Wrap b) (Wrap a)
 
 
 instance (Record rec) => Record (Record.ExtDelta rec) where
 
-   rules vars =
-      rules (Record.extBefore vars) <>
-      rules (Record.extDelta vars) <>
-      rules (Record.extAfter vars) <>
-      (foldMap System $
-         liftA3 Arith.ruleAdd
-            (Record.extBefore vars)
-            (Record.extDelta vars)
-            (Record.extAfter vars))
+   rules (Record.ExtDelta vars) =
+      foldMap rules vars <>
+      foldMap rules (sequenceA vars)
 
-   mixSumRules vars =
-      mixSumRules (Record.extBefore vars) <>
-      mixSumRules (Record.extDelta vars) <>
-      mixSumRules (Record.extAfter vars)
+   mixSumRules (Record.ExtDelta vars) =
+      foldMap mixSumRules vars
 
-   mixLevelRules levels vars =
-      mixLevelRules levels (Record.extBefore vars) <>
-      mixLevelRules levels (Record.extDelta vars) <>
-      mixLevelRules levels (Record.extAfter vars)
+   mixLevelRules levels (Record.ExtDelta vars) =
+      foldMap (mixLevelRules levels) vars
 
    type MixLevel (Record.ExtDelta rec) = MixLevel rec
 
