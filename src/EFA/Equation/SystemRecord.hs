@@ -168,7 +168,7 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
       rules (Record.extBefore vars) <>
       rules (Record.extDelta vars) <>
       rules (Record.extAfter vars) <>
-      (Fold.foldMap System $
+      (foldMap System $
          liftA3 Arith.ruleAdd
             (Record.extBefore vars)
             (Record.extDelta vars)
@@ -215,12 +215,12 @@ instance (FixedLength.C f) => Record (Record.Mix f) where
 
    mixLevelRules (NonEmpty.Cons b Empty.Cons) (Record.Mix s ps) =
       mwhen b $
-      Fold.foldMap (\p -> System (s =:= p)) (FixedLength.Wrap ps)
+      foldMap (\p -> System (s =:= p)) (FixedLength.Wrap ps)
 
    type MixLevel (Record.Mix f) = NonEmpty.T Empty.T
 
    equalR recX recY =
-      Fold.foldMap System $ liftA2 (=:=) recX recY
+      foldMap System $ liftA2 (=:=) recX recY
 
    liftR0 x = pure x
 
@@ -295,5 +295,5 @@ equalResult ::
 equalResult evar val =
    Fold.fold $
    liftA2
-      (\var -> Fold.foldMap (\x -> System $ Rule.equ var =<< Sys.constant x))
+      (\var -> foldMap (\x -> System $ Rule.equ var =<< Sys.constant x))
       evar val
