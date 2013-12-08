@@ -80,20 +80,20 @@ instance Traversable Delta where
    sequenceA (Delta d b a) = liftA3 Delta d b a
 
 
-data ExtDelta f a = ExtDelta {getExtDelta :: Delta (f a)} deriving (Show)
+data ExtDelta rec a = ExtDelta {getExtDelta :: Delta (rec a)} deriving (Show)
 
-accessExtDelta :: Accessor.T (ExtDelta f a) (Delta (f a))
+accessExtDelta :: Accessor.T (ExtDelta rec a) (Delta (rec a))
 accessExtDelta = Accessor.fromWrapper ExtDelta getExtDelta
 
-extDeltaCons :: Sum (f a) => f a -> f a -> ExtDelta f a
+extDeltaCons :: Sum (rec a) => rec a -> rec a -> ExtDelta rec a
 extDeltaCons b a = ExtDelta $ Delta {before = b, after = a, delta = a~-b}
 
-extBefore, extDelta, extAfter :: ExtDelta f a -> f a
+extBefore, extDelta, extAfter :: ExtDelta rec a -> rec a
 extBefore = before . getExtDelta
 extDelta  = delta  . getExtDelta
 extAfter  = after  . getExtDelta
 
-instance FormatValue (f a) => FormatValue (ExtDelta f a) where
+instance FormatValue (rec a) => FormatValue (ExtDelta rec a) where
    formatValue (ExtDelta rec) =
       let assign idx sel =
              Format.assign
@@ -105,17 +105,17 @@ instance FormatValue (f a) => FormatValue (ExtDelta f a) where
              assign RecIdx.After  after  :
              []
 
-instance Functor f => Functor (ExtDelta f) where
+instance Functor rec => Functor (ExtDelta rec) where
    fmap f (ExtDelta d) = ExtDelta (fmap (fmap f) d)
 
-instance (Applicative f) => Applicative (ExtDelta f) where
+instance (Applicative rec) => Applicative (ExtDelta rec) where
    pure a = ExtDelta $ pure $ pure a
    ExtDelta fd <*> ExtDelta d = ExtDelta (liftA2 (<*>) fd d)
 
-instance (Foldable f) => Foldable (ExtDelta f) where
+instance (Foldable rec) => Foldable (ExtDelta rec) where
    foldMap f (ExtDelta d) = foldMap (foldMap f) d
 
-instance (Traversable f) => Traversable (ExtDelta f) where
+instance (Traversable rec) => Traversable (ExtDelta rec) where
    sequenceA (ExtDelta d) = fmap ExtDelta $ traverse sequenceA d
 
 
