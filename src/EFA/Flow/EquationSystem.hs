@@ -123,7 +123,18 @@ mixSumRules, mixFactorRules ::
 mixSumRules =
    System . tell . SysRecord.mixSumRules . unwrap
 mixFactorRules =
-   System . tell . SysRecord.mixFactorRules . unwrap
+   System . tell . SysRecord.mixLevelRules SysRecord.allLevels . unwrap
+
+
+data MixOrientation = None | Source | Sink
+   deriving (Eq, Ord, Show)
+
+mixLevelRules ::
+   (Sys.Value mode v, Sum v, Record rec) =>
+   SysRecord.MixLevel rec Bool ->
+   Expr mode rec s v -> System mode s
+mixLevelRules levels =
+   System . tell . SysRecord.mixLevelRules levels . unwrap
 
 
 

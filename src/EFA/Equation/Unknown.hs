@@ -26,3 +26,8 @@ instance (Applicative rec, Unknown a) => Unknown (Record.ExtDelta rec a) where
 
 instance (FixedLength.C list, Unknown a) => Unknown (Record.Mix list a) where
    unknown = pure unknown
+
+instance
+   (FixedLength.C list, Applicative rec, Unknown a) =>
+      Unknown (Record.ExtMix list rec a) where
+   unknown = pure unknown

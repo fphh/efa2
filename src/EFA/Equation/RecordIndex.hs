@@ -9,6 +9,8 @@ data ExtDelta rec = ExtDelta Delta rec deriving (Show, Eq, Ord)
 
 data Mix pos = MixSum | MixComponent pos deriving (Show, Eq, Ord)
 
+data ExtMix pos rec = ExtMix (Mix pos) rec deriving (Show, Eq, Ord)
+
 
 data Record rec idx = Record rec idx deriving (Show, Eq)
 

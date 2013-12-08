@@ -419,6 +419,9 @@ instance (FixedLength.C list) => MixRecord (FixedLength.WrapPos list) where
 instance (MixRecord len) => Record (RecIdx.Mix len) where
    record = mixRecord
 
+instance (MixRecord len, Record rec) => Record (RecIdx.ExtMix len rec) where
+   record (RecIdx.ExtMix m r) = mixRecord m . record r
+
 
 
 shortIn, shortOut :: String

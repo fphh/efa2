@@ -8,6 +8,7 @@ module EFA.Flow.Sequence.EquationSystem (
 
    Options, optionsDefault,
    optionsSourceMix, optionsSinkMix,
+   EqSys.MixOrientation(..), optionsMix,
    equalInOutSums, independentInOutSums,
    integrateStInOutSums, equalStInOutSums,
 
@@ -234,6 +235,18 @@ optionsSinkMix =
    optionsDefault {
       optTopology = TopoEqSys.optionsSinkMix,
       optStorage = StorageEqSys.optionsSinkMix
+   }
+
+optionsMix ::
+   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
+    Verify.LocalVar mode v, Sum v, Integrate v,
+    Record rec) =>
+   SysRecord.MixLevel rec EqSys.MixOrientation ->
+   Options mode rec s a v
+optionsMix levels =
+   optionsDefault {
+      optTopology = TopoEqSys.optionsMix levels,
+      optStorage = StorageEqSys.optionsMix levels
    }
 
 

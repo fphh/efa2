@@ -24,6 +24,7 @@ import UniqueLogic.ST.TF.Expression ((=:=))
 import Control.Applicative (Applicative, pure, liftA2, liftA3)
 
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable)
 import Data.Foldable (Foldable)
@@ -50,6 +51,14 @@ instance Monoid (System mode s) where
    mempty = System $ return ()
    mappend (System x) (System y) = System $ x >>! y
 
+mwhen :: Monoid a => Bool -> a -> a
+mwhen True t = t
+mwhen False _ = mempty
+
+
+allLevels :: FixedLength.C list => list Bool
+allLevels = FixedLength.repeat True
+
 
 lift0 :: (Record rec, Sum x) => x -> Wrap rec x
 lift0 = Wrap . liftR0
@@ -67,13 +76,22 @@ lift2 ::
 lift2 f (Wrap x) (Wrap y) = Wrap $ liftR2 f x y
 
 
-class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec where
+class
+   (Traversable rec, Applicative rec,
+    Record.IndexSet rec, FixedLength.C (MixLevel rec)) =>
+      Record rec where
    rules ::
       (Sys.Value mode a, Sum a) =>
       Variable mode rec s a -> System mode s
-   mixSumRules, mixFactorRules ::
+   mixSumRules ::
       (Sys.Value mode a, Sum a) =>
       rec (Expr.T mode s a) -> System mode s
+   mixLevelRules ::
+      (Sys.Value mode a, Sum a) =>
+      MixLevel rec Bool ->
+      rec (Expr.T mode s a) -> System mode s
+   type MixLevel rec :: * -> *
+
    equalR ::
       (Sys.Value mode a) =>
       rec (Expr.T mode s a) ->
@@ -94,7 +112,8 @@ instance Record Record.Absolute where
 
    rules _ = mempty
    mixSumRules _ = mempty
-   mixFactorRules _ = mempty
+   mixLevelRules _ _ = mempty
+   type MixLevel Record.Absolute = Empty.T
 
    equalR (Record.Absolute x) (Record.Absolute y) =
       System (x =:= y)
@@ -112,7 +131,8 @@ instance Record Record.Delta where
    rules vars = System $
       Arith.ruleAdd (Record.before vars) (Record.delta vars) (Record.after vars)
    mixSumRules _ = mempty
-   mixFactorRules _ = mempty
+   mixLevelRules _ _ = mempty
+   type MixLevel Record.Delta = Empty.T
 
    {-
    I omit equality on the delta part since it would be redundant.
@@ -148,7 +168,7 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
       rules (Record.extBefore vars) <>
       rules (Record.extDelta vars) <>
       rules (Record.extAfter vars) <>
-      (System $ Fold.sequence_ $
+      (Fold.foldMap System $
          liftA3 Arith.ruleAdd
             (Record.extBefore vars)
             (Record.extDelta vars)
@@ -159,10 +179,12 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
       mixSumRules (Record.extDelta vars) <>
       mixSumRules (Record.extAfter vars)
 
-   mixFactorRules vars =
-      mixFactorRules (Record.extBefore vars) <>
-      mixFactorRules (Record.extDelta vars) <>
-      mixFactorRules (Record.extAfter vars)
+   mixLevelRules levels vars =
+      mixLevelRules levels (Record.extBefore vars) <>
+      mixLevelRules levels (Record.extDelta vars) <>
+      mixLevelRules levels (Record.extAfter vars)
+
+   type MixLevel (Record.ExtDelta rec) = MixLevel rec
 
    {-
    I omit equality on the delta part since it would be redundant.
@@ -191,11 +213,44 @@ instance (FixedLength.C f) => Record (Record.Mix f) where
    mixSumRules (Record.Mix s (NonEmpty.Cons p ps)) =
       System (s =:= Fold.foldl (~+) p (FixedLength.Wrap ps))
 
-   mixFactorRules (Record.Mix s ps) =
+   mixLevelRules (NonEmpty.Cons b Empty.Cons) (Record.Mix s ps) =
+      mwhen b $
       Fold.foldMap (\p -> System (s =:= p)) (FixedLength.Wrap ps)
+
+   type MixLevel (Record.Mix f) = NonEmpty.T Empty.T
 
    equalR recX recY =
       Fold.foldMap System $ liftA2 (=:=) recX recY
+
+   liftR0 x = pure x
+
+   liftR1 f rec = fmap f rec
+
+   liftR2 f recX recY = liftA2 f recX recY
+
+
+instance (Record rec, FixedLength.C f) => Record (Record.ExtMix f rec) where
+
+   rules (Record.ExtMix s ps) =
+      rules s <>
+      Fold.foldMap rules (FixedLength.Wrap ps)
+
+   mixSumRules (Record.ExtMix s pt@(NonEmpty.Cons p ps)) =
+      mixSumRules s <>
+      Fold.foldMap mixSumRules (FixedLength.Wrap pt) <>
+      (equal (Wrap s) $ Fold.foldl (~+) (Wrap p) $
+       fmap Wrap $ FixedLength.Wrap ps)
+
+   mixLevelRules (NonEmpty.Cons b bs) (Record.ExtMix s ps) =
+      mixLevelRules bs s <>
+      Fold.foldMap (mixLevelRules bs) (FixedLength.Wrap ps) <>
+      (mwhen b $ Fold.foldMap (equalR s) $ FixedLength.Wrap ps)
+
+   type MixLevel (Record.ExtMix f rec) = NonEmpty.T (MixLevel rec)
+
+   equalR (Record.ExtMix x px) (Record.ExtMix y py) =
+      equalR x y <>
+      Fold.fold (liftA2 equalR (FixedLength.Wrap px) (FixedLength.Wrap py))
 
    liftR0 x = pure x
 

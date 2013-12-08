@@ -3,12 +3,14 @@ module EFA.Flow.Storage.EquationSystem where
 
 import qualified EFA.Flow.Storage.Quantity as Quant
 import qualified EFA.Flow.EquationSystem as EqSys
-import EFA.Flow.EquationSystem (mixSumRules, mixFactorRules)
+import EFA.Flow.EquationSystem (mixSumRules, mixFactorRules, mixLevelRules)
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.SystemRecord (Record, Expr)
+import EFA.Equation.SystemRecord (Record, Expr, MixLevel)
 import EFA.Equation.Arithmetic (Sum, Constant)
+
+import qualified EFA.Utility.FixedLength as FixedLength
 
 import qualified Data.NonEmpty as NonEmpty
 import Data.Foldable (Foldable, foldMap)
@@ -47,6 +49,18 @@ optionsSinkMix =
    Options {
       optEqualFactorsOut = const mempty,
       optEqualFactorsIn = mixFactorRules
+   }
+
+optionsMix ::
+   (Verify.LocalVar mode v, Sum v, Record rec) =>
+   MixLevel rec EqSys.MixOrientation ->
+   Options mode rec s v
+optionsMix levels =
+   Options {
+      optEqualFactorsOut =
+         mixLevelRules $ FixedLength.map (EqSys.Source==) levels,
+      optEqualFactorsIn =
+         mixLevelRules $ FixedLength.map (EqSys.Sink==) levels
    }
 
 

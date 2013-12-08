@@ -137,6 +137,34 @@ instance (FixedLength.C f) => Traversable (Mix f) where
 
 
 
+data
+   ExtMix f rec a = ExtMix {extMixSum :: rec a, extMix :: NonEmpty.T f (rec a)}
+      deriving (Show)
+
+instance
+   (FormatValue (rec a), FixedLength.C f, FormatValue a) =>
+      FormatValue (ExtMix f rec a) where
+   formatValue rec =
+      Format.mix (formatValue $ extMixSum rec) $
+      fmap formatValue $ NonEmpty.mapTail FixedLength.Wrap $ extMix rec
+
+instance (FixedLength.C f, Functor rec) => Functor (ExtMix f rec) where
+   fmap f (ExtMix s m) = ExtMix (fmap f s) (FixedLength.map (fmap f) m)
+
+instance (FixedLength.C f, Applicative rec) => Applicative (ExtMix f rec) where
+   pure a = ExtMix (pure a) $ FixedLength.repeat (pure a)
+   ExtMix fs fm <*> ExtMix s m = ExtMix (fs <*> s) (FixedLength.zipWith (<*>) fm m)
+
+instance (FixedLength.C f, Foldable rec) => Foldable (ExtMix f rec) where
+   foldMap f (ExtMix s m) = foldMap f s <> foldMap (foldMap f) (FixedLength.Wrap m)
+
+instance (FixedLength.C f, Traversable rec) => Traversable (ExtMix f rec) where
+   sequenceA (ExtMix s m) =
+      liftA2 ExtMix (sequenceA s) $
+      FixedLength.sequenceA $ FixedLength.map sequenceA m
+
+
+
 class
    (Ord (ToIndex rec), Functor rec, Format.Record (ToIndex rec),
     rec ~ FromIndex (ToIndex rec)) =>
@@ -171,9 +199,8 @@ instance C rec => C (ExtDelta rec) where
 instance (FixedLength.C f) => C (Mix f) where
    type ToIndex (Mix f) =
            RecIdx.Mix (FixedLength.WrapPos (NonEmpty.T f))
-   type FromIndex (RecIdx.Mix
-           (FixedLength.WrapPos (NonEmpty.T f))) =
-              Mix f
+   type FromIndex (RecIdx.Mix (FixedLength.WrapPos (NonEmpty.T f))) =
+           Mix f
    access idx =
       case idx of
          RecIdx.MixSum -> Accessor.fromSetGet (\a m -> m{mixSum  = a}) mixSum
@@ -181,6 +208,21 @@ instance (FixedLength.C f) => C (Mix f) where
             Accessor.fromSetGet
                (\a m -> m{mix = FixedLength.update (const a) k $ mix m})
                (FixedLength.index k . mix)
+
+instance (FixedLength.C f, C rec) => C (ExtMix f rec) where
+   type ToIndex (ExtMix f rec) =
+           RecIdx.ExtMix (FixedLength.WrapPos (NonEmpty.T f)) (ToIndex rec)
+   type FromIndex (RecIdx.ExtMix (FixedLength.WrapPos (NonEmpty.T f)) idx) =
+           ExtMix f (FromIndex idx)
+   access (RecIdx.ExtMix idx sub) =
+      case idx of
+         RecIdx.MixSum ->
+            access sub . Accessor.fromSetGet (\a m -> m{extMixSum  = a}) extMixSum
+         RecIdx.MixComponent k ->
+            access sub .
+            Accessor.fromSetGet
+               (\a m -> m{extMix = FixedLength.update (const a) k $ extMix m})
+               (FixedLength.index k . extMix)
 
 
 class C rec => IndexSet rec where
@@ -207,6 +249,18 @@ instance (FixedLength.C f) => IndexSet (Mix f) where
          mixSum = RecIdx.MixSum,
          mix = FixedLength.map RecIdx.MixComponent FixedLength.indices
       }
+
+instance (FixedLength.C f, IndexSet rec) => IndexSet (ExtMix f rec) where
+   indices =
+      case indices of
+         subIndices ->
+            ExtMix {
+               extMixSum = fmap (RecIdx.ExtMix RecIdx.MixSum) subIndices,
+               extMix =
+                  FixedLength.map
+                     (\i -> fmap (RecIdx.ExtMix $ RecIdx.MixComponent i) subIndices)
+                     FixedLength.indices
+            }
 
 
 

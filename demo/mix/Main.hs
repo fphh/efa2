@@ -44,6 +44,7 @@ import Control.Applicative (liftA2, pure)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Empty as Empty
+import Data.NonEmpty ((!:))
 import Data.Monoid (Monoid, mconcat, mempty)
 
 
@@ -225,6 +226,59 @@ seqCumulatedSolution =
    SeqFlow.sequence seqSourceMixSolution
 
 
+type MultiMix = Record.ExtMix (NonEmpty.T Empty.T) Mix
+
+idxMixSum :: RecIdx.Mix pos
+idxMixSum = RecIdx.MixSum
+
+idxMix0 :: RecIdx.Mix (FL.WrapPos (FL.GE1 list))
+idxMix0 = RecIdx.MixComponent FL.i0
+
+idxMix1 :: RecIdx.Mix (FL.WrapPos (FL.GE2 list))
+idxMix1 = RecIdx.MixComponent FL.i1
+
+idxMultiMix ::
+   RecIdx.Mix pos0 -> RecIdx.Mix pos1 ->
+   idx -> RecIdx.Record (RecIdx.ExtMix pos0 (RecIdx.Mix pos1)) idx
+idxMultiMix a b =
+   RecIdx.Record (RecIdx.ExtMix a b)
+
+idxMultiMixSum ::
+   idx -> RecIdx.Record (RecIdx.ExtMix pos0 (RecIdx.Mix pos1)) idx
+idxMultiMixSum = idxMultiMix idxMixSum idxMixSum
+
+multiMixSystem ::
+   EqSys.EquationSystem Verify.Ignore MultiMix Node s Double
+multiMixSystem =
+   mconcat $
+
+   (idxMultiMixSum XIdx.dTime .= 0.5) :
+
+   (idxMultiMix idxMix0 idxMixSum (XIdx.power crossing source0) .= 4) :
+   (idxMultiMix idxMix1 idxMix0   (XIdx.power crossing source0) .= 0) :
+   (idxMultiMix idxMix1 idxMix1   (XIdx.power crossing source0) .= 0) :
+
+   (idxMultiMix idxMix1 idxMixSum (XIdx.power crossing source1) .= 3) :
+   (idxMultiMix idxMix0 idxMix0   (XIdx.power crossing source1) .= 0) :
+   (idxMultiMix idxMix0 idxMix1   (XIdx.power crossing source1) .= 0) :
+
+   (idxMultiMix idxMixSum idxMix0 (XIdx.power sink crossing) .= 5) :
+   (idxMultiMix idxMix0   idxMix1 (XIdx.power sink crossing) .= 0) :
+
+   (idxMultiMixSum (XIdx.eta source0 crossing) .= 0.25) :
+   (idxMultiMixSum (XIdx.eta source1 crossing) .= 0.5) :
+   (idxMultiMixSum (XIdx.eta crossing storage) .= 0.75) :
+   (idxMultiMixSum (XIdx.eta crossing sink) .= 0.8) :
+   []
+
+multiMixSolution :: FlowTopo.Section Node (MultiMix (Result Double))
+multiMixSolution =
+   EqSys.solveOpts
+      (EqSys.optionsMix (EqSys.Source !: EqSys.Sink !: Empty.Cons))
+      (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
+      multiMixSystem
+
+
 main :: IO ()
 main = do
    mapM_ (putStrLn . Format.unUnicode) $
@@ -246,3 +300,5 @@ main = do
       ++
       [Draw.xterm $ Draw.cumulatedFlow $
        CumEqSys.solve seqCumulatedSolution mempty]
+      ++
+      [Draw.xterm $ Draw.flowSection Draw.optionsDefault multiMixSolution]
