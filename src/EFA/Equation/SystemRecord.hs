@@ -26,8 +26,8 @@ import Control.Applicative (Applicative, pure, liftA2, liftA3)
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Empty as Empty
 import qualified Data.Foldable as Fold
-import Data.Traversable (Traversable)
-import Data.Foldable (Foldable)
+import Data.Traversable (Traversable, sequenceA)
+import Data.Foldable (Foldable, foldMap)
 import Data.Monoid (Monoid, (<>), mempty, mappend)
 
 
@@ -231,26 +231,20 @@ instance (FixedLength.C f) => Record (Record.Mix f) where
 
 instance (Record rec, FixedLength.C f) => Record (Record.ExtMix f rec) where
 
-   rules (Record.ExtMix s ps) =
-      rules s <>
-      Fold.foldMap rules (FixedLength.Wrap ps)
+   rules (Record.ExtMix m) = foldMap rules m
 
-   mixSumRules (Record.ExtMix s pt@(NonEmpty.Cons p ps)) =
-      mixSumRules s <>
-      Fold.foldMap mixSumRules (FixedLength.Wrap pt) <>
-      (equal (Wrap s) $ Fold.foldl (~+) (Wrap p) $
-       fmap Wrap $ FixedLength.Wrap ps)
+   mixSumRules (Record.ExtMix m) =
+      foldMap mixSumRules m <>
+      foldMap mixSumRules (sequenceA m)
 
-   mixLevelRules (NonEmpty.Cons b bs) (Record.ExtMix s ps) =
-      mixLevelRules bs s <>
-      Fold.foldMap (mixLevelRules bs) (FixedLength.Wrap ps) <>
-      (mwhen b $ Fold.foldMap (equalR s) $ FixedLength.Wrap ps)
+   mixLevelRules (NonEmpty.Cons b bs) (Record.ExtMix m) =
+      foldMap (mixLevelRules bs) m <>
+      foldMap (mixLevelRules (NonEmpty.Cons b Empty.Cons)) (sequenceA m)
 
    type MixLevel (Record.ExtMix f rec) = NonEmpty.T (MixLevel rec)
 
-   equalR (Record.ExtMix x px) (Record.ExtMix y py) =
-      equalR x y <>
-      Fold.fold (liftA2 equalR (FixedLength.Wrap px) (FixedLength.Wrap py))
+   equalR (Record.ExtMix x) (Record.ExtMix y) =
+      Fold.fold (liftA2 equalR x y)
 
    liftR0 x = pure x
 

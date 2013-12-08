@@ -20,7 +20,7 @@ import Data.NonEmpty ((!:))
 import Data.Map (Map)
 import Control.Category ((.))
 import Control.Applicative (Applicative, pure, (<*>), liftA2, liftA3)
-import Data.Traversable (Traversable, sequenceA, foldMapDefault)
+import Data.Traversable (Traversable, traverse, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
 import Data.Tuple.HT (mapFst)
@@ -137,32 +137,30 @@ instance (FixedLength.C f) => Traversable (Mix f) where
 
 
 
-data
-   ExtMix f rec a = ExtMix {extMixSum :: rec a, extMix :: NonEmpty.T f (rec a)}
-      deriving (Show)
+newtype ExtMix f rec a = ExtMix {getExtMix :: Mix f (rec a)} deriving (Show)
+
+accessExtMix :: Accessor.T (ExtMix f rec a) (Mix f (rec a))
+accessExtMix = Accessor.fromWrapper ExtMix getExtMix
 
 instance
    (FormatValue (rec a), FixedLength.C f, FormatValue a) =>
       FormatValue (ExtMix f rec a) where
-   formatValue rec =
-      Format.mix (formatValue $ extMixSum rec) $
-      fmap formatValue $ NonEmpty.mapTail FixedLength.Wrap $ extMix rec
+   formatValue (ExtMix rec) =
+      Format.mix (formatValue $ mixSum rec) $
+      fmap formatValue $ NonEmpty.mapTail FixedLength.Wrap $ mix rec
 
 instance (FixedLength.C f, Functor rec) => Functor (ExtMix f rec) where
-   fmap f (ExtMix s m) = ExtMix (fmap f s) (FixedLength.map (fmap f) m)
+   fmap f (ExtMix m) = ExtMix (fmap (fmap f) m)
 
 instance (FixedLength.C f, Applicative rec) => Applicative (ExtMix f rec) where
-   pure a = ExtMix (pure a) $ FixedLength.repeat (pure a)
-   ExtMix fs fm <*> ExtMix s m = ExtMix (fs <*> s) (FixedLength.zipWith (<*>) fm m)
+   pure a = ExtMix (pure (pure a))
+   ExtMix fm <*> ExtMix m = ExtMix (liftA2 (<*>) fm m)
 
 instance (FixedLength.C f, Foldable rec) => Foldable (ExtMix f rec) where
-   foldMap f (ExtMix s m) = foldMap f s <> foldMap (foldMap f) (FixedLength.Wrap m)
+   foldMap f (ExtMix m) = foldMap (foldMap f) m
 
 instance (FixedLength.C f, Traversable rec) => Traversable (ExtMix f rec) where
-   sequenceA (ExtMix s m) =
-      liftA2 ExtMix (sequenceA s) $
-      FixedLength.sequenceA $ FixedLength.map sequenceA m
-
+   sequenceA (ExtMix m) = fmap ExtMix $ traverse sequenceA m
 
 
 class
@@ -214,15 +212,9 @@ instance (FixedLength.C f, C rec) => C (ExtMix f rec) where
            RecIdx.ExtMix (FixedLength.WrapPos (NonEmpty.T f)) (ToIndex rec)
    type FromIndex (RecIdx.ExtMix (FixedLength.WrapPos (NonEmpty.T f)) idx) =
            ExtMix f (FromIndex idx)
+
    access (RecIdx.ExtMix idx sub) =
-      case idx of
-         RecIdx.MixSum ->
-            access sub . Accessor.fromSetGet (\a m -> m{extMixSum  = a}) extMixSum
-         RecIdx.MixComponent k ->
-            access sub .
-            Accessor.fromSetGet
-               (\a m -> m{extMix = FixedLength.update (const a) k $ extMix m})
-               (FixedLength.index k . extMix)
+      access sub . access idx . accessExtMix
 
 
 class C rec => IndexSet rec where
@@ -254,16 +246,7 @@ instance (FixedLength.C f) => IndexSet (Mix f) where
 
 instance (FixedLength.C f, IndexSet rec) => IndexSet (ExtMix f rec) where
    indices =
-      case indices of
-         subIndices ->
-            ExtMix {
-               extMixSum = fmap (RecIdx.ExtMix RecIdx.MixSum) subIndices,
-               extMix =
-                  FixedLength.map
-                     (\i -> fmap (RecIdx.ExtMix $ RecIdx.MixComponent i) subIndices)
-                     FixedLength.indices
-            }
-
+      ExtMix $ liftA2 (fmap . RecIdx.ExtMix) indices (pure indices)
 
 
 class C rec => Assigns rec where
