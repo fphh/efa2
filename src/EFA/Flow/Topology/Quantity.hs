@@ -197,7 +197,7 @@ lookupEta (Idx.Eta e) =
 
 lookupSum :: (Ord node) => Idx.Sum node -> Section node v -> Maybe v
 lookupSum (Idx.Sum dir node) s = do
-   sums <- Graph.lookupNode node $ FlowTopo.topology s
+   sums <- lookupSums node s
    case dir of
       Idx.In  -> sumIn sums
       Idx.Out -> sumOut sums
