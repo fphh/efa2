@@ -254,16 +254,20 @@ multiMixSystem =
 
    (idxMultiMixTotal XIdx.dTime .= 0.5) :
 
-   (idxMultiMix idxMix0 idxMixTotal (XIdx.power crossing source0) .= 4) :
-   (idxMultiMix idxMix1 idxMix0   (XIdx.power crossing source0) .= 0) :
-   (idxMultiMix idxMix1 idxMix1   (XIdx.power crossing source0) .= 0) :
+   (idxMultiMixTotal (XIdx.power source0 crossing) .= 4) :
+   (idxMultiMix idxMix1 idxMix0 (XIdx.power source0 crossing) .= 0) :
+   (idxMultiMix idxMix1 idxMix1 (XIdx.power source0 crossing) .= 0) :
 
-   (idxMultiMix idxMix1 idxMixTotal (XIdx.power crossing source1) .= 3) :
-   (idxMultiMix idxMix0 idxMix0   (XIdx.power crossing source1) .= 0) :
-   (idxMultiMix idxMix0 idxMix1   (XIdx.power crossing source1) .= 0) :
+   (idxMultiMixTotal (XIdx.power source1 crossing) .= 3) :
+   (idxMultiMix idxMix0 idxMix0 (XIdx.power source1 crossing) .= 0) :
+   (idxMultiMix idxMix0 idxMix1 (XIdx.power source1 crossing) .= 0) :
 
-   (idxMultiMix idxMixTotal idxMix0 (XIdx.power sink crossing) .= 5) :
-   (idxMultiMix idxMix0   idxMix1 (XIdx.power sink crossing) .= 0) :
+   (idxMultiMixTotal (XIdx.power sink crossing) .= 1.2) :
+   (idxMultiMix idxMix0 idxMix1 (XIdx.power sink crossing) .= 0) :
+   (idxMultiMix idxMix1 idxMix1 (XIdx.power sink crossing) .= 0) :
+
+   (idxMultiMix idxMix0 idxMix0 (XIdx.power storage crossing) .= 0) :
+   (idxMultiMix idxMix1 idxMix0 (XIdx.power storage crossing) .= 0) :
 
    (idxMultiMixTotal (XIdx.eta source0 crossing) .= 0.25) :
    (idxMultiMixTotal (XIdx.eta source1 crossing) .= 0.5) :
