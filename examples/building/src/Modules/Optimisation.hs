@@ -60,7 +60,7 @@ type Param2 = FL.N2
 type Param2x2 = Sweep.Pair Param2 Param2
 
 solve ::
-  (Ord a, Show a, Arith.Constant a) =>
+  (Ord a, Show a, Arith.Constant a, Arith.ZeroTestable a) =>
   EnvResultData a ->
   EtaAssignMap System.Node ->
   Map Name (a -> a) ->

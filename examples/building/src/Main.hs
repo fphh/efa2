@@ -209,8 +209,10 @@ envToPowerRecord =
 
 
 external ::
-  (Eq (v a), Arith.Constant a, Vec.Zipper v,
-  Vec.Walker v, Vec.Singleton v, Vec.Storage v a, Node.C node) =>
+  (Arith.Constant a, Arith.ZeroTestable a,
+   Eq (v a), Vec.Storage v a,
+   Vec.Zipper v, Vec.Storage v Bool,
+   Vec.Walker v, Vec.Singleton v, Node.C node) =>
   [(node, a)] ->
   SeqFlow.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a)) ->
   SeqFlow.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a))

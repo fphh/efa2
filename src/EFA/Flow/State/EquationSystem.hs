@@ -50,7 +50,7 @@ import EFA.Equation.Result(Result)
 import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap))
 import EFA.Equation.Arithmetic
-          (Sum, Product, Constant, Integrate, Scalar)
+          (Sum, Product, Constant, ZeroTestable, Integrate, Scalar)
 
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -254,8 +254,8 @@ expressionGraph =
       SysRecord.exprFromVariable
 
 fromGraph ::
-   (Verify.LocalVar mode a, Constant a, a ~ Scalar v,
-    Verify.LocalVar mode v, Product v, Integrate v,
+   (Verify.LocalVar mode a, Constant a, ZeroTestable a, a ~ Scalar v,
+    Verify.LocalVar mode v, Product v, Integrate v, ZeroTestable v,
     Record rec, Node.C node) =>
    Options mode rec s a v ->
    StateFlow.Graph node
@@ -274,7 +274,7 @@ fromGraph opts g =
 fromStorageSequences ::
    (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
     Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
-    Constant a, Record rec, Node.C node) =>
+    Constant a, ZeroTestable a, Record rec, Node.C node) =>
    Options mode rec s a v ->
    StateFlow.Graph node
       (SysRecord.Expr mode rec s a)
@@ -362,8 +362,8 @@ query =
 setup ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageStateScalar node,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
-    Constant a, a ~ Scalar v,
-    Product v, Integrate v,
+    Constant a, ZeroTestable a, a ~ Scalar v,
+    Product v, Integrate v, ZeroTestable v,
     Record rec, Node.C node) =>
    Options mode rec s a v ->
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
@@ -383,8 +383,8 @@ setup opts gr given = do
    return (vars, eqs)
 
 solveOpts ::
-   (Constant a, a ~ Scalar v,
-    Product v, Integrate v,
+   (Constant a, ZeroTestable a, a ~ Scalar v,
+    Product v, ZeroTestable v, Integrate v,
     Record rec, Node.C node) =>
    (forall s. Options Verify.Ignore rec s a v) ->
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
@@ -396,8 +396,8 @@ solveOpts opts gr sys = runST $ do
    query vars
 
 solve ::
-   (Constant a, a ~ Scalar v,
-    Product v, Integrate v,
+   (Constant a, ZeroTestable a, a ~ Scalar v,
+    Product v, ZeroTestable v, Integrate v,
     Record rec, Node.C node) =>
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
@@ -406,9 +406,9 @@ solve = solveOpts optionsDefault
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForStorageStateScalar node,
-    Constant a, a ~ Scalar v,
+    Constant a, ZeroTestable a, a ~ Scalar v,
     Verify.GlobalVar (Verify.Track output) v recIdx Var.InStateSignal node,
-    Product v, Integrate v,
+    Product v, Integrate v, ZeroTestable v,
     Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s a v) ->

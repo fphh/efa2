@@ -8,7 +8,7 @@ import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.SystemRecord (Expr, Record)
 import EFA.Equation.Arithmetic
-          (Sum, Product, (~/),
+          (Sum, Product, (~/), ZeroTestable,
            Integrate, Scalar, Scale)
 
 import Data.Foldable (foldMap)
@@ -76,7 +76,7 @@ integrateSum carrySum flowSum =
    carrySum =&= Arith.integrate flowSum
 
 spreadSum ::
-   (Verify.LocalVar mode a, Product a, a ~ Scalar v,
+   (Verify.LocalVar mode a, Product a, ZeroTestable a, a ~ Scalar v,
     Verify.LocalVar mode v, Sum v, Scale v,
     Record rec,
     ra ~ Expr mode rec s a,

@@ -71,6 +71,12 @@ zero = Sum Map.empty
 one :: Product a
 one = Product Map.empty
 
+isObviousZero :: Term a -> Bool
+isObviousZero t =
+   case t of
+      Sum s -> Map.null s
+      _ -> False
+
 sumFromTerm :: Term a -> Map (Product a) Rational
 sumFromTerm (Sum s) = s
 sumFromTerm t = Map.singleton (productFromTerm t) 1
@@ -137,6 +143,10 @@ instance Ord idx => Arith.Constant (Term idx) where
    zero = zero
    fromInteger = fromInteger
    fromRational = fromRational
+
+instance Ord idx => Arith.ZeroTestable (Term idx) where
+   allZeros = isObviousZero
+   coincidingZeros x y  =  isObviousZero x && isObviousZero y
 
 
 {- |

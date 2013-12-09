@@ -10,6 +10,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
+           ZeroTestable, allZeros, coincidingZeros,
            Constant, zero,
            Integrate, Scalar, integrate)
 
@@ -103,6 +104,10 @@ instance (Ord i, Constant a) => Constant (MultiValue i a) where
 instance (Ord i, Integrate v) => Integrate (MultiValue i v) where
    type Scalar (MultiValue i v) = MultiValue i (Scalar v)
    integrate = fmap integrate
+
+instance (Ord i, ZeroTestable a) => ZeroTestable (MultiValue i a) where
+   allZeros = Fold.all allZeros
+   coincidingZeros x y = Fold.or $ liftA2 coincidingZeros x y
 
 
 singleton :: a -> MultiValue i a

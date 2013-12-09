@@ -44,7 +44,7 @@ import EFA.Equation.Result (Result)
 import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap))
 import EFA.Equation.Arithmetic
-          (Sum, Product, Constant, (~+), (~*))
+          (Sum, Product, ZeroTestable, Constant, (~+), (~*))
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
@@ -173,7 +173,8 @@ independentInOutSums opts =
 
 
 fromTopology ::
-   (Verify.LocalVar mode a, Constant a, Record rec, Node.C node) =>
+   (Verify.LocalVar mode a, Constant a, ZeroTestable a,
+    Record rec, Node.C node) =>
    Options mode rec s a ->
    CumFlow.Graph node (SysRecord.Expr mode rec s a) ->
    EqSys.System mode s
@@ -200,7 +201,7 @@ fromTopology opts topo =
          (Graph.graphMap topo))
 
 fromEdge ::
-   (Sys.Value mode a, Product a, Record rec) =>
+   (Sys.Value mode a, Product a, ZeroTestable a, Record rec) =>
    CumFlow.Flow (SysRecord.Expr mode rec s a) ->
    EqSys.System mode s
 fromEdge
@@ -268,7 +269,7 @@ query =
 
 setup ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.Any node,
-    Constant a, Record rec, Node.C node) =>
+    Constant a, ZeroTestable a, Record rec, Node.C node) =>
    Options mode rec s a ->
    CumFlow.Graph node (rec (Result a)) ->
    EquationSystem mode rec node s a ->
@@ -286,7 +287,7 @@ setup opts gr given = do
    return (vars, eqs)
 
 solveOpts ::
-   (Constant a, Record rec, Node.C node) =>
+   (Constant a, ZeroTestable a, Record rec, Node.C node) =>
    (forall s. Options Verify.Ignore rec s a) ->
    CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a) ->
@@ -297,14 +298,15 @@ solveOpts opts gr sys = runST $ do
    query vars
 
 solve ::
-   (Constant a, Record rec, Node.C node) =>
+   (Constant a, ZeroTestable a, Record rec, Node.C node) =>
    CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a) ->
    CumFlow.Graph node (rec (Result a))
 solve = solveOpts optionsDefault
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a recIdx Var.Any node, Constant a,
+   (Verify.GlobalVar (Verify.Track output) a recIdx Var.Any node,
+    Constant a, ZeroTestable a,
     Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
    CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s a) ->

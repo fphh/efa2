@@ -120,7 +120,7 @@ external sequenceFlowTopology seqFlowRecord =  EqSys.solveFromMeasurement sequen
 -- ## Analyse External Energy Flow
 
 external ::
-   (Vec.Walker c, Vec.Storage c a,
+   (Vec.Walker c, Vec.Storage c a, Arith.ZeroTestable a,
     Arith.Integrate a, Arith.Constant a, Arith.Scalar a ~ a) =>
    SeqFlow.Graph System.Node (Result (Data Nil a)) (Result (Data (c :> Nil) a)) ->
    SeqFlow.Graph System.Node (Result a) (Result a)
@@ -141,8 +141,8 @@ initStorage = Arith.fromRational $ 0.7*3600*1000
 -- ## Predict Energy Flow
 
 prediction ::
-   (Eq a, Arith.Constant a,
-    Eq v, Arith.Constant v,
+   (Eq a, Arith.Constant a, Arith.ZeroTestable a,
+    Eq v, Arith.Constant v, Arith.ZeroTestable v,
     Arith.Integrate v, Arith.Scalar v ~ a) =>
    SeqFlow.Graph System.Node a v ->
    SeqFlow.Graph System.Node (Result a) (Result v)

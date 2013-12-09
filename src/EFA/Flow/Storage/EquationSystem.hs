@@ -8,7 +8,7 @@ import EFA.Flow.EquationSystem (mixSumRules, mixFactorRules, mixLevelRules)
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.SystemRecord (Record, Expr, MixLevel)
-import EFA.Equation.Arithmetic (Sum, Constant)
+import EFA.Equation.Arithmetic (Sum, ZeroTestable, Constant)
 
 import qualified EFA.Utility.FixedLength as FixedLength
 
@@ -79,7 +79,7 @@ fromCarryEdges opts =
       optEqualFactorsIn opts (Quant.carryXIn edge)
 
 fromInStorages ::
-   (Verify.LocalVar mode x, Constant x, Record rec,
+   (Verify.LocalVar mode x, Constant x, ZeroTestable x, Record rec,
     rx ~ Expr mode rec s x, Quant.Carry carry) =>
    rx -> [carry rx] ->
    EqSys.System mode s
@@ -87,7 +87,7 @@ fromInStorages stoutsum outs =
    splitFactors stoutsum Quant.carryEnergy Quant.carryXOut outs
 
 fromOutStorages ::
-   (Verify.LocalVar mode x, Constant x, Record rec,
+   (Verify.LocalVar mode x, Constant x, ZeroTestable x, Record rec,
     rx ~ Expr mode rec s x, Quant.Carry carry) =>
    rx -> [carry rx] ->
    EqSys.System mode s
@@ -95,7 +95,7 @@ fromOutStorages stinsum ins =
    splitFactors stinsum Quant.carryEnergy Quant.carryXIn ins
 
 splitFactors ::
-   (Verify.LocalVar mode x, Constant x, Record rec,
+   (Verify.LocalVar mode x, Constant x, ZeroTestable x, Record rec,
     rx ~ Expr mode rec s x) =>
    rx ->
    (carry rx -> rx) ->

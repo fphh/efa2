@@ -50,7 +50,7 @@ import EFA.Equation.Result(Result)
 import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap), Expr)
 import EFA.Equation.Arithmetic
-          (Sum, Product, (~*), constOne)
+          (Sum, Product, (~*), ZeroTestable, constOne)
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
@@ -239,7 +239,7 @@ independentInOutSums opts =
 
 
 fromTopology ::
-   (Verify.LocalVar mode v, Product v,
+   (Verify.LocalVar mode v, Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    Options mode rec s v ->
    FlowTopo.DirSection node (Expr mode rec s v) ->
@@ -263,7 +263,7 @@ fromTopology opts (FlowTopoPlain.Section dtime topo) =
       (Graph.graphMap topo)
 
 fromEdge ::
-   (Verify.LocalVar mode v, Product v, Record rec) =>
+   (Verify.LocalVar mode v, Product v, ZeroTestable v, Record rec) =>
    Options mode rec s v ->
    Expr mode rec s v ->
    FlowTopo.Flow (Expr mode rec s v) ->
@@ -298,7 +298,7 @@ fromSums opts s =
    fold $ liftA2 (optInOutSums opts) (FlowTopo.sumIn s) (FlowTopo.sumOut s)
 
 splitFactors ::
-   (Verify.LocalVar mode x, Product x, Record rec,
+   (Verify.LocalVar mode x, Product x, ZeroTestable x, Record rec,
     rx ~ Expr mode rec s x) =>
    rx ->
    rx ->
@@ -350,7 +350,7 @@ query =
 
 setup ::
    (Verify.GlobalVar mode v (Record.ToIndex rec) Var.Signal node,
-    Product v, Record rec, Node.C node) =>
+    Product v, ZeroTestable v, Record rec, Node.C node) =>
    Options mode rec s v ->
    FlowTopo.Section node (rec (Result v)) ->
    EquationSystem mode rec node s v ->
@@ -370,7 +370,7 @@ setup opts gr given = do
    return (vars, eqs)
 
 solveOpts ::
-   (Product v, Record rec, Node.C node) =>
+   (Product v, ZeroTestable v, Record rec, Node.C node) =>
    (forall s. Options Verify.Ignore rec s v) ->
    FlowTopo.Section node (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s v) ->
@@ -381,7 +381,7 @@ solveOpts opts gr sys = runST $ do
    query vars
 
 solve ::
-   (Product v, Record rec, Node.C node) =>
+   (Product v, ZeroTestable v, Record rec, Node.C node) =>
    FlowTopo.Section node (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s v) ->
    FlowTopo.Section node (rec (Result v))
@@ -389,7 +389,8 @@ solve = solveOpts optionsDefault
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) v recIdx Var.Signal node,
-    Product v, Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
+    Product v, ZeroTestable v, Record rec, Record.ToIndex rec ~ recIdx,
+    Node.C node) =>
    FlowTopo.Section node (rec (Result v)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s v) ->
    (ME.Exceptional

@@ -13,7 +13,7 @@ import EFA.Equation.Result (Result)
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
-           Constant, zero,
+           Constant, zero, ZeroTestable,
            Integrate, Scalar, integrate,
            Scale, scale)
 
@@ -106,7 +106,7 @@ withLocalVar f = System $ do
 
 
 splitFactors ::
-   (Verify.LocalVar mode x, Product x, Record rec,
+   (Verify.LocalVar mode x, Product x, ZeroTestable x, Record rec,
     rx ~ Expr mode rec s x) =>
    rx -> (secnode -> rx) ->
    rx -> (secnode -> rx) ->

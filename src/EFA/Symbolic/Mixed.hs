@@ -10,6 +10,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
+           ZeroTestable, allZeros, coincidingZeros,
            Constant, zero,
            Integrate, integrate)
 
@@ -69,6 +70,12 @@ instance
    zero = Signal zero
    fromInteger = Signal . Arith.fromInteger
    fromRational = Signal . Arith.fromRational
+
+instance
+   (ZeroTestable (term signal)) =>
+      ZeroTestable (Signal term scalar signal) where
+   allZeros (Signal x) = allZeros x
+   coincidingZeros (Signal x) (Signal y) = coincidingZeros x y
 
 instance
    (FormatValue (term signal)) =>
@@ -152,6 +159,12 @@ instance
    zero = Scalar zero
    fromInteger = Scalar . Arith.fromInteger
    fromRational = Scalar . Arith.fromRational
+
+instance
+   (ZeroTestable (term (ScalarAtom term scalar signal))) =>
+      ZeroTestable (Scalar term scalar signal) where
+   allZeros (Scalar x) = allZeros x
+   coincidingZeros (Scalar x) (Scalar y) = coincidingZeros x y
 
 instance
    (FormatValue (term (ScalarAtom term scalar signal))) =>

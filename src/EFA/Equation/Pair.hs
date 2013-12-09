@@ -7,6 +7,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
+           ZeroTestable, allZeros, coincidingZeros,
            Constant, zero,
            Integrate, Scalar, integrate)
 
@@ -76,6 +77,11 @@ instance (Constant a, Constant b) => Constant (T a b) where
    zero = Cons Arith.zero Arith.zero
    fromInteger n = Cons (Arith.fromInteger n) (Arith.fromInteger n)
    fromRational x = Cons (Arith.fromRational x) (Arith.fromRational x)
+
+instance (ZeroTestable a, ZeroTestable b) => ZeroTestable (T a b) where
+   allZeros (Cons a b) = allZeros a && allZeros b
+   coincidingZeros (Cons a0 b0) (Cons a1 b1) =
+      coincidingZeros a0 a1 || coincidingZeros b0 b1
 
 instance (Integrate a, Integrate b) => Integrate (T a b) where
    type Scalar (T a b) = T (Scalar a) (Scalar b)

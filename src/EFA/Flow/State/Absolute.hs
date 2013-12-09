@@ -72,8 +72,8 @@ withExpressionGraph f =
 
 
 solve ::
-   (Eq a, Arith.Constant a, a ~ Arith.Scalar v,
-    Eq v, Arith.Product v, Arith.Integrate v,
+   (Eq a, Arith.Constant a, Arith.ZeroTestable a, a ~ Arith.Scalar v,
+    Eq v, Arith.Product v, Arith.Integrate v, Arith.ZeroTestable v,
     Node.C node) =>
    StateFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem Verify.Ignore node s a v) ->
@@ -83,8 +83,8 @@ solve graph sys =
    EqSys.solve (StateFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveOpts ::
-   (Arith.Constant a, a ~ Arith.Scalar v,
-    Arith.Product v, Arith.Integrate v,
+   (Arith.Constant a, Arith.ZeroTestable a, a ~ Arith.Scalar v,
+    Arith.Product v, Arith.Integrate v, Arith.ZeroTestable v,
     Node.C node) =>
    (forall s. Options Verify.Ignore s a v) ->
    StateFlow.Graph node (Result a) (Result v) ->
@@ -97,9 +97,9 @@ solveOpts opts graph sys =
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute Var.ForStorageStateScalar node,
-    Arith.Constant a, a ~ Arith.Scalar v,
+    Arith.Constant a, Arith.ZeroTestable a, a ~ Arith.Scalar v,
     Verify.GlobalVar (Verify.Track output) v RecIdx.Absolute Var.InStateSignal node,
-    Arith.Product v, Arith.Integrate v, Node.C node) =>
+    Arith.Product v, Arith.Integrate v, Arith.ZeroTestable v, Node.C node) =>
    StateFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem (Verify.Track output) node s a v) ->
    (ME.Exceptional

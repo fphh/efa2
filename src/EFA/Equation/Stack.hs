@@ -240,6 +240,13 @@ instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
    type Scalar (Stack i v) = Stack i (Arith.Scalar v)
    integrate = fmap Arith.integrate
 
+instance
+   (Ord i, Arith.Sum a, Arith.ZeroTestable a) =>
+      Arith.ZeroTestable (Stack i a) where
+   allZeros = fold (&&) . fmap Arith.allZeros
+   coincidingZeros x y =
+      Arith.coincidingZeros (toMultiValue x) (toMultiValue y)
+
 
 singleton :: a -> Stack i a
 singleton = Stack

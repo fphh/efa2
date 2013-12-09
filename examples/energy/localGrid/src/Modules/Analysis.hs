@@ -83,7 +83,7 @@ initStorage :: (Arith.Constant a) => a
 initStorage = Arith.fromRational $ 0.7*3600*1000
 
 external ::
-   (Vec.Walker c, Vec.Storage c a,
+   (Vec.Walker c, Vec.Storage c a, Arith.ZeroTestable a,
     Arith.Integrate a, Arith.Constant a, Arith.Scalar a ~ a) =>
    SeqFlow.Graph System.Node (Result (Data Nil a)) (Result (Data (c :> Nil) a)) ->
    SeqFlow.Graph System.Node (Result a) (Result a)
@@ -97,8 +97,9 @@ external sequenceFlowGraph =
       (SeqIdx.storage Idx.initial System.Water  .=  initStorage)
 
 external2 ::
-   (Vec.Singleton v, Vec.Storage v a, Vec.Walker v,
-    Arith.Constant a, Vec.Zipper v) =>
+   (Vec.Singleton v, Vec.Walker v, Vec.Zipper v,
+    Vec.Storage v a, Vec.Storage v Bool,
+    Arith.Constant a, Arith.ZeroTestable a) =>
    SeqFlow.Graph System.Node
       (Result (Data Nil a))
       (Result (Data (v :> Nil) a)) ->
@@ -112,7 +113,7 @@ external2 sequenceFlowGraph =
       (SeqIdx.storage Idx.initial System.Water  .=  Data initStorage)
 
 external3 ::
-   (Arith.Constant a) =>
+   (Arith.Constant a, Arith.ZeroTestable a) =>
    SeqFlow.Graph System.Node
       (Result (Data Nil a))
       (Result (Data Nil a)) ->

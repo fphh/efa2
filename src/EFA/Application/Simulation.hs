@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module EFA.Application.Simulation where
 
@@ -42,12 +43,14 @@ solve :: (Node.C node,
           Ord a,
           Show a,
           Arith.Constant a,
+          Arith.ZeroTestable a,
           SV.Zipper v,
           SV.Walker v,
           SV.Storage v a,
           SV.Singleton v,
           SV.Len (v a),
-          SV.FromList v) =>
+          SV.FromList v,
+          SV.Storage v Bool) =>
          Topo.Topology node ->
          EtaAssignMap node ->
          Map Name (a -> a) ->

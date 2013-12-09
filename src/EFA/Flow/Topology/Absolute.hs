@@ -58,7 +58,7 @@ withExpressionGraph f =
 
 
 solve ::
-   (Arith.Product a, Node.C node) =>
+   (Arith.Product a, Arith.ZeroTestable a, Node.C node) =>
    FlowTopo.Section node (Result a) ->
    (forall s. EquationSystem Verify.Ignore node s a) ->
    FlowTopo.Section node (Result a)
@@ -68,7 +68,7 @@ solve graph sys =
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute Var.Signal node,
-    Arith.Product a, Node.C node) =>
+    Arith.Product a, Arith.ZeroTestable a, Node.C node) =>
    FlowTopo.Section node (Result a) ->
    (forall s. EquationSystem (Verify.Track output) node s a) ->
    (ME.Exceptional

@@ -16,6 +16,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
+           ZeroTestable, allZeros, coincidingZeros,
            Constant)
 
 import qualified EFA.Report.Format as Format
@@ -296,6 +297,12 @@ instance (ZipWith c, Storage c a, Product a) => Product (Data c a) where
    (~/) = zipWith (~/)
    recip = map Arith.recip
    constOne = map Arith.constOne
+
+instance
+   (ZipWith c, All c, Storage c a, Storage c Bool, ZeroTestable a) =>
+      ZeroTestable (Data c a) where
+   allZeros = all allZeros
+   coincidingZeros x y = any id $ zipWith coincidingZeros x y
 
 instance (Constant a) => Constant (Data Nil a) where
    zero = Data Arith.zero

@@ -98,7 +98,7 @@ eqs = EqSys.fromGraph True (Topo.dirFromFlowGraph (snd System.flowGraphOpt))
 -}
 
 solveCharge ::
-  (Ord a, Show a, Arith.Constant a) =>
+  (Ord a, Show a, Arith.Constant a, Arith.ZeroTestable a) =>
   SeqFlow.Graph Node (Result (Data Nil a)) (Result (Data Nil a)) ->
   SolveFunc a
 solveCharge flowGraph etaAssign etaFunc pRest pRestLocal pWater pGas =
@@ -139,7 +139,7 @@ givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 
 solveDischarge ::
-  (Show a, Ord a, Arith.Constant a, Arith.Integrate a) =>
+  (Show a, Ord a, Arith.Constant a, Arith.Integrate a, Arith.ZeroTestable a) =>
   SeqFlow.Graph Node (Result (Data Nil a)) (Result (Data Nil a)) ->
   SolveFunc a
 solveDischarge flowGraph etaAssign etaFunc pRest pRestLocal pWater pGas =

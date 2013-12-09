@@ -6,6 +6,8 @@ import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.Rule as Rule
 import qualified UniqueLogic.ST.TF.System as Sys
 
+import Control.Applicative (liftA2)
+import Data.Maybe.HT (toMaybe)
 import Data.Bool.HT (if')
 import Data.Ratio (Ratio)
 
@@ -44,6 +46,10 @@ class Product a => Constant a where
    fromInteger :: Integer -> a
    fromRational :: Rational -> a
 
+class ZeroTestable a where
+   allZeros :: a -> Bool
+   coincidingZeros :: a -> a -> Bool
+
 
 instance Sum Integer where (~+) = (+); (~-) = (-); negate = P.negate
 instance Sum Float where (~+) = (+); (~-) = (-); negate = P.negate
@@ -70,6 +76,22 @@ instance Integral a => Constant (Ratio a) where
    fromRational = P.fromRational
 
 
+instance ZeroTestable Integer where
+   allZeros = (0==)
+   coincidingZeros x y = x==0 && y==0
+
+instance ZeroTestable Float where
+   allZeros = (0==)
+   coincidingZeros x y = x==0 && y==0
+
+instance ZeroTestable Double where
+   allZeros = (0==)
+   coincidingZeros x y = x==0 && y==0
+
+instance (Integral a) => ZeroTestable (Ratio a) where
+   allZeros = (0==)
+   coincidingZeros x y = x==0 && y==0
+
 
 
 ruleAdd ::
@@ -83,9 +105,22 @@ ruleNegate ::
 ruleNegate = Rule.generic2 negate negate
 
 ruleMul ::
-   (Sys.Value t a, Product a) =>
+   (Sys.Value t a, Product a, ZeroTestable a) =>
    Sys.Variable t s a -> Sys.Variable t s a -> Sys.Variable t s a -> Sys.T t s ()
-ruleMul = Rule.generic3 (flip (~/)) (~/) (~*)
+ruleMul x y z =
+   sequence_ $
+   Sys.assignment3 (~*) x y z :
+   Sys.runApplyMaybe (fmap zeroMul (Sys.arg x)) z :
+   Sys.runApplyMaybe (fmap zeroMul (Sys.arg y)) z :
+   Sys.runApplyMaybe (liftA2 zeroDiv (Sys.arg z) (Sys.arg y)) x :
+   Sys.runApplyMaybe (liftA2 zeroDiv (Sys.arg z) (Sys.arg x)) y :
+   []
+
+zeroMul :: (ZeroTestable a) => a -> Maybe a
+zeroMul x = toMaybe (allZeros x) x
+
+zeroDiv :: (Product a, ZeroTestable a) => a -> a -> Maybe a
+zeroDiv z x = toMaybe (not $ coincidingZeros x z) (z~/x)
 
 ruleRecip ::
    (Sys.Value t a, Product a) =>
@@ -98,13 +133,17 @@ instance (Sys.Value t a, Sum a) => Sum (Expr.T t s a) where
    (~-) = Expr.fromRule3 (\z x y -> ruleAdd x y z)
    negate = Expr.fromRule2 ruleNegate
 
-instance (Sys.Value t a, Product a) => Product (Expr.T t s a) where
+instance
+   (Sys.Value t a, Product a, ZeroTestable a) =>
+      Product (Expr.T t s a) where
    (~*) = Expr.fromRule3 ruleMul
    (~/) = Expr.fromRule3 (\z x y -> ruleMul x y z)
    recip = Expr.fromRule2 ruleRecip
    constOne = Expr.fromRule2 $ Sys.assignment2 constOne
 
-instance (Sys.Value t a, Constant a) => Constant (Expr.T t s a) where
+instance
+   (Sys.Value t a, Constant a, ZeroTestable a) =>
+      Constant (Expr.T t s a) where
    zero = Expr.constant zero
    fromInteger  = Expr.constant . fromInteger
    fromRational = Expr.constant . fromRational
