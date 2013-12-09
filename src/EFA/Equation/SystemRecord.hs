@@ -26,6 +26,7 @@ import Control.Applicative (Applicative, pure, liftA2)
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Empty as Empty
 import qualified Data.Foldable as Fold
+import qualified Data.Monoid.HT as MonoidHT
 import Data.Traversable (Traversable, sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid (Monoid, (<>), mempty, mappend)
@@ -50,10 +51,6 @@ newtype System mode s = System (Sys.T mode s ())
 instance Monoid (System mode s) where
    mempty = System $ return ()
    mappend (System x) (System y) = System $ x >>! y
-
-mwhen :: Monoid a => Bool -> a -> a
-mwhen True t = t
-mwhen False _ = mempty
 
 
 lift0 :: (Record rec, Sum x) => x -> Wrap rec x
@@ -196,7 +193,7 @@ instance (FixedLength.C f) => Record (Record.Mix f) where
       System (s =:= Fold.foldl (~+) p (FixedLength.Wrap ps))
 
    mixLevelRules (NonEmpty.Cons b Empty.Cons) (Record.Mix s ps) =
-      mwhen b $
+      MonoidHT.when b $
       foldMap (\p -> System (s =:= p)) (FixedLength.Wrap ps)
 
    type MixLevel (Record.Mix f) = NonEmpty.T Empty.T
