@@ -285,20 +285,28 @@ main = do
       AssignMap.format $ FlowTopo.toAssignMap sourceMixSolution
 
    concurrentlyMany_ $
-      (map (Draw.xterm . Draw.flowSection Draw.optionsDefault) $
-          sourceMixSolution :
-          sinkMixSolution :
-          cumulatedSolution :
-          EqSys.solve cumulatedSolution mempty :
+      (map
+          (\(title, graph) ->
+             Draw.xterm $ Draw.title title $
+             Draw.flowSection Draw.optionsDefault graph) $
+          ("source mix", sourceMixSolution) :
+          ("sink mix", sinkMixSolution) :
+          ("added source and sink mix", cumulatedSolution) :
+          ("complete added source and sink mix",
+           EqSys.solve cumulatedSolution mempty) :
           [])
       ++
-      [Draw.xterm $ Draw.seqFlowGraph Draw.optionsDefault seqSourceMixSolution]
+      [Draw.xterm $ Draw.title "sequence flow mix" $
+       Draw.seqFlowGraph Draw.optionsDefault seqSourceMixSolution]
       ++
-      [Draw.xterm $ Draw.stateFlowGraph Draw.optionsDefault stateSourceMixSolution]
+      [Draw.xterm $ Draw.title "state flow mix" $
+       Draw.stateFlowGraph Draw.optionsDefault stateSourceMixSolution]
       ++
-      [Draw.xterm $ Draw.cumulatedFlow seqCumulatedSolution]
+      [Draw.xterm $ Draw.title "cumulated flow mix" $
+       Draw.cumulatedFlow seqCumulatedSolution]
       ++
-      [Draw.xterm $ Draw.cumulatedFlow $
-       CumEqSys.solve seqCumulatedSolution mempty]
+      [Draw.xterm $ Draw.title "complete cumulated flow mix" $
+       Draw.cumulatedFlow $ CumEqSys.solve seqCumulatedSolution mempty]
       ++
-      [Draw.xterm $ Draw.flowSection Draw.optionsDefault multiMixSolution]
+      [Draw.xterm $ Draw.title "combined source and sink mix" $
+       Draw.flowSection Draw.optionsDefault multiMixSolution]
