@@ -295,8 +295,8 @@ expressionGraph =
       SysRecord.exprFromVariable
 
 fromGraph ::
-   (Verify.LocalVar mode a, Constant a, ZeroTestable a, a ~ Scalar v,
-    Verify.LocalVar mode v, Product v, ZeroTestable v, Integrate v,
+   (Verify.LocalVar mode a, Constant a, ZeroTestable a,
+    Verify.LocalVar mode v, Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    Options mode rec s a v ->
    SeqFlow.Graph node
@@ -471,8 +471,8 @@ query =
 setup ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageSectionScalar node,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
-    Constant a, ZeroTestable a, a ~ Scalar v,
-    Product v, ZeroTestable v, Integrate v,
+    Constant a, ZeroTestable a,
+    Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    Options mode rec s a v ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
@@ -492,8 +492,8 @@ setup opts gr given = do
    return (vars, eqs)
 
 solveOpts ::
-   (Constant a, ZeroTestable a, a ~ Scalar v,
-    Product v, Integrate v, ZeroTestable v,
+   (Constant a, ZeroTestable a,
+    Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    (forall s. Options Verify.Ignore rec s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
@@ -506,7 +506,7 @@ solveOpts opts gr sys = runST $ do
 
 solve ::
    (Constant a, ZeroTestable a, a ~ Scalar v,
-    Product v, Integrate v, ZeroTestable v,
+    Product v, ZeroTestable v, Integrate v,
     Record rec, Node.C node) =>
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
@@ -517,7 +517,7 @@ solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForStorageSectionScalar node,
     Constant a, ZeroTestable a, a ~ Scalar v,
     Verify.GlobalVar (Verify.Track output) v recIdx Var.InSectionSignal node,
-    Product v, Integrate v, ZeroTestable v,
+    Product v, ZeroTestable v, Integrate v,
     Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
