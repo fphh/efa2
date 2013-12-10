@@ -106,7 +106,7 @@ sourceMixSystem =
 
 sourceMixSolution :: FlowTopo.Section Node (Mix (Result Double))
 sourceMixSolution =
-   EqSys.solveOpts EqSys.optionsSourceMix
+   EqSys.solveOpts (EqSys.sourceMix EqSys.optionsDefault)
       (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
       sourceMixSystem
 
@@ -132,7 +132,7 @@ sinkMixSystem =
 
 sinkMixSolution :: FlowTopo.Section Node (Mix (Result Double))
 sinkMixSolution =
-   EqSys.solveOpts EqSys.optionsSinkMix
+   EqSys.solveOpts (EqSys.sinkMix EqSys.optionsDefault)
       (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
       sinkMixSystem
 
@@ -207,7 +207,7 @@ seqSourceMixSolution ::
    SeqFlow.Graph Node (Mix (Result Double)) (Mix (Result Double))
 seqSourceMixSolution =
    SeqEqSys.solveOpts
-      (SeqEqSys.equalStInOutSums SeqEqSys.optionsSourceMix)
+      (SeqEqSys.equalStInOutSums (SeqEqSys.sourceMix SeqEqSys.optionsDefault))
       seqFlowGraph seqSourceMixSystem
 
 stateSourceMixSolution ::
@@ -278,7 +278,8 @@ multiMixSystem =
 multiMixSolution :: FlowTopo.Section Node (MultiMix (Result Double))
 multiMixSolution =
    EqSys.solveOpts
-      (EqSys.optionsMix (EqSys.Source !: EqSys.Sink !: Empty.Cons))
+      (EqSys.mix (EqSys.Source !: EqSys.Sink !: Empty.Cons) $
+       EqSys.optionsDefault)
       (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
       multiMixSystem
 

@@ -33,30 +33,33 @@ optionsDefault =
       optEqualFactorsIn = const mempty
    }
 
-optionsSourceMix ::
+sourceMix ::
    (Verify.LocalVar mode v, Sum v, Record rec) =>
+   Options mode rec s v ->
    Options mode rec s v
-optionsSourceMix =
-   Options {
+sourceMix opts =
+   opts {
       optEqualFactorsOut = mixFactorRules,
       optEqualFactorsIn = const mempty
    }
 
-optionsSinkMix ::
+sinkMix ::
    (Verify.LocalVar mode v, Sum v, Record rec) =>
+   Options mode rec s v ->
    Options mode rec s v
-optionsSinkMix =
-   Options {
+sinkMix opts =
+   opts {
       optEqualFactorsOut = const mempty,
       optEqualFactorsIn = mixFactorRules
    }
 
-optionsMix ::
+mix ::
    (Verify.LocalVar mode v, Sum v, Record rec) =>
    MixLevel rec EqSys.MixOrientation ->
+   Options mode rec s v ->
    Options mode rec s v
-optionsMix levels =
-   Options {
+mix levels opts =
+   opts {
       optEqualFactorsOut =
          mixLevelRules $ FixedLength.map (EqSys.Source==) levels,
       optEqualFactorsIn =

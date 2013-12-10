@@ -7,8 +7,8 @@ module EFA.Flow.Topology.EquationSystem (
    solve, solveOpts, solveTracked,
 
    Options, optionsDefault,
-   optionsSourceMix, optionsSinkMix,
-   EqSys.MixOrientation(..), optionsMix,
+   sourceMix, sinkMix,
+   EqSys.MixOrientation(..), mix,
    equalInOutSums, independentInOutSums,
    fromTopology,
 
@@ -186,35 +186,35 @@ optionsDefault =
       optEqualEta = const mempty
    }
 
-optionsSourceMix ::
+sourceMix ::
    (Verify.LocalVar mode v, Sum v, Record rec) =>
+   Options mode rec s v ->
    Options mode rec s v
-optionsSourceMix =
-   Options {
-      optInOutSums = (=&=),
+sourceMix opts =
+   opts {
       optEqualFactorsOut = mixFactorRules,
       optEqualFactorsIn = const mempty,
       optEqualEta = mixFactorRules
    }
 
-optionsSinkMix ::
+sinkMix ::
    (Verify.LocalVar mode v, Sum v, Record rec) =>
+   Options mode rec s v ->
    Options mode rec s v
-optionsSinkMix =
-   Options {
-      optInOutSums = (=&=),
+sinkMix opts =
+   opts {
       optEqualFactorsOut = const mempty,
       optEqualFactorsIn = mixFactorRules,
       optEqualEta = mixFactorRules
    }
 
-optionsMix ::
+mix ::
    (Verify.LocalVar mode v, Sum v, Record rec) =>
    SysRecord.MixLevel rec EqSys.MixOrientation ->
+   Options mode rec s v ->
    Options mode rec s v
-optionsMix levels =
-   Options {
-      optInOutSums = (=&=),
+mix levels opts =
+   opts {
       optEqualFactorsOut =
          mixLevelRules $ FixedLength.map (EqSys.Source==) levels,
       optEqualFactorsIn =
