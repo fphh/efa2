@@ -6,9 +6,10 @@ module EFA.Flow.State.EquationSystem (
 
    solve, solveOpts, solveTracked,
 
-   Options, optionsDefault,
+   Options, optionsDefault, optionsBase,
    equalInOutSums, independentInOutSums,
-   integrateStInOutSums, equalStInOutSums,
+   SeqStateEqSys.CoupleSums,
+   SeqStateEqSys.integrateStInOutSums, SeqStateEqSys.equalStInOutSums,
 
    constant,
    constantRecord,
@@ -202,10 +203,19 @@ optionsDefault ::
     Record rec) =>
    Options mode rec s a v
 optionsDefault =
+   optionsBase SeqStateEqSys.integrateStInOutSums
+
+optionsBase ::
+   (Verify.LocalVar mode a, Sum a,
+    Verify.LocalVar mode v,
+    Record rec) =>
+   SeqStateEqSys.CoupleSums mode rec s a v ->
+   Options mode rec s a v
+optionsBase couple =
    Options {
       optTopology = TopoEqSys.optionsDefault,
       optStorage = StorageEqSys.optionsDefault,
-      optCoupling = SeqStateEqSys.optionsDefault
+      optCoupling = SeqStateEqSys.optionsBase couple
    }
 
 
@@ -221,23 +231,6 @@ independentInOutSums ::
    Options mode rec s a v
 independentInOutSums opts =
    opts { optTopology = TopoEqSys.independentInOutSums $ optTopology opts }
-
-
-integrateStInOutSums ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
-    Record rec) =>
-   Options mode rec s a v ->
-   Options mode rec s a v
-integrateStInOutSums opts =
-   opts { optCoupling = SeqStateEqSys.integrateStInOutSums $ optCoupling opts }
-
-equalStInOutSums ::
-   (Verify.LocalVar mode a, Product a, Record rec) =>
-   Options mode rec s a a ->
-   Options mode rec s a a
-equalStInOutSums opts =
-   opts { optCoupling = SeqStateEqSys.equalStInOutSums $ optCoupling opts }
 
 
 expressionGraph ::

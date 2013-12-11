@@ -20,21 +20,31 @@ import Prelude hiding (sqrt)
 
 data Options mode rec s a v =
    Options {
-      optStInOutSums ::
+      optCoupleSums ::
          Expr mode rec s a ->
          Expr mode rec s v ->
          System mode s
    }
 
-optionsDefault ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
+optionsBase ::
+   (Verify.LocalVar mode a, Sum a,
+    Verify.LocalVar mode v,
     Record rec) =>
+   CoupleSums mode rec s a v ->
    Options mode rec s a v
-optionsDefault =
+optionsBase (CoupleSums couple) =
    Options {
-      optStInOutSums = integrateSum
+      optCoupleSums = couple
    }
+
+
+newtype
+   CoupleSums mode rec s a v =
+      CoupleSums
+         (Expr mode rec s a ->
+          Expr mode rec s v ->
+          System mode s)
+
 
 
 {- |
@@ -45,10 +55,8 @@ integrateStInOutSums ::
    (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
     Verify.LocalVar mode v, Integrate v,
     Record rec) =>
-   Options mode rec s a v ->
-   Options mode rec s a v
-integrateStInOutSums opts =
-   opts { optStInOutSums = integrateSum }
+   CoupleSums mode rec s a v
+integrateStInOutSums = CoupleSums integrateSum
 
 {- |
 This option means that the sum of blue edges and the one of red edges must be equal.
@@ -56,11 +64,9 @@ This works only for values of the same type,
 which are currently certainly only scalar types.
 -}
 equalStInOutSums ::
-   (Verify.LocalVar mode a, Product a, Record rec) =>
-   Options mode rec s a a ->
-   Options mode rec s a a
-equalStInOutSums opts =
-   opts { optStInOutSums = (=&=) }
+   (Verify.LocalVar mode a, Sum a, Record rec) =>
+   CoupleSums mode rec s a a
+equalStInOutSums = CoupleSums (=&=)
 
 
 integrateSum ::
@@ -101,6 +107,6 @@ fromStorageSums ::
    FlowTopo.Sums (ra, rv) ->
    System mode s
 fromStorageSums opts sums =
-   foldMap (uncurry $ optStInOutSums opts) (FlowTopo.sumIn sums)
+   foldMap (uncurry $ optCoupleSums opts) (FlowTopo.sumIn sums)
    <>
-   foldMap (uncurry $ optStInOutSums opts) (FlowTopo.sumOut sums)
+   foldMap (uncurry $ optCoupleSums opts) (FlowTopo.sumOut sums)

@@ -69,8 +69,7 @@ solve ::
 solve stateFlowGraph etaAssign etaFunc state params =
   envGetData $
     EqSys.solveOpts
-
-      (EqSys.equalStInOutSums EqSys.optionsDefault)
+      (EqSys.optionsBase EqSys.equalStInOutSums)
       (AppOpt.givenAverageWithoutState state
           (Map.fromList $ Fold.toList $
            NonEmptyC.zip idxParams (fmap Data params))

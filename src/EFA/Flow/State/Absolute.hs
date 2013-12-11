@@ -3,9 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Flow.State.Absolute (
    module EFA.Flow.State.Absolute,
-   EqSys.optionsDefault,
+   EqSys.optionsDefault, EqSys.optionsBase,
    EqSys.equalInOutSums, EqSys.independentInOutSums,
-   EqSys.integrateStInOutSums, EqSys.equalStInOutSums,
+   EqSys.CoupleSums, EqSys.integrateStInOutSums, EqSys.equalStInOutSums,
    Abs.liftF, Abs.liftF2,
    (=.=),
    ) where

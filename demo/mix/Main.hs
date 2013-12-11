@@ -207,7 +207,8 @@ seqSourceMixSolution ::
    SeqFlow.Graph Node (Mix (Result Double)) (Mix (Result Double))
 seqSourceMixSolution =
    SeqEqSys.solveOpts
-      (SeqEqSys.equalStInOutSums (SeqEqSys.sourceMix SeqEqSys.optionsDefault))
+      (SeqEqSys.sourceMix $
+       SeqEqSys.optionsBase SeqEqSys.equalStInOutSums)
       seqFlowGraph seqSourceMixSystem
 
 stateSourceMixSolution ::
