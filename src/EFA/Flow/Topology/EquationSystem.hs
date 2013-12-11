@@ -4,7 +4,7 @@
 module EFA.Flow.Topology.EquationSystem (
    EquationSystem, Expression, RecordExpression,
 
-   solve, solveOpts, solveTracked,
+   solve, solveOpts, solveTracked, solveTrackedOpts,
 
    Options, optionsDefault,
    sourceMix, sinkMix,
@@ -387,6 +387,23 @@ solve ::
    FlowTopo.Section node (rec (Result v))
 solve = solveOpts optionsDefault
 
+solveTrackedOpts ::
+   (Verify.GlobalVar (Verify.Track output) v recIdx Var.Signal node,
+    Product v, ZeroTestable v, Record rec, Record.ToIndex rec ~ recIdx,
+    Node.C node) =>
+   (forall s. Options (Verify.Track output) rec s v) ->
+   FlowTopo.Section node (rec (Result v)) ->
+   (forall s. EquationSystem (Verify.Track output) rec node s v) ->
+   (ME.Exceptional
+      (Verify.Exception output)
+      (FlowTopo.Section node (rec (Result v))),
+    Verify.Assigns output)
+solveTrackedOpts opts gr sys = runST $ do
+   (vars, eqs) <- setup opts gr sys
+   runWriterT $ ME.runExceptionalT $ Verify.runTrack $ do
+      Sys.solveBreadthFirst eqs
+      MT.lift $ query vars
+
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) v recIdx Var.Signal node,
     Product v, ZeroTestable v, Record rec, Record.ToIndex rec ~ recIdx,
@@ -397,8 +414,4 @@ solveTracked ::
       (Verify.Exception output)
       (FlowTopo.Section node (rec (Result v))),
     Verify.Assigns output)
-solveTracked gr sys = runST $ do
-   (vars, eqs) <- setup optionsDefault gr sys
-   runWriterT $ ME.runExceptionalT $ Verify.runTrack $ do
-      Sys.solveBreadthFirst eqs
-      MT.lift $ query vars
+solveTracked = solveTrackedOpts optionsDefault
