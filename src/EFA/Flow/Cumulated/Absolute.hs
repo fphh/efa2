@@ -58,7 +58,7 @@ withExpressionGraph f =
 
 
 solve ::
-   (Eq a, Arith.Constant a, Arith.ZeroTestable a, Node.C node) =>
+   (Eq a, Arith.Product a, Arith.ZeroTestable a, Node.C node) =>
    CumFlow.Graph node (Result a) ->
    (forall s. EquationSystem Verify.Ignore node s a) ->
    CumFlow.Graph node (Result a)
@@ -68,7 +68,7 @@ solve graph sys =
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute CumVar.Any node,
-    Arith.Constant a, Arith.ZeroTestable a, Node.C node) =>
+    Arith.Product a, Arith.ZeroTestable a, Node.C node) =>
    CumFlow.Graph node (Result a) ->
    (forall s. EquationSystem (Verify.Track output) node s a) ->
    (ME.Exceptional
