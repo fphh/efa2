@@ -72,7 +72,7 @@ globalVariable ::
 globalVariable var = do
    vars <-
       lift $ for Record.indices $ \recIdx ->
-         Verify.globalVariableDyn $ RecIdx.Record recIdx var
+         Verify.globalVariable $ RecIdx.Record recIdx var
    tell $ SysRecord.rules vars
    return vars
 

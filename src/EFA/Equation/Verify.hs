@@ -93,11 +93,6 @@ class Sys.Value w a => LocalVar w a where
 
 class LocalVar w a => GlobalVar w a recIdx var node where
    globalVariable ::
-      (Format.Record recIdx, FormatValue (idx node),
-       Var.Index idx, Var.Type idx ~ var) =>
-      RecIdx.Record recIdx (idx node) -> ST s (Sys.Variable w s a)
-
-   globalVariableDyn ::
       (Format.Record recIdx, FormatValue (var node)) =>
       RecIdx.Record recIdx (var node) -> ST s (Sys.Variable w s a)
 
@@ -125,8 +120,7 @@ instance
       GlobalVar (Track output)
          (Pair.T (MixedTerm (mixedTerm term) recIdx part node) a)
          recIdx var node where
-   globalVariable = globalVariableTracked SymVar.varSymbol
-   globalVariableDyn = globalVariableTracked SymVar.symbol
+   globalVariable = globalVariableTracked SymVar.symbol
 
 
 type Ignore = IdentityT
@@ -140,7 +134,6 @@ instance LocalVar IdentityT a where
 
 instance GlobalVar IdentityT a recIdx var node where
    globalVariable _ = SysSimple.globalVariable
-   globalVariableDyn _ = SysSimple.globalVariable
 
 
 globalVariableTracked ::
