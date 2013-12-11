@@ -197,21 +197,22 @@ data Options mode rec s a v =
    }
 
 optionsDefault ::
-   (Verify.LocalVar mode a, Sum a, Record rec) =>
+   (Verify.LocalVar mode a, Constant a, ZeroTestable a, Record rec) =>
    Options mode rec s a a
 optionsDefault =
-   optionsBase SeqStateEqSys.equalStInOutSums
+   optionsBase SeqStateEqSys.equalStInOutSums StorageEqSys.classOne
 
 optionsBase ::
    (Verify.LocalVar mode a, Sum a,
     Verify.LocalVar mode v,
     Record rec) =>
    SeqStateEqSys.CoupleSums mode rec s a v ->
+   StorageEqSys.One mode rec s a ->
    Options mode rec s a v
-optionsBase couple =
+optionsBase couple one =
    Options {
       optTopology = TopoEqSys.optionsDefault,
-      optStorage = StorageEqSys.optionsDefault,
+      optStorage = StorageEqSys.optionsBase one,
       optCoupling = SeqStateEqSys.optionsBase couple
    }
 
@@ -244,7 +245,7 @@ expressionGraph =
       SysRecord.exprFromVariable
 
 fromGraph ::
-   (Verify.LocalVar mode a, Constant a, ZeroTestable a,
+   (Verify.LocalVar mode a, Product a, ZeroTestable a,
     Verify.LocalVar mode v, Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    Options mode rec s a v ->
@@ -264,7 +265,7 @@ fromGraph opts g =
 fromStorageSequences ::
    (Verify.LocalVar mode a, ra ~ SysRecord.Expr mode rec s a,
     Verify.LocalVar mode v, rv ~ SysRecord.Expr mode rec s v,
-    Constant a, ZeroTestable a, Record rec, Node.C node) =>
+    Product a, ZeroTestable a, Record rec, Node.C node) =>
    Options mode rec s a v ->
    StateFlow.Graph node
       (SysRecord.Expr mode rec s a)
@@ -276,11 +277,11 @@ fromStorageSequences opts g =
              (optStorage opts) (Storage.edges sg)
           <>
           foldMap
-             (\(s, ns) -> StorageEqSys.fromInStorages s $ Map.elems ns)
+             (\(s, ns) -> StorageEqSys.fromInStorages (optStorage opts) s $ Map.elems ns)
              (Storage.outEdges sg)
           <>
           foldMap
-             (\(s, ns) -> StorageEqSys.fromOutStorages s $ Map.elems ns)
+             (\(s, ns) -> StorageEqSys.fromOutStorages (optStorage opts) s $ Map.elems ns)
              (Storage.inEdges sg)
    in  (foldMap f $ StateFlow.storages g)
        <>
@@ -352,7 +353,7 @@ query =
 setup ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageStateScalar node,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
-    Constant a, ZeroTestable a,
+    Product a, ZeroTestable a,
     Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    Options mode rec s a v ->
@@ -373,7 +374,7 @@ setup opts gr given = do
    return (vars, eqs)
 
 solveOpts ::
-   (Constant a, ZeroTestable a,
+   (Product a, ZeroTestable a,
     Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    (forall s. Options Verify.Ignore rec s a v) ->

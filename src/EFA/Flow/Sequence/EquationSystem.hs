@@ -205,23 +205,24 @@ data Options mode rec s a v =
    }
 
 optionsDefault ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
+   (Verify.LocalVar mode a, Constant a, ZeroTestable a, a ~ Scalar v,
     Verify.LocalVar mode v, Integrate v,
     Record rec) =>
    Options mode rec s a v
 optionsDefault =
-   optionsBase SeqStateEqSys.integrateStInOutSums
+   optionsBase SeqStateEqSys.integrateStInOutSums StorageEqSys.classOne
 
 optionsBase ::
    (Verify.LocalVar mode a, Sum a,
     Verify.LocalVar mode v,
     Record rec) =>
    SeqStateEqSys.CoupleSums mode rec s a v ->
+   StorageEqSys.One mode rec s a ->
    Options mode rec s a v
-optionsBase couple =
+optionsBase couple one =
    Options {
       optTopology = TopoEqSys.optionsDefault,
-      optStorage = StorageEqSys.optionsDefault,
+      optStorage = StorageEqSys.optionsBase one,
       optCoupling = SeqStateEqSys.optionsBase couple
    }
 
@@ -291,7 +292,7 @@ expressionGraph =
       SysRecord.exprFromVariable
 
 fromGraph ::
-   (Verify.LocalVar mode a, Constant a, ZeroTestable a,
+   (Verify.LocalVar mode a, Product a, ZeroTestable a,
     Verify.LocalVar mode v, Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    Options mode rec s a v ->
@@ -309,7 +310,7 @@ fromGraph opts g =
       []
 
 fromStorageSequences ::
-   (Verify.LocalVar mode a, Constant a, ZeroTestable a,
+   (Verify.LocalVar mode a, Product a, ZeroTestable a,
     Verify.LocalVar mode v, Record rec, Node.C node) =>
    Options mode rec s a v ->
    SeqFlow.Graph node
@@ -324,11 +325,11 @@ fromStorageSequences opts g =
              (PartMap.init partMap, PartMap.exit partMap) storageMap
           <>
           foldMap
-             (\(s, ns) -> fromInStorages s $ Map.elems ns)
+             (\(s, ns) -> fromInStorages (optStorage opts) s $ Map.elems ns)
              (Storage.outEdges sg)
           <>
           foldMap
-             (\(s, ns) -> fromOutStorages s $ Map.elems ns)
+             (\(s, ns) -> fromOutStorages (optStorage opts) s $ Map.elems ns)
              (Storage.inEdges sg)
    in  fold $
        Map.intersectionWith f
@@ -380,28 +381,30 @@ condSum x = maybe x (\(s,_) -> x ~+ s)
 
 
 fromInStorages ::
-   (Verify.LocalVar mode x, Constant x, ZeroTestable x, Record rec,
+   (Verify.LocalVar mode x, Product x, ZeroTestable x, Record rec,
     rx ~ SysRecord.Expr mode rec s x) =>
+   StorageEqSys.Options mode rec s x ->
    rx -> [SeqFlow.Carry rx] ->
    EqSys.System mode s
-fromInStorages stoutsum outs =
+fromInStorages opts stoutsum outs =
    let maxEnergies = map SeqFlow.carryMaxEnergy outs
        stEnergies  = map SeqFlow.carryEnergy outs
    in  mconcat $
-       StorageEqSys.fromInStorages stoutsum outs :
+       StorageEqSys.fromInStorages opts stoutsum outs :
        zipWith (=&=) maxEnergies
           (stoutsum : zipWith (~-) maxEnergies stEnergies)
 
 fromOutStorages ::
-   (Verify.LocalVar mode x, Constant x, ZeroTestable x, Record rec,
+   (Verify.LocalVar mode x, Product x, ZeroTestable x, Record rec,
     rx ~ SysRecord.Expr mode rec s x) =>
+   StorageEqSys.Options mode rec s x ->
    rx -> [SeqFlow.Carry rx] ->
    EqSys.System mode s
-fromOutStorages stinsum ins =
+fromOutStorages opts stinsum ins =
    (withLocalVar $ \s ->
-      StorageEqSys.splitFactors s SeqFlow.carryMaxEnergy SeqFlow.carryXIn ins)
+      StorageEqSys.splitFactors opts s SeqFlow.carryMaxEnergy SeqFlow.carryXIn ins)
    <>
-   StorageEqSys.fromOutStorages stinsum ins
+   StorageEqSys.fromOutStorages opts stinsum ins
 
 
 withExpressionGraph ::
@@ -467,7 +470,7 @@ query =
 setup ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageSectionScalar node,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
-    Constant a, ZeroTestable a,
+    Product a, ZeroTestable a,
     Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    Options mode rec s a v ->
@@ -488,7 +491,7 @@ setup opts gr given = do
    return (vars, eqs)
 
 solveOpts ::
-   (Constant a, ZeroTestable a,
+   (Product a, ZeroTestable a,
     Product v, ZeroTestable v,
     Record rec, Node.C node) =>
    (forall s. Options Verify.Ignore rec s a v) ->

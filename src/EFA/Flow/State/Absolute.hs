@@ -81,7 +81,7 @@ solve graph sys =
    EqSys.solve (StateFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveOpts ::
-   (Arith.Constant a, Arith.ZeroTestable a,
+   (Arith.Product a, Arith.ZeroTestable a,
     Arith.Product v, Arith.ZeroTestable v,
     Node.C node) =>
    (forall s. Options Verify.Ignore s a v) ->

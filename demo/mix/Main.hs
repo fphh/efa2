@@ -13,6 +13,8 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Cumulated.EquationSystem as CumEqSys
 import qualified EFA.Flow.Cumulated.Quantity as CumFlow
 
+import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
+
 import qualified EFA.Flow.Topology.EquationSystem as EqSys
 import qualified EFA.Flow.Topology.AssignMap as AssignMap
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -208,7 +210,7 @@ seqSourceMixSolution ::
 seqSourceMixSolution =
    SeqEqSys.solveOpts
       (SeqEqSys.sourceMix $
-       SeqEqSys.optionsBase SeqEqSys.equalStInOutSums)
+       SeqEqSys.optionsBase SeqEqSys.equalStInOutSums StorageEqSys.classOne)
       seqFlowGraph seqSourceMixSystem
 
 stateSourceMixSolution ::

@@ -7,36 +7,60 @@ import EFA.Flow.EquationSystem (mixSumRules, mixFactorRules, mixLevelRules)
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.SystemRecord (Record, Expr, MixLevel)
+import EFA.Equation.SystemRecord (Record, Expr, MixLevel, Wrap(Wrap))
 import EFA.Equation.Arithmetic (Sum, ZeroTestable, Constant)
 
 import qualified EFA.Utility.FixedLength as FixedLength
 
+import qualified UniqueLogic.ST.TF.Expression as Expr
+
 import qualified Data.NonEmpty as NonEmpty
+import Control.Applicative (pure)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid (Monoid, mempty, (<>))
 
 
 data Options mode rec s a =
    Options {
+      optOne :: Expr mode rec s a,
       optEqualFactorsOut, optEqualFactorsIn ::
          Expr mode rec s a ->
          EqSys.System mode s
    }
 
 optionsDefault ::
-   (Verify.LocalVar mode v, Record rec) =>
-   Options mode rec s v
-optionsDefault =
+   (Verify.LocalVar mode a, Constant a, ZeroTestable a, Record rec) =>
+   Options mode rec s a
+optionsDefault = optionsBase classOne
+
+optionsBase ::
+   (Verify.LocalVar mode a, Record rec) =>
+   One mode rec s a ->
+   Options mode rec s a
+optionsBase (One one) =
    Options {
+      optOne = one,
       optEqualFactorsOut = const mempty,
       optEqualFactorsIn = const mempty
    }
 
+newtype One mode rec s a = One (Expr mode rec s a)
+
+classOne ::
+   (Verify.LocalVar mode a, Constant a, ZeroTestable a, Record rec) =>
+   One mode rec s a
+classOne = One Arith.one
+
+customOne ::
+   (Verify.LocalVar mode a, Record rec) =>
+   a -> One mode rec s a
+customOne = One . Wrap . pure . Expr.constant
+
+
 sourceMix ::
-   (Verify.LocalVar mode v, Sum v, Record rec) =>
-   Options mode rec s v ->
-   Options mode rec s v
+   (Verify.LocalVar mode a, Sum a, Record rec) =>
+   Options mode rec s a ->
+   Options mode rec s a
 sourceMix opts =
    opts {
       optEqualFactorsOut = mixFactorRules,
@@ -44,9 +68,9 @@ sourceMix opts =
    }
 
 sinkMix ::
-   (Verify.LocalVar mode v, Sum v, Record rec) =>
-   Options mode rec s v ->
-   Options mode rec s v
+   (Verify.LocalVar mode a, Sum a, Record rec) =>
+   Options mode rec s a ->
+   Options mode rec s a
 sinkMix opts =
    opts {
       optEqualFactorsOut = const mempty,
@@ -54,10 +78,10 @@ sinkMix opts =
    }
 
 mix ::
-   (Verify.LocalVar mode v, Sum v, Record rec) =>
+   (Verify.LocalVar mode a, Sum a, Record rec) =>
    MixLevel rec EqSys.MixOrientation ->
-   Options mode rec s v ->
-   Options mode rec s v
+   Options mode rec s a ->
+   Options mode rec s a
 mix levels opts =
    opts {
       optEqualFactorsOut =
@@ -68,7 +92,7 @@ mix levels opts =
 
 
 fromCarryEdges ::
-   (Verify.LocalVar mode x, Constant x, Record rec,
+   (Verify.LocalVar mode x, Sum x, Record rec,
     rx ~ Expr mode rec s x, Quant.Carry carry, Foldable f) =>
    Options mode rec s x ->
    f (carry rx) ->
@@ -82,30 +106,33 @@ fromCarryEdges opts =
       optEqualFactorsIn opts (Quant.carryXIn edge)
 
 fromInStorages ::
-   (Verify.LocalVar mode x, Constant x, ZeroTestable x, Record rec,
+   (Verify.LocalVar mode x, Arith.Product x, ZeroTestable x, Record rec,
     rx ~ Expr mode rec s x, Quant.Carry carry) =>
+   Options mode rec s x ->
    rx -> [carry rx] ->
    EqSys.System mode s
-fromInStorages stoutsum outs =
-   splitFactors stoutsum Quant.carryEnergy Quant.carryXOut outs
+fromInStorages opts stoutsum outs =
+   splitFactors opts stoutsum Quant.carryEnergy Quant.carryXOut outs
 
 fromOutStorages ::
-   (Verify.LocalVar mode x, Constant x, ZeroTestable x, Record rec,
+   (Verify.LocalVar mode x, Arith.Product x, ZeroTestable x, Record rec,
     rx ~ Expr mode rec s x, Quant.Carry carry) =>
+   Options mode rec s x ->
    rx -> [carry rx] ->
    EqSys.System mode s
-fromOutStorages stinsum ins =
-   splitFactors stinsum Quant.carryEnergy Quant.carryXIn ins
+fromOutStorages opts stinsum ins =
+   splitFactors opts stinsum Quant.carryEnergy Quant.carryXIn ins
 
 splitFactors ::
-   (Verify.LocalVar mode x, Constant x, ZeroTestable x, Record rec,
+   (Verify.LocalVar mode x, Arith.Product x, ZeroTestable x, Record rec,
     rx ~ Expr mode rec s x) =>
+   Options mode rec s x ->
    rx ->
    (carry rx -> rx) ->
    (carry rx -> rx) ->
    [carry rx] ->
    EqSys.System mode s
-splitFactors varsum energy xfactor =
-   foldMap (EqSys.splitFactors varsum energy Arith.one xfactor)
+splitFactors opts varsum energy xfactor =
+   foldMap (EqSys.splitFactors varsum energy (optOne opts) xfactor)
    .
    NonEmpty.fetch
