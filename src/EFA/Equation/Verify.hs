@@ -109,23 +109,13 @@ type MixedTerm mixedTerm recIdx part node =
            (RecIdx.Record recIdx (Var.InPartSignal part node))
 
 instance
-   (Format output, FormatValue a, Eq a,
-    FormatValue (Term term recIdx node)) =>
-      LocalVar (Track output)
-         (Pair.T (Term term recIdx node) a) where
+   (Format output, FormatValue a, LabeledNumber a) =>
+      LocalVar (Track output) a where
    localVariable = localVariableTracked
 
 instance
    (Format output, FormatValue a, Eq a,
-    FormatValue (MixedTerm mixedTerm recIdx part node)) =>
-      LocalVar (Track output)
-         (Pair.T (MixedTerm mixedTerm recIdx part node) a) where
-   localVariable = localVariableTracked
-
-instance
-   (Format output, FormatValue a, Eq a,
-    FormatValue (Term term recIdx node),
-    Pointed term) =>
+    FormatValue (Term term recIdx node), Pointed term) =>
       GlobalVar (Track output)
          (Pair.T (Term term recIdx node) a)
          recIdx TopoVar.Signal node where
@@ -168,8 +158,8 @@ globalVariableTracked symbol idx =
          logUpdate symbol idx)
 
 localVariableTracked ::
-   (FormatValue term, Eq a, FormatValue a, Format output) =>
-   ST s (Variable output s term a)
+   (Format output, FormatValue a, LabeledNumber a) =>
+   ST s (Sys.Variable (Track output) s a)
 localVariableTracked =
    Sys.globalVariable
       (\al av ->
