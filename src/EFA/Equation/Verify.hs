@@ -5,6 +5,7 @@
 module EFA.Equation.Verify where
 
 import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Symbolic.Variable as SymVar
 
 import qualified EFA.Equation.RecordIndex as RecIdx
@@ -13,7 +14,7 @@ import qualified EFA.Equation.Pair as Pair
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format)
-import EFA.Utility (Pointed)
+import EFA.Utility (Pointed, point)
 
 import qualified UniqueLogic.ST.TF.System.Simple as SysSimple
 import qualified UniqueLogic.ST.TF.System as Sys
@@ -100,6 +101,8 @@ class LocalVar w a => GlobalVar w a recIdx var node where
 type Variable output s a b = Sys.Variable (Track output) s (Pair.T a b)
 
 
+type Term term recIdx node = term (RecIdx.Record recIdx (TopoVar.Signal node))
+
 type MixedTerm mixedTerm recIdx part node =
         mixedTerm
            (RecIdx.Record recIdx (Var.ForStorageScalar part node))
@@ -107,10 +110,26 @@ type MixedTerm mixedTerm recIdx part node =
 
 instance
    (Format output, FormatValue a, Eq a,
+    FormatValue (Term term recIdx node)) =>
+      LocalVar (Track output)
+         (Pair.T (Term term recIdx node) a) where
+   localVariable = localVariableTracked
+
+instance
+   (Format output, FormatValue a, Eq a,
     FormatValue (MixedTerm mixedTerm recIdx part node)) =>
       LocalVar (Track output)
          (Pair.T (MixedTerm mixedTerm recIdx part node) a) where
    localVariable = localVariableTracked
+
+instance
+   (Format output, FormatValue a, Eq a,
+    FormatValue (Term term recIdx node),
+    Pointed term) =>
+      GlobalVar (Track output)
+         (Pair.T (Term term recIdx node) a)
+         recIdx TopoVar.Signal node where
+   globalVariable = globalVariableTracked point
 
 instance
    (Format output, FormatValue a, Eq a,
