@@ -47,11 +47,10 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.SystemRecord as SysRecord
+import EFA.Equation.Arithmetic (Sum, Product, Constant, ZeroTestable)
 import EFA.Equation.Result(Result)
 import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap))
-import EFA.Equation.Arithmetic
-          (Sum, Product, Constant, ZeroTestable, Integrate, Scalar)
 
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -198,12 +197,10 @@ data Options mode rec s a v =
    }
 
 optionsDefault ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
-    Record rec) =>
-   Options mode rec s a v
+   (Verify.LocalVar mode a, Sum a, Record rec) =>
+   Options mode rec s a a
 optionsDefault =
-   optionsBase SeqStateEqSys.integrateStInOutSums
+   optionsBase SeqStateEqSys.equalStInOutSums
 
 optionsBase ::
    (Verify.LocalVar mode a, Sum a,
@@ -389,25 +386,22 @@ solveOpts opts gr sys = runST $ do
    query vars
 
 solve ::
-   (Constant a, ZeroTestable a, a ~ Scalar v,
-    Product v, ZeroTestable v, Integrate v,
-    Record rec, Node.C node) =>
-   StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
-   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
-   StateFlow.Graph node (rec (Result a)) (rec (Result v))
+   (Constant a, ZeroTestable a, Record rec, Node.C node) =>
+   StateFlow.Graph node (rec (Result a)) (rec (Result a)) ->
+   (forall s. EquationSystem Verify.Ignore rec node s a a) ->
+   StateFlow.Graph node (rec (Result a)) (rec (Result a))
 solve = solveOpts optionsDefault
 
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForStorageStateScalar node,
-    Constant a, ZeroTestable a, a ~ Scalar v,
-    Verify.GlobalVar (Verify.Track output) v recIdx Var.InStateSignal node,
-    Product v, Integrate v, ZeroTestable v,
+    Verify.GlobalVar (Verify.Track output) a recIdx Var.InStateSignal node,
+    Constant a, ZeroTestable a,
     Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
-   StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
-   (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
+   StateFlow.Graph node (rec (Result a)) (rec (Result a)) ->
+   (forall s. EquationSystem (Verify.Track output) rec node s a a) ->
    (ME.Exceptional
       (Verify.Exception output)
-      (StateFlow.Graph node (rec (Result a)) (rec (Result v))),
+      (StateFlow.Graph node (rec (Result a)) (rec (Result a))),
     Verify.Assigns output)
 solveTracked gr sys = runST $ do
    (vars, eqs) <- setup optionsDefault gr sys
