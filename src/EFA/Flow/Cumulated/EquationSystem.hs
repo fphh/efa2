@@ -236,7 +236,7 @@ fromSums opts s =
 
 withExpressionGraph ::
    (Node.C node, Record rec,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.Any node) =>
+    Verify.GlobalVar mode v (Var.RecordAny rec node)) =>
    (CumFlow.Graph node
        (RecordExpression mode rec node s v v) ->
     EquationSystem mode rec node s v) ->
@@ -250,7 +250,7 @@ withExpressionGraph f =
 
 variables ::
    (Node.C node, Record rec, Sum a,
-    Verify.GlobalVar mode a (Record.ToIndex rec) Var.Any node) =>
+    Verify.GlobalVar mode a (Var.RecordAny rec node)) =>
    CumFlow.Graph node (rec (Result a)) ->
    EqSys.Writer mode s
       (CumFlow.Graph node (SysRecord.Variable mode rec s a))
@@ -268,7 +268,7 @@ query =
       (traverse (fmap Result.fromMaybe . Sys.query))
 
 setup ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.Any node,
+   (Verify.GlobalVar mode a (Var.RecordAny rec node),
     Product a, ZeroTestable a, Record rec, Node.C node) =>
    Options mode rec s a ->
    CumFlow.Graph node (rec (Result a)) ->
@@ -305,9 +305,9 @@ solve ::
 solve = solveOpts optionsDefault
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a recIdx Var.Any node,
+   (Verify.GlobalVar (Verify.Track output) a (Var.RecordAny rec node),
     Product a, ZeroTestable a,
-    Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
+    Record rec, Node.C node) =>
    CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s a) ->
    (ME.Exceptional

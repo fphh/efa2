@@ -409,8 +409,8 @@ fromOutStorages opts stinsum ins =
 
 withExpressionGraph ::
    (Node.C node, Record rec,
-    Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageSectionScalar node,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node) =>
+    Verify.GlobalVar mode a (Var.RecordForStorageSectionScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordInSectionSignal rec node)) =>
    (SeqFlow.Graph node
        (RecordExpression mode rec node s a v a)
        (RecordExpression mode rec node s a v v) ->
@@ -438,8 +438,8 @@ fromSectionSystem sec (EqSys.VariableSystem topoSys) =
 
 variables ::
    (Node.C node, Record rec, Sum a, Sum v,
-    Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageSectionScalar node,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node) =>
+    Verify.GlobalVar mode a (Var.RecordForStorageSectionScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordInSectionSignal rec node)) =>
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EqSys.Writer mode s
       (SeqFlow.Graph node
@@ -468,8 +468,8 @@ query =
 
 
 setup ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageSectionScalar node,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode a (Var.RecordForStorageSectionScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordInSectionSignal rec node),
     Product a, ZeroTestable a,
     Product v, ZeroTestable v,
     Record rec, Node.C node) =>
@@ -513,11 +513,11 @@ solve ::
 solve = solveOpts optionsDefault
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForStorageSectionScalar node,
+   (Verify.GlobalVar (Verify.Track output) a (Var.RecordForStorageSectionScalar rec node),
     Constant a, ZeroTestable a, a ~ Scalar v,
-    Verify.GlobalVar (Verify.Track output) v recIdx Var.InSectionSignal node,
+    Verify.GlobalVar (Verify.Track output) v (Var.RecordInSectionSignal rec node),
     Product v, ZeroTestable v, Integrate v,
-    Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
+    Record rec, Node.C node) =>
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
    (ME.Exceptional

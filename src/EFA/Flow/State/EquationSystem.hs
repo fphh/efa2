@@ -291,8 +291,8 @@ fromStorageSequences opts g =
 
 withExpressionGraph ::
    (Node.C node, Record rec,
-    Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageStateScalar node,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node) =>
+    Verify.GlobalVar mode a (Var.RecordForStorageStateScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordInStateSignal rec node)) =>
    (StateFlow.Graph node
        (RecordExpression mode rec node s a v a)
        (RecordExpression mode rec node s a v v) ->
@@ -321,8 +321,8 @@ fromStateSystem sec (EqSys.VariableSystem topoSys) =
 
 variables ::
    (Node.C node, Record rec, Sum a, Sum v,
-    Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageStateScalar node,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node) =>
+    Verify.GlobalVar mode a (Var.RecordForStorageStateScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordInStateSignal rec node)) =>
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EqSys.Writer mode s
       (StateFlow.Graph node
@@ -351,8 +351,8 @@ query =
 
 
 setup ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForStorageStateScalar node,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
+   (Verify.GlobalVar mode a (Var.RecordForStorageStateScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordInStateSignal rec node),
     Product a, ZeroTestable a,
     Product v, ZeroTestable v,
     Record rec, Node.C node) =>
@@ -394,10 +394,10 @@ solve ::
 solve = solveOpts optionsDefault
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a recIdx Var.ForStorageStateScalar node,
-    Verify.GlobalVar (Verify.Track output) a recIdx Var.InStateSignal node,
+   (Verify.GlobalVar (Verify.Track output) a (Var.RecordForStorageStateScalar rec node),
+    Verify.GlobalVar (Verify.Track output) a (Var.RecordInStateSignal rec node),
     Constant a, ZeroTestable a,
-    Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
+    Record rec, Node.C node) =>
    StateFlow.Graph node (rec (Result a)) (rec (Result a)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s a a) ->
    (ME.Exceptional

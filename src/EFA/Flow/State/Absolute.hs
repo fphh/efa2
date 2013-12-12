@@ -54,10 +54,19 @@ type
 
 
 
+type
+   VarForStorageStateScalar node =
+      Var.RecordForStorageStateScalar Record.Absolute node
+
+type
+   VarInStateSignal node =
+      Var.RecordInStateSignal Record.Absolute node
+
+
 withExpressionGraph ::
    (Node.C node,
-    Verify.GlobalVar mode a RecIdx.Absolute Var.ForStorageStateScalar node,
-    Verify.GlobalVar mode v RecIdx.Absolute Var.InStateSignal node) =>
+    Verify.GlobalVar mode a (VarForStorageStateScalar node),
+    Verify.GlobalVar mode v (VarInStateSignal node)) =>
    (StateFlow.Graph node
        (Expression mode node s a v a)
        (Expression mode node s a v v) ->
@@ -94,8 +103,8 @@ solveOpts opts graph sys =
       (StateFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute Var.ForStorageStateScalar node,
-    Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute Var.InStateSignal node,
+   (Verify.GlobalVar (Verify.Track output) a (VarForStorageStateScalar node),
+    Verify.GlobalVar (Verify.Track output) a (VarInStateSignal node),
     Arith.Constant a, Arith.ZeroTestable a, Node.C node) =>
    StateFlow.Graph node (Result a) (Result a) ->
    (forall s. EquationSystem (Verify.Track output) node s a a) ->

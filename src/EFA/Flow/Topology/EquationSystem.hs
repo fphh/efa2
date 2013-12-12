@@ -315,7 +315,7 @@ splitFactors dtime varsum energy xfactor =
 
 withExpressionGraph ::
    (Node.C node, Record rec,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.Signal node) =>
+    Verify.GlobalVar mode v (Var.RecordSignal rec node)) =>
    (FlowTopo.Section node
        (RecordExpression mode rec node s v v) ->
     EquationSystem mode rec node s v) ->
@@ -329,7 +329,7 @@ withExpressionGraph f =
 
 variables ::
    (Node.C node, Record rec, Sum v,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.Signal node) =>
+    Verify.GlobalVar mode v (Var.RecordSignal rec node)) =>
    FlowTopo.Section node (rec (Result v)) ->
    EqSys.Writer mode s
       (FlowTopo.Section node
@@ -349,7 +349,7 @@ query =
 
 
 setup ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.Signal node,
+   (Verify.GlobalVar mode v (Var.RecordSignal rec node),
     Product v, ZeroTestable v, Record rec, Node.C node) =>
    Options mode rec s v ->
    FlowTopo.Section node (rec (Result v)) ->
@@ -388,8 +388,8 @@ solve ::
 solve = solveOpts optionsDefault
 
 solveTrackedOpts ::
-   (Verify.GlobalVar (Verify.Track output) v recIdx Var.Signal node,
-    Product v, ZeroTestable v, Record rec, Record.ToIndex rec ~ recIdx,
+   (Verify.GlobalVar (Verify.Track output) v (Var.RecordSignal rec node),
+    Product v, ZeroTestable v, Record rec,
     Node.C node) =>
    (forall s. Options (Verify.Track output) rec s v) ->
    FlowTopo.Section node (rec (Result v)) ->
@@ -405,8 +405,8 @@ solveTrackedOpts opts gr sys = runST $ do
       MT.lift $ query vars
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) v recIdx Var.Signal node,
-    Product v, ZeroTestable v, Record rec, Record.ToIndex rec ~ recIdx,
+   (Verify.GlobalVar (Verify.Track output) v (Var.RecordSignal rec node),
+    Product v, ZeroTestable v, Record rec,
     Node.C node) =>
    FlowTopo.Section node (rec (Result v)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s v) ->

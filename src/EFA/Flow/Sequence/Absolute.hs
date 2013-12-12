@@ -59,11 +59,19 @@ type
       EqSys.Expression Verify.Ignore Record.Absolute node s a v x
 
 
+type
+   VarForStorageSectionScalar node =
+      Var.RecordForStorageSectionScalar Record.Absolute node
+
+type
+   VarInSectionSignal node =
+      Var.RecordInSectionSignal Record.Absolute node
+
 
 withExpressionGraph ::
    (Node.C node,
-    Verify.GlobalVar mode a RecIdx.Absolute Var.ForStorageSectionScalar node,
-    Verify.GlobalVar mode v RecIdx.Absolute Var.InSectionSignal node) =>
+    Verify.GlobalVar mode a (VarForStorageSectionScalar node),
+    Verify.GlobalVar mode v (VarInSectionSignal node)) =>
    (SeqFlow.Graph node
        (Expression mode node s a v a)
        (Expression mode node s a v v) ->
@@ -102,9 +110,9 @@ solveOpts opts graph sys =
       (SeqFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute Var.ForStorageSectionScalar node,
+   (Verify.GlobalVar (Verify.Track output) a (VarForStorageSectionScalar node),
     Arith.Constant a, Arith.ZeroTestable a, a ~ Arith.Scalar v,
-    Verify.GlobalVar (Verify.Track output) v RecIdx.Absolute Var.InSectionSignal node,
+    Verify.GlobalVar (Verify.Track output) v (VarInSectionSignal node),
     Arith.Product v, Arith.ZeroTestable v, Arith.Integrate v, Node.C node) =>
    SeqFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem (Verify.Track output) node s a v) ->

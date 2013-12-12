@@ -8,6 +8,8 @@ import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Symbolic.Variable as SymVar
 
+import qualified EFA.Graph.Topology.Node as Node
+
 import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Pair as Pair
 
@@ -92,10 +94,10 @@ instance (Format output) => Sys.C (Track output) where
 class Sys.Value w a => LocalVar w a where
    localVariable :: ST s (Sys.Variable w s a)
 
-class LocalVar w a => GlobalVar w a recIdx var node where
+class LocalVar w a => GlobalVar w a var where
    globalVariable ::
-      (Format.Record recIdx, FormatValue (var node)) =>
-      RecIdx.Record recIdx (var node) -> ST s (Sys.Variable w s a)
+      (FormatValue var) =>
+      var -> ST s (Sys.Variable w s a)
 
 
 type Variable output s a b = Sys.Variable (Track output) s (Pair.T a b)
@@ -115,20 +117,22 @@ instance
 
 instance
    (Format output, FormatValue a, Eq a,
+    Format.Record recIdx, Node.C node,
     FormatValue (Term term recIdx node), Pointed term) =>
       GlobalVar (Track output)
          (Pair.T (Term term recIdx node) a)
-         recIdx TopoVar.Signal node where
+         (RecIdx.Record recIdx (TopoVar.Signal node)) where
    globalVariable = globalVariableTracked point
 
 instance
    (Format output, FormatValue a, Eq a,
+    Format.Record recIdx, FormatValue (var node),
     FormatValue (MixedTerm (mixedTerm term) recIdx part node),
     Pointed term, SymVar.Symbol var,
     mixedTerm ~ SymVar.Term var, part ~ SymVar.Part var) =>
       GlobalVar (Track output)
          (Pair.T (MixedTerm (mixedTerm term) recIdx part node) a)
-         recIdx var node where
+         (RecIdx.Record recIdx (var node)) where
    globalVariable = globalVariableTracked SymVar.symbol
 
 
@@ -141,7 +145,7 @@ runIgnorant = runIdentityT
 instance LocalVar IdentityT a where
    localVariable = SysSimple.globalVariable
 
-instance GlobalVar IdentityT a recIdx var node where
+instance GlobalVar IdentityT a var where
    globalVariable _ = SysSimple.globalVariable
 
 

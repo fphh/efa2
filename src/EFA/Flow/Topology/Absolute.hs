@@ -44,10 +44,10 @@ type
    ExpressionIgnore node s a x =
       EqSys.Expression Verify.Ignore Record.Absolute node s a x
 
+type VarSignal node = Var.RecordSignal Record.Absolute node
 
 withExpressionGraph ::
-   (Node.C node,
-    Verify.GlobalVar mode v RecIdx.Absolute Var.Signal node) =>
+   (Node.C node, Verify.GlobalVar mode v (VarSignal node)) =>
    (FlowTopo.Section node
        (Expression mode node s v v) ->
     EquationSystem mode node s v) ->
@@ -67,7 +67,7 @@ solve graph sys =
    EqSys.solve (FlowTopo.mapSection Record.Absolute graph) sys
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute Var.Signal node,
+   (Verify.GlobalVar (Verify.Track output) a (VarSignal node),
     Arith.Product a, Arith.ZeroTestable a, Node.C node) =>
    FlowTopo.Section node (Result a) ->
    (forall s. EquationSystem (Verify.Track output) node s a) ->

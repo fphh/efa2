@@ -5,6 +5,9 @@ import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.SequenceState.Index as FlowIdx
 import qualified EFA.Graph.Topology.Node as Node
 
+import qualified EFA.Equation.RecordIndex as RecIdx
+import qualified EFA.Equation.Record as Record
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
@@ -20,6 +23,8 @@ data Signal node =
    | X (Idx.X node)
    | Sum (Idx.Sum node)
      deriving (Show, Eq, Ord)
+
+type RecordSignal rec node = RecIdx.Record (Record.ToIndex rec) (Signal node)
 
 
 class FormatSignalIndex t => Index t where

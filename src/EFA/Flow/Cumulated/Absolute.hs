@@ -45,10 +45,12 @@ type
    ExpressionIgnore node s a x =
       EqSys.Expression Verify.Ignore Record.Absolute node s a x
 
+type VarAny node = CumVar.RecordAny Record.Absolute node
+
 
 withExpressionGraph ::
    (Node.C node,
-    Verify.GlobalVar mode v RecIdx.Absolute CumVar.Any node) =>
+    Verify.GlobalVar mode v (VarAny node)) =>
    (CumFlow.Graph node (Expression mode node s v v) ->
     EquationSystem mode node s v) ->
    EquationSystem mode node s v
@@ -67,7 +69,7 @@ solve graph sys =
    EqSys.solve (CumFlow.mapGraph Record.Absolute graph) sys
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a RecIdx.Absolute CumVar.Any node,
+   (Verify.GlobalVar (Verify.Track output) a (VarAny node),
     Arith.Product a, Arith.ZeroTestable a, Node.C node) =>
    CumFlow.Graph node (Result a) ->
    (forall s. EquationSystem (Verify.Track output) node s a) ->

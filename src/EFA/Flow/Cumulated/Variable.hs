@@ -2,6 +2,10 @@ module EFA.Flow.Cumulated.Variable where
 
 import qualified EFA.Flow.Cumulated.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
+
+import qualified EFA.Equation.RecordIndex as RecIdx
+import qualified EFA.Equation.Record as Record
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -17,6 +21,8 @@ data Any node =
    | X (Idx.X node)
    | Sum (Idx.Sum node)
      deriving (Show, Eq, Ord)
+
+type RecordAny rec node = RecIdx.Record (Record.ToIndex rec) (Any node)
 
 
 class Index t where

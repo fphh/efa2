@@ -6,6 +6,10 @@ import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
+
+import qualified EFA.Equation.RecordIndex as RecIdx
+import qualified EFA.Equation.Record as Record
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
@@ -26,10 +30,18 @@ type StateAny   = Any Idx.State
 type InPartSignal part = Idx.InPart part TopoVar.Signal
 type InSectionSignal   = Idx.InSection TopoVar.Signal
 type InStateSignal     = Idx.InState TopoVar.Signal
+type RecordInSectionSignal rec node =
+        RecIdx.Record (Record.ToIndex rec) (InSectionSignal node)
+type RecordInStateSignal rec node =
+        RecIdx.Record (Record.ToIndex rec) (InStateSignal node)
 
 type ForStorageScalar part   = Idx.ForStorage (StorageVar.Scalar part)
 type ForStorageSectionScalar = ForStorageScalar Idx.Section
 type ForStorageStateScalar   = ForStorageScalar Idx.State
+type RecordForStorageSectionScalar rec node =
+        RecIdx.Record (Record.ToIndex rec) (ForStorageSectionScalar node)
+type RecordForStorageStateScalar rec node =
+        RecIdx.Record (Record.ToIndex rec) (ForStorageStateScalar node)
 
 class Index t where
    type Type t :: * -> *

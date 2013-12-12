@@ -65,9 +65,9 @@ x =&= y  =  System $ tell $ SysRecord.equal x y
 
 
 globalVariable ::
-   (Record rec, Verify.GlobalVar mode a (Record.ToIndex rec) var node,
-    Sum a, FormatValue (var node)) =>
-   var node ->
+   (Verify.GlobalVar mode a (RecIdx.Record (Record.ToIndex rec) var),
+    Sum a, Record rec, FormatValue var) =>
+   var ->
    Writer mode s (SysRecord.Variable mode rec s a)
 globalVariable var = do
    vars <-
@@ -77,9 +77,9 @@ globalVariable var = do
    return vars
 
 globalVariableFromResult ::
-   (Record rec, Verify.GlobalVar mode a (Record.ToIndex rec) var node,
-    Sum a, FormatValue (var node)) =>
-   var node -> rec (Result a) ->
+   (Verify.GlobalVar mode a (RecIdx.Record (Record.ToIndex rec) var),
+    Sum a, Record rec, FormatValue var) =>
+   var -> rec (Result a) ->
    Writer mode s (SysRecord.Variable mode rec s a)
 globalVariableFromResult varIdx val = do
    var <- globalVariable varIdx
