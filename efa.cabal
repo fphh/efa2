@@ -202,6 +202,8 @@ Executable test-efa
     EFA.Test.Arithmetic
     EFA.Test.EquationSystem
     EFA.Test.EquationSystem.Given
+    EFA.Test.Mix
+    EFA.Test.Mix.Given
     EFA.Test.Tree
     EFA.TestUtility
 
