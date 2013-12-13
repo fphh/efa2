@@ -50,7 +50,7 @@ instance Traversable Absolute where
    sequenceA (Absolute a) = fmap Absolute a
 
 
-data Delta a = Delta {delta, before, after :: a} deriving (Show)
+data Delta a = Delta {delta, before, after :: a} deriving (Show, Eq)
 
 deltaConst :: Constant a => a -> Delta a
 deltaConst x = Delta {before = x, after = x, delta = zero}
@@ -80,7 +80,7 @@ instance Traversable Delta where
    sequenceA (Delta d b a) = liftA3 Delta d b a
 
 
-data ExtDelta rec a = ExtDelta {getExtDelta :: Delta (rec a)} deriving (Show)
+data ExtDelta rec a = ExtDelta {getExtDelta :: Delta (rec a)} deriving (Show, Eq)
 
 accessExtDelta :: Accessor.T (ExtDelta rec a) (Delta (rec a))
 accessExtDelta = Accessor.fromWrapper ExtDelta getExtDelta
@@ -119,7 +119,7 @@ instance (Traversable rec) => Traversable (ExtDelta rec) where
    sequenceA (ExtDelta d) = fmap ExtDelta $ traverse sequenceA d
 
 
-data Mix f a = Mix {total :: a, mix :: NonEmpty.T f a} deriving (Show)
+data Mix f a = Mix {total :: a, mix :: NonEmpty.T f a} deriving (Show, Eq)
 
 instance (FixedLength.C f, FormatValue a) => FormatValue (Mix f a) where
    formatValue rec =
@@ -141,7 +141,7 @@ instance (FixedLength.C f) => Traversable (Mix f) where
 
 
 
-newtype ExtMix f rec a = ExtMix {getExtMix :: Mix f (rec a)} deriving (Show)
+newtype ExtMix f rec a = ExtMix {getExtMix :: Mix f (rec a)} deriving (Show, Eq)
 
 accessExtMix :: Accessor.T (ExtMix f rec a) (Mix f (rec a))
 accessExtMix = Accessor.fromWrapper ExtMix getExtMix
