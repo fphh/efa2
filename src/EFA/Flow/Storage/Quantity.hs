@@ -36,7 +36,7 @@ class (Applicative f, Foldable f) => Carry f where
 mapGraphWithVar ::
    (Carry carry, CarryPart carry ~ part, PartIdx.Format part) =>
    (Idx.PartNode part node -> Maybe (FlowTopo.Sums v)) ->
-   (Var.ForStorageScalar part node -> a0 -> a1) ->
+   (Var.Scalar part node -> a0 -> a1) ->
    node ->
    Graph carry a0 ->
    Graph carry a1
@@ -52,7 +52,7 @@ mapGraphWithVar lookupSums f node (Storage.Graph partMap edges) =
 
 mapCarryWithVar ::
    (Carry carry, CarryPart carry ~ part) =>
-   (Var.ForStorageScalar part node -> a0 -> a1) ->
+   (Var.Scalar part node -> a0 -> a1) ->
    node -> StorageIdx.Edge part -> carry a0 -> carry a1
 mapCarryWithVar f node edge =
    liftA2 f (Idx.ForStorage <$> (carryVars <*> pure edge) <*> pure node)

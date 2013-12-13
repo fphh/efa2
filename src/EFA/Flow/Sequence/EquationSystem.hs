@@ -32,8 +32,8 @@ module EFA.Flow.Sequence.EquationSystem (
 
 import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
 import qualified EFA.Flow.SequenceState.Quantity as SeqState
-import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Flow.Sequence.Variable as Var
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Topology.EquationSystem as TopoEqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -409,8 +409,8 @@ fromOutStorages opts stinsum ins =
 
 withExpressionGraph ::
    (Node.C node, Record rec,
-    Verify.GlobalVar mode a (Var.RecordForStorageSectionScalar rec node),
-    Verify.GlobalVar mode v (Var.RecordInSectionSignal rec node)) =>
+    Verify.GlobalVar mode a (Var.RecordScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordSignal rec node)) =>
    (SeqFlow.Graph node
        (RecordExpression mode rec node s a v a)
        (RecordExpression mode rec node s a v v) ->
@@ -438,8 +438,8 @@ fromSectionSystem sec (EqSys.VariableSystem topoSys) =
 
 variables ::
    (Node.C node, Record rec, Sum a, Sum v,
-    Verify.GlobalVar mode a (Var.RecordForStorageSectionScalar rec node),
-    Verify.GlobalVar mode v (Var.RecordInSectionSignal rec node)) =>
+    Verify.GlobalVar mode a (Var.RecordScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordSignal rec node)) =>
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EqSys.Writer mode s
       (SeqFlow.Graph node
@@ -468,8 +468,8 @@ query =
 
 
 setup ::
-   (Verify.GlobalVar mode a (Var.RecordForStorageSectionScalar rec node),
-    Verify.GlobalVar mode v (Var.RecordInSectionSignal rec node),
+   (Verify.GlobalVar mode a (Var.RecordScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordSignal rec node),
     Product a, ZeroTestable a,
     Product v, ZeroTestable v,
     Record rec, Node.C node) =>
@@ -513,9 +513,9 @@ solve ::
 solve = solveOpts optionsDefault
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a (Var.RecordForStorageSectionScalar rec node),
+   (Verify.GlobalVar (Verify.Track output) a (Var.RecordScalar rec node),
     Constant a, ZeroTestable a, a ~ Scalar v,
-    Verify.GlobalVar (Verify.Track output) v (Var.RecordInSectionSignal rec node),
+    Verify.GlobalVar (Verify.Track output) v (Var.RecordSignal rec node),
     Product v, ZeroTestable v, Integrate v,
     Record rec, Node.C node) =>
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->

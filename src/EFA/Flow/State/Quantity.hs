@@ -44,9 +44,9 @@ module EFA.Flow.State.Quantity (
    Env.TypeOf, Env.Element, Env.switchPart,
    ) where
 
+import qualified EFA.Flow.State.Variable as Var
 import qualified EFA.Flow.State as StateFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
-import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
@@ -588,8 +588,8 @@ instance
 
 mapGraphWithVar ::
    (Ord node) =>
-   (Var.ForStorageStateScalar node -> a0 -> a1) ->
-   (Var.InStateSignal node -> v0 -> v1) ->
+   (Var.Scalar node -> a0 -> a1) ->
+   (Var.Signal node -> v0 -> v1) ->
    Graph node a0 v0 ->
    Graph node a1 v1
 mapGraphWithVar f g gr =
@@ -600,7 +600,7 @@ mapGraphWithVar f g gr =
 
 mapStoragesWithVar ::
    (Ord node) =>
-   (Var.ForStorageStateScalar node -> a0 -> a1) ->
+   (Var.Scalar node -> a0 -> a1) ->
    Graph node a0 v0 ->
    Storages node a1
 mapStoragesWithVar f gr =
@@ -609,7 +609,7 @@ mapStoragesWithVar f gr =
 
 mapStatesWithVar ::
    (Ord node) =>
-   (Var.InStateSignal node -> v0 -> v1) ->
+   (Var.Signal node -> v0 -> v1) ->
    States node v0 ->
    States node v1
 mapStatesWithVar f =

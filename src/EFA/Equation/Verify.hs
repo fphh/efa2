@@ -105,8 +105,8 @@ type Term term recIdx node = term (RecIdx.Record recIdx (TopoVar.Signal node))
 
 type MixedTerm mixedTerm recIdx part node =
         mixedTerm
-           (RecIdx.Record recIdx (Var.ForStorageScalar part node))
-           (RecIdx.Record recIdx (Var.InPartSignal part node))
+           (RecIdx.Record recIdx (Var.Scalar part node))
+           (RecIdx.Record recIdx (Var.Signal part node))
 
 instance
    (Format output, FormatValue a, LabeledNumber a) =>

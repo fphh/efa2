@@ -11,7 +11,7 @@ import qualified Modules.Signals as Signals
 import qualified EFA.Flow.Sequence.Absolute as EqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
-import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.Sequence.Variable as Var
 import qualified EFA.Flow.SequenceState.Index as Idx
 import EFA.Flow.Sequence.Absolute ((.=))
 
@@ -156,7 +156,7 @@ prediction sequenceFlowTopology =
 
 givenForPrediction ::
    (Arith.Constant v) =>
-   Var.InSectionSignal System.Node -> v -> Result v
+   Var.Signal System.Node -> v -> Result v
 givenForPrediction (Idx.InPart _sec var) v =
    case var of
       TopoVar.DTime _ -> Determined v
@@ -195,13 +195,13 @@ type
       EqAbs.EquationSystemIgnore System.Node s StackDouble StackDouble
 
 type DeltaDouble = EqRecord.Delta Double
-type StackDouble = Stack (Var.SectionAny System.Node) Double
+type StackDouble = Stack (Var.Any System.Node) Double
 
 
 stackFromDelta ::
-   Var.InSectionSignal System.Node -> DeltaDouble -> StackDouble
+   Var.Signal System.Node -> DeltaDouble -> StackDouble
 stackFromDelta idx d =
-   Stack.deltaPair (Var.Signal idx)
+   Stack.deltaPair (Var.signal idx)
       (EqRecord.before d) (EqRecord.delta d)
 
 difference ::
@@ -216,7 +216,7 @@ difference sequenceFlowTopology =
       (XIdx.storage Idx.initial System.Battery .= initStorage)
 
 givenForDifferentialAnalysis ::
-   Var.InSectionSignal System.Node -> v -> Result v
+   Var.Signal System.Node -> v -> Result v
 givenForDifferentialAnalysis (Idx.InPart _sec var) v =
    case var of
       TopoVar.DTime _ -> Determined v

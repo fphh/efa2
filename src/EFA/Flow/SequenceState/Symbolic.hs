@@ -13,27 +13,27 @@ import EFA.Utility (Pointed, point)
 type
    SignalTerm term recIdx part node =
       Term.Signal term
-         (RecIdx.Record recIdx (Var.ForStorageScalar part node))
-         (RecIdx.Record recIdx (Var.InPartSignal part node))
+         (RecIdx.Record recIdx (Var.Scalar part node))
+         (RecIdx.Record recIdx (Var.Signal part node))
 
 type
    ScalarTerm term recIdx part node =
       Term.Scalar term
-         (RecIdx.Record recIdx (Var.ForStorageScalar part node))
-         (RecIdx.Record recIdx (Var.InPartSignal part node))
+         (RecIdx.Record recIdx (Var.Scalar part node))
+         (RecIdx.Record recIdx (Var.Signal part node))
 
 type
    ScalarAtom term recIdx part node =
       Term.ScalarAtom term
-         (RecIdx.Record recIdx (Var.ForStorageScalar part node))
-         (RecIdx.Record recIdx (Var.InPartSignal part node))
+         (RecIdx.Record recIdx (Var.Scalar part node))
+         (RecIdx.Record recIdx (Var.Signal part node))
 
 
 type
    VarTerm var term recIdx node =
       Term var term
-         (RecIdx.Record recIdx (Var.ForStorageScalar (Part var) node))
-         (RecIdx.Record recIdx (Var.InPartSignal (Part var) node))
+         (RecIdx.Record recIdx (Var.Scalar (Part var) node))
+         (RecIdx.Record recIdx (Var.Signal (Part var) node))
 
 class (var ~ Variable (Term var) (Part var)) => Symbol var where
    type Term var :: (* -> *) -> * -> * -> *
@@ -44,16 +44,16 @@ class (var ~ Variable (Term var) (Part var)) => Symbol var where
       RecIdx.Record recIdx (var node) ->
       VarTerm var term recIdx node
 
-instance Symbol (Var.InPartSignal part) where
-   type Term (Var.InPartSignal part) = Term.Signal
-   type Part (Var.InPartSignal part) = part
-   type Variable Term.Signal part = Var.InPartSignal part
+instance Symbol (Var.Signal part) where
+   type Term (Var.Signal part) = Term.Signal
+   type Part (Var.Signal part) = part
+   type Variable Term.Signal part = Var.Signal part
    symbol = Term.Signal . point
 
-instance Symbol (Var.ForStorageScalar part) where
-   type Term (Var.ForStorageScalar part) = Term.Scalar
-   type Part (Var.ForStorageScalar part) = part
-   type Variable Term.Scalar part = Var.ForStorageScalar part
+instance Symbol (Var.Scalar part) where
+   type Term (Var.Scalar part) = Term.Scalar
+   type Part (Var.Scalar part) = part
+   type Variable Term.Scalar part = Var.Scalar part
    symbol = Term.Scalar . point . Term.ScalarVariable
 
 

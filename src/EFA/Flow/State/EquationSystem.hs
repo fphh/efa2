@@ -30,8 +30,8 @@ module EFA.Flow.State.EquationSystem (
 
 import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
 import qualified EFA.Flow.SequenceState.Quantity as SeqState
-import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Flow.State.Variable as Var
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
 import qualified EFA.Flow.Storage as Storage
@@ -291,8 +291,8 @@ fromStorageSequences opts g =
 
 withExpressionGraph ::
    (Node.C node, Record rec,
-    Verify.GlobalVar mode a (Var.RecordForStorageStateScalar rec node),
-    Verify.GlobalVar mode v (Var.RecordInStateSignal rec node)) =>
+    Verify.GlobalVar mode a (Var.RecordScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordSignal rec node)) =>
    (StateFlow.Graph node
        (RecordExpression mode rec node s a v a)
        (RecordExpression mode rec node s a v v) ->
@@ -321,8 +321,8 @@ fromStateSystem sec (EqSys.VariableSystem topoSys) =
 
 variables ::
    (Node.C node, Record rec, Sum a, Sum v,
-    Verify.GlobalVar mode a (Var.RecordForStorageStateScalar rec node),
-    Verify.GlobalVar mode v (Var.RecordInStateSignal rec node)) =>
+    Verify.GlobalVar mode a (Var.RecordScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordSignal rec node)) =>
    StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EqSys.Writer mode s
       (StateFlow.Graph node
@@ -351,8 +351,8 @@ query =
 
 
 setup ::
-   (Verify.GlobalVar mode a (Var.RecordForStorageStateScalar rec node),
-    Verify.GlobalVar mode v (Var.RecordInStateSignal rec node),
+   (Verify.GlobalVar mode a (Var.RecordScalar rec node),
+    Verify.GlobalVar mode v (Var.RecordSignal rec node),
     Product a, ZeroTestable a,
     Product v, ZeroTestable v,
     Record rec, Node.C node) =>
@@ -394,8 +394,8 @@ solve ::
 solve = solveOpts optionsDefault
 
 solveTracked ::
-   (Verify.GlobalVar (Verify.Track output) a (Var.RecordForStorageStateScalar rec node),
-    Verify.GlobalVar (Verify.Track output) a (Var.RecordInStateSignal rec node),
+   (Verify.GlobalVar (Verify.Track output) a (Var.RecordScalar rec node),
+    Verify.GlobalVar (Verify.Track output) a (Var.RecordSignal rec node),
     Constant a, ZeroTestable a,
     Record rec, Node.C node) =>
    StateFlow.Graph node (rec (Result a)) (rec (Result a)) ->

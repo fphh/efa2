@@ -11,11 +11,11 @@ module EFA.Flow.Sequence.Absolute (
    ) where
 
 import qualified EFA.Flow.SequenceState.Symbolic as SymVar
-import qualified EFA.Flow.SequenceState.Variable as Var
 
 import qualified EFA.Flow.Sequence.Symbolic as Symbolic
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence.Variable as Var
 import qualified EFA.Flow.Absolute as Abs
 import EFA.Flow.Sequence.EquationSystem ((=.=))
 
@@ -61,11 +61,11 @@ type
 
 type
    VarForStorageSectionScalar node =
-      Var.RecordForStorageSectionScalar Record.Absolute node
+      Var.RecordScalar Record.Absolute node
 
 type
    VarInSectionSignal node =
-      Var.RecordInSectionSignal Record.Absolute node
+      Var.RecordSignal Record.Absolute node
 
 
 withExpressionGraph ::

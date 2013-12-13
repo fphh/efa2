@@ -132,6 +132,7 @@ Library
     EFA.Flow.SequenceState.Symbolic
     EFA.Flow.Sequence
     EFA.Flow.Sequence.Index
+    EFA.Flow.Sequence.Variable
     EFA.Flow.Sequence.Quantity
     EFA.Flow.Sequence.Record
     EFA.Flow.Sequence.EquationSystem
@@ -141,6 +142,7 @@ Library
     EFA.Flow.Sequence.Symbolic
     EFA.Flow.State
     EFA.Flow.State.Index
+    EFA.Flow.State.Variable
     EFA.Flow.State.Quantity
     EFA.Flow.State.EquationSystem
     EFA.Flow.State.Absolute

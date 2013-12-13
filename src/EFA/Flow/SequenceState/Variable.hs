@@ -7,9 +7,6 @@ import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
-import qualified EFA.Equation.RecordIndex as RecIdx
-import qualified EFA.Equation.Record as Record
-
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
@@ -19,51 +16,36 @@ import EFA.Report.FormatValue
 
 
 data Any part node =
-     Signal (InPartSignal part node)
-   | Scalar (ForStorageScalar part node)
+     Signal (Signal part node)
+   | Scalar (Scalar part node)
      deriving (Show, Eq, Ord)
 
-type SectionAny = Any Idx.Section
-type StateAny   = Any Idx.State
 
+type Signal part = Idx.InPart part TopoVar.Signal
+type Scalar part = Idx.ForStorage (StorageVar.Scalar part)
 
-type InPartSignal part = Idx.InPart part TopoVar.Signal
-type InSectionSignal   = Idx.InSection TopoVar.Signal
-type InStateSignal     = Idx.InState TopoVar.Signal
-type RecordInSectionSignal rec node =
-        RecIdx.Record (Record.ToIndex rec) (InSectionSignal node)
-type RecordInStateSignal rec node =
-        RecIdx.Record (Record.ToIndex rec) (InStateSignal node)
-
-type ForStorageScalar part   = Idx.ForStorage (StorageVar.Scalar part)
-type ForStorageSectionScalar = ForStorageScalar Idx.Section
-type ForStorageStateScalar   = ForStorageScalar Idx.State
-type RecordForStorageSectionScalar rec node =
-        RecIdx.Record (Record.ToIndex rec) (ForStorageSectionScalar node)
-type RecordForStorageStateScalar rec node =
-        RecIdx.Record (Record.ToIndex rec) (ForStorageStateScalar node)
 
 class Index t where
    type Type t :: * -> *
    index :: t a -> Type t a
 
 instance TopoVar.Index idx => Index (Idx.InPart part idx) where
-   type Type (Idx.InPart part idx) = InPartSignal part
+   type Type (Idx.InPart part idx) = Signal part
    index = Idx.liftInPart TopoVar.index
 
 instance StorageVar.Index idx => Index (Idx.ForStorage idx) where
-   type Type (Idx.ForStorage idx) = ForStorageScalar (StorageVar.Part idx)
+   type Type (Idx.ForStorage idx) = Scalar (StorageVar.Part idx)
    index = Idx.liftForStorage StorageVar.index
 
 
 (<#>) ::
    (StorageVar.Index idx, StorageVar.Part idx ~ part) =>
-   idx -> node -> ForStorageScalar part node
+   idx -> node -> Scalar part node
 (<#>) idx node = Idx.ForStorage (StorageVar.index idx) node
 
 (<~>) ::
    (TopoVar.Index idx) =>
-   part -> idx node -> InPartSignal part node
+   part -> idx node -> Signal part node
 (<~>) part idx = Idx.InPart part $ TopoVar.index idx
 
 

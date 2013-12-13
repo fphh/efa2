@@ -12,7 +12,7 @@ module EFA.Flow.State.Absolute (
 
 import qualified EFA.Flow.State.EquationSystem as EqSys
 import qualified EFA.Flow.State.Quantity as StateFlow
-import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.State.Variable as Var
 import qualified EFA.Flow.Absolute as Abs
 import EFA.Flow.State.EquationSystem ((=.=))
 
@@ -56,11 +56,11 @@ type
 
 type
    VarForStorageStateScalar node =
-      Var.RecordForStorageStateScalar Record.Absolute node
+      Var.RecordScalar Record.Absolute node
 
 type
    VarInStateSignal node =
-      Var.RecordInStateSignal Record.Absolute node
+      Var.RecordSignal Record.Absolute node
 
 
 withExpressionGraph ::

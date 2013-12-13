@@ -42,9 +42,9 @@ module EFA.Flow.Sequence.Quantity (
 
 import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.Sequence.Variable as Var
 import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.SequenceState.Quantity as Env
-import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Storage.Quantity as StorageQuant
@@ -363,8 +363,8 @@ storageMapFromList secs edges =
 
 mapGraphWithVar ::
    (Ord node) =>
-   (Var.ForStorageSectionScalar node -> a0 -> a1) ->
-   (Var.InSectionSignal node -> v0 -> v1) ->
+   (Var.Scalar node -> a0 -> a1) ->
+   (Var.Signal node -> v0 -> v1) ->
    Graph node a0 v0 ->
    Graph node a1 v1
 mapGraphWithVar f g gr =
@@ -375,7 +375,7 @@ mapGraphWithVar f g gr =
 
 mapStoragesWithVar ::
    (Ord node) =>
-   (Var.ForStorageSectionScalar node -> a0 -> a1) ->
+   (Var.Scalar node -> a0 -> a1) ->
    Graph node a0 v0 ->
    Storages node a1
 mapStoragesWithVar f gr =
@@ -389,7 +389,7 @@ mapStoragesWithVar f gr =
 
 mapSequenceWithVar ::
    (Ord node) =>
-   (Var.InSectionSignal node -> v0 -> v1) ->
+   (Var.Signal node -> v0 -> v1) ->
    Sequence node v0 ->
    Sequence node v1
 mapSequenceWithVar f =
