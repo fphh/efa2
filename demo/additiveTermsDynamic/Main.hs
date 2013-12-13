@@ -35,7 +35,7 @@ import qualified System.IO as IO
 
 
 
-type Term = Symbolic.Term RecIdx.Delta SumProduct.Term Node
+type Term = Symbolic.Term SumProduct.Term RecIdx.Delta Node
 
 
 type

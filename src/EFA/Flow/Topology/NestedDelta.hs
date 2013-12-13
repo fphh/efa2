@@ -22,7 +22,7 @@ import EFA.Utility (Pointed)
 
 
 parameterSymbol ::
-   (Pointed term, Node.C node, t ~ SymVar.Term RecIdx.Delta term node,
+   (Pointed term, Node.C node, t ~ SymVar.Term term RecIdx.Delta node,
     FlowTopo.Lookup idx) =>
 
    OuterExtrusion rec t ->
@@ -36,7 +36,7 @@ parameterSymbol param idx =
 
 givenParameterSymbol ::
    (Verify.LocalVar mode v, EqSys.Record rec,
-    Pointed term, Node.C node, SymVar.Term RecIdx.Delta term node ~ v,
+    Pointed term, Node.C node, SymVar.Term term RecIdx.Delta node ~ v,
     FlowTopo.Lookup idx) =>
 
    idx node ->

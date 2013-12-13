@@ -45,7 +45,7 @@ import Data.Monoid (mempty, (<>))
 
 
 
-type Term = Symbolic.Term RecIdx.Delta SumProduct.Term Node
+type Term = Symbolic.Term SumProduct.Term RecIdx.Delta Node
 
 type IdxMultiDelta = RecIdx.ExtDelta (RecIdx.ExtDelta (RecIdx.ExtDelta RecIdx.Absolute))
 type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Absolute))

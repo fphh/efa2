@@ -23,31 +23,30 @@ import qualified UniqueLogic.ST.TF.System as Sys
 import Data.Monoid ((<>))
 
 
-type
-   Term recIdx term node =
-      term (RecIdx.Record recIdx (TopoVar.Signal node))
+type Term term recIdx node = term (RecIdx.Record recIdx (TopoVar.Signal node))
+
 
 type
    EquationSystem mode rec node s term =
       EqSys.EquationSystem mode rec node s
-         (Term (EqRecord.ToIndex rec) term node)
+         (Term term (EqRecord.ToIndex rec) node)
 
 
 symbol ::
    Pointed term =>
    RecIdx.Record recIdx (TopoVar.Signal node) ->
-   Term recIdx term node
+   Term term recIdx node
 symbol = point
 
 varSymbol ::
    (Pointed term, TopoVar.Index idx) =>
-   RecIdx.Record recIdx (idx node) -> Term recIdx term node
+   RecIdx.Record recIdx (idx node) -> Term term recIdx node
 varSymbol idx =
    symbol (fmap TopoVar.index idx)
 
 
 given ::
-   (Sys.Value mode t, t ~ Term recIdx term node,
+   (Sys.Value mode t, t ~ Term term recIdx node,
     EqSys.Record rec, recIdx ~ EqRecord.ToIndex rec, Pointed term,
     TopoVar.Index idx, FlowTopo.Lookup idx, Node.C node) =>
    RecIdx.Record recIdx (idx node) ->
@@ -59,7 +58,7 @@ given idx =
 infixr 6 =<>
 
 (=<>) ::
-   (Sys.Value mode t, t ~ Term recIdx term node,
+   (Sys.Value mode t, t ~ Term term recIdx node,
     EqSys.Record rec, recIdx ~ EqRecord.ToIndex rec, Pointed term,
     TopoVar.Index idx, FlowTopo.Lookup idx, Node.C node) =>
    RecIdx.Record recIdx (idx node) ->
