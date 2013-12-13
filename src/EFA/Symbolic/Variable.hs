@@ -11,26 +11,26 @@ import EFA.Utility (Pointed, point)
 
 
 type
-   SignalTerm recIdx term part node =
+   SignalTerm term recIdx part node =
       Term.Signal term
          (RecIdx.Record recIdx (Var.ForStorageScalar part node))
          (RecIdx.Record recIdx (Var.InPartSignal part node))
 
 type
-   ScalarTerm recIdx term part node =
+   ScalarTerm term recIdx part node =
       Term.Scalar term
          (RecIdx.Record recIdx (Var.ForStorageScalar part node))
          (RecIdx.Record recIdx (Var.InPartSignal part node))
 
 type
-   ScalarAtom recIdx term part node =
+   ScalarAtom term recIdx part node =
       Term.ScalarAtom term
          (RecIdx.Record recIdx (Var.ForStorageScalar part node))
          (RecIdx.Record recIdx (Var.InPartSignal part node))
 
 
 type
-   VarTerm var recIdx term node =
+   VarTerm var term recIdx node =
       Term var term
          (RecIdx.Record recIdx (Var.ForStorageScalar (Part var) node))
          (RecIdx.Record recIdx (Var.InPartSignal (Part var) node))
@@ -42,7 +42,7 @@ class (var ~ Variable (Term var) (Part var)) => Symbol var where
    symbol ::
       Pointed term =>
       RecIdx.Record recIdx (var node) ->
-      VarTerm var recIdx term node
+      VarTerm var term recIdx node
 
 instance Symbol (Var.InPartSignal part) where
    type Term (Var.InPartSignal part) = Term.Signal
@@ -59,6 +59,6 @@ instance Symbol (Var.ForStorageScalar part) where
 
 varSymbol ::
    (Pointed term, Var.Index idx, Var.Type idx ~ var, Symbol var) =>
-   RecIdx.Record recIdx (idx node) -> VarTerm var recIdx term node
+   RecIdx.Record recIdx (idx node) -> VarTerm var term recIdx node
 varSymbol idx =
    symbol (fmap Var.index idx)

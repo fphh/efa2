@@ -137,11 +137,11 @@ variable ::
 variable = EqSys.variable . RecIdx.absolute
 
 
-type SignalTerm term node = Symbolic.SignalTerm RecIdx.Absolute term node
-type ScalarTerm term node = Symbolic.ScalarTerm RecIdx.Absolute term node
-type ScalarAtom term node = Symbolic.ScalarAtom RecIdx.Absolute term node
+type SignalTerm term node = Symbolic.SignalTerm term RecIdx.Absolute node
+type ScalarTerm term node = Symbolic.ScalarTerm term RecIdx.Absolute node
+type ScalarAtom term node = Symbolic.ScalarAtom term RecIdx.Absolute node
 
-type VarTerm var term node = SymVar.VarTerm var RecIdx.Absolute term node
+type VarTerm var term node = SymVar.VarTerm var term RecIdx.Absolute node
 
 type
    SymbolicEquationSystem mode node s term =

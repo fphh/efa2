@@ -27,27 +27,27 @@ import Data.Monoid ((<>))
 
 
 type
-   ScalarTerm recIdx term node =
-      SymVar.ScalarTerm recIdx term Idx.Section node
+   ScalarTerm term recIdx node =
+      SymVar.ScalarTerm term recIdx Idx.Section node
 
 type
-   ScalarAtom recIdx term node =
-      SymVar.ScalarAtom recIdx term Idx.Section node
+   ScalarAtom term recIdx node =
+      SymVar.ScalarAtom term recIdx Idx.Section node
 
 type
-   SignalTerm recIdx term node =
-      SymVar.SignalTerm recIdx term Idx.Section node
+   SignalTerm term recIdx node =
+      SymVar.SignalTerm term recIdx Idx.Section node
 
 type
    EquationSystem mode rec node s term =
       EqSys.EquationSystem mode rec node s
-         (ScalarTerm (EqRecord.ToIndex rec) term node)
-         (SignalTerm (EqRecord.ToIndex rec) term node)
+         (ScalarTerm term (EqRecord.ToIndex rec) node)
+         (SignalTerm term (EqRecord.ToIndex rec) node)
 
 
 given ::
-   (Sys.Value mode t, t ~ VarTerm var recIdx term node,
-    t ~ SeqFlow.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
+   (Sys.Value mode t, t ~ VarTerm var term recIdx node,
+    t ~ SeqFlow.Element idx (ScalarTerm term recIdx node) (SignalTerm term recIdx node),
     EqSys.Record rec, recIdx ~ EqRecord.ToIndex rec, Pointed term,
     Var.Type idx ~ var, Symbol var,
     SeqFlow.Lookup idx, Node.C node) =>
@@ -60,8 +60,8 @@ given idx =
 infixr 6 =<>
 
 (=<>) ::
-   (Sys.Value mode t, t ~ VarTerm var recIdx term node,
-    t ~ SeqFlow.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
+   (Sys.Value mode t, t ~ VarTerm var term recIdx node,
+    t ~ SeqFlow.Element idx (ScalarTerm term recIdx node) (SignalTerm term recIdx node),
     EqSys.Record rec, recIdx ~ EqRecord.ToIndex rec, Pointed term,
     Var.Type idx ~ var, Symbol var,
     SeqFlow.Lookup idx, Node.C node) =>

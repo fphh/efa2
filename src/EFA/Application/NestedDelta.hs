@@ -151,7 +151,7 @@ e &&> ParameterRecord inner xs =
 
 parameterSymbol ::
    (Pointed term, Node.C node,
-    t ~ SymVar.VarTerm var RecIdx.Delta term node,
+    t ~ SymVar.VarTerm var term RecIdx.Delta node,
     Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    OuterExtrusion rec t ->
@@ -164,7 +164,7 @@ parameterSymbol param idx =
 
 absoluteSymbol ::
    (Pointed term, Node.C node,
-    t ~ SymVar.VarTerm var RecIdx.Delta term node,
+    t ~ SymVar.VarTerm var term RecIdx.Delta node,
     Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    InnerExtrusion rec t ->
@@ -189,7 +189,7 @@ givenParameterSymbol ::
    (Verify.LocalVar mode t,
     EqSys.Record rec, Record.ToIndex rec ~ recIdx,
     Pointed term, Node.C node,
-    t ~ SymVar.VarTerm var RecIdx.Delta term node,
+    t ~ SymVar.VarTerm var term RecIdx.Delta node,
     t ~ Env.Element idx scalar signal,
     Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
