@@ -51,17 +51,17 @@ flowGraph :: ResultGraph a v
 flowGraph = TripodGiven.seqFlowGraph
 
 
--- Hilfsfunktion, um das testGiven-Gleichungssystem zu bauen.
--- Man übergibt ein gelöstes Env.
+-- Hilfsfunktion, um das fullGiven-Gleichungssystem zu bauen.
+-- Man übergibt ein gelösten Graphen.
 -- Es muessen noch die richtigen Werte eingetragen werden.
 
 {-
-ME.switch undefined (putStrLn . toTestGiven) $ fst testEnv
+ME.switch undefined (putStrLn . formatGiven) $ fst fullGraph
 -}
-toTestGiven :: ResultGraph Rational Rational -> String
-toTestGiven gr =
-   "testGiven :: EquationSystem s\n" ++
-   "testGiven = mconcat $\n" ++
+formatGiven :: ResultGraph Rational Rational -> String
+formatGiven gr =
+   "fullGiven :: EquationSystem s\n" ++
+   "fullGiven = mconcat $\n" ++
    appEndo
       (SeqFlow.foldMap Endo Endo $ SeqFlow.mapGraphWithVar g g gr)
       "   []"
@@ -75,23 +75,23 @@ toTestGiven gr =
             Undetermined -> showString "?"
 
 
-testEnv, solvedEnv ::
+fullGraph, solvedGraph ::
    (ME.Exceptional
       (Verify.Exception Format.Unicode)
       (ResultGraph Rational Rational),
     Verify.Assigns Format.Unicode)
-testEnv =
-   mapFst (fmap numericEnv) $
-   EqSys.solveTracked flowGraph testGiven
+fullGraph =
+   mapFst (fmap numericGraph) $
+   EqSys.solveTracked flowGraph fullGiven
 
-solvedEnv =
-   mapFst (fmap numericEnv) $
-   EqSys.solveTracked flowGraph originalGiven
+solvedGraph =
+   mapFst (fmap numericGraph) $
+   EqSys.solveTracked flowGraph partialGiven
 
-numericEnv ::
+numericGraph ::
    ResultGraph (Pair.T at an) (Pair.T vt vn) ->
    ResultGraph an vn
-numericEnv =
+numericGraph =
    SeqFlow.mapGraph (fmap Pair.second) (fmap Pair.second)
 
 
@@ -120,14 +120,14 @@ data
             EqSys.EquationSystem mode Node s a v
       }
 
-originalGiven :: EquationSystem s
-originalGiven = foldMap getEquation originalEquations
+partialGiven :: EquationSystem s
+partialGiven = foldMap getEquation partialEquations
 
-originalEquations ::
+partialEquations ::
    (Verify.LocalVar mode a, Arith.Constant a,
     Verify.LocalVar mode v, Arith.Constant v) =>
    [Equation mode a v]
-originalEquations =
+partialEquations =
    Equation (XIdx.dTime sec0 .= 1 / 1) :
    Equation (XIdx.dTime sec1 .= 2 / 1) :
    Equation (XIdx.dTime sec2 .= 1 / 1) :
@@ -160,8 +160,8 @@ originalEquations =
    []
 
 
-testGiven :: EquationSystem s
-testGiven = mconcat $
+fullGiven :: EquationSystem s
+fullGiven = mconcat $
   (XIdx.power sec0 node0 node2 .= 34 / 3) :
   (XIdx.power sec0 node1 node2 .= 25 / 4) :
   (XIdx.power sec0 node2 node0 .= 17 / 2) :

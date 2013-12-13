@@ -61,7 +61,7 @@ determinateness :: IO ()
 determinateness =
   Test.singleIO "Check whether all quantities can be determined." $ do
     let undetermined =
-          undeterminedFromGraph $ solveIncomplete Given.originalEquations
+          undeterminedFromGraph $ solveIncomplete Given.partialEquations
         allDetermined = null $ undetermined
     when (not allDetermined) $ do
       putStrLn $ "undetermined variables:\n" ++
@@ -75,7 +75,7 @@ minimalDeterminateness =
           map fst $
           filter (completelyDetermined . solveIncomplete . snd) $
           zip [(0::Int) .. ] $ map snd $
-          ListHT.removeEach Given.originalEquations
+          ListHT.removeEach Given.partialEquations
         minimal = null redundantEqs
     when (not minimal) $ putStrLn $
       "at least one of the following equations is redundant: " ++
@@ -86,12 +86,12 @@ minimalDeterminateness =
 checkException ::
   (ME.Exceptional
      (Verify.Exception Format.Unicode)
-     env,
+     graph,
    Verify.Assigns Format.Unicode) ->
-  IO env
+  IO graph
 checkException solution =
   case solution of
-    (ME.Success env, _) -> return env
+    (ME.Success graph, _) -> return graph
     (ME.Exception (Verify.Exception name lhs rhs), assigns) -> do
       putStrLn $ "conflicting assignments during solution:"
       maybe (return ()) (putStrLn . Format.unUnicode) name
@@ -111,9 +111,9 @@ printAssignments assigns =
 correctness :: IO ()
 correctness =
   Test.singleIO "Check correctness of the equation system for sequence flow graphs." $ do
-  testEnv <- checkException Given.testEnv
-  env <- checkException Given.solvedEnv
-  return $ testEnv == env
+  fullGraph <- checkException Given.fullGraph
+  solvedGraph <- checkException Given.solvedGraph
+  return $ fullGraph == solvedGraph
 
 
 showDifferences ::
@@ -121,31 +121,31 @@ showDifferences ::
   SeqFlow.Graph node a v ->
   SeqFlow.Graph node a v ->
   IO ()
-showDifferences testEnv env = do
-  let testAM = SeqFlow.toAssignMap testEnv
-  let am     = SeqFlow.toAssignMap env
+showDifferences fullGraph solvedGraph = do
+  let fullAM   = SeqFlow.toAssignMap fullGraph
+  let solvedAM = SeqFlow.toAssignMap solvedGraph
   putStrLn "Expected assignments that are not computed:"
   putStrLn $ Format.unUnicode $ Format.lines $ AssignMap.format $
-     AssignMap.difference testAM am
+     AssignMap.difference fullAM solvedAM
 
   putStrLn "Computed assignments that are not expected:"
   putStrLn $ Format.unUnicode $ Format.lines $ AssignMap.format $
-     AssignMap.difference am testAM
+     AssignMap.difference solvedAM fullAM
 
   putStrLn "Conflicts between expected and computed assignments:"
   putStrLn $ Format.unUnicode $ Format.lines $ AssignMap.format $
      AssignMap.filter (uncurry (/=)) (uncurry (/=)) $
-     AssignMap.intersectionWith (,) (,) testAM am
+     AssignMap.intersectionWith (,) (,) fullAM solvedAM
 
 
 consistency :: IO ()
 consistency =
   Test.singleIO "Check consistency of the equation system for sequence flow graphs." $ do
-  env <- fmap Given.numericEnv $ checkException $
-    EqSys.solveTracked Given.flowGraph Given.testGiven
-  testEnv <- checkException Given.testEnv
-  -- showDifferences testEnv env
-  return $ testEnv == env
+  graph <- fmap Given.numericGraph $ checkException $
+    EqSys.solveTracked Given.flowGraph Given.fullGiven
+  fullGraph <- checkException Given.fullGraph
+  -- showDifferences fullGraph graph
+  return $ fullGraph == graph
 
 
 runTests :: IO ()
@@ -159,17 +159,17 @@ runTests = do
 main :: IO ()
 main = do
 
-  testEnv <- checkException Given.testEnv
-  env <- checkException Given.solvedEnv
+  fullGraph <- checkException Given.fullGraph
+  solvedGraph <- checkException Given.solvedGraph
 
-  showDifferences testEnv env
+  showDifferences fullGraph solvedGraph
   putStrLn "These lists should all be empty."
-  -- print (testEnv == env)
+  -- print (fullGraph == solvedGraph)
 
   concurrentlyMany_ [
     Draw.xterm $
       Draw.title "Aktuell berechnet" $
-      Draw.seqFlowGraph Draw.optionsDefault env,
+      Draw.seqFlowGraph Draw.optionsDefault solvedGraph,
     Draw.xterm $
       Draw.title "Zielvorgabe" $
-      Draw.seqFlowGraph Draw.optionsDefault testEnv ]
+      Draw.seqFlowGraph Draw.optionsDefault fullGraph ]
