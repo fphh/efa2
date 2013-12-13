@@ -12,6 +12,7 @@ module EFA.Utility.FixedLength (
    N0, N1, N2, N3, N4, N5, N6, N7, N8,
    GE1, GE2, GE3, GE4, GE5, GE6, GE7, GE8,
    i0, i1, i2, i3, i4, i5, i6, i7,
+   (NonEmpty.!:), end,
    ) where
 
 import qualified Data.NonEmpty as NonEmpty
@@ -44,6 +45,10 @@ instance C list => C (NonEmpty.T list) where
    type Position (NonEmpty.T list) = Succ (Position list)
    type List (Succ position) = NonEmpty.T (List position)
    switch _ x = x
+
+
+end :: Empty.T a
+end = Empty.Cons
 
 
 newtype Wrap list a = Wrap {unwrap :: list a}
