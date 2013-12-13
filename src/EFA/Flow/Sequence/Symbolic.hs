@@ -5,8 +5,8 @@ module EFA.Flow.Sequence.Symbolic (
    Verify.Ignore,
    ) where
 
-import qualified EFA.Symbolic.Variable as SymVar
-import EFA.Symbolic.Variable (VarTerm, Symbol, varSymbol)
+import qualified EFA.Flow.SequenceState.Symbolic as SymVar
+import EFA.Flow.SequenceState.Symbolic (VarTerm, Symbol, varSymbol)
 import EFA.Utility (Pointed)
 
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys

@@ -88,7 +88,6 @@ Library
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
-    EFA.Symbolic.Variable
     EFA.Report.Typ
     EFA.Report.Base
     EFA.Report.Report
@@ -130,6 +129,7 @@ Library
     EFA.Flow.SequenceState.Quantity
     EFA.Flow.SequenceState.EquationSystem
     EFA.Flow.SequenceState.Index
+    EFA.Flow.SequenceState.Symbolic
     EFA.Flow.Sequence
     EFA.Flow.Sequence.Index
     EFA.Flow.Sequence.Quantity

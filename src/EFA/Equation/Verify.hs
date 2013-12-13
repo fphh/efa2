@@ -4,9 +4,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Equation.Verify where
 
+import qualified EFA.Flow.SequenceState.Symbolic as SymVar
 import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Flow.Topology.Variable as TopoVar
-import qualified EFA.Symbolic.Variable as SymVar
 
 import qualified EFA.Graph.Topology.Node as Node
 

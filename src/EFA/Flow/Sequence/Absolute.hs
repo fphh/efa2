@@ -10,7 +10,8 @@ module EFA.Flow.Sequence.Absolute (
    (=.=),
    ) where
 
-import qualified EFA.Symbolic.Variable as SymVar
+import qualified EFA.Flow.SequenceState.Symbolic as SymVar
+import qualified EFA.Flow.SequenceState.Variable as Var
 
 import qualified EFA.Flow.Sequence.Symbolic as Symbolic
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys
@@ -18,7 +19,6 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Absolute as Abs
 import EFA.Flow.Sequence.EquationSystem ((=.=))
 
-import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify

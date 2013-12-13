@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-module EFA.Symbolic.Variable where
+module EFA.Flow.SequenceState.Symbolic where
 
 import qualified EFA.Flow.SequenceState.Variable as Var
 import qualified EFA.Equation.RecordIndex as RecIdx
