@@ -154,10 +154,12 @@ consistency =
 
 runTests :: IO ()
 runTests = do
+  putStrLn "Mix equation system tests"
   determinateness
   minimalDeterminateness
   correctness
   consistency
+  putStrLn ""
 
 
 main :: IO ()
