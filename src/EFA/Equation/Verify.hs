@@ -95,9 +95,7 @@ class Sys.Value w a => LocalVar w a where
    localVariable :: ST s (Sys.Variable w s a)
 
 class LocalVar w a => GlobalVar w a var where
-   globalVariable ::
-      (FormatValue var) =>
-      var -> ST s (Sys.Variable w s a)
+   globalVariable :: var -> ST s (Sys.Variable w s a)
 
 
 type Variable output s a b = Sys.Variable (Track output) s (Pair.T a b)
@@ -116,13 +114,26 @@ instance
    localVariable = localVariableTracked
 
 instance
+   (GlobalRecVar output a term recIdx var,
+    Format output, FormatValue term, FormatValue a, Eq a) =>
+      GlobalVar (Track output)
+         (Pair.T term a) (RecIdx.Record recIdx var) where
+   globalVariable = globalRecordVariable
+
+
+class GlobalRecVar output a term recIdx var where
+   globalRecordVariable ::
+      RecIdx.Record recIdx var ->
+      ST s (Sys.Variable (Track output) s (Pair.T term a))
+
+instance
    (Format output, FormatValue a, Eq a,
     Format.Record recIdx, Node.C node,
     FormatValue (Term term recIdx node), Pointed term) =>
-      GlobalVar (Track output)
-         (Pair.T (Term term recIdx node) a)
-         (RecIdx.Record recIdx (TopoVar.Signal node)) where
-   globalVariable = globalVariableTracked point
+      GlobalRecVar output a
+         (Term term recIdx node)
+         recIdx (TopoVar.Signal node) where
+   globalRecordVariable = globalVariableTracked point
 
 instance
    (Format output, FormatValue a, Eq a,
@@ -130,10 +141,10 @@ instance
     FormatValue (MixedTerm (mixedTerm term) recIdx part node),
     Pointed term, SymVar.Symbol var,
     mixedTerm ~ SymVar.Term var, part ~ SymVar.Part var) =>
-      GlobalVar (Track output)
-         (Pair.T (MixedTerm (mixedTerm term) recIdx part node) a)
-         (RecIdx.Record recIdx (var node)) where
-   globalVariable = globalVariableTracked SymVar.symbol
+      GlobalRecVar output a
+         (MixedTerm (mixedTerm term) recIdx part node)
+         recIdx (var node) where
+   globalRecordVariable = globalVariableTracked SymVar.symbol
 
 
 type Ignore = IdentityT
