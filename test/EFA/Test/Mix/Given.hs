@@ -193,17 +193,14 @@ partialEquations =
    Equation (idxMultiMixTotal XIdx.dTime .= 0.5) :
 
    Equation (idxMultiMixTotal (XIdx.power source0 crossing) .= 4) :
-   Equation (idxMultiMix idxMix1 idxMix0 (XIdx.power source0 crossing) .= 0) :
-   Equation (idxMultiMix idxMix1 idxMix1 (XIdx.power source0 crossing) .= 0) :
+   Equation (idxMultiMix idxMix1 idxMixTotal (XIdx.power source0 crossing) .= 0) :
 
    Equation (idxMultiMixTotal (XIdx.power source1 crossing) .= 3) :
-   Equation (idxMultiMix idxMix0 idxMix0 (XIdx.power source1 crossing) .= 0) :
-   Equation (idxMultiMix idxMix0 idxMix1 (XIdx.power source1 crossing) .= 0) :
+   Equation (idxMultiMix idxMix0 idxMixTotal (XIdx.power source1 crossing) .= 0) :
 
    Equation (idxMultiMixTotal (XIdx.power sink crossing) .= 0.4) :
-   Equation (idxMultiMix idxMix0 idxMix1 (XIdx.power sink crossing) .= 0) :
-
-   Equation (idxMultiMix idxMix0 idxMix0 (XIdx.power storage crossing) .= 0) :
+   Equation (idxMultiMix idxMixTotal idxMix1 (XIdx.power sink crossing) .= 0) :
+   Equation (idxMultiMix idxMixTotal idxMix0 (XIdx.power storage crossing) .= 0) :
 
    Equation (idxMultiMixTotal (XIdx.eta source0 crossing) .= 0.25) :
    Equation (idxMultiMixTotal (XIdx.eta source1 crossing) .= 0.5) :
