@@ -14,20 +14,28 @@ import EFA.Equation.Arithmetic
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-{-
-Ord instance intentionally omitted
-since it means lexigraphic ordering
-which is certainly unexpected in many cases.
--}
+import Data.Function.HT (compose2)
+import Data.Eq.HT (equating)
+import Data.Ord.HT (comparing)
+
+
 {- |
 Data type that allows to perform the same computation
 in different representations parallelly.
 Don't think of it as a vector type.
 Rather than this,
 we use it for simultaneous symbolic and numeric computations.
+This is reflected in the 'Eq', 'Ord' and 'ZeroTestable' instances
+that only watch the 'second' component.
 -}
 data T a b = Cons {first :: a, second :: b}
-   deriving (Eq, Show)
+   deriving (Show)
+
+instance (Eq b) => Eq (T a b) where
+   (==) = equating second
+
+instance (Ord b) => Ord (T a b) where
+   compare = comparing second
 
 instance (FormatValue a, FormatValue b) => FormatValue (T a b) where
    formatValue (Cons a b) = Format.pair (formatValue a) (formatValue b)
@@ -78,10 +86,9 @@ instance (Constant a, Constant b) => Constant (T a b) where
    fromInteger n = Cons (Arith.fromInteger n) (Arith.fromInteger n)
    fromRational x = Cons (Arith.fromRational x) (Arith.fromRational x)
 
-instance (ZeroTestable a, ZeroTestable b) => ZeroTestable (T a b) where
-   allZeros (Cons a b) = allZeros a && allZeros b
-   coincidingZeros (Cons a0 b0) (Cons a1 b1) =
-      coincidingZeros a0 a1 || coincidingZeros b0 b1
+instance (ZeroTestable b) => ZeroTestable (T a b) where
+   allZeros = allZeros . second
+   coincidingZeros = compose2 coincidingZeros second
 
 instance (Integrate a, Integrate b) => Integrate (T a b) where
    type Scalar (T a b) = T (Scalar a) (Scalar b)
