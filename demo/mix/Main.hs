@@ -39,14 +39,12 @@ import qualified EFA.Report.Format as Format
 
 import qualified EFA.Utility.FixedLength as FL
 import qualified EFA.Utility.Stream as Stream
+import EFA.Utility.FixedLength ((!:))
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility.Async (concurrentlyMany_)
 
 import Control.Applicative (liftA2, pure)
 
-import qualified Data.NonEmpty as NonEmpty
-import qualified Data.Empty as Empty
-import Data.NonEmpty ((!:))
 import Data.Monoid (Monoid, mconcat, mempty)
 
 
@@ -84,7 +82,7 @@ topology =
        (crossing, storage), (crossing, sink)]
 
 
-type Mix = Record.Mix (NonEmpty.T Empty.T)
+type Mix = Record.Mix FL.N1
 
 sourceMixSystem ::
    EqSys.EquationSystem Verify.Ignore Mix Node s Double
@@ -229,7 +227,7 @@ seqCumulatedSolution =
    SeqFlow.sequence seqSourceMixSolution
 
 
-type MultiMix = Record.ExtMix (NonEmpty.T Empty.T) Mix
+type MultiMix = Record.ExtMix FL.N1 Mix
 
 idxMixTotal :: RecIdx.Mix pos
 idxMixTotal = RecIdx.MixTotal
@@ -277,7 +275,7 @@ multiMixSystem =
 multiMixSolution :: FlowTopo.Section Node (MultiMix (Result Double))
 multiMixSolution =
    EqSys.solveOpts
-      (EqSys.mix (EqSys.Source !: EqSys.Sink !: Empty.Cons) $
+      (EqSys.mix (EqSys.Source !: EqSys.Sink !: FL.end) $
        EqSys.optionsDefault)
       (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
       multiMixSystem

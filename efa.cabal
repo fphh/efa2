@@ -693,7 +693,6 @@ Executable demo-mix
   If flag(buildDemos)
     Build-Depends:
       efa,
-      non-empty,
       base
   Else
     Buildable: False
