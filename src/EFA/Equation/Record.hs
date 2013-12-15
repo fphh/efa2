@@ -2,8 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Equation.Record where
 
-
 import qualified EFA.Equation.RecordIndex as RecIdx
+import qualified EFA.Equation.Mix as Mix
 
 import EFA.Equation.Arithmetic (Sum, (~-), Constant, zero)
 
@@ -119,51 +119,59 @@ instance (Traversable rec) => Traversable (ExtDelta rec) where
    sequenceA (ExtDelta d) = fmap ExtDelta $ traverse sequenceA d
 
 
-data Mix f a = Mix {total :: a, mix :: NonEmpty.T f a} deriving (Show, Eq)
+data Mix dir f a = Mix {total :: a, mix :: NonEmpty.T f a} deriving (Show, Eq)
 
-instance (FixedLength.C f, FormatValue a) => FormatValue (Mix f a) where
+type SinkMix = Mix Mix.Sink
+type SourceMix = Mix Mix.Source
+
+instance (FixedLength.C f, FormatValue a) => FormatValue (Mix dir f a) where
    formatValue rec =
       Format.mix (formatValue $ total rec) $
       fmap formatValue $ NonEmpty.mapTail FixedLength.Wrap $ mix rec
 
-instance (FixedLength.C f) => Functor (Mix f) where
+instance (FixedLength.C f) => Functor (Mix dir f) where
    fmap f (Mix s m) = Mix (f s) (FixedLength.map f m)
 
-instance (FixedLength.C f) => Applicative (Mix f) where
+instance (FixedLength.C f) => Applicative (Mix dir f) where
    pure a = Mix a $ FixedLength.repeat a
    Mix fs fm <*> Mix s m = Mix (fs s) (FixedLength.zipWith ($) fm m)
 
-instance (FixedLength.C f) => Foldable (Mix f) where
+instance (FixedLength.C f) => Foldable (Mix dir f) where
    foldMap f (Mix s m) = f s <> foldMap f (FixedLength.Wrap m)
 
-instance (FixedLength.C f) => Traversable (Mix f) where
+instance (FixedLength.C f) => Traversable (Mix dir f) where
    sequenceA (Mix s m) = liftA2 Mix s $ FixedLength.sequenceA m
 
 
 
-newtype ExtMix f rec a = ExtMix {getExtMix :: Mix f (rec a)} deriving (Show, Eq)
+newtype
+   ExtMix dir f rec a =
+      ExtMix {getExtMix :: Mix dir f (rec a)} deriving (Show, Eq)
 
-accessExtMix :: Accessor.T (ExtMix f rec a) (Mix f (rec a))
+type ExtSinkMix = ExtMix Mix.Sink
+type ExtSourceMix = ExtMix Mix.Source
+
+accessExtMix :: Accessor.T (ExtMix dir f rec a) (Mix dir f (rec a))
 accessExtMix = Accessor.fromWrapper ExtMix getExtMix
 
 instance
    (FormatValue (rec a), FixedLength.C f, FormatValue a) =>
-      FormatValue (ExtMix f rec a) where
+      FormatValue (ExtMix dir f rec a) where
    formatValue (ExtMix rec) =
       Format.mix (formatValue $ total rec) $
       fmap formatValue $ NonEmpty.mapTail FixedLength.Wrap $ mix rec
 
-instance (FixedLength.C f, Functor rec) => Functor (ExtMix f rec) where
+instance (FixedLength.C f, Functor rec) => Functor (ExtMix dir f rec) where
    fmap f (ExtMix m) = ExtMix (fmap (fmap f) m)
 
-instance (FixedLength.C f, Applicative rec) => Applicative (ExtMix f rec) where
+instance (FixedLength.C f, Applicative rec) => Applicative (ExtMix dir f rec) where
    pure a = ExtMix (pure (pure a))
    ExtMix fm <*> ExtMix m = ExtMix (liftA2 (<*>) fm m)
 
-instance (FixedLength.C f, Foldable rec) => Foldable (ExtMix f rec) where
+instance (FixedLength.C f, Foldable rec) => Foldable (ExtMix dir f rec) where
    foldMap f (ExtMix m) = foldMap (foldMap f) m
 
-instance (FixedLength.C f, Traversable rec) => Traversable (ExtMix f rec) where
+instance (FixedLength.C f, Traversable rec) => Traversable (ExtMix dir f rec) where
    sequenceA (ExtMix m) = fmap ExtMix $ traverse sequenceA m
 
 
@@ -196,11 +204,11 @@ instance C rec => C (ExtDelta rec) where
    access (RecIdx.ExtDelta idx sub) =
       access sub . access idx . accessExtDelta
 
-instance (FixedLength.C f) => C (Mix f) where
-   type ToIndex (Mix f) =
-           RecIdx.Mix (FixedLength.WrapPos (NonEmpty.T f))
-   type FromIndex (RecIdx.Mix (FixedLength.WrapPos (NonEmpty.T f))) =
-           Mix f
+instance (Mix.Direction dir, FixedLength.C f) => C (Mix dir f) where
+   type ToIndex (Mix dir f) =
+           RecIdx.Mix dir (FixedLength.WrapPos (NonEmpty.T f))
+   type FromIndex (RecIdx.Mix dir (FixedLength.WrapPos (NonEmpty.T f))) =
+           Mix dir f
    access idx =
       case idx of
          RecIdx.MixTotal -> Accessor.fromSetGet (\a m -> m{total = a}) total
@@ -209,11 +217,13 @@ instance (FixedLength.C f) => C (Mix f) where
                (\a m -> m{mix = FixedLength.update (const a) k $ mix m})
                (FixedLength.index k . mix)
 
-instance (FixedLength.C f, C rec) => C (ExtMix f rec) where
-   type ToIndex (ExtMix f rec) =
-           RecIdx.ExtMix (FixedLength.WrapPos (NonEmpty.T f)) (ToIndex rec)
-   type FromIndex (RecIdx.ExtMix (FixedLength.WrapPos (NonEmpty.T f)) idx) =
-           ExtMix f (FromIndex idx)
+instance
+   (Mix.Direction dir, FixedLength.C f, C rec) =>
+      C (ExtMix dir f rec) where
+   type ToIndex (ExtMix dir f rec) =
+           RecIdx.ExtMix dir (FixedLength.WrapPos (NonEmpty.T f)) (ToIndex rec)
+   type FromIndex (RecIdx.ExtMix dir (FixedLength.WrapPos (NonEmpty.T f)) idx) =
+           ExtMix dir f (FromIndex idx)
 
    access (RecIdx.ExtMix idx sub) =
       access sub . access idx . accessExtMix
@@ -233,14 +243,16 @@ instance IndexSet rec => IndexSet (ExtDelta rec) where
    indices =
       ExtDelta $ liftA2 (fmap . RecIdx.ExtDelta) indices (pure indices)
 
-instance (FixedLength.C f) => IndexSet (Mix f) where
+instance (Mix.Direction dir, FixedLength.C f) => IndexSet (Mix dir f) where
    indices =
       Mix {
          total = RecIdx.MixTotal,
          mix = FixedLength.map RecIdx.MixComponent FixedLength.indices
       }
 
-instance (FixedLength.C f, IndexSet rec) => IndexSet (ExtMix f rec) where
+instance
+   (Mix.Direction dir, FixedLength.C f, IndexSet rec) =>
+      IndexSet (ExtMix dir f rec) where
    indices =
       ExtMix $ liftA2 (fmap . RecIdx.ExtMix) indices (pure indices)
 

@@ -1,15 +1,25 @@
 module EFA.Equation.RecordIndex where
 
+import qualified EFA.Equation.Mix as Mix
+
 
 data Absolute = Absolute deriving (Show, Eq, Ord)
+
 
 data Delta = Before | Delta | After deriving (Show, Eq, Ord)
 
 data ExtDelta rec = ExtDelta Delta rec deriving (Show, Eq, Ord)
 
-data Mix pos = MixTotal | MixComponent pos deriving (Show, Eq, Ord)
 
-data ExtMix pos rec = ExtMix (Mix pos) rec deriving (Show, Eq, Ord)
+data Mix dir pos = MixTotal | MixComponent pos deriving (Show, Eq, Ord)
+
+data ExtMix dir pos rec = ExtMix (Mix dir pos) rec deriving (Show, Eq, Ord)
+
+type SinkMix = Mix Mix.Sink
+type SourceMix = Mix Mix.Source
+
+type ExtSinkMix = ExtMix Mix.Sink
+type ExtSourceMix = ExtMix Mix.Source
 
 
 data Record rec idx = Record rec idx deriving (Show, Eq)
@@ -37,8 +47,8 @@ after :: idx -> Record Delta idx
 after = Record After
 
 
-mixTotal :: idx -> Record (Mix pos) idx
+mixTotal :: (Mix.Direction dir) => idx -> Record (Mix dir pos) idx
 mixTotal = Record MixTotal
 
-mixComponent :: pos -> idx -> Record (Mix pos) idx
+mixComponent :: (Mix.Direction dir) => pos -> idx -> Record (Mix dir pos) idx
 mixComponent = Record . MixComponent

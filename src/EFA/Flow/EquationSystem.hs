@@ -3,6 +3,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Flow.EquationSystem where
 
+import qualified EFA.Flow.Topology.Index as Idx
+
 import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
@@ -19,7 +21,6 @@ import EFA.Equation.Arithmetic
 
 import EFA.Report.FormatValue (FormatValue)
 
-import qualified EFA.Utility.FixedLength as FixedLength
 import EFA.Utility ((>>!))
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
@@ -124,18 +125,13 @@ mixSumRules, mixFactorRules ::
 mixSumRules =
    System . tell . SysRecord.mixSumRules . unwrap
 mixFactorRules =
-   System . tell . SysRecord.mixLevelRules (FixedLength.repeat True) . unwrap
-
-
-data MixOrientation = None | Source | Sink
-   deriving (Eq, Ord, Show)
+   System . tell . SysRecord.mixLevelRules Nothing . unwrap
 
 mixLevelRules ::
    (Sys.Value mode v, Sum v, Record rec) =>
-   SysRecord.MixLevel rec Bool ->
-   Expr mode rec s v -> System mode s
-mixLevelRules levels =
-   System . tell . SysRecord.mixLevelRules levels . unwrap
+   Idx.Direction -> Expr mode rec s v -> System mode s
+mixLevelRules dir =
+   System . tell . SysRecord.mixLevelRules (Just dir) . unwrap
 
 
 

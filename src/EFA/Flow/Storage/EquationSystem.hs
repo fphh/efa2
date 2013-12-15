@@ -1,16 +1,16 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Flow.Storage.EquationSystem where
 
+import qualified EFA.Flow.Topology.Index as Idx
+
 import qualified EFA.Flow.Storage.Quantity as Quant
 import qualified EFA.Flow.EquationSystem as EqSys
-import EFA.Flow.EquationSystem (mixSumRules, mixFactorRules, mixLevelRules)
+import EFA.Flow.EquationSystem (mixSumRules, mixLevelRules)
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.SystemRecord (Record, Expr, MixLevel, Wrap(Wrap))
+import EFA.Equation.SystemRecord (Record, Expr, Wrap(Wrap))
 import EFA.Equation.Arithmetic (Sum, ZeroTestable, Constant)
-
-import qualified EFA.Utility.FixedLength as FixedLength
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
 
@@ -57,37 +57,24 @@ customOne ::
 customOne = One . Wrap . pure . Expr.constant
 
 
-sourceMix ::
+cumulativeMix ::
    (Verify.LocalVar mode a, Sum a, Record rec) =>
    Options mode rec s a ->
    Options mode rec s a
-sourceMix opts =
+cumulativeMix opts =
    opts {
-      optEqualFactorsOut = mixFactorRules,
+      optEqualFactorsOut = const mempty,
       optEqualFactorsIn = const mempty
    }
 
-sinkMix ::
+realMix ::
    (Verify.LocalVar mode a, Sum a, Record rec) =>
    Options mode rec s a ->
    Options mode rec s a
-sinkMix opts =
+realMix opts =
    opts {
-      optEqualFactorsOut = const mempty,
-      optEqualFactorsIn = mixFactorRules
-   }
-
-mix ::
-   (Verify.LocalVar mode a, Sum a, Record rec) =>
-   MixLevel rec EqSys.MixOrientation ->
-   Options mode rec s a ->
-   Options mode rec s a
-mix levels opts =
-   opts {
-      optEqualFactorsOut =
-         mixLevelRules $ FixedLength.map (EqSys.Source==) levels,
-      optEqualFactorsIn =
-         mixLevelRules $ FixedLength.map (EqSys.Sink==) levels
+      optEqualFactorsOut = mixLevelRules Idx.Out,
+      optEqualFactorsIn  = mixLevelRules Idx.In
    }
 
 

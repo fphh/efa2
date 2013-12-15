@@ -1,6 +1,7 @@
 module EFA.Report.Format where
 
 import qualified EFA.Equation.RecordIndex as RecIdx
+import qualified EFA.Equation.Mix as Mix
 import qualified EFA.Utility.FixedLength as FixedLength
 
 import qualified Data.NonEmpty as NonEmpty
@@ -409,17 +410,21 @@ instance Record rec => Record (RecIdx.ExtDelta rec) where
 
 
 class MixRecord len where
-   mixRecord :: Format output => RecIdx.Mix len -> output -> output
+   mixRecord ::
+      (Mix.Direction dir, Format output) =>
+      RecIdx.Mix dir len -> output -> output
 
 instance (FixedLength.C list) => MixRecord (FixedLength.WrapPos list) where
    mixRecord RecIdx.MixTotal = id
    mixRecord (RecIdx.MixComponent pos) =
       mixComponent (integer $ fromIntegral $ FixedLength.numFromPos pos)
 
-instance (MixRecord len) => Record (RecIdx.Mix len) where
+instance (Mix.Direction dir, MixRecord len) => Record (RecIdx.Mix dir len) where
    record = mixRecord
 
-instance (MixRecord len, Record rec) => Record (RecIdx.ExtMix len rec) where
+instance
+   (Mix.Direction dir, MixRecord len, Record rec) =>
+      Record (RecIdx.ExtMix dir len rec) where
    record (RecIdx.ExtMix m r) = mixRecord m . record r
 
 

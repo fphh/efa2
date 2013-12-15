@@ -39,7 +39,6 @@ import qualified EFA.Report.Format as Format
 
 import qualified EFA.Utility.FixedLength as FL
 import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.FixedLength ((!:))
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility.Async (concurrentlyMany_)
 
@@ -82,11 +81,11 @@ topology =
        (crossing, storage), (crossing, sink)]
 
 
-type Mix = Record.Mix FL.N1
+type SourceMix = Record.SourceMix FL.N1
 
-sourceMixSystem ::
-   EqSys.EquationSystem Verify.Ignore Mix Node s Double
-sourceMixSystem =
+sourceMixSystem0, sourceMixSystem1, sourceMixSystem2 ::
+   EqSys.EquationSystem Verify.Ignore SourceMix Node s Double
+sourceMixSystem0 =
    mconcat $
 
    (RecIdx.mixTotal XIdx.dTime .= 0.5) :
@@ -104,15 +103,55 @@ sourceMixSystem =
 
    []
 
-sourceMixSolution :: FlowTopo.Section Node (Mix (Result Double))
-sourceMixSolution =
-   EqSys.solveOpts (EqSys.sourceMix EqSys.optionsDefault)
-      (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
-      sourceMixSystem
+sourceMixSystem1 =
+   mconcat $
 
+   (RecIdx.mixTotal XIdx.dTime .= 0.3) :
+   (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 5) :
+   (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 0) :
+   (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
+   (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 7) :
+   (RecIdx.mixTotal (XIdx.eta source0 crossing) .= 0.3) :
+   (RecIdx.mixTotal (XIdx.eta source1 crossing) .= 0.4) :
+   (RecIdx.mixTotal (XIdx.eta storage crossing) .= 0.9) :
+   (RecIdx.mixTotal (XIdx.eta crossing sink) .= 0.7) :
+   []
+
+sourceMixSystem2 =
+   mconcat $
+
+   (RecIdx.mixTotal XIdx.dTime .= 0.6) :
+   (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 4) :
+   (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 0) :
+   (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
+   (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 4) :
+   (RecIdx.mixTotal (XIdx.eta source0 crossing) .= 0.7) :
+   (RecIdx.mixTotal (XIdx.eta source1 crossing) .= 0.2) :
+   (RecIdx.mixTotal (XIdx.eta crossing storage) .= 0.1) :
+   (RecIdx.mixTotal (XIdx.eta crossing sink) .= 0.6) :
+   (RecIdx.mixTotal (XIdx.x crossing storage) .= 0.5) :
+   []
+
+
+sourceMixSolution0 :: FlowTopo.Section Node (SourceMix (Result Double))
+sourceMixSolution0 =
+   EqSys.solveOpts
+      (EqSys.realMix EqSys.optionsDefault)
+      (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
+      sourceMixSystem0
+
+sourceMixSolution2 :: FlowTopo.Section Node (SourceMix (Result Double))
+sourceMixSolution2 =
+   EqSys.solveOpts
+      (EqSys.realMix EqSys.optionsDefault)
+      (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
+      sourceMixSystem2
+
+
+type SinkMix = Record.SinkMix FL.N1
 
 sinkMixSystem ::
-   EqSys.EquationSystem Verify.Ignore Mix Node s Double
+   EqSys.EquationSystem Verify.Ignore SinkMix Node s Double
 sinkMixSystem =
    mconcat $
 
@@ -130,26 +169,28 @@ sinkMixSystem =
    (RecIdx.mixTotal (XIdx.eta crossing sink) .= 0.8) :
    []
 
-sinkMixSolution :: FlowTopo.Section Node (Mix (Result Double))
+sinkMixSolution :: FlowTopo.Section Node (SinkMix (Result Double))
 sinkMixSolution =
-   EqSys.solveOpts (EqSys.sinkMix EqSys.optionsDefault)
+   EqSys.solveOpts
+      (EqSys.realMix EqSys.optionsDefault)
       (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
       sinkMixSystem
 
 
-cumulatedSolution :: FlowTopo.Section Node (Mix (Result Double))
+cumulatedSolution :: FlowTopo.Section Node (SourceMix (Result Double))
 cumulatedSolution =
    FlowTopoPlain.mapEdge (fmap StateFlow.flowResultFromCumResult) $
    FlowTopoPlain.checkedZipWith "cumulatedSolution"
       (liftA2 (liftA2 (~+)))
       (const $ const $ pure unknown)
       (liftA2 (liftA2 (liftA2 (liftA2 (~+)))))
-      (FlowTopoPlain.mapEdge (fmap StateFlow.cumFromFlow) sourceMixSolution)
-      (FlowTopoPlain.mapEdge (fmap StateFlow.cumFromFlow) sinkMixSolution)
+      (FlowTopoPlain.mapEdge (fmap StateFlow.cumFromFlow) sourceMixSolution0)
+      (FlowTopoPlain.mapEdge (fmap StateFlow.cumFromFlow) sourceMixSolution2)
 
 
 
-seqFlowGraph :: SeqFlow.Graph Node (Mix (Result a)) (Mix (Result v))
+
+seqFlowGraph :: SeqFlow.Graph Node (SourceMix (Result a)) (SourceMix (Result v))
 seqFlowGraph =
    let state0 =
           [dirEdge source0 crossing, dirEdge source1 crossing,
@@ -165,54 +206,30 @@ sec0, sec1, sec2 :: PartIdx.Section
 sec0 :~ sec1 :~ sec2 :~ _ = Stream.enumFrom $ PartIdx.section0
 
 seqSourceMixSystem ::
-   SeqEqSys.EquationSystem Verify.Ignore Mix Node s Double Double
+   SeqEqSys.EquationSystem Verify.Ignore SourceMix Node s Double Double
 seqSourceMixSystem =
    mconcat $
 
    (RecIdx.mixComponent FL.i0 (SeqIdx.stOutSum SeqIdx.initSection storage) SeqEqSys..= 0.1) :
    (RecIdx.mixComponent FL.i1 (SeqIdx.stOutSum SeqIdx.initSection storage) SeqEqSys..= 0.2) :
 
-   SeqEqSys.fromSectionSystem sec0 sourceMixSystem :
+   SeqEqSys.fromSectionSystem sec0 sourceMixSystem0 :
+   SeqEqSys.fromSectionSystem sec1 sourceMixSystem1 :
+   SeqEqSys.fromSectionSystem sec2 sourceMixSystem2 :
 
    (RecIdx.mixTotal (SeqIdx.stEnergy sec0 sec1 storage) SeqEqSys..= 0.2) :
-
-   (SeqEqSys.fromSectionSystem sec1 $ mconcat $
-      (RecIdx.mixTotal XIdx.dTime .= 0.3) :
-      (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 5) :
-      (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 0) :
-      (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
-      (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 7) :
-      (RecIdx.mixTotal (XIdx.eta source0 crossing) .= 0.3) :
-      (RecIdx.mixTotal (XIdx.eta source1 crossing) .= 0.4) :
-      (RecIdx.mixTotal (XIdx.eta storage crossing) .= 0.9) :
-      (RecIdx.mixTotal (XIdx.eta crossing sink) .= 0.7) :
-      []) :
-
-   (SeqEqSys.fromSectionSystem sec2 $ mconcat $
-      (RecIdx.mixTotal XIdx.dTime .= 0.6) :
-      (RecIdx.mixComponent FL.i0 (XIdx.power source0 crossing) .= 4) :
-      (RecIdx.mixComponent FL.i1 (XIdx.power source0 crossing) .= 0) :
-      (RecIdx.mixComponent FL.i0 (XIdx.power source1 crossing) .= 0) :
-      (RecIdx.mixComponent FL.i1 (XIdx.power source1 crossing) .= 4) :
-      (RecIdx.mixTotal (XIdx.eta source0 crossing) .= 0.7) :
-      (RecIdx.mixTotal (XIdx.eta source1 crossing) .= 0.2) :
-      (RecIdx.mixTotal (XIdx.eta crossing storage) .= 0.1) :
-      (RecIdx.mixTotal (XIdx.eta crossing sink) .= 0.6) :
-      (RecIdx.mixTotal (XIdx.x crossing storage) .= 0.5) :
-      []) :
 
    []
 
 seqSourceMixSolution ::
-   SeqFlow.Graph Node (Mix (Result Double)) (Mix (Result Double))
+   SeqFlow.Graph Node (SourceMix (Result Double)) (SourceMix (Result Double))
 seqSourceMixSolution =
    SeqEqSys.solveOpts
-      (SeqEqSys.sourceMix $
-       SeqEqSys.optionsBase SeqEqSys.equalStInOutSums StorageEqSys.classOne)
+      (SeqEqSys.optionsBase SeqEqSys.equalStInOutSums StorageEqSys.classOne)
       seqFlowGraph seqSourceMixSystem
 
 stateSourceMixSolution ::
-   StateFlow.Graph Node (Mix (Result Double)) (Mix (Result Double))
+   StateFlow.Graph Node (SourceMix (Result Double)) (SourceMix (Result Double))
 stateSourceMixSolution =
    StateEqSys.solve
       (StateFlow.graphFromCumResult $
@@ -220,32 +237,32 @@ stateSourceMixSolution =
       mempty
 
 seqCumulatedSolution ::
-   CumFlow.Graph Node (Mix (Result Double))
+   CumFlow.Graph Node (SourceMix (Result Double))
 seqCumulatedSolution =
    Graph.mapEdge CumFlow.flowResultFromCumResult $
    CumFlow.fromSequenceFlowRecordResult $
    SeqFlow.sequence seqSourceMixSolution
 
 
-type MultiMix = Record.ExtMix FL.N1 Mix
+type MultiMix = Record.ExtSourceMix FL.N1 SinkMix
 
-idxMixTotal :: RecIdx.Mix pos
+idxMixTotal :: RecIdx.Mix dir pos
 idxMixTotal = RecIdx.MixTotal
 
-idxMix0 :: RecIdx.Mix (FL.WrapPos (FL.GE1 list))
+idxMix0 :: RecIdx.Mix dir (FL.WrapPos (FL.GE1 list))
 idxMix0 = RecIdx.MixComponent FL.i0
 
-idxMix1 :: RecIdx.Mix (FL.WrapPos (FL.GE2 list))
+idxMix1 :: RecIdx.Mix dir (FL.WrapPos (FL.GE2 list))
 idxMix1 = RecIdx.MixComponent FL.i1
 
 idxMultiMix ::
-   RecIdx.Mix pos0 -> RecIdx.Mix pos1 ->
-   idx -> RecIdx.Record (RecIdx.ExtMix pos0 (RecIdx.Mix pos1)) idx
+   RecIdx.SourceMix pos0 -> RecIdx.SinkMix pos1 ->
+   idx -> RecIdx.Record (RecIdx.ExtSourceMix pos0 (RecIdx.SinkMix pos1)) idx
 idxMultiMix a b =
    RecIdx.Record (RecIdx.ExtMix a b)
 
 idxMultiMixTotal ::
-   idx -> RecIdx.Record (RecIdx.ExtMix pos0 (RecIdx.Mix pos1)) idx
+   idx -> RecIdx.Record (RecIdx.ExtSourceMix pos0 (RecIdx.SinkMix pos1)) idx
 idxMultiMixTotal = idxMultiMix idxMixTotal idxMixTotal
 
 multiMixSystem ::
@@ -275,8 +292,7 @@ multiMixSystem =
 multiMixSolution :: FlowTopo.Section Node (MultiMix (Result Double))
 multiMixSolution =
    EqSys.solveOpts
-      (EqSys.mix (EqSys.Source !: EqSys.Sink !: FL.end) $
-       EqSys.optionsDefault)
+      (EqSys.realMix EqSys.optionsDefault)
       (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
       multiMixSystem
 
@@ -284,19 +300,21 @@ multiMixSolution =
 main :: IO ()
 main = do
    mapM_ (putStrLn . Format.unUnicode) $
-      AssignMap.format $ FlowTopo.toAssignMap sourceMixSolution
+      AssignMap.format $ FlowTopo.toAssignMap multiMixSolution
 
    concurrentlyMany_ $
       (map
           (\(title, graph) ->
              Draw.xterm $ Draw.title title $
              Draw.flowSection Draw.optionsDefault graph) $
-          ("source mix", sourceMixSolution) :
-          ("sink mix", sinkMixSolution) :
-          ("added source and sink mix", cumulatedSolution) :
-          ("complete added source and sink mix",
+          ("source mix", sourceMixSolution0) :
+          ("added source mixes", cumulatedSolution) :
+          ("complete added source mixes",
            EqSys.solve cumulatedSolution mempty) :
           [])
+      ++
+      [Draw.xterm $ Draw.title "sink mix" $
+       Draw.flowSection Draw.optionsDefault sinkMixSolution]
       ++
       [Draw.xterm $ Draw.title "sequence flow mix" $
        Draw.seqFlowGraph Draw.optionsDefault seqSourceMixSolution]
@@ -310,5 +328,6 @@ main = do
       [Draw.xterm $ Draw.title "complete cumulated flow mix" $
        Draw.cumulatedFlow $ CumEqSys.solve seqCumulatedSolution mempty]
       ++
-      [Draw.xterm $ Draw.title "combined source and sink mix" $
+      [Draw.xterm $
+       Draw.title "combined source and sink mix - non-uniform eta caused by eps/eps problem" $
        Draw.flowSection Draw.optionsDefault multiMixSolution]

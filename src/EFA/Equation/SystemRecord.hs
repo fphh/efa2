@@ -3,8 +3,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Equation.SystemRecord where
 
+import qualified EFA.Flow.Topology.Index as Idx
+
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Mix as Mix
 import EFA.Equation.Result (Result)
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
@@ -24,7 +27,6 @@ import UniqueLogic.ST.TF.Expression ((=:=))
 import Control.Applicative (Applicative, pure, liftA2)
 
 import qualified Data.NonEmpty as NonEmpty
-import qualified Data.Empty as Empty
 import qualified Data.Foldable as Fold
 import qualified Data.Monoid.HT as MonoidHT
 import Data.Traversable (Traversable, sequenceA)
@@ -70,8 +72,7 @@ lift2 f (Wrap x) (Wrap y) = Wrap $ liftR2 f x y
 
 
 class
-   (Traversable rec, Applicative rec,
-    Record.IndexSet rec, FixedLength.C (MixLevel rec)) =>
+   (Traversable rec, Applicative rec, Record.IndexSet rec) =>
       Record rec where
    rules ::
       (Sys.Value mode a, Sum a) =>
@@ -81,9 +82,8 @@ class
       rec (Expr.T mode s a) -> System mode s
    mixLevelRules ::
       (Sys.Value mode a, Sum a) =>
-      MixLevel rec Bool ->
+      Maybe Idx.Direction ->
       rec (Expr.T mode s a) -> System mode s
-   type MixLevel rec :: * -> *
 
    equalR ::
       (Sys.Value mode a) =>
@@ -106,7 +106,6 @@ instance Record Record.Absolute where
    rules _ = mempty
    mixSumRules _ = mempty
    mixLevelRules _ _ = mempty
-   type MixLevel Record.Absolute = Empty.T
 
    equalR (Record.Absolute x) (Record.Absolute y) =
       System (x =:= y)
@@ -125,7 +124,6 @@ instance Record Record.Delta where
       Arith.ruleAdd (Record.before vars) (Record.delta vars) (Record.after vars)
    mixSumRules _ = mempty
    mixLevelRules _ _ = mempty
-   type MixLevel Record.Delta = Empty.T
 
    {-
    I omit equality on the delta part since it would be redundant.
@@ -160,10 +158,8 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
    mixSumRules (Record.ExtDelta vars) =
       foldMap mixSumRules vars
 
-   mixLevelRules levels (Record.ExtDelta vars) =
-      foldMap (mixLevelRules levels) vars
-
-   type MixLevel (Record.ExtDelta rec) = MixLevel rec
+   mixLevelRules dir (Record.ExtDelta vars) =
+      foldMap (mixLevelRules dir) vars
 
    {-
    I omit equality on the delta part since it would be redundant.
@@ -185,18 +181,29 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
          (liftR2 f (Record.extAfter  recX) (Record.extAfter  recY))
 
 
-instance (FixedLength.C f) => Record (Record.Mix f) where
+newtype
+   MatchMixDir f a dir =
+      MatchMixDir {getMatchMixDir :: Record.Mix dir f a -> Bool}
+
+matchMixDir ::
+   Mix.Direction dir =>
+   Maybe Idx.Direction -> Record.Mix dir f a -> Bool
+matchMixDir dir =
+   getMatchMixDir $
+   Mix.switch
+      (MatchMixDir $ \_ -> dir /= Just Idx.In)
+      (MatchMixDir $ \_ -> dir /= Just Idx.Out)
+
+instance (Mix.Direction dir, FixedLength.C f) => Record (Record.Mix dir f) where
 
    rules _ = mempty
 
    mixSumRules (Record.Mix s (NonEmpty.Cons p ps)) =
       System (s =:= Fold.foldl (~+) p (FixedLength.Wrap ps))
 
-   mixLevelRules (NonEmpty.Cons b Empty.Cons) (Record.Mix s ps) =
-      MonoidHT.when b $
+   mixLevelRules dir r@(Record.Mix s ps) =
+      MonoidHT.when (matchMixDir dir r) $
       foldMap (\p -> System (s =:= p)) (FixedLength.Wrap ps)
-
-   type MixLevel (Record.Mix f) = NonEmpty.T Empty.T
 
    equalR recX recY =
       foldMap System $ liftA2 (=:=) recX recY
@@ -208,7 +215,9 @@ instance (FixedLength.C f) => Record (Record.Mix f) where
    liftR2 f recX recY = liftA2 f recX recY
 
 
-instance (Record rec, FixedLength.C f) => Record (Record.ExtMix f rec) where
+instance
+   (Mix.Direction dir, Record rec, FixedLength.C f) =>
+      Record (Record.ExtMix dir f rec) where
 
    rules (Record.ExtMix m) = foldMap rules m
 
@@ -216,11 +225,9 @@ instance (Record rec, FixedLength.C f) => Record (Record.ExtMix f rec) where
       foldMap mixSumRules m <>
       foldMap mixSumRules (sequenceA m)
 
-   mixLevelRules (NonEmpty.Cons b bs) (Record.ExtMix m) =
-      foldMap (mixLevelRules bs) m <>
-      foldMap (mixLevelRules (NonEmpty.Cons b Empty.Cons)) (sequenceA m)
-
-   type MixLevel (Record.ExtMix f rec) = NonEmpty.T (MixLevel rec)
+   mixLevelRules dir (Record.ExtMix m) =
+      foldMap (mixLevelRules dir) m <>
+      foldMap (mixLevelRules dir) (sequenceA m)
 
    equalR (Record.ExtMix x) (Record.ExtMix y) =
       Fold.fold (liftA2 equalR x y)

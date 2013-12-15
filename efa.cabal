@@ -108,6 +108,7 @@ Library
     EFA.Equation.Stack
     EFA.Equation.Pair
     EFA.Equation.Verify
+    EFA.Equation.Mix
     EFA.Flow.Part.Map
     EFA.Flow.Part.Index
     EFA.Flow.Storage

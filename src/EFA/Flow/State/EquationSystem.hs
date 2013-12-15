@@ -211,8 +211,8 @@ optionsBase ::
    Options mode rec s a v
 optionsBase couple one =
    Options {
-      optTopology = TopoEqSys.optionsDefault,
-      optStorage = StorageEqSys.optionsBase one,
+      optTopology = TopoEqSys.cumulativeMix $ TopoEqSys.optionsDefault,
+      optStorage = StorageEqSys.cumulativeMix $ StorageEqSys.optionsBase one,
       optCoupling = SeqStateEqSys.optionsBase couple
    }
 

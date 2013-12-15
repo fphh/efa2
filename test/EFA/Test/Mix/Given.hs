@@ -70,27 +70,27 @@ topology =
        (crossing, storage), (crossing, sink)]
 
 
-type Mix = Record.Mix FL.N1
+type Mix = Record.SinkMix FL.N1
 
-type MultiMix = Record.ExtMix FL.N1 Mix
+type MultiMix = Record.ExtSourceMix FL.N1 Mix
 
-idxMixTotal :: RecIdx.Mix pos
+idxMixTotal :: RecIdx.Mix dir pos
 idxMixTotal = RecIdx.MixTotal
 
-idxMix0 :: RecIdx.Mix (FL.WrapPos (FL.GE1 list))
+idxMix0 :: RecIdx.Mix dir (FL.WrapPos (FL.GE1 list))
 idxMix0 = RecIdx.MixComponent FL.i0
 
-idxMix1 :: RecIdx.Mix (FL.WrapPos (FL.GE2 list))
+idxMix1 :: RecIdx.Mix dir (FL.WrapPos (FL.GE2 list))
 idxMix1 = RecIdx.MixComponent FL.i1
 
 idxMultiMix ::
-   RecIdx.Mix pos0 -> RecIdx.Mix pos1 ->
-   idx -> RecIdx.Record (RecIdx.ExtMix pos0 (RecIdx.Mix pos1)) idx
+   RecIdx.SourceMix pos0 -> RecIdx.SinkMix pos1 ->
+   idx -> RecIdx.Record (RecIdx.ExtSourceMix pos0 (RecIdx.SinkMix pos1)) idx
 idxMultiMix a b =
    RecIdx.Record (RecIdx.ExtMix a b)
 
 idxMultiMixTotal ::
-   idx -> RecIdx.Record (RecIdx.ExtMix pos0 (RecIdx.Mix pos1)) idx
+   idx -> RecIdx.Record (RecIdx.ExtSourceMix pos0 (RecIdx.SinkMix pos1)) idx
 idxMultiMixTotal = idxMultiMix idxMixTotal idxMixTotal
 
 multiMixSystem ::
@@ -125,8 +125,7 @@ multiMixOptions ::
    (Verify.LocalVar mode a, Arith.Sum a) =>
    EqSys.Options mode MultiMix s a
 multiMixOptions =
-   EqSys.mix (EqSys.Source !: EqSys.Sink !: FL.end) $
-   EqSys.optionsDefault
+   EqSys.realMix EqSys.optionsDefault
 
 multiMixSolution :: FlowTopo.Section Node (MultiMix (Result Double))
 multiMixSolution =
@@ -169,7 +168,9 @@ evar .= val  =
    evar EqSys..= Arith.fromRational val
 
 
-type MixRecIdx = RecIdx.ExtMix (FL.WrapPos FL.N2) (RecIdx.Mix (FL.WrapPos FL.N2))
+type MixRecIdx =
+        RecIdx.ExtSourceMix (FL.WrapPos FL.N2)
+           (RecIdx.SinkMix (FL.WrapPos FL.N2))
 
 type Tracked = Pair.T (Symbol.Term Term MixRecIdx Node) Rational
 
@@ -211,7 +212,7 @@ partialEquations =
 
 infixl 1 #
 
-(#) :: a -> (a,a) -> Mix a
+(#) :: a -> (a,a) -> Record.Mix dir FL.N1 a
 (#) total (x,y) = Record.Mix total $ x !: y !: FL.end
 
 
@@ -219,7 +220,7 @@ infix 0 %=
 
 (%=) ::
    (Arith.Constant x, Verify.LocalVar mode x, FlowTopo.Lookup idx) =>
-   idx Node -> Mix (Mix Rational) ->
+   idx Node -> Record.SourceMix FL.N1 (Record.SinkMix FL.N1 Rational) ->
    EqSys.EquationSystem mode MultiMix Node s x
 evar %= val  =
    evar EqSys.%= fmap Arith.fromRational (Record.ExtMix val)

@@ -7,8 +7,7 @@ module EFA.Flow.Topology.EquationSystem (
    solve, solveOpts, solveTracked, solveTrackedOpts,
 
    Options, optionsDefault,
-   sourceMix, sinkMix,
-   EqSys.MixOrientation(..), mix,
+   cumulativeMix, realMix,
    equalInOutSums, independentInOutSums,
    fromTopology,
 
@@ -32,6 +31,7 @@ module EFA.Flow.Topology.EquationSystem (
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Variable as Var
+import qualified EFA.Flow.Topology.Index as Idx
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import EFA.Flow.Topology.Quantity (lookup)
 
@@ -54,8 +54,6 @@ import EFA.Equation.Arithmetic
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
-
-import qualified EFA.Utility.FixedLength as FixedLength
 
 import qualified UniqueLogic.ST.TF.System as Sys
 
@@ -186,41 +184,26 @@ optionsDefault =
       optEqualEta = const mempty
    }
 
-sourceMix ::
-   (Verify.LocalVar mode v, Sum v, Record rec) =>
+cumulativeMix ::
+   (Verify.LocalVar mode v, Record rec) =>
    Options mode rec s v ->
    Options mode rec s v
-sourceMix opts =
-   opts {
-      optEqualFactorsOut = mixFactorRules,
-      optEqualFactorsIn = const mempty,
-      optEqualEta = mixFactorRules
-   }
-
-sinkMix ::
-   (Verify.LocalVar mode v, Sum v, Record rec) =>
-   Options mode rec s v ->
-   Options mode rec s v
-sinkMix opts =
+cumulativeMix opts =
    opts {
       optEqualFactorsOut = const mempty,
-      optEqualFactorsIn = mixFactorRules,
-      optEqualEta = mixFactorRules
+      optEqualFactorsIn = const mempty,
+      optEqualEta = const mempty
    }
 
-mix ::
+realMix ::
    (Verify.LocalVar mode v, Sum v, Record rec) =>
-   SysRecord.MixLevel rec EqSys.MixOrientation ->
    Options mode rec s v ->
    Options mode rec s v
-mix levels opts =
+realMix opts =
    opts {
-      optEqualFactorsOut =
-         mixLevelRules $ FixedLength.map (EqSys.Source==) levels,
-      optEqualFactorsIn =
-         mixLevelRules $ FixedLength.map (EqSys.Sink==) levels,
-      optEqualEta =
-         mixLevelRules $ FixedLength.map (EqSys.None/=) levels
+      optEqualFactorsOut = mixLevelRules Idx.Out,
+      optEqualFactorsIn  = mixLevelRules Idx.In,
+      optEqualEta = mixFactorRules
    }
 
 

@@ -7,8 +7,6 @@ module EFA.Flow.Sequence.EquationSystem (
    solve, solveOpts, solveTracked,
 
    Options, optionsDefault, optionsBase,
-   sourceMix, sinkMix,
-   EqSys.MixOrientation(..), mix,
    equalInOutSums, independentInOutSums,
    SeqStateEqSys.CoupleSums,
    SeqStateEqSys.integrateStInOutSums, SeqStateEqSys.equalStInOutSums,
@@ -206,7 +204,7 @@ data Options mode rec s a v =
 
 optionsDefault ::
    (Verify.LocalVar mode a, Constant a, ZeroTestable a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
+    Verify.LocalVar mode v, Sum v, Integrate v,
     Record rec) =>
    Options mode rec s a v
 optionsDefault =
@@ -214,53 +212,16 @@ optionsDefault =
 
 optionsBase ::
    (Verify.LocalVar mode a, Sum a,
-    Verify.LocalVar mode v,
+    Verify.LocalVar mode v, Sum v,
     Record rec) =>
    SeqStateEqSys.CoupleSums mode rec s a v ->
    StorageEqSys.One mode rec s a ->
    Options mode rec s a v
 optionsBase couple one =
    Options {
-      optTopology = TopoEqSys.optionsDefault,
-      optStorage = StorageEqSys.optionsBase one,
+      optTopology = TopoEqSys.realMix $ TopoEqSys.optionsDefault,
+      optStorage = StorageEqSys.realMix $ StorageEqSys.optionsBase one,
       optCoupling = SeqStateEqSys.optionsBase couple
-   }
-
-sourceMix ::
-   (Verify.LocalVar mode a, Sum a,
-    Verify.LocalVar mode v, Sum v,
-    Record rec) =>
-   Options mode rec s a v ->
-   Options mode rec s a v
-sourceMix opts =
-   opts {
-      optTopology = TopoEqSys.sourceMix $ optTopology opts,
-      optStorage = StorageEqSys.sourceMix $ optStorage opts
-   }
-
-sinkMix ::
-   (Verify.LocalVar mode a, Sum a,
-    Verify.LocalVar mode v, Sum v,
-    Record rec) =>
-   Options mode rec s a v ->
-   Options mode rec s a v
-sinkMix opts =
-   opts {
-      optTopology = TopoEqSys.sinkMix $ optTopology opts,
-      optStorage = StorageEqSys.sinkMix $ optStorage opts
-   }
-
-mix ::
-   (Verify.LocalVar mode a, Sum a,
-    Verify.LocalVar mode v, Sum v,
-    Record rec) =>
-   SysRecord.MixLevel rec EqSys.MixOrientation ->
-   Options mode rec s a v ->
-   Options mode rec s a v
-mix levels opts =
-   opts {
-      optTopology = TopoEqSys.mix levels $ optTopology opts,
-      optStorage = StorageEqSys.mix levels $ optStorage opts
    }
 
 
