@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 module Main where
 
 import EFA.Application.Utility
@@ -22,7 +23,6 @@ import qualified EFA.Flow.Topology.Index as XIdx
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Flow.Draw as Draw
-import EFA.Flow.Topology.EquationSystem ((.=))
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
@@ -31,6 +31,7 @@ import qualified EFA.Graph as Graph
 import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
+import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
 import EFA.Equation.Unknown (unknown)
 import EFA.Equation.Arithmetic ((~+))
@@ -79,6 +80,17 @@ topology =
    topologyFromEdges
       [(source0, crossing), (source1, crossing),
        (crossing, storage), (crossing, sink)]
+
+
+infix 0 .=
+
+(.=) ::
+   (Arith.Constant x, Verify.LocalVar mode x, FlowTopo.Lookup idx,
+    EqSys.Record rec, Record.ToIndex rec ~ recIdx) =>
+   RecIdx.Record recIdx (idx Node) -> Rational ->
+   EqSys.EquationSystem mode rec Node s x
+evar .= val  =
+   evar EqSys..= Arith.fromRational val
 
 
 type SourceMix = Record.SourceMix FL.N1
@@ -266,7 +278,8 @@ idxMultiMixTotal ::
 idxMultiMixTotal = idxMultiMix idxMixTotal idxMixTotal
 
 multiMixSystem ::
-   EqSys.EquationSystem Verify.Ignore MultiMix Node s Double
+   (Arith.Constant a) =>
+   EqSys.EquationSystem Verify.Ignore MultiMix Node s a
 multiMixSystem =
    mconcat $
 
@@ -289,8 +302,16 @@ multiMixSystem =
    (idxMultiMixTotal (XIdx.eta crossing sink) .= 0.8) :
    []
 
+
 multiMixSolution :: FlowTopo.Section Node (MultiMix (Result Double))
 multiMixSolution =
+   EqSys.solveOpts
+      (EqSys.realMix EqSys.optionsDefault)
+      (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
+      multiMixSystem
+
+multiMixSolutionRatio :: FlowTopo.Section Node (MultiMix (Result Rational))
+multiMixSolutionRatio =
    EqSys.solveOpts
       (EqSys.realMix EqSys.optionsDefault)
       (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
@@ -301,6 +322,9 @@ main :: IO ()
 main = do
    mapM_ (putStrLn . Format.unUnicode) $
       AssignMap.format $ FlowTopo.toAssignMap multiMixSolution
+
+   mapM_ (putStrLn . Format.unUnicode) $
+      AssignMap.format $ FlowTopo.toAssignMap multiMixSolutionRatio
 
    concurrentlyMany_ $
       (map
@@ -331,3 +355,7 @@ main = do
       [Draw.xterm $
        Draw.title "combined source and sink mix - non-uniform eta caused by eps/eps problem" $
        Draw.flowSection Draw.optionsDefault multiMixSolution]
+      ++
+      [Draw.xterm $
+       Draw.title "combined source and sink mix - no eps/eps problem" $
+       Draw.flowSection Draw.optionsDefault multiMixSolutionRatio]
