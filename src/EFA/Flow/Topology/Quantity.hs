@@ -15,6 +15,7 @@ module EFA.Flow.Topology.Quantity (
 
    mapSectionWithVar,
    mapTopologyWithVar,
+   mapSumsWithVar,
    mapFlowWithVar,
 
    FlowTopo.liftEdgeFlow,
@@ -248,13 +249,16 @@ mapTopologyWithVar ::
    Topology node v0 ->
    Topology node v1
 mapTopologyWithVar f topo =
-   Graph.mapNodeWithKey
-      (\n (Sums {sumIn = sin, sumOut = sout}) ->
-         Sums {
-            sumIn = flip fmap sin $ f (Var.Sum $ Idx.Sum Idx.In n),
-            sumOut = flip fmap sout $ f (Var.Sum $ Idx.Sum Idx.Out n)
-         }) $
+   Graph.mapNodeWithKey (mapSumsWithVar f) $
    Graph.mapEdgeWithKey (FlowTopo.liftEdgeFlow $ mapFlowWithVar f) topo
+
+mapSumsWithVar ::
+   (Var.Signal node -> v0 -> v1) -> node -> Sums v0 -> Sums v1
+mapSumsWithVar f n (Sums {sumIn = sin, sumOut = sout}) =
+   Sums {
+      sumIn = flip fmap sin $ f (Var.Sum $ Idx.Sum Idx.In n),
+      sumOut = flip fmap sout $ f (Var.Sum $ Idx.Sum Idx.Out n)
+   }
 
 mapFlowWithVar ::
    (Var.Signal node -> v0 -> v1) ->
