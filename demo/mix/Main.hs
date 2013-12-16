@@ -45,7 +45,7 @@ import EFA.Utility.Async (concurrentlyMany_)
 import Control.Applicative (liftA2, pure)
 
 import Data.Monoid (Monoid, mconcat, mempty)
-import Data.Ratio ((%))
+
 
 data Node = Source0 | Source1 | Crossing | Storage | Sink
    deriving (Show, Eq, Ord, Enum)
@@ -289,35 +289,6 @@ multiMixSystem =
    (idxMultiMixTotal (XIdx.eta crossing sink) .= 0.8) :
    []
 
-
-
-multiMixSystemRatio ::
-   EqSys.EquationSystem Verify.Ignore MultiMix Node s Rational
-multiMixSystemRatio =
-   mconcat $
-
-   (idxMultiMixTotal XIdx.dTime .= 1 % 2) :
-
-   (idxMultiMixTotal (XIdx.power source0 crossing) .= 4) :
-   (idxMultiMix idxMix1 idxMixTotal (XIdx.power source0 crossing) .= 0) :
-
-   (idxMultiMixTotal (XIdx.power source1 crossing) .= 3) :
-   (idxMultiMix idxMix0 idxMixTotal (XIdx.power source1 crossing) .= 0) :
-
-   (idxMultiMixTotal (XIdx.power sink crossing) .= 4 % 10) :
-   (idxMultiMix idxMixTotal idxMix1 (XIdx.power sink crossing) .= 0) :
-
-   (idxMultiMix idxMixTotal idxMix0 (XIdx.power storage crossing) .= 0) :
-
-   (idxMultiMixTotal (XIdx.eta source0 crossing) .= 1 % 4) :
-   (idxMultiMixTotal (XIdx.eta source1 crossing) .= 1 % 2) :
-   (idxMultiMixTotal (XIdx.eta crossing storage) .= 3 % 4) :
-   (idxMultiMixTotal (XIdx.eta crossing sink) .= 4 % 5) :
-
-   []
-
-
-
 multiMixSolution :: FlowTopo.Section Node (MultiMix (Result Double))
 multiMixSolution =
    EqSys.solveOpts
@@ -325,21 +296,11 @@ multiMixSolution =
       (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
       multiMixSystem
 
-multiMixSolutionRatio :: FlowTopo.Section Node (MultiMix (Result Rational))
-multiMixSolutionRatio =
-   EqSys.solveOpts
-      (EqSys.realMix EqSys.optionsDefault)
-      (FlowTopo.sectionFromPlain $ Topo.flowFromPlain topology)
-      multiMixSystemRatio
-
 
 main :: IO ()
 main = do
    mapM_ (putStrLn . Format.unUnicode) $
       AssignMap.format $ FlowTopo.toAssignMap multiMixSolution
-
-   mapM_ (putStrLn . Format.unUnicode) $
-      AssignMap.format $ FlowTopo.toAssignMap multiMixSolutionRatio
 
    concurrentlyMany_ $
       (map
@@ -365,12 +326,8 @@ main = do
        Draw.cumulatedFlow seqCumulatedSolution]
       ++
       [Draw.xterm $ Draw.title "complete cumulated flow mix" $
-       Draw.cumulatedFlow $ CumEqSys.solveOpts (CumEqSys.independentInOutSums CumEqSys.optionsDefault) seqCumulatedSolution mempty]
+       Draw.cumulatedFlow $ CumEqSys.solve seqCumulatedSolution mempty]
       ++
       [Draw.xterm $
        Draw.title "combined source and sink mix - non-uniform eta caused by eps/eps problem" $
        Draw.flowSection Draw.optionsDefault multiMixSolution]
-      ++
-      [Draw.xterm $
-       Draw.title "combined source and sink mix - no visible eps/eps problem" $
-       Draw.flowSection Draw.optionsDefault multiMixSolutionRatio]
