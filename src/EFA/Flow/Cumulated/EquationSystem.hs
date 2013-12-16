@@ -60,6 +60,7 @@ import Control.Monad.Trans.Reader (runReaderT)
 import Control.Monad.Trans.Writer (runWriterT)
 
 import Control.Monad.ST (ST, runST)
+import Control.Monad (guard)
 
 import Control.Applicative (Applicative, pure, liftA2)
 
@@ -181,7 +182,7 @@ fromTopology ::
 fromTopology opts topo =
    foldMap fromEdge (Graph.edgeLabels topo)
    <>
-   foldMap (fromSums opts) (Graph.nodeLabels topo)
+   fold (Map.mapWithKey (fromSums opts) $ Graph.nodeLabels topo)
    <>
    (EqSys.withLocalVar $ \totalTime ->
       (foldMap (totalTime =&=) $
@@ -224,14 +225,16 @@ fromEdge
 
 
 fromSums ::
-   (Verify.LocalVar mode a, Sum a, Record rec) =>
+   (Node.C node, Verify.LocalVar mode a, Sum a, Record rec) =>
    Options mode rec s a ->
+   node ->
    CumFlow.Sums (SysRecord.Expr mode rec s a) ->
    EqSys.System mode s
-fromSums opts s =
-   let sumIn  = CumFlow.sumIn s
-       sumOut = CumFlow.sumOut s
-   in  fold $ liftA2 (optInOutSums opts) sumIn sumOut
+fromSums opts node s =
+   fold $
+      guard (not $ Node.isStorage $ Node.typ node)
+      >>
+      liftA2 (optInOutSums opts) (CumFlow.sumIn s) (CumFlow.sumOut s)
 
 
 withExpressionGraph ::
