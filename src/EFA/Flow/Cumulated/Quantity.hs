@@ -5,7 +5,10 @@ module EFA.Flow.Cumulated.Quantity (
 
    mapGraph,
    traverseGraph,
+
    mapGraphWithVar,
+   mapSumsWithVar,
+   mapFlowWithVar,
 
    fromSequenceFlow,
    fromSequenceFlowResult,
@@ -280,12 +283,19 @@ mapGraphWithVar ::
    Graph node a0 ->
    Graph node a1
 mapGraphWithVar f =
-   Graph.mapNodeWithKey
-      (\n -> liftA2 f (sumsVars <*> pure n))
+   Graph.mapNodeWithKey (mapSumsWithVar f)
    .
-   Graph.mapEdgeWithKey
-      (\e -> liftA2 f (flowVars <*> pure e))
+   Graph.mapEdgeWithKey (mapFlowWithVar f)
 
+mapSumsWithVar ::
+   (CumVar.Any node -> a0 -> a1) ->
+   node -> Sums a0 -> Sums a1
+mapSumsWithVar f n = liftA2 f (sumsVars <*> pure n)
+
+mapFlowWithVar ::
+   (CumVar.Any node -> a0 -> a1) ->
+   Graph.DirEdge node -> Flow a0 -> Flow a1
+mapFlowWithVar f e = liftA2 f (flowVars <*> pure e)
 
 sumsVars :: Sums (node -> CumVar.Any node)
 sumsVars =
