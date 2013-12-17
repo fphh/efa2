@@ -4,14 +4,14 @@
 
 module EFA.Test.Mix.Given where
 
-import EFA.Application.Utility (topologyFromEdges)
+import EFA.Example.Topology.FourLeaves
+          (Node, source0, source1, crossing, storage, sink, topology)
 
 import qualified EFA.Flow.Topology.EquationSystem as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Symbolic as Symbol
 import qualified EFA.Flow.Topology.Index as XIdx
 
-import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Equation.RecordIndex as RecIdx
@@ -34,40 +34,6 @@ import Data.Tuple.HT (mapFst)
 import Data.Monoid (Monoid, mconcat)
 import Data.Foldable (foldMap)
 
-
-
-data Node = Source0 | Source1 | Crossing | Storage | Sink
-   deriving (Show, Eq, Ord, Enum)
-
-source0, source1, crossing, storage, sink :: Node
-source0  = Source0
-source1  = Source1
-storage  = Storage
-sink     = Sink
-crossing = Crossing
-
-instance Node.C Node where
-   display Source0  = Format.literal "Quelle0"
-   display Source1  = Format.literal "Quelle1"
-   display Storage  = Format.literal "Speicher"
-   display Sink     = Format.literal "Senke"
-   display Crossing = Format.literal "Kreuzung"
-
-   subscript = Format.integer . fromIntegral . fromEnum
-   dotId = Node.dotIdDefault
-
-   typ Source0  = Node.Source
-   typ Source1  = Node.Source
-   typ Storage  = Node.Storage
-   typ Sink     = Node.Sink
-   typ Crossing = Node.Crossing
-
-
-topology :: Topo.Topology Node
-topology =
-   topologyFromEdges
-      [(source0, crossing), (source1, crossing),
-       (crossing, storage), (crossing, sink)]
 
 
 type Mix = Record.SinkMix FL.N1

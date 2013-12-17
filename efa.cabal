@@ -171,6 +171,7 @@ Library
     EFA.Example.Topology.Tripod
     EFA.Example.Topology.Tripod.Given
     EFA.Example.Topology.Tripod.State
+    EFA.Example.Topology.FourLeaves
   Other-Modules:
     EFA.Equation.SystemRecord
     EFA.Flow.EquationSystem
