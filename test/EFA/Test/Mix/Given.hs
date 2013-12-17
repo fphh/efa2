@@ -6,6 +6,9 @@ module EFA.Test.Mix.Given where
 
 import EFA.Example.Topology.FourLeaves
           (Node, source0, source1, crossing, storage, sink, topology)
+import EFA.Example.Record.SourceSinkMix
+          (MultiMix, idxMixTotal, idxMix0, idxMix1,
+           idxMultiMix, idxMultiMixTotal)
 
 import qualified EFA.Flow.Topology.EquationSystem as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -34,30 +37,6 @@ import Data.Tuple.HT (mapFst)
 import Data.Monoid (Monoid, mconcat)
 import Data.Foldable (foldMap)
 
-
-
-type Mix = Record.SinkMix FL.N1
-
-type MultiMix = Record.ExtSourceMix FL.N1 Mix
-
-idxMixTotal :: RecIdx.Mix dir pos
-idxMixTotal = RecIdx.MixTotal
-
-idxMix0 :: RecIdx.Mix dir (FL.WrapPos (FL.GE1 list))
-idxMix0 = RecIdx.MixComponent FL.i0
-
-idxMix1 :: RecIdx.Mix dir (FL.WrapPos (FL.GE2 list))
-idxMix1 = RecIdx.MixComponent FL.i1
-
-idxMultiMix ::
-   RecIdx.SourceMix pos0 -> RecIdx.SinkMix pos1 ->
-   idx -> RecIdx.Record (RecIdx.ExtSourceMix pos0 (RecIdx.SinkMix pos1)) idx
-idxMultiMix a b =
-   RecIdx.Record (RecIdx.ExtMix a b)
-
-idxMultiMixTotal ::
-   idx -> RecIdx.Record (RecIdx.ExtSourceMix pos0 (RecIdx.SinkMix pos1)) idx
-idxMultiMixTotal = idxMultiMix idxMixTotal idxMixTotal
 
 multiMixOptions ::
    (Verify.LocalVar mode a, Arith.Sum a) =>
