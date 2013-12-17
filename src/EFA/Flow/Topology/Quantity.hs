@@ -4,14 +4,14 @@ module EFA.Flow.Topology.Quantity (
    Section, DirSection, FlowTopo.label, FlowTopo.topology,
    Topology, DirTopology, Sums(..), Flow(..),
 
-   mapSection,
-   mapTopology,
+   mapSection, mapDirSection,
+   mapTopology, mapDirTopology,
 
    checkedZipWithSection,
    checkedZipWithTopology,
 
-   traverseSection,
-   traverseTopology,
+   traverseSection, traverseDirSection,
+   traverseTopology, traverseDirTopology,
 
    mapSectionWithVar,
    mapTopologyWithVar,
@@ -38,7 +38,8 @@ module EFA.Flow.Topology.Quantity (
 
    Lookup, lookup,
 
-   fold, foldMap,
+   fold, foldDir,
+   foldMap, foldMapDir,
    ) where
 
 import qualified EFA.Flow.Topology.Variable as Var
@@ -96,12 +97,28 @@ mapSection f gr =
       topology = mapTopology f $ topology gr
    }
 
+mapDirSection ::
+   (v0 -> v1) ->
+   DirSection node v0 -> DirSection node v1
+mapDirSection f gr =
+   FlowTopo.Section {
+      label = f $ label gr,
+      topology = mapDirTopology f $ topology gr
+   }
+
 mapTopology ::
    (v0 -> v1) ->
    Topology node v0 -> Topology node v1
 mapTopology f gr =
    Graph.mapNode (mapSums f) $
    Graph.mapEdge (fmap $ fmap f) gr
+
+mapDirTopology ::
+   (v0 -> v1) ->
+   DirTopology node v0 -> DirTopology node v1
+mapDirTopology f gr =
+   Graph.mapNode (mapSums f) $
+   Graph.mapEdge (fmap f) gr
 
 
 checkedZipWithSection ::
@@ -139,12 +156,26 @@ traverseSection ::
 traverseSection f (FlowTopo.Section lab topo) =
    liftA2 FlowTopo.Section (f lab) (traverseTopology f topo)
 
+traverseDirSection ::
+   (Applicative f, Ord node) =>
+   (v0 -> f v1) ->
+   DirSection node v0 -> f (DirSection node v1)
+traverseDirSection f (FlowTopo.Section lab topo) =
+   liftA2 FlowTopo.Section (f lab) (traverseDirTopology f topo)
+
 traverseTopology ::
    (Applicative f, Ord node) =>
    (v0 -> f v1) ->
    Topology node v0 -> f (Topology node v1)
 traverseTopology f =
    Graph.traverse (traverseSums f) (traverse $ traverse f)
+
+traverseDirTopology ::
+   (Applicative f, Ord node) =>
+   (v0 -> f v1) ->
+   DirTopology node v0 -> f (DirTopology node v1)
+traverseDirTopology f =
+   Graph.traverse (traverseSums f) (traverse f)
 
 
 toAssignMap ::
@@ -395,6 +426,18 @@ sumsFromDir x mdir =
       Nothing       -> Sums {sumIn = Nothing, sumOut = Nothing}
       Just Topo.In  -> Sums {sumIn = Just x,  sumOut = Nothing}
       Just Topo.Out -> Sums {sumIn = Nothing, sumOut = Just x}
+
+foldMapDir ::
+   (Node.C node, Monoid w) =>
+   (v -> w) -> DirSection node v -> w
+foldMapDir fv =
+   foldDir . mapDirSection fv
+
+foldDir ::
+   (Node.C node, Monoid w) =>
+   DirSection node w -> w
+foldDir = MW.execWriter . traverseDirSection MW.tell
+
 
 foldMap ::
    (Node.C node, Monoid w) =>
