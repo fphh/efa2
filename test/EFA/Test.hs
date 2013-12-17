@@ -21,6 +21,6 @@ main = do
    void $ Stack.runTests
    void $ Util.runTests
    void $ Seq.runTests
-   Mix.runTests
    EqSys.runTests
+   Mix.runTests
    Tree.runTests
