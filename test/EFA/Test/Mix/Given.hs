@@ -93,43 +93,11 @@ idxMultiMixTotal ::
    idx -> RecIdx.Record (RecIdx.ExtSourceMix pos0 (RecIdx.SinkMix pos1)) idx
 idxMultiMixTotal = idxMultiMix idxMixTotal idxMixTotal
 
-multiMixSystem ::
-   EqSys.EquationSystem Verify.Ignore MultiMix Node s Double
-multiMixSystem =
-   mconcat $
-
-   (idxMultiMixTotal XIdx.dTime .= 0.5) :
-
-   (idxMultiMixTotal (XIdx.power source0 crossing) .= 4) :
-   (idxMultiMix idxMix1 idxMix0 (XIdx.power source0 crossing) .= 0) :
-   (idxMultiMix idxMix1 idxMix1 (XIdx.power source0 crossing) .= 0) :
-
-   (idxMultiMixTotal (XIdx.power source1 crossing) .= 3) :
-   (idxMultiMix idxMix0 idxMix0 (XIdx.power source1 crossing) .= 0) :
-   (idxMultiMix idxMix0 idxMix1 (XIdx.power source1 crossing) .= 0) :
-
-   (idxMultiMixTotal (XIdx.power sink crossing) .= 0.4) :
-   (idxMultiMix idxMix0 idxMix1 (XIdx.power sink crossing) .= 0) :
-   (idxMultiMix idxMix1 idxMix1 (XIdx.power sink crossing) .= 0) :
-
-   (idxMultiMix idxMix0 idxMix0 (XIdx.power storage crossing) .= 0) :
-   (idxMultiMix idxMix1 idxMix0 (XIdx.power storage crossing) .= 0) :
-
-   (idxMultiMixTotal (XIdx.eta source0 crossing) .= 0.25) :
-   (idxMultiMixTotal (XIdx.eta source1 crossing) .= 0.5) :
-   (idxMultiMixTotal (XIdx.eta crossing storage) .= 0.75) :
-   (idxMultiMixTotal (XIdx.eta crossing sink) .= 0.8) :
-   []
-
 multiMixOptions ::
    (Verify.LocalVar mode a, Arith.Sum a) =>
    EqSys.Options mode MultiMix s a
 multiMixOptions =
    EqSys.realMix EqSys.optionsDefault
-
-multiMixSolution :: FlowTopo.Section Node (MultiMix (Result Double))
-multiMixSolution =
-   EqSys.solveOpts multiMixOptions flowGraph multiMixSystem
 
 
 type ResultGraph a = FlowTopo.Section Node (MultiMix (Result a))
