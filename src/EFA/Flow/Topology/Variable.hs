@@ -20,6 +20,7 @@ data Signal node =
    | Power (Idx.Power node)
    | Eta (Idx.Eta node)
    | DTime (Idx.DTime node)
+   | One (Idx.One node)
    | X (Idx.X node)
    | Sum (Idx.Sum node)
      deriving (Show, Eq, Ord)
@@ -34,6 +35,7 @@ instance Index Idx.Energy where index = Energy
 instance Index Idx.Power  where index = Power
 instance Index Idx.Eta    where index = Eta
 instance Index Idx.DTime  where index = DTime
+instance Index Idx.One    where index = One
 instance Index Idx.X      where index = X
 instance Index Idx.Sum    where index = Sum
 
@@ -46,6 +48,7 @@ ident var =
       Eta _idx -> Format.eta
       X _idx -> Format.xfactor
       DTime _idx -> Format.dtime
+      One _idx -> Format.integer 1
       Sum _idx -> Format.signalSum
 
 instance FlowIdx.Identifier Signal where
@@ -62,6 +65,7 @@ formatSignalValue var s =
       Eta idx -> formatSignalIndex idx s
       X idx -> formatSignalIndex idx s
       DTime idx -> formatSignalIndex idx s
+      One idx -> formatSignalIndex idx s
       Sum idx -> formatSignalIndex idx s
 
 
@@ -77,6 +81,7 @@ instance (Node.C node) => FormatValue (Signal node) where
          Eta idx -> formatValue idx
          X idx -> formatValue idx
          DTime idx -> formatValue idx
+         One idx -> formatValue idx
          Sum idx -> formatValue idx
 
 
@@ -100,6 +105,9 @@ instance FormatIndex Idx.X where
    formatIndex = formatValue
 
 instance FormatIndex Idx.DTime where
+   formatIndex = formatValue
+
+instance FormatIndex Idx.One where
    formatIndex = formatValue
 
 instance FormatIndex Idx.Sum where

@@ -34,6 +34,9 @@ data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 -- | Delta time variables
 data DTime node = DTime deriving (Show, Ord, Eq)
 
+-- | Sum of split factor signals
+data One node = One deriving (Show, Ord, Eq)
+
 -- | Index for Measurement Position
 data Position node = Position node node deriving (Show, Read, Eq, Ord)
 

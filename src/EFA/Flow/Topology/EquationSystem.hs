@@ -227,8 +227,10 @@ fromTopology ::
    Options mode rec s v ->
    FlowTopo.DirSection node (Expr mode rec s v) ->
    EqSys.System mode s
-fromTopology opts (FlowTopoPlain.Section dtime topo) =
+fromTopology opts gr@(FlowTopoPlain.Section (FlowTopo.Label dtime one) topo) =
    mixFactorRules dtime
+   <>
+   FlowTopo.foldMapDir (\signal -> one =&= constOne signal) gr
    <>
    foldMap (fromEdge opts dtime) (Graph.edgeLabels topo)
    <>
@@ -237,11 +239,11 @@ fromTopology opts (FlowTopoPlain.Section dtime topo) =
    foldMap
       (\(ins,ss,outs) ->
          (flip foldMap (FlowTopo.sumIn ss) $ \s ->
-            splitFactors dtime s
+            splitFactors one s
                FlowTopo.flowEnergyIn FlowTopo.flowXIn $ Map.elems ins)
          <>
          (flip foldMap (FlowTopo.sumOut ss) $ \s ->
-            splitFactors dtime s
+            splitFactors one s
                FlowTopo.flowEnergyOut FlowTopo.flowXOut $ Map.elems outs))
       (Graph.graphMap topo)
 
@@ -289,8 +291,8 @@ splitFactors ::
    (flow rx -> rx) ->
    [flow rx] ->
    EqSys.System mode s
-splitFactors dtime varsum energy xfactor =
-   foldMap (EqSys.splitFactors varsum energy (constOne dtime) xfactor)
+splitFactors one varsum energy xfactor =
+   foldMap (EqSys.splitFactors varsum energy one xfactor)
    .
    NonEmpty.fetch
 

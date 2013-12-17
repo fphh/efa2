@@ -51,7 +51,7 @@ import qualified EFA.Flow.Storage.Quantity as StorageQuant
 import qualified EFA.Flow.Storage.Variable as StorageVar
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Storage as Storage
-import EFA.Flow.Topology.Quantity (Topology, Sums(..), Flow(..))
+import EFA.Flow.Topology.Quantity (Topology, Label, Sums(..), Flow(..))
 import EFA.Flow.SequenceState.Variable ((<#>))
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
@@ -90,12 +90,13 @@ type
 
 type
    Sequence node v =
-      SeqFlow.Sequence node Graph.EitherEdge v (Sums v) (Maybe (Flow v))
+      SeqFlow.Sequence node Graph.EitherEdge
+         (Label v) (Sums v) (Maybe (Flow v))
 
 type
    Graph node a v =
       SeqFlow.Graph node Graph.EitherEdge
-         v (Sums v) a a (Maybe (Flow v)) (Carry a)
+         (Label v) (Sums v) a a (Maybe (Flow v)) (Carry a)
 
 data Carry a =
    Carry {

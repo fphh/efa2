@@ -193,7 +193,7 @@ cumulatedSolution :: FlowTopo.Section Node (SourceMix (Result Double))
 cumulatedSolution =
    FlowTopoPlain.mapEdge (fmap StateFlow.flowResultFromCumResult) $
    FlowTopoPlain.checkedZipWith "cumulatedSolution"
-      (liftA2 (liftA2 (~+)))
+      (liftA2 (liftA2 (liftA2 (~+))))
       (const $ const $ pure unknown)
       (liftA2 (liftA2 (liftA2 (liftA2 (~+)))))
       (FlowTopoPlain.mapEdge (fmap StateFlow.cumFromFlow) sourceMixSolution0)

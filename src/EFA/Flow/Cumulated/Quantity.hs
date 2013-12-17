@@ -129,8 +129,8 @@ cumFromFlow time flow =
 cumFromFlowGraph ::
    (Ord node) =>
    FlowTopo.Section node a -> CumGraph node a
-cumFromFlowGraph (FlowTopoPlain.Section time topo) =
-   Graph.mapEdge (cumFromFlow time) $
+cumFromFlowGraph (FlowTopoPlain.Section label topo) =
+   Graph.mapEdge (cumFromFlow (FlowTopo.dtime label)) $
    FlowTopoPlain.dirFromFlowGraph topo
 
 flowResultFromCum :: Cum a -> Flow (Result a)
