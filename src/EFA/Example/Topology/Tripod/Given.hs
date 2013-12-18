@@ -32,29 +32,23 @@ equationSystem =
 
    (XIdx.storage (Idx.afterSection sec2) node3 .= 10.0) :
 
-
+   (XIdx.x sec0 node2 node3 .= 0.32) :
+   (XIdx.eta sec0 node0 node2 .= 0.75) :
+   (XIdx.eta sec0 node2 node1 .= 0.5) :
+   (XIdx.eta sec0 node3 node2 .= 0.25) :
    (XIdx.power sec0 node2 node3 .= 4.0) :
 
-   (XIdx.x sec0 node2 node3 .= 0.32) :
-
-   (XIdx.power sec1 node3 node2 .= 5) :
-   (XIdx.power sec2 node3 node2 .= 6) :
-
-   (XIdx.eta sec0 node3 node2 .= 0.25) :
-   (XIdx.eta sec0 node2 node1 .= 0.5) :
-   (XIdx.eta sec0 node0 node2 .= 0.75) :
-
-   (XIdx.eta sec1 node2 node1 .= 0.5) :
    (XIdx.eta sec1 node0 node2 .= 0.75) :
-   (XIdx.power sec1 node1 node2 .= 4.0) :
-
-
-   (XIdx.eta sec2 node3 node2 .= 0.75) :
-   (XIdx.eta sec2 node2 node1 .= 0.5) :
-   (XIdx.eta sec2 node0 node2 .= 0.75) :
-   (XIdx.power sec2 node1 node2 .= 4.0) :
-
+   (XIdx.eta sec1 node2 node1 .= 0.5) :
    (XIdx.eta sec1 node2 node3 .= 0.25) :
+   (XIdx.power sec1 node1 node2 .= 4.0) :
+   (XIdx.power sec1 node3 node2 .= 5) :
+
+   (XIdx.eta sec2 node0 node2 .= 0.75) :
+   (XIdx.eta sec2 node2 node1 .= 0.5) :
+   (XIdx.eta sec2 node3 node2 .= 0.75) :
+   (XIdx.power sec2 node1 node2 .= 4.0) :
+   (XIdx.power sec2 node3 node2 .= 6) :
 
    []
 
