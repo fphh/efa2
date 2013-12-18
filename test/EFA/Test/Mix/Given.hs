@@ -71,16 +71,6 @@ numericGraph =
    FlowTopo.mapSection (fmap $ fmap Pair.second)
 
 
-infix 0 .=
-
-(.=) ::
-   (Arith.Constant x, Verify.LocalVar mode x, FlowTopo.Lookup idx) =>
-   RecIdx.Record MixRecIdx (idx Node) -> Rational ->
-   EqSys.EquationSystem mode MultiMix Node s x
-evar .= val  =
-   evar EqSys..= Arith.fromRational val
-
-
 type MixRecIdx =
         RecIdx.ExtSourceMix (FL.WrapPos FL.N2)
            (RecIdx.SinkMix (FL.WrapPos FL.N2))
@@ -97,6 +87,17 @@ data
             EqSys.EquationSystem mode MultiMix Node s a
       }
 
+
+infix 0 .=
+
+(.=) ::
+   (Arith.Constant x, Verify.LocalVar mode x, FlowTopo.Lookup idx) =>
+   RecIdx.Record MixRecIdx (idx Node) -> Rational ->
+   Equation mode x
+var .= val  =
+   Equation (var EqSys..= Arith.fromRational val)
+
+
 partialGiven :: EquationSystem s
 partialGiven = foldMap getEquation partialEquations
 
@@ -104,22 +105,22 @@ partialEquations ::
    (Verify.LocalVar mode a, Arith.Constant a) =>
    [Equation mode a]
 partialEquations =
-   Equation (idxMultiMixTotal XIdx.dTime .= 0.5) :
+   (idxMultiMixTotal XIdx.dTime .= 0.5) :
 
-   Equation (idxMultiMixTotal (XIdx.power source0 crossing) .= 4) :
-   Equation (idxMultiMix idxMix1 idxMixTotal (XIdx.power source0 crossing) .= 0) :
+   (idxMultiMixTotal (XIdx.power source0 crossing) .= 4) :
+   (idxMultiMix idxMix1 idxMixTotal (XIdx.power source0 crossing) .= 0) :
 
-   Equation (idxMultiMixTotal (XIdx.power source1 crossing) .= 3) :
-   Equation (idxMultiMix idxMix0 idxMixTotal (XIdx.power source1 crossing) .= 0) :
+   (idxMultiMixTotal (XIdx.power source1 crossing) .= 3) :
+   (idxMultiMix idxMix0 idxMixTotal (XIdx.power source1 crossing) .= 0) :
 
-   Equation (idxMultiMixTotal (XIdx.power sink crossing) .= 0.4) :
-   Equation (idxMultiMix idxMixTotal idxMix1 (XIdx.power sink crossing) .= 0) :
-   Equation (idxMultiMix idxMixTotal idxMix0 (XIdx.power storage crossing) .= 0) :
+   (idxMultiMixTotal (XIdx.power sink crossing) .= 0.4) :
+   (idxMultiMix idxMixTotal idxMix1 (XIdx.power sink crossing) .= 0) :
+   (idxMultiMix idxMixTotal idxMix0 (XIdx.power storage crossing) .= 0) :
 
-   Equation (idxMultiMixTotal (XIdx.eta source0 crossing) .= 0.25) :
-   Equation (idxMultiMixTotal (XIdx.eta source1 crossing) .= 0.5) :
-   Equation (idxMultiMixTotal (XIdx.eta crossing storage) .= 0.75) :
-   Equation (idxMultiMixTotal (XIdx.eta crossing sink) .= 0.8) :
+   (idxMultiMixTotal (XIdx.eta source0 crossing) .= 0.25) :
+   (idxMultiMixTotal (XIdx.eta source1 crossing) .= 0.5) :
+   (idxMultiMixTotal (XIdx.eta crossing storage) .= 0.75) :
+   (idxMultiMixTotal (XIdx.eta crossing sink) .= 0.8) :
    []
 
 
