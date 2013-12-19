@@ -44,7 +44,7 @@ import EFA.Equation.Result (Result)
 import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap))
 import EFA.Equation.Arithmetic
-          (Sum, Product, ZeroTestable, (~+), (~*))
+          (Sum, Product, ZeroTestable, constOne, (~+), (~*))
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
@@ -193,11 +193,11 @@ fromTopology opts topo =
       foldMap
          (\(ins,ss,outs) ->
             (flip foldMap (CumFlow.sumIn ss) $ \s ->
-               TopoEqSys.splitFactors totalTime s
+               TopoEqSys.splitFactors (constOne totalTime) s
                   CumFlow.flowEnergyIn CumFlow.flowXIn $ Map.elems ins)
             <>
             (flip foldMap (CumFlow.sumOut ss) $ \s ->
-               TopoEqSys.splitFactors totalTime s
+               TopoEqSys.splitFactors (constOne totalTime) s
                   CumFlow.flowEnergyOut CumFlow.flowXOut $ Map.elems outs))
          (Graph.graphMap topo))
 
