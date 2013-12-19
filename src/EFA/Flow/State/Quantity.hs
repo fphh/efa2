@@ -58,7 +58,7 @@ import qualified EFA.Flow.Topology as FlowTopoPlain
 import qualified EFA.Flow.Part.Map as PartMap
 import EFA.Flow.Part.Map (PartMap)
 import EFA.Flow.State (states, storages)
-import EFA.Flow.Topology.Quantity (Sums(..), Flow(..), Label(..))
+import EFA.Flow.Topology.Quantity (Sums(..), Flow(..))
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
@@ -95,13 +95,12 @@ type
 
 type
    States node v =
-      StateFlow.States node Graph.EitherEdge
-         (Label v) (Sums v) (Maybe (Flow v))
+      StateFlow.States node Graph.EitherEdge v (Sums v) (Maybe (Flow v))
 
 type
    Graph node a v =
       StateFlow.Graph node Graph.EitherEdge
-         (Label v) (Sums v) a (Maybe (Flow v)) (Carry a)
+         v (Sums v) a (Maybe (Flow v)) (Carry a)
 
 data Carry a =
    Carry {
@@ -292,8 +291,7 @@ stateMapFromStatesAndSequence sts seq =
 
 type
    CumGraph node a =
-      StateFlow.Graph node Graph.EitherEdge
-         (Label a) (Sums a) a (Maybe (Cum a)) a
+      StateFlow.Graph node Graph.EitherEdge a (Sums a) a (Maybe (Cum a)) a
 
 
 
@@ -399,7 +397,7 @@ fromSequenceFlowGen integrate add zero allStEdges secMap gr =
        sts =
           flip cumulateSequence secMap
              (FlowTopoPlain.checkedZipWith "StateFlow.fromSequenceFlow"
-                 (addLabel add) (addSums add) (liftA2 (liftA2 add))) $
+                 add (addSums add) (liftA2 (liftA2 add))) $
           fmap (FlowTopoPlain.mapEdge (fmap cumFromFlow) . snd) $
           SeqFlow.mapSequence integrate sq
    in  StateFlow.Graph {
@@ -434,7 +432,7 @@ cumulateCarryEdges add secMap =
 sumsMap ::
    (Ord node) =>
    node ->
-   StateFlow.States node Graph.EitherEdge (Label v) (Sums v) (Maybe (Cum v)) ->
+   StateFlow.States node Graph.EitherEdge v (Sums v) (Maybe (Cum v)) ->
    Map Idx.State (Sums v)
 sumsMap node =
    fmap (fromMaybe (error "node not in sequence") .
@@ -514,12 +512,6 @@ graphFromStateMap flowStates =
           states = timeFlowStates
        }
 
-
-addLabel ::
-   (a -> a -> a) ->
-   Label a -> Label a -> Label a
-addLabel add (Label dt0 o0) (Label dt1 _o1) =
-   Label (add dt0 dt1) o0
 
 addSums ::
    (a -> a -> a) ->

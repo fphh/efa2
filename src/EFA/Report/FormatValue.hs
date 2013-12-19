@@ -103,9 +103,6 @@ instance (Node.C node) => FormatValue (TopoIdx.X node) where
 instance (Node.C node) => FormatValue (TopoIdx.DTime node) where
    formatValue TopoIdx.DTime = Format.dtime
 
-instance (Node.C node) => FormatValue (TopoIdx.One node) where
-   formatValue TopoIdx.One = Format.integer 1
-
 instance (Node.C node) => FormatValue (TopoIdx.Sum node) where
    formatValue (TopoIdx.Sum dir node) =
       Format.subscript Format.signalSum $
@@ -135,10 +132,6 @@ instance FormatSignalIndex TopoIdx.X where
 instance FormatSignalIndex TopoIdx.DTime where
    formatSignalIndex TopoIdx.DTime s =
       Format.subscript Format.dtime $ PartIdx.format s
-
-instance FormatSignalIndex TopoIdx.One where
-   formatSignalIndex TopoIdx.One s =
-      Format.subscript (Format.integer 1) $ PartIdx.format s
 
 instance FormatSignalIndex TopoIdx.Sum where
    formatSignalIndex (TopoIdx.Sum dir n) s =

@@ -709,7 +709,7 @@ flowTopology opts =
 flowSection ::
    (FormatValue v, Node.C node) =>
    Options Unicode -> FlowTopoQuant.Section node v -> DotGraph T.Text
-flowSection opts (FlowTopo.Section lab gr) =
+flowSection opts (FlowTopo.Section dt gr) =
    dotDirGraph .
    (\sgr ->
        DotStmts {
@@ -719,7 +719,7 @@ flowSection opts (FlowTopo.Section lab gr) =
           edgeStmts = []
        }) $
    DotSG True Nothing $
-   uncurry (DotStmts [GraphAttrs [labelFromString $ formatTime lab]] []) $
+   uncurry (DotStmts [GraphAttrs [labelFromString $ formatTime dt]] []) $
    dotNodesEdgesFromTopology opts gr
 
 dotNodesEdgesFromTopology ::
@@ -756,11 +756,11 @@ seqFlowGraph opts gr =
        SeqFlowQuant.storages gr)
       (snd $
        Map.mapAccumWithKey
-          (\before sec (rng, FlowTopo.Section lab topo) ->
+          (\before sec (rng, FlowTopo.Section dt topo) ->
              (,) (Idx.afterSection sec) $
              (show sec ++
               " / Range " ++ formatRange rng ++
-              " / " ++ formatTime lab,
+              " / " ++ formatTime dt,
               Graph.mapNodeWithKey
                  (\node sums ->
                     let (Storage.Graph partMap _, stores) =
@@ -835,8 +835,8 @@ stateFlowGraph opts gr =
       (Map.mapWithKey (storageGraphShow opts) $
        StateFlowQuant.storages gr)
       (Map.mapWithKey
-          (\state (FlowTopo.Section lab topo) ->
-             (show state ++ " / " ++ formatTime lab,
+          (\state (FlowTopo.Section dt topo) ->
+             (show state ++ " / " ++ formatTime dt,
               Graph.mapNodeWithKey
                  (\node _sums ->
                     stateNodeShow node $ PartMap.lookup state $
@@ -1006,9 +1006,9 @@ dotDirGraph stmts =
    }
 
 
-formatTime :: FormatValue a => FlowTopoQuant.Label a -> String
-formatTime lab =
-   "Time " ++ (unUnicode $ formatValue $ FlowTopoQuant.dtime lab)
+formatTime :: FormatValue a => a -> String
+formatTime dt =
+   "Time " ++ unUnicode (formatValue dt)
 
 formatAssignWithOpts ::
    (Node.C node, Var.FormatIndex idx, Idx.Identifier idx,

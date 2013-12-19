@@ -88,12 +88,9 @@ fromSection ::
       (Signal.TSignal v a) (FlowTopo.Sums (Result (Data (v :> Nil) a)))
       (Maybe (Flow (Signal.FFSignal v a))) ->
    FlowTopo.Section node (Result (Data (v :> Nil) a))
-fromSection (FlowTopoPlain.Section time topo) =
+fromSection (FlowTopoPlain.Section dtime topo) =
    FlowTopoPlain.Section
-      ((pure Undetermined) {
-          FlowTopo.dtime =
-             Determined . Signal.unpack . Signal.delta $ time
-       })
+      (Determined . Signal.unpack . Signal.delta $ dtime)
       (Graph.mapEdge
          (fmap (fullFlow . fmap (Determined . Signal.unpack)))
          topo)
@@ -103,18 +100,18 @@ sectionToPowerRecord ::
    (Ord node) =>
    FlowTopo.Section node (Data (v :> Nil) a) ->
    Record.PowerRecord node v a
-sectionToPowerRecord (FlowTopoPlain.Section label topo) =
-   Record.Record (Signal.TC $ FlowTopo.dtime label) $
+sectionToPowerRecord (FlowTopoPlain.Section time topo) =
+   Record.Record (Signal.TC time) $
    fmap Signal.TC $ topologyToPowerMap topo
 
 sectionResultToPowerRecord ::
    (Ord node) =>
    FlowTopo.Section node (Result (Data (v :> Nil) a)) ->
    Record.PowerRecord node v a
-sectionResultToPowerRecord (FlowTopoPlain.Section label topo) =
+sectionResultToPowerRecord (FlowTopoPlain.Section rtime topo) =
    Record.Record
       (Signal.TC $
-       case FlowTopo.dtime label of
+       case rtime of
           Undetermined -> error "sectionResultToPowerRecord"
           Determined time -> time) $
    fmap Signal.TC $ Map.mapMaybe Result.toMaybe $ topologyToPowerMap topo

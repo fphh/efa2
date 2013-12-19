@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module EFA.Flow.Topology.Quantity (
    Section, DirSection, FlowTopo.label, FlowTopo.topology,
-   Topology, DirTopology, Sums(..), Flow(..), Label(..),
+   Topology, DirTopology, Sums(..), Flow(..),
 
    mapSection, mapDirSection,
    mapTopology, mapDirTopology,
@@ -33,7 +33,6 @@ module EFA.Flow.Topology.Quantity (
    lookupEta,
    lookupSum,
    lookupDTime,
-   lookupOne,
    lookupSums,
    lookupAutoDirSection,
 
@@ -74,11 +73,11 @@ import Prelude hiding (lookup, sin)
 
 type
    Section node v =
-      FlowTopo.Section node Graph.EitherEdge (Label v) (Sums v) (Maybe (Flow v))
+      FlowTopo.Section node Graph.EitherEdge v (Sums v) (Maybe (Flow v))
 
 type
    DirSection node v =
-      FlowTopo.Section node Graph.DirEdge (Label v) (Sums v) (Flow v)
+      FlowTopo.Section node Graph.DirEdge v (Sums v) (Flow v)
 
 type
    Topology node v =
@@ -94,7 +93,7 @@ mapSection ::
    Section node v0 -> Section node v1
 mapSection f gr =
    FlowTopo.Section {
-      label = fmap f $ label gr,
+      label = f $ label gr,
       topology = mapTopology f $ topology gr
    }
 
@@ -103,7 +102,7 @@ mapDirSection ::
    DirSection node v0 -> DirSection node v1
 mapDirSection f gr =
    FlowTopo.Section {
-      label = fmap f $ label gr,
+      label = f $ label gr,
       topology = mapDirTopology f $ topology gr
    }
 
@@ -131,7 +130,7 @@ checkedZipWithSection ::
    Section node v2
 checkedZipWithSection caller f gr0 gr1 =
    FlowTopo.Section {
-      label = liftA2 f (label gr0) (label gr1),
+      label = f (label gr0) (label gr1),
       topology = checkedZipWithTopology caller f (topology gr0) (topology gr1)
    }
 
@@ -155,14 +154,14 @@ traverseSection ::
    (v0 -> f v1) ->
    Section node v0 -> f (Section node v1)
 traverseSection f (FlowTopo.Section lab topo) =
-   liftA2 FlowTopo.Section (traverse f lab) (traverseTopology f topo)
+   liftA2 FlowTopo.Section (f lab) (traverseTopology f topo)
 
 traverseDirSection ::
    (Applicative f, Ord node) =>
    (v0 -> f v1) ->
    DirSection node v0 -> f (DirSection node v1)
 traverseDirSection f (FlowTopo.Section lab topo) =
-   liftA2 FlowTopo.Section (traverse f lab) (traverseDirTopology f topo)
+   liftA2 FlowTopo.Section (f lab) (traverseDirTopology f topo)
 
 traverseTopology ::
    (Applicative f, Ord node) =>
@@ -239,10 +238,7 @@ lookupSums :: (Ord node) => node -> Section node v -> Maybe (Sums v)
 lookupSums node = Graph.lookupNode node . FlowTopo.topology
 
 lookupDTime :: Idx.DTime node -> Section node v -> Maybe v
-lookupDTime Idx.DTime = Just . dtime . FlowTopo.label
-
-lookupOne :: Idx.One node -> Section node v -> Maybe v
-lookupOne Idx.One = Just . one . FlowTopo.label
+lookupDTime Idx.DTime = Just . FlowTopo.label
 
 
 class (Var.Index idx, Var.FormatIndex idx) => Lookup idx where
@@ -260,9 +256,6 @@ instance Lookup Idx.Eta where
 instance Lookup Idx.DTime where
    lookup = lookupDTime
 
-instance Lookup Idx.One where
-   lookup = lookupOne
-
 instance Lookup Idx.X where
    lookup = lookupX
 
@@ -277,21 +270,8 @@ mapSectionWithVar ::
    Section node v1
 mapSectionWithVar f gr =
    FlowTopo.Section {
-      label = mapLabelWithVar f $ label gr,
+      label = f (Var.DTime Idx.DTime) $ label gr,
       topology = mapTopologyWithVar f $ topology gr
-   }
-
-mapLabelWithVar ::
-   (Var.Signal node -> v0 -> v1) ->
-   Label v0 -> Label v1
-mapLabelWithVar f =
-   liftA2 f labelVars
-
-labelVars :: Label (Var.Signal node)
-labelVars =
-   Label {
-      dtime = Var.DTime Idx.DTime,
-      one = Var.One Idx.One
    }
 
 mapTopologyWithVar ::
@@ -322,7 +302,7 @@ sectionFromPlain ::
    (Ord node, Unknown v) =>
    Topo.FlowTopology node -> Section node v
 sectionFromPlain gr =
-   FlowTopo.Section (pure unknown) $
+   FlowTopo.Section unknown $
    unknownTopologyNodes $
    Graph.mapEdgeWithKey
       (\ee _ ->
@@ -341,10 +321,6 @@ unknownTopologyNodes =
                 toMaybe (any (Topo.isActive . fst) es) unknown
          in  Sums {sumIn = maybeDir pre, sumOut = maybeDir suc})
 
-
-data Label v =
-   Label { dtime, one :: v }
-   deriving (Eq)
 
 data Flow v =
    Flow {
@@ -377,23 +353,6 @@ instance Applicative Flow where
       Flow
          (fxout xout) (fpout pout) (feout eout)
          (feta eta) (fein ein) (fpin pin) (fxin xin)
-
-
-instance Functor Label where
-   fmap f (Label dt o) =
-      Label (f dt) (f o)
-
-instance Foldable Label where
-   foldMap = foldMapDefault
-
-instance Traversable Label where
-   traverse f (Label dt o) =
-      pure Label <*> f dt <*> f o
-
-instance Applicative Label where
-   pure a = Label a a
-   Label fdt fo <*> Label dt o =
-      Label (fdt dt) (fo o)
 
 
 instance Functor Sums where
