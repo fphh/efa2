@@ -7,8 +7,15 @@ module EFA.Flow.Cumulated.Quantity (
    traverseGraph,
 
    mapGraphWithVar,
+   mapCumGraphWithVar,
+
    mapSumsWithVar,
    mapFlowWithVar,
+   mapCumWithVar,
+
+   sumsVars,
+   flowVars,
+   cumVars,
 
    fromSequenceFlow,
    fromSequenceFlowResult,
@@ -298,6 +305,16 @@ mapGraphWithVar f =
    .
    Graph.mapEdgeWithKey (mapFlowWithVar f)
 
+mapCumGraphWithVar ::
+   (Ord node) =>
+   (CumVar.Any node -> a0 -> a1) ->
+   CumGraph node a0 ->
+   CumGraph node a1
+mapCumGraphWithVar f =
+   Graph.mapNodeWithKey (mapSumsWithVar f)
+   .
+   Graph.mapEdgeWithKey (mapCumWithVar f)
+
 mapSumsWithVar ::
    (CumVar.Any node -> a0 -> a1) ->
    node -> Sums a0 -> Sums a1
@@ -307,6 +324,11 @@ mapFlowWithVar ::
    (CumVar.Any node -> a0 -> a1) ->
    Graph.DirEdge node -> Flow a0 -> Flow a1
 mapFlowWithVar f e = liftA2 f (flowVars <*> pure e)
+
+mapCumWithVar ::
+   (CumVar.Any node -> a0 -> a1) ->
+   Graph.DirEdge node -> Cum a0 -> Cum a1
+mapCumWithVar f e = liftA2 f (cumVars <*> pure e)
 
 sumsVars :: Sums (node -> CumVar.Any node)
 sumsVars =
@@ -326,6 +348,14 @@ flowVars =
       flowXIn = CumVar.index . CumIdx.X CumIdx.In,
       flowEta = CumVar.index . CumIdx.Eta,
       flowDTime = CumVar.index . CumIdx.DTime
+   }
+
+cumVars :: Cum (Graph.DirEdge node -> CumVar.Any node)
+cumVars =
+   Cum {
+      cumEnergyOut = CumVar.index . CumIdx.Energy CumIdx.Out,
+      cumEnergyIn = CumVar.index . CumIdx.Energy CumIdx.In,
+      cumDTime = CumVar.index . CumIdx.DTime
    }
 
 
