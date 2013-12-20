@@ -11,7 +11,6 @@ import qualified EFA.Flow.Cumulated.Quantity as CumFlow
 import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph as Graph
 
 import qualified EFA.Equation.Verify as Verify
 
@@ -105,15 +104,11 @@ main = do
   Draw.xterm $
     Draw.title "Unchecked computation" $
     Draw.cumulatedFlow $
-    EqSys.solve
-      (Graph.mapEdge CumFlow.flowResultFromCumResult Given.cumGraph)
-      mempty
+    EqSys.solve Given.flowGraphRatio mempty
 
   mapM_ (putStrLn . Format.unASCII) $ AssignMap.format .
     CumFlow.toAssignMap $
-    EqSys.solve
-      (Graph.mapEdge CumFlow.flowResultFromCumResult Given.cumGraph)
-      mempty
+    EqSys.solve Given.flowGraphRatio mempty
 
   fullGraph <- checkException Given.fullGraph
   solvedGraph <- checkException Given.solvedGraph

@@ -36,10 +36,13 @@ cumGraph =
    CumFlow.fromSequenceFlowResult $ SeqFlow.sequence $
    TestEqSys.solveIncomplete TestGiven.partialEquations
 
+flowGraphRatio :: ResultGraph Rational
+flowGraphRatio =
+   Graph.mapEdge CumFlow.flowResultFromCumResult cumGraph
+
 flowGraph :: (Arith.Constant a) => ResultGraph a
 flowGraph =
-   CumFlow.mapGraph (fmap Arith.fromRational) $
-   Graph.mapEdge CumFlow.flowResultFromCumResult cumGraph
+   CumFlow.mapGraph (fmap Arith.fromRational) flowGraphRatio
 
 
 fullGraph, solvedGraph ::
