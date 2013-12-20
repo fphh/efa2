@@ -25,6 +25,8 @@ module EFA.Flow.Cumulated.Quantity (
    lookupSum,
 
    Lookup, lookup,
+
+   fold, foldMap,
    ) where
 
 import qualified EFA.Flow.Cumulated.Variable as CumVar
@@ -34,6 +36,7 @@ import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
 import EFA.Flow.Topology.Quantity (Sums(..))
 
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -44,10 +47,14 @@ import EFA.Equation.Result (Result(Determined))
 import qualified EFA.Utility.Map as MapU
 import qualified Data.Map as Map
 
+import qualified Control.Monad.Trans.Writer as MW
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<|>))
 import Control.Monad ((<=<))
+
+import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, foldMapDefault)
-import Data.Foldable (Foldable, foldMap)
+import Data.Foldable (Foldable)
+import Data.Monoid (Monoid)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -316,3 +323,15 @@ flowVars =
       flowEta = CumVar.index . CumIdx.Eta,
       flowDTime = CumVar.index . CumIdx.DTime
    }
+
+
+foldMap ::
+   (Node.C node, Monoid w) =>
+   (v -> w) -> Graph node v -> w
+foldMap f =
+   fold . mapGraph f
+
+fold ::
+   (Node.C node, Monoid w) =>
+   Graph node w -> w
+fold = MW.execWriter . traverseGraph MW.tell
