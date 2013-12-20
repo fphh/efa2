@@ -13,9 +13,12 @@ import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Verify as Verify
+import qualified EFA.Equation.Result as Result
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue)
+import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Report.Format (Format)
 
 import EFA.Utility.Async (concurrentlyMany_)
 
@@ -23,8 +26,32 @@ import qualified Control.Monad.Exception.Synchronous as ME
 
 import System.Exit (exitFailure)
 
-import Data.Monoid (mempty)
 import Data.Foldable (forM_)
+import Control.Monad (when)
+import Data.Monoid (mempty)
+
+
+undeterminedFromGraph ::
+  (Node.C node, Format output) =>
+  CumFlow.Graph node (Result a) ->
+  [output]
+undeterminedFromGraph =
+  CumFlow.fold .
+  CumFlow.mapGraphWithVar
+    (\var -> Result.switch [formatValue var] (const []))
+
+determinateness :: IO ()
+determinateness =
+  Test.singleIO "Check whether all quantities can be determined." $ do
+    let undetermined =
+          undeterminedFromGraph $ EqSys.solve Given.flowGraphRatio mempty
+        allDetermined = null $ undetermined
+    when (not allDetermined) $ do
+      putStrLn $ "undetermined variables:\n" ++
+        unlines (map Format.unUnicode undetermined)
+    return allDetermined
+
+
 
 
 checkException ::
@@ -94,6 +121,7 @@ consistency =
 runTests :: IO ()
 runTests = do
   putStrLn "Cumulated graph equation system tests"
+  determinateness
   correctness
   consistency
   putStrLn ""
