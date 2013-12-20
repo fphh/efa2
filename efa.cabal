@@ -153,6 +153,7 @@ Library
     EFA.Flow.Cumulated.Quantity
     EFA.Flow.Cumulated.EquationSystem
     EFA.Flow.Cumulated.Absolute
+    EFA.Flow.Cumulated.AssignMap
     EFA.Flow.Absolute
     EFA.Flow.SystemEta
     EFA.Flow.Draw

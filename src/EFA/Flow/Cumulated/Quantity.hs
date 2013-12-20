@@ -17,6 +17,8 @@ module EFA.Flow.Cumulated.Quantity (
    flowResultFromCum,
    flowResultFromCumResult,
 
+   toAssignMap,
+
    lookupPower,
    lookupEnergy,
    lookupX,
@@ -30,10 +32,12 @@ module EFA.Flow.Cumulated.Quantity (
    ) where
 
 import qualified EFA.Flow.Cumulated.Variable as CumVar
+import qualified EFA.Flow.Cumulated.AssignMap as AssignMap
 import qualified EFA.Flow.Cumulated.Index as CumIdx
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology as FlowTopoPlain
+import EFA.Flow.Cumulated.AssignMap (AssignMap)
 import EFA.Flow.Topology.Quantity (Sums(..))
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -323,6 +327,13 @@ flowVars =
       flowEta = CumVar.index . CumIdx.Eta,
       flowDTime = CumVar.index . CumIdx.DTime
    }
+
+
+toAssignMap ::
+   (Node.C node) =>
+   Graph node a -> AssignMap node a
+toAssignMap =
+   fold . mapGraphWithVar AssignMap.singleton
 
 
 foldMap ::
