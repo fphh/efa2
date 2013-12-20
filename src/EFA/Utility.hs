@@ -3,9 +3,10 @@ module EFA.Utility where
 import qualified Data.Stream as Stream
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as ListHT
+import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, mapAccumL)
 import Data.Stream (Stream)
-
+import Data.Bool.HT (if')
 
 
 checkJust :: String -> Maybe a -> a
@@ -17,6 +18,17 @@ zipWithTraversable ::
    (Traversable f) => (a -> b -> c) -> Stream a -> f b -> f c
 zipWithTraversable f as0 =
    snd . mapAccumL (\(Stream.Cons a as) b -> (as, f a b)) as0
+
+mapDiagonal ::
+   (Traversable f) =>
+   (a -> b) ->
+   (a -> b) ->
+   f a -> [f b]
+mapDiagonal deflt diag xs =
+   map (\j ->
+      zipWithTraversable (\k -> if' (j==k) diag deflt)
+         (Stream.iterate (+1) 0) xs) $
+   Match.take (Fold.toList xs) [0::Int ..]
 
 
 for :: [a] -> (a -> b) -> [b]
