@@ -6,6 +6,7 @@ module EFA.Equation.Verify where
 
 import qualified EFA.Flow.SequenceState.Symbolic as SymVar
 import qualified EFA.Flow.SequenceState.Variable as Var
+import qualified EFA.Flow.Cumulated.Variable as CumVar
 import qualified EFA.Flow.Topology.Variable as TopoVar
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -103,6 +104,8 @@ type Variable output s a b = Sys.Variable (Track output) s (Pair.T a b)
 
 type Term term recIdx node = term (RecIdx.Record recIdx (TopoVar.Signal node))
 
+type CumTerm term recIdx node = term (RecIdx.Record recIdx (CumVar.Any node))
+
 type MixedTerm mixedTerm recIdx part node =
         mixedTerm
            (RecIdx.Record recIdx (Var.Scalar part node))
@@ -133,6 +136,15 @@ instance
       GlobalRecVar output a
          (Term term recIdx node)
          recIdx (TopoVar.Signal node) where
+   globalRecordVariable = globalVariableTracked point
+
+instance
+   (Format output, FormatValue a, Eq a,
+    Format.Record recIdx, Node.C node,
+    FormatValue (CumTerm term recIdx node), Pointed term) =>
+      GlobalRecVar output a
+         (CumTerm term recIdx node)
+         recIdx (CumVar.Any node) where
    globalRecordVariable = globalVariableTracked point
 
 instance

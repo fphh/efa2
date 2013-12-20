@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Flow.Cumulated.Quantity (
-   Graph,
+   Graph, CumGraph,
    Sums(..), Cum(..), Flow(..),
 
    mapGraph,
@@ -69,7 +69,7 @@ data Flow a =
       flowXOut, flowPowerOut, flowEnergyOut,
       flowEta,
       flowEnergyIn, flowPowerIn, flowXIn :: a
-   }
+   } deriving (Eq)
 
 
 instance Functor Flow where

@@ -7,6 +7,7 @@ import qualified EFA.Test.Utility as Util
 import qualified EFA.Test.Sequence as Seq
 
 import qualified EFA.Test.Mix as Mix
+import qualified EFA.Test.Cumulated as Cumulated
 import qualified EFA.Test.EquationSystem as EqSys
 import qualified EFA.Test.Tree as Tree
 
@@ -22,5 +23,6 @@ main = do
    void $ Util.runTests
    void $ Seq.runTests
    EqSys.runTests
+   Cumulated.runTests
    Mix.runTests
    Tree.runTests
