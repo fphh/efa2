@@ -59,7 +59,7 @@ import qualified EFA.Utility.Map as MapU
 import qualified Data.Map as Map
 
 import qualified Control.Monad.Trans.Writer as MW
-import Control.Applicative (Applicative, pure, liftA2, (<*>), (<|>))
+import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<|>))
 import Control.Monad ((<=<))
 
 import qualified Data.Foldable as Fold
@@ -137,6 +137,13 @@ instance Applicative Cum where
    pure a = Cum a a a
    Cum ftime feout fein <*> Cum time eout ein =
       Cum (ftime time) (feout eout) (fein ein)
+
+instance Foldable Cum where
+   foldMap = foldMapDefault
+
+instance Traversable Cum where
+   traverse f (Cum dt eout ein) =
+      liftA3 Cum (f dt) (f eout) (f ein)
 
 cumFromFlow :: a -> SeqFlow.Flow a -> Cum a
 cumFromFlow time flow =
