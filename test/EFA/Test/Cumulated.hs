@@ -11,25 +11,37 @@ import qualified EFA.Flow.Cumulated.Quantity as CumFlow
 import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph as Graph
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Result as Result
-import EFA.Equation.Result (Result)
+import EFA.Equation.Result (Result(Undetermined))
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
 import EFA.Report.Format (Format)
 
 import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility (mapDiagonal)
 
 import qualified Control.Monad.Exception.Synchronous as ME
 
 import System.Exit (exitFailure)
 
-import Data.Foldable (forM_)
+import qualified Data.Foldable as Fold
 import Control.Monad (when)
-import Data.Monoid (mempty)
+import Control.Applicative (pure)
+import Data.Traversable (Traversable, traverse, fmapDefault, foldMapDefault)
+import Data.Foldable (Foldable, forM_, foldMap)
+import Data.Monoid (All(All), getAll, mempty)
 
+
+completelyDetermined ::
+  Node.C node =>
+  CumFlow.Graph node (Result a) -> Bool
+completelyDetermined =
+  getAll .
+  CumFlow.foldMap (All . Result.isDetermined)
 
 undeterminedFromGraph ::
   (Node.C node, Format output) =>
@@ -52,6 +64,43 @@ determinateness =
     return allDetermined
 
 
+newtype
+   WrapCumGraph node a =
+      WrapCumGraph {
+         unwrapCumGraph :: Graph.Graph node Graph.DirEdge () (CumFlow.Cum a)
+      }
+
+instance (Node.C node) => Functor (WrapCumGraph node) where
+  fmap = fmapDefault
+
+instance (Node.C node) => Foldable (WrapCumGraph node) where
+  foldMap = foldMapDefault
+
+instance (Node.C node) => Traversable (WrapCumGraph node) where
+  traverse f (WrapCumGraph gr) =
+    fmap WrapCumGraph $ Graph.traverse pure (traverse f) gr
+
+minimalDeterminateness :: IO ()
+minimalDeterminateness =
+  Test.singleIO
+    ("The set of given equations is not minimal " ++
+     "and we cannot make it minimal in an easy way.") $ do
+    let edgeGraph = Graph.mapNode (const ()) Given.cumGraph
+        redundantEqs =
+          map fst $
+          filter (completelyDetermined . (\gr -> EqSys.solve gr mempty) . snd) $
+          zip (Fold.toList $ WrapCumGraph $
+               Graph.mapEdgeWithKey (CumFlow.mapCumWithVar formatAssign) edgeGraph) $
+          map (Graph.mapNode (\() -> pure Undetermined) .
+               Graph.mapEdge CumFlow.flowResultFromCumResult .
+               unwrapCumGraph) $
+          mapDiagonal id (const Undetermined) $
+          WrapCumGraph edgeGraph
+        minimal = null redundantEqs
+    when (not minimal) $ putStrLn $
+      "at least one of the following equations is redundant:\n" ++
+      (Format.unUnicode $ Format.lines redundantEqs)
+    return minimal
 
 
 checkException ::
@@ -122,6 +171,7 @@ runTests :: IO ()
 runTests = do
   putStrLn "Cumulated graph equation system tests"
   determinateness
+  when False minimalDeterminateness
   correctness
   consistency
   putStrLn ""
