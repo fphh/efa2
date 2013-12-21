@@ -193,6 +193,7 @@ Executable test-efa
       QuickCheck,
       containers,
       explicit-exception,
+      non-empty,
       utility-ht,
       template-haskell >=2.7 && <2.9,
       base
