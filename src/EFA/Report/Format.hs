@@ -4,14 +4,16 @@ import qualified EFA.Equation.RecordIndex as RecIdx
 import qualified EFA.Equation.Mix as Mix
 import qualified EFA.Utility.FixedLength as FixedLength
 
+import qualified Data.Char.Small as SmallChar
+import qualified Data.Char.Number as NumberChar
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import Data.Map (Map)
-
 import Data.Bool.HT (if')
 import Data.List (intercalate)
 import Data.Ratio (Ratio, numerator, denominator)
 import Data.Foldable (Foldable, foldr1)
+import Data.Maybe (fromMaybe)
 
 import Text.Printf (PrintfArg, printf)
 
@@ -245,47 +247,13 @@ instance Format Unicode where
    multiply (Unicode x) (Unicode y) = Unicode $ x ++ "\xb7" ++ y
    intPower (Unicode x) n =
       -- writing many digits in superscript looks ugly in a monospace font
-      let super c =
-             case c of
-                '0' -> '\x2070'
-                '1' -> '\xb9'
-                '2' -> '\xb2'
-                '3' -> '\xb3'
-                '4' -> '\x2074'
-                '5' -> '\x2075'
-                '6' -> '\x2076'
-                '7' -> '\x2077'
-                '8' -> '\x2078'
-                '9' -> '\x2079'
-                '-' -> '\x207B'
-                _ -> c
-      in  Unicode $ x ++ map super (show n)
+      Unicode $
+      x ++ map (\c -> fromMaybe c $ SmallChar.superscriptMaybe c) (show n)
    showRaw (Unicode x) = x
 
 ratioCharMap :: Integral a => Map (Ratio a) String
 ratioCharMap =
-   let xys =
-          fmap (:[]) $
-          Map.fromList $
-          (1/4, '\xbc') :
-          (1/2, '\xbd') :
-          (3/4, '\xbe') :
-          (1/7, '\x2150') :
-          (1/9, '\x2151') :
-          (1/10,'\x2152') :
-          (1/3, '\x2153') :
-          (2/3, '\x2154') :
-          (1/5, '\x2155') :
-          (2/5, '\x2156') :
-          (3/5, '\x2157') :
-          (4/5, '\x2158') :
-          (1/6, '\x2159') :
-          (5/6, '\x215A') :
-          (1/8, '\x215B') :
-          (3/8, '\x215C') :
-          (5/8, '\x215D') :
-          (7/8, '\x215E') :
-          []
+   let xys = fmap (:[]) NumberChar.fractionMap
    in  Map.union xys (fmap ('-':) $ Map.mapKeys P.negate xys)
 
 
