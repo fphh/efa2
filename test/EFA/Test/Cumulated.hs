@@ -130,7 +130,7 @@ printAssignments assigns =
 
 correctness :: IO ()
 correctness =
-  Test.singleIO "Check correctness of the equation system for sequence flow graphs." $ do
+  Test.singleIO "Check correctness of the equation system." $ do
   fullGraph <- checkException Given.fullGraph
   solvedGraph <- checkException Given.solvedGraph
   return $ fullGraph == solvedGraph
@@ -160,7 +160,7 @@ showDifferences fullGraph solvedGraph = do
 
 consistency :: IO ()
 consistency =
-  Test.singleIO "Check consistency of the equation system for sequence flow graphs." $ do
+  Test.singleIO "Check consistency of the equation system." $ do
   graph <- fmap Given.numericGraph $ checkException $
     EqSys.solveTracked Given.flowGraph Given.fullGiven
   fullGraph <- checkException Given.fullGraph
