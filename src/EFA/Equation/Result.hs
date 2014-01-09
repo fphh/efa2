@@ -4,7 +4,7 @@ module EFA.Equation.Result where
 
 import Control.Applicative (Applicative, pure, (<*>), Alternative, empty, (<|>))
 import Data.Foldable (Foldable, foldMap)
-import Data.Monoid (mempty)
+import Data.Monoid (Monoid, mempty, mappend)
 
 
 data Result a = Undetermined
@@ -14,6 +14,7 @@ data Result a = Undetermined
 instance Functor Result where
   fmap _ Undetermined = Undetermined
   fmap f (Determined a) = Determined $ f a
+  {-# INLINE fmap #-}
 
 instance Applicative Result where
   pure = Determined
@@ -51,3 +52,9 @@ Better use Result.toMaybe or pattern matching.
 isDetermined :: Result a -> Bool
 isDetermined (Determined _) = True
 isDetermined _ = False
+
+instance Monoid a => Monoid (Result a) where
+  mempty = Undetermined
+  Undetermined `mappend` m = m
+  m `mappend` Undetermined = m
+  Determined m1 `mappend` Determined m2 = Determined (m1 `mappend` m2)

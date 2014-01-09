@@ -1,6 +1,7 @@
 SRCDIRS = src demo examples test
 TESTDIR = efatest
 
+
 HTDIR = $(HOME)/haskell
 HTPKGS = gnuplot non-empty unique-logic-tf utility
 

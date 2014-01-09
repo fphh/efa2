@@ -89,7 +89,7 @@ type instance D.Value (Record s1 s2 t1 t2 id v d1 d2) = d2
 
 data Record s1 s2 t1 t2 id v d1 d2 =
      Record { recordTime :: TC s1 t1 (Data (v :> Nil) d1),
-              recordSignalMap :: Map id (TC s2 t2 (Data (v :> Nil) d2)) } 
+              recordSignalMap :: Map id (TC s2 t2 (Data (v :> Nil) d2)) }
               deriving (Show, Read, Eq)
 
 

@@ -165,6 +165,7 @@ Library
     EFA.Application.Tree
     EFA.Application.Optimisation
     EFA.Application.Sweep
+    EFA.Application.DoubleSweep
     EFA.Application.Simulation
     EFA.Application.OneStorage
     EFA.Application.StateAnalysis
@@ -240,28 +241,9 @@ Executable example-optimising-storage
   Else
     Buildable: False
 
-Executable example-optimal-storage-usage
-  Main-Is: examples/elementary/optimalStorageUsage/Main.hs
-  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
-  If flag(buildExamples)
-    Build-Depends:
-      gnuplot,
-      efa,
-      vector,
-      containers,
-      data-accessor,
-      utility-ht,
-      non-empty,
-      containers,
-      base
-  Else
-    Buildable: False
-
-
-
 
 Executable example-vehicle
-  Hs-Source-Dirs: examples/vehicle/src
+  Hs-Source-Dirs: examples/advanced/vehicle/src
   Main-Is: Main.hs
   Other-Modules:
     Modules.Signals
@@ -281,36 +263,17 @@ Executable example-vehicle
   Else
     Buildable: False
 
-
-Executable example-local-grid
-  Hs-Source-Dirs: examples/energy/localGrid/src
+Executable example-energy
+  Hs-Source-Dirs: examples/advanced/energy/src
   Main-Is: Main.hs
   Other-Modules:
-    Modules.Signals
-    Modules.System
-    Modules.Analysis
-  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
-  If flag(buildExamples)
-   Build-Depends:
-      efa,
-      gnuplot,
-      graphviz,
-      utility-ht,
-     containers,
-      non-empty,
-      filepath,
-      base
-  Else
-    Buildable: False
-
-
-Executable example-local-grid-optimise
-  Hs-Source-Dirs: examples/energy/localGrid/src
-  Main-Is: Optimise.hs
-  Other-Modules:
-    Modules.Signals
-    Modules.System
-    Modules.Analysis
+      Modules.Setting
+      Modules.Optimisation
+      Modules.Optimisation.NonIO
+      Modules.Optimisation.Base
+      Modules.System
+      Modules.Plot
+      Modules.Utility
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildExamples)
     Build-Depends:
@@ -322,27 +285,8 @@ Executable example-local-grid-optimise
       non-empty,
       filepath,
       vector,
-      base
-  Else
-    Buildable: False
-
-Executable example-building
-  Hs-Source-Dirs: examples/building/src
-  Main-Is: Main.hs
-  Other-Modules:
-    Modules.System
-    Modules.Optimisation
-  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      gnuplot,
-      graphviz,
-      utility-ht,
-      containers,
-      non-empty,
-      filepath,
-      vector,
+      time,
+      text,
       base
   Else
     Buildable: False
@@ -364,6 +308,8 @@ Executable example-two-ways
   If flag(buildExamples)
     Build-Depends:
       efa,
+      gnuplot,
+      utility-ht,
       base
   Else
     Buildable: False
@@ -701,6 +647,18 @@ Executable demo-mix
   If flag(buildDemos)
     Build-Depends:
       efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-arithmetic
+  Main-Is: demo/arithmetic/Sweep.hs
+  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists -main-is Sweep
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      containers,
+      vector,
       base
   Else
     Buildable: False

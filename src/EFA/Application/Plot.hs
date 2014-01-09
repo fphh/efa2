@@ -55,7 +55,7 @@ import EFA.Equation.Stack (Stack)
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
-import qualified Graphics.Gnuplot.Advanced as Plot
+import qualified Graphics.Gnuplot.Advanced as PlotAdv
 import qualified Graphics.Gnuplot.Terminal as Terminal
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
@@ -99,22 +99,26 @@ tableLinear2D term str = run term . plotTable tail str
 
 surfaceWithOpts ::
   (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
-  String -> term ->
+  String ->
+  term ->
   (LineSpec.T -> LineSpec.T) ->
+  (Graph3D.T (Plot.Value tcX) (Plot.Value tcY) (Plot.Value tcZ) ->
+    Graph3D.T (Plot.Value tcX) (Plot.Value tcY) (Plot.Value tcZ)) ->
   (Opts.T (Graph3D.T (Plot.Value tcX) (Plot.Value tcY) (Plot.Value tcZ)) ->
     Opts.T (Graph3D.T (Plot.Value tcX) (Plot.Value tcY) (Plot.Value tcZ))) ->
   tcX -> tcY -> tcZ -> IO ()
-surfaceWithOpts ti terminal opts fopts x y z =
+surfaceWithOpts ti terminal opts surfstyle fopts x y z =
   Plot.run terminal
     (fopts $ Plot.xyFrameAttr ti x y)
-    (Plot.surface opts x y z)
+    (fmap surfstyle $ Plot.surface opts x y z)
+
 
 surface ::
   (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
   String -> term ->
   tcX -> tcY -> tcZ -> IO ()
 surface ti terminal x y z =
-  surfaceWithOpts ti terminal id id x y z
+  surfaceWithOpts ti terminal id id id x y z
 
 {-
 combineWith ::
@@ -377,9 +381,10 @@ stack ::
    (FormatValue term, Ord term) =>
    String -> Format.ASCII -> Map term Double -> IO ()
 stack title var =
-   void .
-   Plot.plotSync DefaultTerm.cons . Frame.cons (Plot.stackFrameAttr title var) .
-   Plot.stack
+   void
+   . PlotAdv.plotSync DefaultTerm.cons
+   . Frame.cons (Plot.stackFrameAttr title var)
+   . Plot.stack
 
 
 {- |
@@ -389,8 +394,10 @@ stacks ::
    (Ord term, FormatValue term) =>
    String -> [Format.ASCII] -> Map term [Double] -> IO ()
 stacks title vars =
-   void . Plot.plotSync DefaultTerm.cons .
-   Frame.cons (Plot.stacksFrameAttr title vars) . Plot.stacks
+   void
+   . PlotAdv.plotSync DefaultTerm.cons
+   . Frame.cons (Plot.stacksFrameAttr title vars)
+   . Plot.stacks
 
 
 stackFromEnv ::

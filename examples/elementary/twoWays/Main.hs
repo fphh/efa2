@@ -2,6 +2,7 @@
 module Main where
 
 import EFA.Application.Utility (topologyFromEdges, quantityTopology)
+import qualified EFA.Application.Plot as AppPlot
 
 import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -11,6 +12,7 @@ import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Topology.Absolute ((.=), (=.=))
 
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Result as Result
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
@@ -19,12 +21,16 @@ import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility.Async (concurrentlyMany_)
 
+import qualified EFA.Signal.Signal as Sig
+
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (formatValue)
+
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 import Control.Applicative (liftA2)
 
 import Data.Monoid (mconcat, (<>))
+import Data.Tuple.HT (fst3, snd3, thd3)
 
 
 {- |
@@ -102,17 +108,32 @@ eout = XIdx.energy Sink c3
 ein  = XIdx.energy Source c0
 
 
-solve :: Double -> Double -> String
+solve :: Double -> Double -> (Double, Double, Double)
 solve e x =
    let emap idx =
           Var.checkedLookup "solve" FlowTopo.lookupEnergy idx $
           EqSys.solve (quantityTopology topo) (etas <> given e x)
-   in  show e ++ " " ++ show x ++ " " ++
-       Format.unUnicode (formatValue (liftA2 (/) (emap eout) (emap ein)))
+       res = case liftA2 (/) (emap eout) (emap ein) of
+                  Result.Determined v -> v
+                  Result.Undetermined ->
+                    error $ "Undetermined at " ++ show e ++ ", " ++ show x
+   in  (e, x, res)
 
 main :: IO ()
 main =
-   concurrentlyMany_ [
-      Draw.xterm $ Draw.topology topo,
-      putStrLn $ unlines $ map (\e -> unlines $ map (solve e) xRange) enRange
-   ]
+   let pts :: Sig.UTSignal2 [] [] (Double, Double, Double)
+       pts = Sig.fromList2 $ map (\e -> map (solve e) xRange) enRange
+
+
+       xs, ys :: Sig.PSignal2 [] [] Double
+       xs = Sig.changeType $ Sig.map fst3 pts
+       ys = Sig.changeType $ Sig.map snd3 pts
+
+       zs :: Sig.NSignal2 [] [] Double
+       zs = Sig.changeType $ Sig.map thd3 pts
+
+
+   in concurrentlyMany_ $
+      (Draw.xterm $ Draw.topology topo) :
+      AppPlot.surface "EtaSys" DefaultTerm.cons xs ys zs :
+      []

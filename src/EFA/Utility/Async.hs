@@ -21,3 +21,6 @@ wait (Async m) = readMVar m
 
 concurrentlyMany_ :: [IO ()] -> IO ()
 concurrentlyMany_ = mapM async >=> mapM_ wait
+
+concurrentlyMany :: [IO a] -> IO [a]
+concurrentlyMany = mapM async >=> mapM wait

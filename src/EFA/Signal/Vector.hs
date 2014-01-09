@@ -507,6 +507,7 @@ lookUpGen look idxs =
       (ys, []) -> ys
       (_, invalidIdxs) ->
          error $ "lookUpGen: indices out of Range: " ++ show invalidIdxs
+                 ++ "\nAll indices: " ++ show idxs
 
 class Reverse v where
    reverse :: (Storage v d) => v d -> v d

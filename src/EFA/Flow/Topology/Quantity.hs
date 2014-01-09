@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+
+
 module EFA.Flow.Topology.Quantity (
    Section, DirSection, FlowTopo.label, FlowTopo.topology,
    Topology, DirTopology, Sums(..), Flow(..),

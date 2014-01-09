@@ -14,6 +14,7 @@ module EFA.Flow.Draw (
    showCarryEdge, hideCarryEdge,
    showStorage, hideStorage,
    showEtaNode, hideEtaNode,
+   modifyTitle,
 
    cumulatedFlow,
 
@@ -290,6 +291,15 @@ setGlobalAttrs attr =
 title :: String -> DotGraph T.Text -> DotGraph T.Text
 title ti =
    setGlobalAttrs $ GraphAttrs [labelFromString ti]
+
+modifyTitle :: String -> DotGraph T.Text -> DotGraph T.Text
+modifyTitle str =
+  Accessor.modify (attrStmtsAcc . graphStatementsAcc) (map g)
+  where g (GraphAttrs attrs) = GraphAttrs $ map f attrs
+        g x = x
+        f (Viz.Label (Viz.StrLabel txt)) =
+          Viz.Label (Viz.StrLabel (T.append txt (T.pack str)))
+        f x = x
 
 bgcolour :: X11Colors.X11Color -> DotGraph T.Text -> DotGraph T.Text
 bgcolour c =

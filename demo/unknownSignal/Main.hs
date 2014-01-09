@@ -8,13 +8,19 @@ import EFA.Application.Utility ( topologyFromEdges, quantityTopology )
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Rec
 import qualified EFA.Signal.Data as Data
+import qualified EFA.Signal.Chop as Chop
+import qualified EFA.Signal.Sequence as Sequ
 import EFA.Signal.Data (Data, (:>), Nil)
 
 import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as XIdx
+import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Draw as Draw
+import qualified EFA.Flow.Sequence.Record as SeqRec
 import EFA.Flow.Topology.Absolute ((.=), (=.=))
+
+import qualified EFA.Flow.Sequence.Quantity as SeqQty
 
 import qualified EFA.Equation.Result as Result
 
@@ -29,6 +35,8 @@ import qualified Data.Map as Map
 
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (mconcat, (<>))
+
+
 
 
 node0, node1, node2, node3 :: Node.Int
@@ -102,6 +110,7 @@ given =
 
 
 main :: IO ()
+
 main =
    case EqSys.solve (quantityTopology topoTripod) given of
       flowTopo -> do
@@ -131,6 +140,23 @@ main =
                            (FlowTopo.flowEnergyIn flow)) $
                 Graph.edgeLabels $ FlowTopo.topology flowTopo
 
+             sequencePowers :: Sequ.List (Rec.PowerRecord Node.Int [] Double)
+             sequencePowers = Chop.genSequ $ Chop.addZeroCrossings rec
+
+             sequenceFlowsFilt :: Sequ.List (Rec.FlowRecord Node.Int [] Double)
+             sequenceFlowsFilt =
+               fmap Rec.partIntegrate sequencePowers
+
+
+             sequenceFlowGraph ::
+               SeqQty.Graph Node.Int
+                 (Result.Result (Data Nil Double)) (Result.Result (Data ([] :> Nil) Double))
+             sequenceFlowGraph =
+               SeqRec.flowGraphFromSequence $
+               fmap (TopoRecord.flowTopologyFromRecord topoTripod) $
+               sequenceFlowsFilt
+
+
          concurrentlyMany_ [
             PlotIO.record "Power Signals" DefaultTerm.cons show id rec,
             PlotIO.recordList_extract "Power Signals" DefaultTerm.cons show id
@@ -138,5 +164,8 @@ main =
                [ XIdx.ppos node1 node0,
                  XIdx.ppos node1 node2,
                  XIdx.ppos node1 node3 ],
+
+            Draw.xterm $ Draw.title "sequenceFlowGraph"
+                     $ Draw.seqFlowGraph Draw.optionsDefault sequenceFlowGraph,
 
             Draw.xterm $ Draw.flowSection Draw.optionsDefault flowTopo ]

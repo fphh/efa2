@@ -8,7 +8,7 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~/))
-import EFA.Equation.Result (Result(Determined))
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Graph as Graph
 
@@ -20,7 +20,8 @@ import Data.Foldable (Foldable, foldMap)
 
 
 etaSys ::
-   (Node.C n, Graph.Edge e, Ord (e n), Arith.Constant v,
+   (Node.C n, Graph.Edge e, Ord (e n),
+    Arith.Sum v, Arith.Product v,
     Functor f, Foldable f) =>
    f (Graph.Graph n e (FlowTopo.Sums (Result v)) el) -> Result v
 etaSys sq =
@@ -34,6 +35,6 @@ etaSys sq =
              (Map.mapMaybe FlowTopo.sumOut .
               Map.filterWithKey (\node _ -> Node.isSource $ Node.typ node)) nodes
        sumRes =
-          foldl (liftA2 (~+)) (Determined Arith.zero) . foldMap Map.elems
+          foldl1 (liftA2 (~+)) . foldMap Map.elems
 
    in  liftA2 (~/) (sumRes sinks) (sumRes sources)

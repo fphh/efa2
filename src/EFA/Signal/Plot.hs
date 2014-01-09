@@ -9,8 +9,8 @@ module EFA.Signal.Plot (
    run,
    signal,
    signalFrameAttr,
-   heatmap, xyzrange3d, cbrange, xyzlabel,
-   paletteGH, paletteGray, paletteHSV,
+   heatmap, xyzrange3d, cbrange, xyzlabel, depthorder,
+   paletteGH, paletteGray, paletteHSV, missing, contour,
    Signal,
    Value,
    Labeled, label,
@@ -203,6 +203,18 @@ heatmap =
   Opts.add (Opt.custom "view" "") ["map"] .
   Opts.add (Opt.custom "pm3d" "") ["at b"]
 
+contour ::  (Graph.C graph) => Opts.T graph -> Opts.T graph
+contour =
+  Opts.add (Opt.custom "contour" "") ["base"]
+  . Opts.add (Opt.custom "cntrparam" "") ["bspline"]
+  . Opts.add (Opt.custom "cntrparam" "") ["levels auto 10"]
+
+missing ::
+  String -> Opts.T graph -> Opts.T graph
+missing str =
+  Opts.add (Opt.custom "datafile" "") ["missing " ++ show str]
+
+
 xyzrange3d ::
   (Tuple.C x, Atom.C x,
   Tuple.C y, Atom.C y,
@@ -247,6 +259,12 @@ paletteHSV ::
   (Graph.C graph) => Opts.T graph -> Opts.T graph
 paletteHSV =
   Opts.add (Opt.custom "palette" "") ["model HSV defined ( 0 0 1 1, 1 1 1 1 )"]
+
+depthorder ::
+  (Graph.C graph) => Opts.T graph -> Opts.T graph
+depthorder =
+  Opts.add (Opt.custom "pm3d" "") ["depthorder"]
+
 
 
 data Labeled tc = Labeled String tc
@@ -503,7 +521,7 @@ surfaceBasic ::
    TC s2 typ2 (Data c2 a2) ->
    Plot3D.T x y z
 surfaceBasic opts x y z =
-   fmap (Graph3D.lineSpec $ opts surfaceLineSpec) $
+   fmap (Graph3D.lineSpec (opts surfaceLineSpec)) $
    Plot3D.mesh $ List.zipWith3 zip3 (getData x) (getData y) (getData z)
 
 class

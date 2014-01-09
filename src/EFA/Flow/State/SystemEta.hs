@@ -19,14 +19,14 @@ import Data.Maybe.HT (toMaybe)
 
 
 etaSys ::
-   (Node.C node, Arith.Constant v) =>
+   (Node.C node, Arith.Product v) =>
    StateFlow.Graph node a (Result v) -> Result v
 etaSys =
    SystemEta.etaSys . fmap FlowTopo.topology . StateFlow.states
 
 
 detEtaSys ::
-   (Node.C node, Arith.Constant v) =>
+   (Node.C node, Arith.Product v) =>
    Caller ->
    StateFlow.Graph node a (Result v) -> v
 detEtaSys caller =
@@ -39,10 +39,11 @@ type Forcing node a v = StateFlow.Graph node a (Result v) -> v
 
 
 objectiveFunction ::
-   (Node.C node, Arith.Constant v) =>
+   (Node.C node, Arith.Product v) =>
    Condition node a v ->
    Forcing node a v ->
    StateFlow.Graph node a (Result v) ->
-   Maybe v
+   Maybe (v, v)
 objectiveFunction cond forcing env =
-   toMaybe (cond env) $ detEtaSys "objectiveFunction" env ~+ forcing env
+   let eta = detEtaSys "objectiveFunction" env
+   in  toMaybe (cond env) $ (eta ~+ forcing env, eta)

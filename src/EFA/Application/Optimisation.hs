@@ -4,15 +4,21 @@
 
 module EFA.Application.Optimisation where
 
-import qualified EFA.Flow.State.Quantity as StateFlow
+import qualified EFA.Application.OneStorage as One
+import qualified EFA.Application.Sweep as Sweep
+
+import qualified EFA.Flow.State.Quantity as StateQty
+import qualified EFA.Flow.State as State
+
 import qualified EFA.Flow.SequenceState.Index as Idx
 
 import qualified EFA.Flow.Topology.Variable as TopoVar
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Flow.Storage.Variable as StorageVar
+import qualified EFA.Flow.Storage as Storage
 
-import EFA.Signal.Data (Data(Data), Nil)
+import EFA.Signal.Data (Data, Nil)
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Result as Result
@@ -53,10 +59,10 @@ givenAverageWithoutState ::
    (Arith.Sum a, Arith.Sum v, Node.C node) =>
    Idx.State ->
    Map (TopoIdx.Power node) v ->
-   StateFlow.Graph node (Result a) (Result v) ->
-   StateFlow.Graph node (Result a) (Result v)
+   StateQty.Graph node (Result a) (Result v) ->
+   StateQty.Graph node (Result a) (Result v)
 givenAverageWithoutState focus given =
-   StateFlow.mapGraphWithVar
+   StateQty.mapGraphWithVar
       (\(Idx.ForStorage var _) a ->
          case var of
             StorageVar.X _ -> a
@@ -74,21 +80,110 @@ givenAverageWithoutState focus given =
                  TopoVar.X _ -> v
                  _ -> Undetermined)
 
-initialEnv ::
+
+initialEnvWithoutState ::
+  (Ord node, Arith.Constant b,
+   Sweep.SweepClass sweep vec b,
+   Sweep.SweepMap sweep vec b b) =>
+  One.OptimalEnvParams node f sweep vec b ->
+  Maybe Idx.State ->
+  StateQty.Graph node a v ->
+  StateQty.Graph node (Result (sweep vec b)) (Result (sweep vec b))
+initialEnvWithoutState params state =
+  let -- one = One.one params
+      one = Sweep.fromRational (One.sweepLength params) Arith.one
+      mkSweep x = Determined $ Sweep.map (const (Arith.fromRational x)) one
+  in StateQty.mapGraphWithVar
+       (\(Idx.ForStorage var _) _a ->
+         case var of
+            StorageVar.X _ -> mkSweep 0.5
+            _ -> Undetermined)
+       (\(Idx.InPart st var) _v ->
+         case var of
+            TopoVar.Eta _ -> mkSweep 0.5
+            TopoVar.DTime _ -> Determined one
+            TopoVar.X _ ->
+               let f s = if s == st then Undetermined else x
+                   x = mkSweep 0.2
+               in  maybe x f state
+            _ -> Undetermined)
+
+{-
+initialEnvWithoutState ::
    (Ord node, Arith.Constant d) =>
-   StateFlow.Graph node (Result a) (Result v)  ->
-   StateFlow.Graph node (Result (Data Nil d)) (Result (Data Nil d))
-initialEnv =
-   StateFlow.mapGraphWithVar
+   Maybe Idx.State ->
+   StateQty.Graph node (Result a) (Result v) ->
+   StateQty.Graph node (Result (Data Nil d)) (Result (Data Nil d))
+initialEnvWithoutState state =
+   StateQty.mapGraphWithVar
       (\(Idx.ForStorage var _) _a ->
          fmap Data $
          case var of
             StorageVar.X _ -> Determined $ Arith.fromRational 0.5
             _ -> Undetermined)
-      (\(Idx.InPart _state var) _v ->
+      (\(Idx.InPart st var) _v ->
          fmap Data $
          case var of
             TopoVar.Eta _ -> Determined $ Arith.fromRational 0.5
             TopoVar.DTime _ -> Determined $ Arith.fromRational 1
-            TopoVar.X _ -> Determined $ Arith.fromRational 0.5
+            TopoVar.X _ ->
+               let f s = if s == st then Undetermined else x
+                   x = Determined $ Arith.fromRational 0.2
+               in  maybe x f state
             _ -> Undetermined)
+-}
+
+
+eraseXAndEtaFromState ::
+   (Ord node) =>
+   Idx.State ->
+   StateQty.Graph node a (Result b) ->
+   StateQty.Graph node a (Result b)
+eraseXAndEtaFromState state =
+  StateQty.mapGraphWithVar
+      (\(Idx.ForStorage _var _) a -> a)
+      (\(Idx.InPart st var) v ->
+         case var of
+            TopoVar.X _ -> if st == state then Undetermined else v
+            TopoVar.Eta _ -> if st == state then Undetermined else v
+            _ -> v)
+
+eraseEnergies ::
+   (Ord node) =>
+   StateQty.Graph node (Result (Data Nil d)) (Result (Data Nil d)) ->
+   StateQty.Graph node (Result (Data Nil d)) (Result (Data Nil d))
+eraseEnergies =
+  StateQty.mapGraphWithVar
+      (\(Idx.ForStorage _var _) a -> a)
+      (\(Idx.InPart _st var) v ->
+         case var of
+            TopoVar.Energy _ -> Undetermined
+            _ -> v)
+
+initialEnv ::
+  (Ord node, Arith.Constant b,
+   Sweep.SweepClass sweep vec b,
+   Sweep.SweepMap sweep vec b b) =>
+  One.OptimalEnvParams node f sweep vec b ->
+  StateQty.Graph node a v ->
+  StateQty.Graph node (Result (sweep vec b)) (Result (sweep vec b))
+initialEnv params = initialEnvWithoutState params Nothing
+
+
+storageEdgeXFactors ::
+  (Fractional b, Arith.Constant b,
+   Sweep.SweepClass sweep vec b,
+   Sweep.SweepMap sweep vec b b) =>
+  One.OptimalEnvParams node f sweep vec b ->
+  Integer ->
+  Integer ->
+  StateQty.Graph node (Result (sweep vec b)) v ->
+  StateQty.Graph node (Result (sweep vec b)) v
+storageEdgeXFactors params nout nin g = g { State.storages = tt }
+   where one = Sweep.fromRational (One.sweepLength params) Arith.one
+         tt = Map.map f $ State.storages g
+         f gr = gr { Storage.edges = Map.map func $ Storage.edges gr }
+         func x = x { StateQty.carryXOut = xout, StateQty.carryXIn = xin }
+         xout = Determined $ Sweep.map (/Arith.fromInteger nout) one
+         xin = Determined $ Sweep.map (/Arith.fromInteger nin) one
+

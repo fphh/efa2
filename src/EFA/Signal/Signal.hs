@@ -59,7 +59,6 @@ import Prelude
            Int, Double, (-))
 import qualified Prelude as P
 
-
 ----------------------------------------------------------
 -- | Signal & Company
 
@@ -1361,10 +1360,11 @@ interp1Lin :: (Show d1,
               TC Sample t2 (Data Nil d1)
 interp1Lin caller xSig ySig (TC (Data xVal)) =
   toSample $ ((y2 ~- y1) ~/ (x2 ~- x1)) ~* (xVal ~- x1) ~+ y1
-  where sIdx@(SignalIdx idx) =
+  where
+        sIdx@(SignalIdx idx) =
           P.maybe (error msg) id $ findIndex (P.> xVal) xSig
         -- prevent negativ index when interpolating on first element
-        TC (Data x1) = getSample xSig $ SignalIdx $ 
+        TC (Data x1) = getSample xSig $ SignalIdx $
           if idx P.== 0 then error msg else idx-1
         TC (Data x2) = getSample xSig sIdx
         -- prevent negativ index when interpolating on first element
@@ -1511,7 +1511,7 @@ scale ::
 scale fact = map (fact ~*)
 
 -- | Scale Signal by a given Number
-offset :: 
+offset ::
   (Sum d1, D.Map c1, D.Storage c1 d1) =>
   d1 -> TC s1 t1 (Data c1 d1) ->  TC s1 t1 (Data c1 d1)
 offset offs = map (offs ~+)
