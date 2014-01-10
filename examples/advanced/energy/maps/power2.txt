@@ -1,0 +1,6 @@
+double local(2,2)
+  16	 0.2
+  17	 0.2
+double rest(2,2)  
+  16	 0.9
+  17	 1
