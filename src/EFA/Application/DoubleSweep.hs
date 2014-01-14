@@ -9,7 +9,6 @@
 module EFA.Application.DoubleSweep where
 
 import qualified EFA.Application.Sweep as Sweep
-import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Signal.Signal as Sig
 
@@ -162,32 +161,42 @@ optimalSolutionGeneric f =
   fmap (NonEmpty.maximumBy (comparing fst)) . NonEmpty.fetch .
   mapMaybe (\x -> fmap (flip (,) x) $ f x)
 
+
 findBestIndex ::
   (UV.Unbox a, Ord a, Arith.Constant a, Show a,
-   Sweep.SweepClass Sweep UV.Vector a) =>
-  (Sweep UV.Vector Bool) ->
-  (Sweep UV.Vector a) ->
-  (Sweep UV.Vector a) ->
-  Maybe (Int, (a, a))
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Sweep.SweepVector vec Bool,
+   Sweep.SweepClass sweep vec Bool) =>
+  (sweep (vec :: * -> *) Bool) ->
+  (sweep vec a) ->
+  (sweep vec a) ->
+  Maybe (Int, a, a)
 findBestIndex cond esys force =
-  if (UV.or c) then Just res else Nothing
-  where c = Sweep.fromSweep cond
-        start = (0, (Arith.zero, Arith.zero))
-        res = UV.ifoldl f start
-                $ UV.zip3 (Sweep.fromSweep cond)
-                          (Sweep.fromSweep esys)
-                          (Sweep.fromSweep force)
-        f acc@(_, (fo, _)) i (b, es2, f2) =
+  if (or c) then Just res else Nothing
+  where c = Sweep.toList cond
+        start = (0, Arith.zero, Arith.zero)
+        res = List.foldl' f start 
+                    (List.zip4 [0..] (Sweep.toList cond) 
+                               (Sweep.toList esys) (Sweep.toList force))
+        f acc@(_, fo, _) (i, b, es2, f2) =
           if b && f2 > fo
-             then (i, (f2, es2))
+             then (i, f2, es2)
              else acc
+
 
 optimalSolutionState2 ::
   (UV.Unbox a, Ord a, Node.C node, Arith.Constant a, Show a,
-   Sweep.SweepClass Sweep UV.Vector a) =>
-  (StateFlow.Graph node (Result (Sweep UV.Vector a)) (Result (Sweep UV.Vector a)) ->
-    Result (Sweep UV.Vector a)) ->
-  StateFlow.Graph node (Result (Sweep UV.Vector a)) (Result (Sweep UV.Vector a)) ->
+   Arith.Product (sweep vec a),
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Monoid (sweep vec Bool),
+   Sweep.SweepVector vec Bool,
+   Sweep.SweepClass sweep vec Bool,
+   Sweep.SweepMap sweep vec a Bool) =>
+  (StateFlow.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
+    Result (sweep vec a)) ->
+  StateFlow.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
   Maybe (a, a, StateFlow.Graph node (Result a) (Result a))
 optimalSolutionState2 forcing env =
   let condVec = checkGreaterZero env
@@ -195,19 +204,9 @@ optimalSolutionState2 forcing env =
       force = forcing env
       bestIdx = liftA3 findBestIndex condVec esys (liftA2 (Arith.~+) force esys)
   in case bestIdx of
-          Determined (Just (n, (x, y))) ->
-            let choose = fmap ((UV.! n) . Sweep.unSweep)
+          Determined (Just (n, x, y)) ->
+            let choose = fmap (Sweep.!!! n)
                 env2 = StateFlow.mapGraph choose choose env
-{-
-                choose x =
-                  case x of
-                       Sweep ys -> ys UV.! n
-                       Sweep.Const _ y -> y
-
-                env2 = StateFlow.mapGraph (fmap choose) (fmap choose) env
--}
-
-
             in Just (x, y, env2)
           _ -> Nothing
 
@@ -221,21 +220,22 @@ fold ::
    StateFlow.Graph node w w -> w
 fold = MW.execWriter . StateFlow.traverseGraph MW.tell MW.tell
 
+
 checkGreaterZero ::
-  (Ord a, Monoid (sweep UV.Vector Bool), Arith.Constant a,
-   Node.C node, UV.Unbox a, Sweep.SweepClass sweep1 UV.Vector a,
-   Sweep.SweepClass sweep UV.Vector Bool) =>
-  StateFlow.Graph node b (Result (sweep1 UV.Vector a)) ->
-  Result (sweep UV.Vector Bool)
+  (Arith.Constant a, Ord a,
+   Ord node,
+   Monoid (sweep vec Bool), Node.C node,
+   Sweep.SweepClass sweep vec a,
+   Sweep.SweepClass sweep vec Bool,
+   Sweep.SweepMap sweep vec a Bool) =>
+  StateFlow.Graph node b (Result (sweep vec a)) ->
+  Result (sweep vec Bool)
 checkGreaterZero = fold . StateFlow.mapGraphWithVar
   (\_ _ -> Undetermined)
   (\(Idx.InPart _ var) v ->
      case var of
           TopoVar.Power _ ->
             case v of
-                 (Determined w) ->
-                   Determined
-                   $ Sweep.toSweep
-                   $ UV.map (> Arith.zero) $ Sweep.fromSweep $ w
+                 (Determined w) -> Determined $ Sweep.map (> Arith.zero) w
                  _ -> Undetermined
           _ -> Undetermined)

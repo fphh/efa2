@@ -17,16 +17,12 @@ TODO
 
 * Funktion um Section zu plotten.
 
-* simulationIO soll generisch für n reqs werden.
-
 * inaktive Kanten schon in extractOptimalPowerMatricesPerState erkennen
   sollen 0 Leistung liefern
 
 * findZeroCrossing verstehen
 
 * fromSequenceFlow Wirkung von allStEdges ???
-
-* optimalSolutionGeneric nicht richtig, Email Henning 11.12.2013 12:03
 
 * wiki-Artikel wg forall verbessern
 
@@ -44,15 +40,13 @@ import qualified Modules.Optimisation.NonIO as NonIO
 import qualified Modules.Plot as ModPlot
 import qualified Modules.Types as Types
 
-import Modules.Optimisation (EnvResult)
-
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.DoubleSweep as DoubleSweep
 import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Application.Optimisation as AppOpt
-import EFA.Application.Simulation (Name(Name))
+import EFA.Application.OneStorage (Name(Name))
 
 import qualified EFA.Flow.Draw as Draw
 
@@ -84,10 +78,10 @@ import Control.Monad (void)
 
 
 iterateBalanceIO ::
-  ModSet.Params Node [] Sweep UV.Vector Double ->
+  One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
-  EnvResult (Sweep UV.Vector Double) ->
-  IO (EnvResult (Sweep UV.Vector Double))
+  Types.EnvResult Node (Sweep UV.Vector Double) ->
+  IO (Types.EnvResult Node (Sweep UV.Vector Double))
 iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
   let
@@ -135,8 +129,8 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
    Sweep.SweepClass sweep vec a) =>
-  ModSet.Params Node list sweep vec a->
-  EnvResult (sweep vec a)
+  One.OptimalEnvParams Node list sweep vec a->
+  Types.EnvResult Node (sweep vec a)
 initEnv params = AppOpt.initialEnv params System.stateFlowGraph
 
 
@@ -175,17 +169,19 @@ main = do
 
       pts = DoubleSweep.mkPts2 ModSet.sweepPts
 
-      optParams :: ModSet.Params Node [] Sweep UV.Vector Double
+      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
       optParams =
         One.OptimalEnvParams
+          System.topology
+          ModSet.initStorageState
+          ModSet.initStorageSeq
           etaMap
+          System.etaAssignMap
           pts
           ModSet.forcingMap
-          System.topology
           ModSet.dofs
           ModSet.reqs
           ModSet.sweepLength
-
 
   putStrLn $ "Steps\tBalance\t\t\tEta\t"
 

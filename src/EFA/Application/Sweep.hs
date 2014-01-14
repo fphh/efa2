@@ -26,7 +26,7 @@ import Prelude hiding (map)
 import qualified Data.List as List
 
 
-data Sweep vec a = Sweep { unSweep :: !(vec a) } deriving (Show)
+data Sweep vec a = Sweep { unSweep :: (vec a) } deriving (Show)
 
 instance (UV.Unbox a, Eq a) => Eq (Sweep UV.Vector a) where
   _ == _ = error $ "EFA.Application.Sweep: Eq undefined: probable cause: "
@@ -52,11 +52,11 @@ class SweepClass sweep vec a where
   fromSweep :: sweep vec a -> vec a
   replicate :: sweep vec a -> a -> sweep vec a
   fromRational :: Int -> a -> sweep vec a
+  (!!!) :: sweep vec a -> Int -> a
 
 instance (UV.Unbox a) => SweepClass Sweep UV.Vector a where
   length (Sweep x) = UV.length x
   {-# INLINE length #-}
-
 
   toSweep = Sweep
   {-# INLINE toSweep #-}
@@ -70,6 +70,10 @@ instance (UV.Unbox a) => SweepClass Sweep UV.Vector a where
 
   fromRational len x =
     Sweep (UV.replicate len x)
+  {-# INLINE fromRational #-}
+
+  (Sweep u) !!! n = u UV.! n
+  {-# INLINE (!!!) #-}
 
 class SweepVector vec a where
   fromSweepVector :: vec a -> [a]
@@ -86,11 +90,13 @@ fromList ::
   (UV.Unbox a, SweepClass sweep vec a, SweepVector vec a) =>
   [a] -> sweep vec a
 fromList = toSweep . toSweepVector
+{-# INLINE fromList #-}
 
 toList ::
   (UV.Unbox a, SweepClass sweep vec a, SweepVector vec a) =>
   sweep vec a -> [a]
 toList = fromSweepVector . fromSweep
+{-# INLINE toList #-}
 
 class SweepMap (sweep :: (* -> *) -> * -> *) vec a b where
   map :: (a -> b) -> sweep vec a -> sweep vec b
@@ -99,42 +105,33 @@ instance (UV.Unbox a, UV.Unbox b, SweepClass sweep UV.Vector a,
           SweepClass sweep UV.Vector b) =>
          SweepMap sweep UV.Vector a b where
   map f = toSweep . UV.map f . fromSweep
---  {-# INLINE map #-}
-
-
-class SweepZipWith vec a b c where
-  zipWith :: (a -> b -> c) -> vec a -> vec b  -> vec c
-
-instance (UV.Unbox c, UV.Unbox b, UV.Unbox a) => SweepZipWith UV.Vector a b c where
-  zipWith = UV.zipWith
---  {-# INLINE zipWith #-}
-
+  {-# INLINE map #-}
 
 
 instance (Arith.Sum a, UV.Unbox a) => Arith.Sum (Sweep UV.Vector a) where
   (Sweep x) ~+ (Sweep y) = Sweep $ UV.zipWith (~+) x y
---  {-# INLINE (~+) #-}
+  {-# INLINE (~+) #-}
 
   (Sweep x) ~- (Sweep y) = Sweep $ UV.zipWith (~-) x y
---  {-# INLINE (~-) #-}
+  {-# INLINE (~-) #-}
 
   negate (Sweep x) = Sweep $ UV.map Arith.negate x
---  {-# INLINE negate #-}
+  {-# INLINE negate #-}
 
 
 instance (Arith.Product a, Arith.Constant a, UV.Unbox a) =>
          Arith.Product (Sweep UV.Vector  a) where
   (Sweep x) ~* (Sweep y) = Sweep $ UV.zipWith (~*) x y
---  {-# INLINE (~*) #-}
+  {-# INLINE (~*) #-}
 
   (Sweep x) ~/ (Sweep y) = Sweep $ UV.zipWith (~/) x y
---  {-# INLINE (~/) #-}
+  {-# INLINE (~/) #-}
 
   recip (Sweep x) = Sweep $ UV.map Arith.recip x
---  {-# INLINE recip #-}
+  {-# INLINE recip #-}
 
   constOne (Sweep x) = Sweep $ UV.replicate (UV.length x) Arith.one
---  {-# INLINE constOne #-}
+  {-# INLINE constOne #-}
 
 instance Arith.Integrate (Sweep vec a) where
   type Scalar (Sweep vec a) = (Sweep vec a)
@@ -144,7 +141,7 @@ instance Arith.Integrate (Sweep vec a) where
 
 instance (UV.Unbox a, Eq a, Num a, Arith.Constant a) =>
          Arith.ZeroTestable (Sweep UV.Vector a) where
-  allZeros ~(Sweep x) = UV.and (UV.map (Arith.zero ==) x)
+  allZeros (Sweep x) = UV.and (UV.map (Arith.zero ==) x)
   {-# INLINE allZeros #-}
 
   coincidingZeros (Sweep x) (Sweep y) =

@@ -8,19 +8,19 @@ module Modules.Optimisation.NonIO where
 
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Optimisation.Base as Base
-import qualified Modules.System as System
+
 import qualified Modules.Utility as ModUt
 import qualified Modules.Setting as ModSet
 import qualified Modules.Types as Types
 
-import Modules.Optimisation (EnvResult, external)
-import Modules.System (Node)
+import Modules.Optimisation (external)
 
 import qualified EFA.Application.Sweep as Sweep
-import EFA.Application.Sweep (Sweep)
-
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Simulation as AppSim
+import EFA.Application.Sweep (Sweep)
+
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Quantity as TopoQty
@@ -30,7 +30,6 @@ import qualified EFA.Flow.Sequence.Absolute as SeqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqQty
 import qualified EFA.Flow.Sequence.Record as SeqRec
 import qualified EFA.Flow.Sequence.Index as SeqIdx
-import EFA.Flow.Sequence.Absolute ((.=))
 
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.Absolute as StateEqAbs
@@ -50,32 +49,44 @@ import EFA.Equation.Result (Result(Determined, Undetermined))
 import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
-import Data.Monoid (mempty)
+import Data.Monoid (Monoid, mempty, (<>))
 
 import Control.Functor.HT (for)
 
 
 quasiStationaryOptimisation ::
-  ModSet.Params System.Node [] Sweep UV.Vector Double ->
-  Map Idx.State (Map [Double] (EnvResult (Sweep UV.Vector Double))) ->
-  Types.QuasiStationary Sweep UV.Vector Double
+  (Show node, Node.C node,
+   Ord a, Show a, UV.Unbox a, Arith.Constant a,
+   Ord (sweep vec a),
+   Monoid (sweep vec Bool),
+   Arith.Product (sweep vec a),
+   Sweep.SweepVector vec a,
+   Sweep.SweepVector vec Bool,
+   Sweep.SweepMap sweep vec a a,
+   Sweep.SweepMap sweep vec a Bool,
+   Sweep.SweepClass sweep vec a,
+   Sweep.SweepClass sweep vec Bool) =>
+  One.OptimalEnvParams node [] sweep vec a ->
+  Map Idx.State (Map [a] (Types.EnvResult node (sweep vec a))) ->
+  Types.QuasiStationary node sweep vec a
 quasiStationaryOptimisation params perStateSweep =
   let a = Base.optimalObjectivePerState params perStateSweep
       b = Base.selectOptimalState a
   in Types.QuasiStationary perStateSweep a b
 
 simulation ::
-  forall sweep vec list.
-  (Arith.ZeroTestable (sweep vec Double),
+  forall node sweep vec list.
+  (Node.C node, Show node, Ord node,
+   Arith.ZeroTestable (sweep vec Double),
    Arith.Product (sweep vec Double),
    Arith.Sum (sweep vec Double),
    Sweep.SweepVector vec Double,
    Sweep.SweepClass sweep vec Double,
    Sweep.SweepMap sweep vec Double Double) =>
-  ModSet.Params System.Node list sweep vec Double ->
-  Map (TopoIdx.Position Node) (Sig.PSignal2 Vector Vector Double) ->
-  Record.PowerRecord Node Vector Double ->
-  Types.Simulation sweep vec Double
+  One.OptimalEnvParams node list sweep vec Double ->
+  Map (TopoIdx.Position node) (Sig.PSignal2 Vector Vector Double) ->
+  Record.PowerRecord node Vector Double ->
+  Types.Simulation node sweep vec Double
 simulation params dofsMatrices reqsRec =
 
   let (prest, plocal) =
@@ -84,7 +95,7 @@ simulation params dofsMatrices reqsRec =
              _ -> error "NonIO.simulation: number of signals"
 
 
-      dofsSignals :: Map (TopoIdx.Position Node) (Sig.PSignal Vector Double)
+      dofsSignals :: Map (TopoIdx.Position node) (Sig.PSignal Vector Double)
       dofsSignals =
         for dofsMatrices $ \mat ->
           Sig.tzipWith
@@ -95,11 +106,11 @@ simulation params dofsMatrices reqsRec =
       givenSigs = Record.addSignals (Map.toList dofsSignals) reqsRec
 
 
-      envSims :: TopoQty.Section Node (Result (Data (Vector :> Nil) Double))
+      envSims :: TopoQty.Section node (Result (Data (Vector :> Nil) Double))
       envSims =
         AppSim.solve
           (One.systemTopology params)
-          System.etaAssignMap
+          (One.etaAssignMap params)
           (One.etaMap params)
           givenSigs
 
@@ -114,35 +125,35 @@ simulation params dofsMatrices reqsRec =
         Base.filterPowerRecordList params $ Chop.genSequ recZeroCross
 
 
-      sequenceFlowsFilt :: Sequ.List (Record.FlowRecord Node [] Double)
+      sequenceFlowsFilt :: Sequ.List (Record.FlowRecord node [] Double)
       sequenceFlowsFilt = fmap Record.partIntegrate sequencePowers
 
       sequenceFlowGraphSim ::
-        SeqQty.Graph Node
+        SeqQty.Graph node
           (Result (Data Nil Double)) (Result (Data ([] :> Nil) Double))
       sequenceFlowGraphSim =
         SeqAbs.solveOpts
           (SeqAbs.independentInOutSums SeqAbs.optionsDefault)
           (SeqRec.flowGraphFromSequence $
-            fmap (TopoRecord.flowTopologyFromRecord System.topology) $
+            fmap (TopoRecord.flowTopologyFromRecord (One.systemTopology params)) $
             sequenceFlowsFilt)
-          (SeqIdx.storage Idx.initial System.Water .= ModSet.initStorageSeq)
+          (Map.foldWithKey
+            (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
+            mempty (One.unInitStorageSeq $ One.initStorageSeq params))
 
-
-      stateFlowGraphSim :: EnvResult (sweep vec Double)
+      stateFlowGraphSim :: Types.EnvResult node (sweep vec Double)
       stateFlowGraphSim =
         StateEqAbs.solveOpts
           Optimisation.options
           (toSweep params $ StateQty.graphFromCumResult $
            StateQty.fromSequenceFlowResult False $
            SeqQty.mapGraph id (fmap Arith.integrate) $
-           external ModSet.initStorage sequenceFlowGraphSim)
+           external (One.initStorageState params) sequenceFlowGraphSim)
           mempty
 
 
   in Types.Simulation stateFlowGraphSim sequenceFlowGraphSim recZeroCross
 
--- hier nochmal das sweep.map wegmachen!
 
 toSweep ::
   (Sweep.SweepClass sweep vec a, Arith.Constant a) =>
@@ -156,10 +167,11 @@ toSweep params = StateQty.mapGraph f f
 
 
 optimiseAndSimulate ::
-  ModSet.Params System.Node [] Sweep UV.Vector Double ->
-  Record.PowerRecord Node Vector Double ->
-  Map Idx.State (Map [Double] (EnvResult (Sweep UV.Vector Double))) ->
-  Types.Optimisation Sweep UV.Vector Double
+  (Show node, Node.C node) =>
+  One.OptimalEnvParams node [] Sweep UV.Vector Double ->
+  Record.PowerRecord node Vector Double ->
+  Map Idx.State (Map [Double] (Types.EnvResult node (Sweep UV.Vector Double))) ->
+  Types.Optimisation node Sweep UV.Vector Double
 optimiseAndSimulate params reqsRec perStateSweep =
   let optimalResult = quasiStationaryOptimisation params perStateSweep
 
