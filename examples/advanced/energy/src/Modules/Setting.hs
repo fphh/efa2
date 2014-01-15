@@ -67,9 +67,9 @@ legend _ = "Undefined"
 scaleTableEta :: Map One.Name (Double, Double)
 scaleTableEta = Map.fromList $
   (System.storage,     (4, 0.6)) :
-  (System.gas,         (2, 0.8)) :
-  (System.transformer, (3, 1)) :
-  (System.coal,        (3, 1)) :
+  (System.gas,         (2, 0.7)) :
+  (System.transformer, (3, 0.95)) :
+  (System.coal,        (3, 0.45)) :
   (System.local,       (3, 1)) :
   (System.rest,        (3, 1)) :
   []
@@ -82,7 +82,9 @@ localScale = 0.3
 forcingMap ::
   Map System.Node (One.SocDrive Double)
 forcingMap = Map.fromList $
-  (System.Water, One.ChargeDrive (-0.12)) :
+  --(System.Water, One.ChargeDrive (-0.12)) :
+  (System.Water, One.ChargeDrive 0) :
+
   []
 
 varRestPower', varLocalPower' :: [[Double]]

@@ -122,12 +122,15 @@ simulation params dofsMatrices reqsRec =
           (Base.envToPowerRecord envSims)
             { Record.recordTime = Record.recordTime givenSigs }
 
-      (sequencePowers, _) =
-        Base.filterPowerRecordList params $ Chop.genSequ recZeroCross
 
+      -- sequencePowers :: Sequ.List (PowerRecord System.Node [] Double)
+      sequencePowers = Chop.genSequ recZeroCross
 
-      sequenceFlowsFilt :: Sequ.List (Record.FlowRecord node [] Double)
-      sequenceFlowsFilt = fmap Record.partIntegrate sequencePowers
+      (_, sequenceFlowsFilt) =
+        Sequ.unzip $
+        Sequ.filter (Record.major (Sig.toScalar 0) (Sig.toScalar 0.2) . snd) $
+        fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
+
 
       sequenceFlowGraphSim ::
         SeqQty.Graph node

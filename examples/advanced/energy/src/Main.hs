@@ -190,6 +190,7 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
 
 
+
   putStrLn (show len ++ "\t" ++ show bal ++ "\t" ++ show eta)
 
 {-
@@ -198,7 +199,9 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
       f ' ' = '_'
       f x = x
 
+-}
 
+{-
   Draw.xterm
            $ Draw.bgcolour LimeGreen
            $ Draw.title ("Sequence Flow Graph from Simulation\\lBalance " ++ show bal ++ "\\l")
@@ -206,12 +209,10 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
 
   Draw.xterm
-           $ Draw.bgcolour Orchid1
            $ Draw.title ("State Flow Graph from Simulation\\lBalance " ++ show bal ++ "\\l")
            $ Draw.stateFlowGraph Draw.optionsDefault
            $ StateQty.mapGraph (fmap (head . Sweep.toList)) (fmap (head . Sweep.toList)) statefg
 -}
-
 
   return statefg
 

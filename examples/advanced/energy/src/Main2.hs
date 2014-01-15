@@ -61,7 +61,7 @@ import qualified EFA.IO.TableParser as Table
 
 import qualified EFA.Equation.Arithmetic as Arith
 
-import EFA.Utility.Async (concurrentlyMany)
+import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
@@ -70,9 +70,7 @@ import qualified Data.Empty as Empty
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
-
 import Control.Monad (void)
-
 
 
 iterateBalanceIO ::
@@ -92,34 +90,37 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
 
   let
-      powerPos = StateIdx.x (Idx.State 3) System.Network System.Water
+      -- xPos = StateIdx.x (Idx.State 3) System.Network System.Water
       len = One.sweepLength params
 
-  ModPlot.plotSimulationSignalsPerEdge params opt
 
-  void $ concurrentlyMany [
-    ModPlot.plotMaxEta opt,
-    ModPlot.plotMaxObj opt,
-    ModPlot.plotMaxState opt ]
 
-  ModPlot.plotMaxEta opt
+  concurrentlyMany_ [
+    Draw.xterm $ Draw.topology (One.systemTopology params),
+    ModPlot.plotSimulationSignalsPerEdge params opt ]
 
-  ModPlot.plotMaxStateContour opt
 
-  void $ concurrentlyMany [
+  -- ModPlot.plotOptimalObjectivePerState opt
+
+
+  concurrentlyMany_ [
+    ModPlot.plotPerStateSweep len "Sweep per State" opt,
     ModPlot.plotMaxEtaPerState opt,
-    ModPlot.plotMaxPosPerState powerPos opt,
+    -- ModPlot.plotMaxPosPerState xPos opt,
     ModPlot.plotMaxObjPerState opt ]
 
+  concurrentlyMany_ [
+    ModPlot.plotMaxEta opt,
+    ModPlot.plotMaxObj opt,
+    ModPlot.plotMaxState opt,
+    ModPlot.plotMaxStateContour opt ]
 
-  ModPlot.plotPerStateSweep len "Sweep per State" opt
 
-  ModPlot.plotSimulationSignalsPerEdge params opt
+
+  --ModPlot.plotSimulationSignalsPerEdge params opt
   ModPlot.plotSimulationSignals params opt
 
-  ModPlot.plotOptimalObjectivePerState opt
   ModPlot.plotSimulationGraphs (const Draw.xterm) opt
-
 
   --ModPlot.plotSimulationGraphs (Draw.pdf . ("pdf/"++) . (++ (timeStr ++ ".pdf"))) opt
 
@@ -185,8 +186,6 @@ main = do
           (ReqsAndDofs.reqsPos ModSet.reqs)
           (ReqsAndDofs.dofsPos ModSet.dofs)
           ModSet.sweepLength
-
-  putStrLn $ "Steps\tBalance\t\t\tEta\t"
 
   void $
      ModUt.nestM 5

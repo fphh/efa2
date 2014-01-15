@@ -43,7 +43,7 @@ import qualified Graphics.Gnuplot.ColorSpecification as ColorSpec
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 
-import Data.GraphViz.Attributes.Colors.X11 (X11Color(LimeGreen, Orchid1))
+import Data.GraphViz.Attributes.Colors.X11 (X11Color(LimeGreen, Lavender))
 
 
 import qualified Data.Map as Map; import Data.Map (Map)
@@ -138,7 +138,7 @@ plotGraphMaps title =
   sequence_ . Map.elems . Map.mapWithKey
     (\reqs -> maybe (return ())
         (\(objVal, eta, graph) ->
-              Draw.xterm $ Draw.bgcolour Orchid1
+              Draw.xterm $ Draw.bgcolour Lavender
                          $ Draw.title ( title
                                         ++ "\\lreqs " ++ show reqs
                                         ++ "\\lObjective Value " ++ show objVal
@@ -323,7 +323,7 @@ plotPerStateSweep ::
    Sweep.SweepClass sweep vec Double) =>
   Int -> String -> Types.Optimisation node sweep vec Double -> IO ()
 plotPerStateSweep len title =
-  plotSweeps id title
+  plotSweeps id (title ++ ", etaSys")
   . Map.map (matrix2ListOfMatrices len
              . Sig.map Sweep.toList
              . sweepResultTo2DMatrix len)
@@ -411,7 +411,7 @@ plotSimulationGraphs terminal (Types.Optimisation _ sim) = do
 
 
   terminal "state_"
-    $ Draw.bgcolour Orchid1
+    $ Draw.bgcolour Lavender
     $ Draw.title "State Flow Graph from Simulation"
     $ Draw.stateFlowGraph Draw.optionsDefault
     $ StateQty.mapGraph g g (Types.stateFlowGraph sim)
