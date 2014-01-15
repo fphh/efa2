@@ -47,7 +47,8 @@ import Modules.Types (EnvResult)
 
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.DoubleSweep as DoubleSweep
+import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+
 import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Application.Optimisation as AppOpt
@@ -252,13 +253,18 @@ main1 = do
       prest = Sig.convert $ transform r
       plocal = Sig.convert $ transform l
 
+      reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos ModSet.reqs
+
       reqsRec :: Record.PowerRecord Node Vector Double
       reqsRec =
         Record.Record (Sig.convert time)
-                      (Map.fromList (zip ModSet.reqs [prest, plocal]))
+                      (Map.fromList (zip reqsPos [prest, plocal]))
 
-      pts = DoubleSweep.mkPts2 ModSet.sweepPts
+      -- pts = DoubleSweep.mkPts2 ModSet.sweepPts
 
+ -- print pts
+
+  let
       optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
       optParams =
         One.OptimalEnvParams
@@ -267,10 +273,10 @@ main1 = do
           ModSet.initStorageSeq
           etaMap
           System.etaAssignMap
-          pts
+          ModSet.sweepPts
           ModSet.forcingMap
-          ModSet.dofs
-          ModSet.reqs
+          (ReqsAndDofs.reqsPos ModSet.reqs)
+          (ReqsAndDofs.dofsPos ModSet.dofs)
           ModSet.sweepLength
 
 
@@ -284,3 +290,4 @@ main1 = do
 
 main :: IO ()
 main = main1
+

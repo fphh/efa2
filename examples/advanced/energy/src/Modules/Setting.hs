@@ -2,13 +2,12 @@
 
 module Modules.Setting where
 
-import qualified Modules.System as System; import Modules.System (Node)
+import qualified Modules.System as System
 
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
-import EFA.Application.Sweep (Sweep)
 
-import qualified EFA.Application.DoubleSweep as DoubleSweep
+import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
@@ -17,10 +16,10 @@ import qualified EFA.Signal.ConvertTable as CT
 
 import qualified EFA.Equation.Arithmetic as Arith
 
-import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
-import qualified Data.Empty as Empty
 import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector (Vector)
+import qualified Data.Vector.Unboxed as UV
+
 
 
 local, rest, water, gas :: [Double]
@@ -30,31 +29,32 @@ rest =  [0.1, 0.2 .. 3]
 water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]
 
-type Reqs = NonEmpty.T (NonEmpty.T Empty.T)
+reqs :: ReqsAndDofs.Reqs [(TopoIdx.Position System.Node, [Double])]
+reqs = ReqsAndDofs.Reqs $
+  (TopoIdx.ppos System.LocalRest System.LocalNetwork, local) :
+  (TopoIdx.ppos System.Rest System.Network,           rest) :
+  []
+
+dofs :: ReqsAndDofs.Dofs [(TopoIdx.Position System.Node, [Double])]
+dofs = ReqsAndDofs.Dofs $
+  (TopoIdx.ppos System.Network System.Water,    water) :
+  (TopoIdx.ppos System.LocalNetwork System.Gas, gas) :
+  []
 
 
-type Dofs = NonEmpty.T (NonEmpty.T Empty.T)
+sweepPair ::
+  ReqsAndDofs.Pair ReqsAndDofs.Reqs ReqsAndDofs.Dofs
+                   [(TopoIdx.Position System.Node, [Double])]
+sweepPair = ReqsAndDofs.Pair reqs dofs
 
-reqsPts :: Reqs [Double]
-reqsPts = local !: rest !: Empty.Cons
-
-dofsPts :: Dofs [Double]
-dofsPts =  water !: gas !: Empty.Cons
-
-sweepPts :: DoubleSweep.Points Reqs Dofs Double
-sweepPts = DoubleSweep.Pair reqsPts dofsPts
+sweepPts ::
+  Map [Double]
+      (ReqsAndDofs.Pair (Sweep.List Sweep.Sweep UV.Vector)
+                        (Sweep.List Sweep.Sweep UV.Vector) Double)
+sweepPts = ReqsAndDofs.mkPts2 sweepPair
 
 sweepLength :: Int
-sweepLength = Sweep.size dofsPts
-
-
-dofs, reqs :: [TopoIdx.Position System.Node]
-
-dofs = [ TopoIdx.ppos System.Network System.Water,
-         TopoIdx.ppos System.LocalNetwork System.Gas ]
-
-reqs = [ TopoIdx.ppos System.Rest System.Network,
-         TopoIdx.ppos System.LocalRest System.LocalNetwork ]
+sweepLength = ReqsAndDofs.sweepLength sweepPair
 
 noLegend :: Int -> String
 noLegend =  (const "")
@@ -96,14 +96,6 @@ varRestPower :: Sig.PSignal2 Vector Vector Double
 varRestPower = Sig.fromList2 varRestPower'
 
 varLocalPower :: Sig.PSignal2 Vector Vector Double
-{-
-varLocalPower :: 
-  (Vec.Storage c Double,
-   Vec.Storage c (c Double),
-   Vec.FromList c) =>
-  Sig.TC s t (Data (c :> (c :> Nil)) Double)
--}
-
 varLocalPower = Sig.fromList2 varLocalPower'
 
 

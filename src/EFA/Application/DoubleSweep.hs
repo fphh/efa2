@@ -9,6 +9,7 @@
 module EFA.Application.DoubleSweep where
 
 import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 
 import qualified EFA.Signal.Signal as Sig
 
@@ -29,18 +30,14 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import Control.Applicative (liftA2)
 
-import qualified Data.Traversable as Trav
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.List as List
-import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
-import Data.Traversable (Traversable, traverse)
-import Data.Foldable (Foldable, foldMap)
 import Data.Maybe (mapMaybe)
-import Data.Monoid ((<>), Monoid)
+import Data.Monoid (Monoid)
 import Data.Ord (comparing)
 import qualified Control.Monad.Trans.Writer as MW
 
@@ -49,73 +46,9 @@ import Control.Applicative (liftA3)
 -- | Map a two dimensional load room (varX, varY) and find per load situation
 -- | the optimal solution in the 2d-solution room (two degrees of freevarOptX varOptY)
 
-data Pair f g a =
-  Pair {
-    fstRecord :: f a,
-    sndRecord :: g a
-  }
-
-
-instance (Functor f, Functor g) => Functor (Pair f g) where
-  fmap f (Pair xs ys) = Pair (fmap f xs) (fmap f ys)
-
-instance (Foldable f, Foldable g) => Foldable (Pair f g) where
-  foldMap f (Pair xs ys) = foldMap f xs <> foldMap f ys
-
-instance (Traversable f, Traversable g) => Traversable (Pair f g) where
-  traverse f (Pair xs ys) = liftA2 Pair (traverse f xs) (traverse f ys)
-
-instance (NonEmptyC.Zip f, NonEmptyC.Zip g) => NonEmptyC.Zip (Pair f g) where
-  zipWith f (Pair x0 y0) (Pair x1 y1) =
-     Pair (NonEmptyC.zipWith f x0 x1) (NonEmptyC.zipWith f y0 y1)
-
-instance (Show (f a), Show (g a)) => Show (Pair f g a) where
-  show (Pair f g) = "Pair (" ++ show f ++ ") (" ++ show g ++ ")"
-
-type Points f g v = Pair f g [v]
-
-mkPts ::
-  (Traversable f, Traversable g, Ord (f a)) =>
-  Points f g a -> Map (f a) [Pair f g a]
-mkPts =
-  List.foldl'
-    (\acc xy -> Map.insertWith' (++) (fstRecord xy) [xy] acc)
-    Map.empty .
-  Trav.sequence
-
-
-innerSweep ::
-  (Sweep.Size x, Sweep.DoubleList x, UV.Unbox a,
-   Sweep.SweepClass sweep vec a, Sweep.SweepVector vec a) =>
-  x [a] -> [sweep vec a]
-innerSweep xs =
-  let ys = sequence $ Sweep.doubleList xs
-      go [] = []
-      go zs =
-        let (as, bs) = List.foldl' f ([], []) zs
-            f (ss, ts) (c:cs) = (c:ss, cs:ts)
-            f _ [] = error "EFA.Application.DoubleSweep.innerSweep: empty list"
-        in as : go bs
-  in map Sweep.fromList $ go ys
-
-
-mkPts2 ::
-  (Ord a, UV.Unbox a, Sweep.Size y,
-   Sweep.DoubleList x, Sweep.DoubleList y,
-   Sweep.SweepVector vec a,
-   Sweep.SweepClass sweep vec a) =>
-  Pair x y [a] -> Map [a] (Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a)
-mkPts2 (Pair as bs) =
-  let is = innerSweep bs
-      len = Sweep.length (head is)
-      os = sequence $ Sweep.doubleList as
-      toSw n x = Sweep.fromRational n x
-      f o = (o, Pair (Sweep.List $ map (toSw len) o) (Sweep.List is))
-  in Map.fromList (map f os)
-
 doubleSweep ::
-  (Pair g h a -> b) ->
-  Map (f a) (Pair g h a) ->
+  (ReqsAndDofs.Pair g h a -> b) ->
+  Map (f a) (ReqsAndDofs.Pair g h a) ->
   Map (f a) b
 doubleSweep = Map.map
 

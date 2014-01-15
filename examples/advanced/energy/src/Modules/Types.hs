@@ -1,6 +1,8 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 
 module Modules.Types where
@@ -33,16 +35,16 @@ data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
       Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))),
 
     optimalState ::
-      Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) }
+      Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) } deriving (Show)
 
 data Simulation node (sweep :: (* -> *) -> * -> *) vec a =
   Simulation {
     stateFlowGraph :: EnvResult node (sweep vec a),
     sequenceFlowGraph ::
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
-    signals :: Record.PowerRecord node [] a }
+    signals :: Record.PowerRecord node [] a }  deriving (Show)
 
 data Optimisation node (sweep :: (* -> *) -> * -> *) vec a =
   Optimisation {
     quasiStationary :: QuasiStationary node sweep vec a,
-    simulation :: Simulation node sweep vec a }
+    simulation :: Simulation node sweep vec a }  deriving (Show)

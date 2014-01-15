@@ -169,6 +169,7 @@ Library
     EFA.Application.Simulation
     EFA.Application.OneStorage
     EFA.Application.StateAnalysis
+    EFA.Application.ReqsAndDofs
     EFA.Example.Topology.LinearOne
     EFA.Example.Topology.LinearTwo
     EFA.Example.Topology.Tripod
@@ -290,6 +291,8 @@ Executable example-energy
       base
   Else
     Buildable: False
+
+
 
 Executable example-time
   Main-Is: examples/elementary/time/Main.hs

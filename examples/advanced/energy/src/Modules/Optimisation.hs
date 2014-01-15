@@ -4,12 +4,11 @@
 
 module Modules.Optimisation where
 
-import qualified Modules.System as System
 import qualified Modules.Setting as ModSet
 import qualified Modules.Types as Types
 
 
-import qualified EFA.Application.DoubleSweep as DoubleSweep
+import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.Sweep as Sweep
 import EFA.Application.OneStorage
@@ -71,11 +70,11 @@ solve ::
   EtaAssignMap node ->
   Map Name (a -> a) ->
   Idx.State ->
-  DoubleSweep.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a ->
+  ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a ->
   Types.EnvResult node (sweep vec a)
 solve reqsAndDofs stateFlowGraph etaAssign etaFunc state params =
-  let ss = Sweep.unList (DoubleSweep.fstRecord params)
-             ++ Sweep.unList (DoubleSweep.sndRecord params)
+  let ss = Sweep.unList (ReqsAndDofs.reqs params)
+           ++ Sweep.unList (ReqsAndDofs.dofs params)
   in StateAbs.solveOpts
       options
       (AppOpt.givenAverageWithoutState state

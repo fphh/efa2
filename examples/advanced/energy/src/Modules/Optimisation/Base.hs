@@ -10,6 +10,7 @@ import qualified Modules.Utility as ModUt
 import Modules.Types (EnvResult)
 
 import qualified EFA.Application.DoubleSweep as DoubleSweep
+import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
@@ -68,7 +69,9 @@ perStateSweep ::
 perStateSweep params stateFlowGraph =
   Map.mapWithKey f states
   where states = StateQty.states stateFlowGraph
-        reqsAndDofs = map TopoIdx.Power $ One.reqs params ++ One.dofs params
+        reqsAndDofs = map TopoIdx.Power
+                      $ ReqsAndDofs.unReqs (One.reqsPos params)
+                        ++ ReqsAndDofs.unDofs (One.dofsPos params)
 
         f state _ = DoubleSweep.doubleSweep solveFunc (One.points params)
           where solveFunc =
@@ -210,9 +213,9 @@ signCorrectedOptimalPowerMatrices ::
   (Ord v, Arith.Sum v, Arith.Constant v, Show node, Ord node) =>
   One.OptimalEnvParams node [] sweep vec v ->
   Map [v] (Maybe (Double, Double, Idx.State, EnvResult node v)) ->
-  [TopoIdx.Position node] ->
+  ReqsAndDofs.Dofs [TopoIdx.Position node] ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector Vector (Maybe (Result v)))
-signCorrectedOptimalPowerMatrices params m ppos =
+signCorrectedOptimalPowerMatrices params m (ReqsAndDofs.Dofs ppos) =
   Map.fromList $ map g ppos
   where g pos = (pos, ModUt.to2DMatrix $ Map.map f m)
           where f Nothing = Nothing

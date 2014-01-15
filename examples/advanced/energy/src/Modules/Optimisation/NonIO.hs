@@ -15,6 +15,8 @@ import qualified Modules.Types as Types
 
 import Modules.Optimisation (external)
 
+import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Simulation as AppSim
@@ -88,9 +90,8 @@ simulation ::
   Record.PowerRecord node Vector Double ->
   Types.Simulation node sweep vec Double
 simulation params dofsMatrices reqsRec =
-
   let (prest, plocal) =
-        case map (Record.getSig reqsRec) (One.reqs params) of
+        case map (Record.getSig reqsRec) (ReqsAndDofs.unReqs $ One.reqsPos params) of
              [r, l] -> (r, l)
              _ -> error "NonIO.simulation: number of signals"
 
@@ -178,7 +179,7 @@ optimiseAndSimulate params reqsRec perStateSweep =
       dofsMatrices =
         Map.map (Sig.map ModUt.nothing2Nan) $
           Base.signCorrectedOptimalPowerMatrices params (Types.optimalState optimalResult)
-          (One.dofs params)
+          (One.dofsPos params)
 
   in Types.Optimisation
        optimalResult
