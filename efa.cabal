@@ -293,6 +293,34 @@ Executable example-energy
     Buildable: False
 
 
+Executable example-energy2
+  Hs-Source-Dirs: examples/advanced/energy/src
+  Main-Is: Main2.hs
+  Other-Modules:
+      Modules.Setting
+      Modules.Optimisation
+      Modules.Optimisation.NonIO
+      Modules.Optimisation.Base
+      Modules.System
+      Modules.Plot
+      Modules.Utility
+  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      gnuplot,
+      graphviz,
+      utility-ht,
+      containers,
+      non-empty,
+      filepath,
+      vector,
+      time,
+      text,
+      base
+  Else
+    Buildable: False
+
 
 Executable example-time
   Main-Is: examples/elementary/time/Main.hs

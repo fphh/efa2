@@ -70,7 +70,7 @@ data OptimalEnvParams node f sweep vec a = OptimalEnvParams {
   etaAssignMap :: EtaAssignMap node,
   points :: Map (f a) (ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),
   forcingPerNode :: Map node (SocDrive a),
-  reqsPos :: ReqsAndDofs.Reqs [TopoIdx.Position node],
-  dofsPos :: ReqsAndDofs.Dofs [TopoIdx.Position node],
+  reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
+  dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   sweepLength :: Int
   }

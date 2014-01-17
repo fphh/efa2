@@ -51,6 +51,7 @@ import Data.GraphViz.Types.Canonical (DotGraph)
 import Data.Text.Lazy (Text)
 import qualified Data.Vector.Unboxed as UV
 import Data.Vector (Vector)
+import Data.Tuple.HT (fst3, snd3)
 
 import Data.Monoid ((<>), mconcat)
 import Control.Applicative (liftA2)
@@ -160,6 +161,7 @@ plotOptimalObjectivePerState ::
   Types.Optimisation node sweep vec a -> IO ()
 plotOptimalObjectivePerState =
   plotGraphMapOfMaps . Types.optimalObjectivePerState . Types.quasiStationary
+
 
 plotPerEdge ::
   (Vector.Walker l, Vector.Storage l a, Vector.FromList l,
@@ -315,8 +317,7 @@ sweepResultTo2DMatrix len = Sig.map f . ModUt.to2DMatrix
 
 
 plotPerStateSweep ::
-  (--Ord a, Arith.Constant a, UV.Unbox a,
-   Show (vec Double),
+  (Show (vec Double),
    Node.C node,
    Arith.Product (sweep vec Double),
    Sweep.SweepVector vec Double,
@@ -330,6 +331,32 @@ plotPerStateSweep len title =
   . Map.map (Map.map StateEta.etaSys)
   . Types.perStateSweep
   . Types.quasiStationary
+
+plotOptimal ::
+  Ord b =>
+  ((b, b, Types.EnvResult node b) -> Double) ->
+  String ->
+  Types.Optimisation node sweep vec b -> IO ()
+plotOptimal f title =
+  AppPlot.surfaceWithOpts title
+            DefaultTerm.cons
+            id
+            (Graph3D.typ "lines")
+            frameOpts varRestPower varLocalPower
+  . Map.elems
+  . Map.map (to2DMatrix . fmap (m2n . fmap f))
+  . Types.optimalObjectivePerState
+  . Types.quasiStationary
+  where m2n Nothing = ModUt.nan
+        m2n (Just x) = x
+
+plotOptimalObjs, plotOptimalEtas ::
+  Types.Optimisation node sweep vec Double -> IO ()
+plotOptimalObjs =
+  plotOptimal fst3 ("Maximal Objective Function Surfaces")
+plotOptimalEtas =
+  plotOptimal snd3 "Maximal Eta Surfaces"
+
 
 
 findTile :: Ord t => [t] -> [t] -> t -> t -> [(t, t)]

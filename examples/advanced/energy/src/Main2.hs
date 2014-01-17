@@ -48,8 +48,6 @@ import EFA.Application.Sweep (Sweep)
 import qualified EFA.Application.Optimisation as AppOpt
 import EFA.Application.OneStorage (Name(Name))
 
-import qualified EFA.Flow.State.Index as StateIdx
-import qualified EFA.Flow.Part.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 
 
@@ -93,7 +91,9 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
       -- xPos = StateIdx.x (Idx.State 3) System.Network System.Water
       len = One.sweepLength params
 
-
+  concurrentlyMany_ [
+    ModPlot.plotOptimalEtas opt,
+    ModPlot.plotOptimalObjs opt ]
 
   concurrentlyMany_ [
     Draw.xterm $ Draw.topology (One.systemTopology params),

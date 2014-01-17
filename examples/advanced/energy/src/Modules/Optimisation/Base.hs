@@ -213,7 +213,7 @@ signCorrectedOptimalPowerMatrices ::
   (Ord v, Arith.Sum v, Arith.Constant v, Show node, Ord node) =>
   One.OptimalEnvParams node [] sweep vec v ->
   Map [v] (Maybe (Double, Double, Idx.State, EnvResult node v)) ->
-  ReqsAndDofs.Dofs [TopoIdx.Position node] ->
+  ReqsAndDofs.Dofs (TopoIdx.Position node) ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector Vector (Maybe (Result v)))
 signCorrectedOptimalPowerMatrices params m (ReqsAndDofs.Dofs ppos) =
   Map.fromList $ map g ppos

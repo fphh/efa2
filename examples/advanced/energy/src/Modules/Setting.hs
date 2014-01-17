@@ -24,18 +24,26 @@ import qualified Data.Vector.Unboxed as UV
 
 local, rest, water, gas :: [Double]
 
+
 local = [0.1, 0.2 .. 3]
 rest =  [0.1, 0.2 .. 3]
 water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]
 
-reqs :: ReqsAndDofs.Reqs [(TopoIdx.Position System.Node, [Double])]
+{-
+local = [1,2]
+rest =  [3,4]
+water = [5,6]
+gas =   [7,8]
+-}
+
+reqs :: ReqsAndDofs.Reqs (TopoIdx.Position System.Node, [Double])
 reqs = ReqsAndDofs.Reqs $
   (TopoIdx.ppos System.LocalRest System.LocalNetwork, local) :
   (TopoIdx.ppos System.Rest System.Network,           rest) :
   []
 
-dofs :: ReqsAndDofs.Dofs [(TopoIdx.Position System.Node, [Double])]
+dofs :: ReqsAndDofs.Dofs (TopoIdx.Position System.Node, [Double])
 dofs = ReqsAndDofs.Dofs $
   (TopoIdx.ppos System.Network System.Water,    water) :
   (TopoIdx.ppos System.LocalNetwork System.Gas, gas) :
@@ -44,8 +52,9 @@ dofs = ReqsAndDofs.Dofs $
 
 sweepPair ::
   ReqsAndDofs.Pair ReqsAndDofs.Reqs ReqsAndDofs.Dofs
-                   [(TopoIdx.Position System.Node, [Double])]
+                   (TopoIdx.Position System.Node, [Double])
 sweepPair = ReqsAndDofs.Pair reqs dofs
+
 
 sweepPts ::
   Map [Double]
@@ -82,9 +91,7 @@ localScale = 0.3
 forcingMap ::
   Map System.Node (One.SocDrive Double)
 forcingMap = Map.fromList $
-  --(System.Water, One.ChargeDrive (-0.12)) :
-  (System.Water, One.ChargeDrive 0) :
-
+  (System.Water, One.ChargeDrive (-0.12)) :
   []
 
 varRestPower', varLocalPower' :: [[Double]]
