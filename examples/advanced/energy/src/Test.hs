@@ -30,7 +30,7 @@ TODO
 
 -}
 
-module Main where
+module Test where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Utility as ModUt
@@ -50,6 +50,9 @@ import EFA.Application.OneStorage (Name(Name))
 
 import qualified EFA.Flow.Draw as Draw
 
+import qualified EFA.Flow.State.Index as StateIdx
+import qualified EFA.Flow.Part.Index as Idx
+
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
@@ -59,7 +62,8 @@ import qualified EFA.IO.TableParser as Table
 
 import qualified EFA.Equation.Arithmetic as Arith
 
-import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility.Async (concurrentlyMany)
+
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
@@ -68,64 +72,37 @@ import qualified Data.Empty as Empty
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
+
 import Control.Monad (void)
 
+test :: String
+test = "test"
 
 iterateBalanceIO ::
   One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
   Types.EnvResult Node (Sweep UV.Vector Double) ->
-  IO (Types.EnvResult Node (Sweep UV.Vector Double))
+  IO ()
 iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
-  let
-      perStateSweep = Base.perStateSweep params stateFlowGraphOpt
+  let perStateSweep = Base.perStateSweep params stateFlowGraphOpt
+      Types.Optimisation quasi sim = 
+        NonIO.optimiseAndSimulate params reqsRec perStateSweep
 
+  writeFile (test ++ "/perStateSweep.txt") (show $ Types.perStateSweep quasi)
+  writeFile (test ++ "/optimalObjectivePerState.txt") (show $ Types.optimalObjectivePerState quasi)
+  writeFile (test ++ "/optimalState.txt") (show $ Types.optimalState quasi)
 
-      opt = NonIO.optimiseAndSimulate params reqsRec perStateSweep
+  Draw.dot (test ++ "/stateFlowGraph.dot")
+           $ Draw.stateFlowGraph Draw.optionsDefault
+           $ Types.stateFlowGraph sim
 
+  Draw.dot (test ++ "/sequenceFlowGraph.dot")
+           $ Draw.seqFlowGraph Draw.optionsDefault
+           $ Types.sequenceFlowGraph sim
 
+  writeFile (test ++ "/signals.txt") (show $ Types.signals sim)
 
-
-  let
-      -- xPos = StateIdx.x (Idx.State 3) System.Network System.Water
-      len = One.sweepLength params
-
-  concurrentlyMany_ [
-    ModPlot.plotOptimalEtas opt,
-    ModPlot.plotOptimalObjs opt ]
-
-  concurrentlyMany_ [
-    Draw.xterm $ Draw.topology (One.systemTopology params),
-    ModPlot.plotSimulationSignalsPerEdge params opt ]
-
-
-  -- ModPlot.plotOptimalObjectivePerState opt
-
-
-  concurrentlyMany_ [
-    ModPlot.plotPerStateSweep len "Sweep per State" opt,
-    ModPlot.plotMaxEtaPerState opt,
-    -- ModPlot.plotMaxPosPerState xPos opt,
-    ModPlot.plotMaxObjPerState opt ]
-
-  concurrentlyMany_ [
-    ModPlot.plotMaxEta opt,
-    ModPlot.plotMaxObj opt,
-    ModPlot.plotMaxState opt,
-    ModPlot.plotMaxStateContour opt ]
-
-
-
-  --ModPlot.plotSimulationSignalsPerEdge params opt
-  ModPlot.plotSimulationSignals params opt
-
-  ModPlot.plotSimulationGraphs (const Draw.xterm) opt
-
-  --ModPlot.plotSimulationGraphs (Draw.pdf . ("pdf/"++) . (++ (timeStr ++ ".pdf"))) opt
-
-
-  return $ Types.stateFlowGraph $ Types.simulation opt
 
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
@@ -134,6 +111,18 @@ initEnv ::
   Types.EnvResult Node (sweep vec a)
 initEnv params = AppOpt.initialEnv params System.stateFlowGraph
 
+
+writeOptParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double -> IO ()
+writeOptParams params = do
+
+  Draw.dot (test ++ "/systemTopology.dot")
+           $ Draw.topology (One.systemTopology params)
+
+  writeFile (test ++ "/etaAssignMap.txt") (show $ One.etaAssignMap params)
+  -- writeFile (test ++ "/points.txt") (show $ One.points params)
+  writeFile (test ++ "/dofsPos.txt") (show $ One.dofsPos params)
+  writeFile (test ++ "/reqsPos.txt") (show $ One.reqsPos params)
+  writeFile (test ++ "/sweepLength.txt") (show $ One.sweepLength params)
 
 
 
@@ -171,8 +160,6 @@ main = do
         Record.Record (Sig.convert time)
                       (Map.fromList (zip reqsPos [prest, plocal]))
 
-
-
       optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
       optParams =
         One.OptimalEnvParams
@@ -187,8 +174,8 @@ main = do
           (ReqsAndDofs.dofsPos ModSet.dofs)
           ModSet.sweepLength
 
-  void $
-     ModUt.nestM 5
-        (iterateBalanceIO optParams reqsRec)
+  writeOptParams optParams
+
+  iterateBalanceIO optParams reqsRec
         ( AppOpt.storageEdgeXFactors optParams 3 3
           $ AppOpt.initialEnv optParams System.stateFlowGraph)

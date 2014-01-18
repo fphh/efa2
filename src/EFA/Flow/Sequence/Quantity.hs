@@ -104,6 +104,9 @@ data Carry a =
    deriving (Eq)
 
 
+instance Show (Graph a b c) where
+         show _ = "<SeqQty.Graph>"
+
 instance StorageQuant.Carry Carry where
    carryEnergy = carryEnergy
    carryXOut   = carryXOut

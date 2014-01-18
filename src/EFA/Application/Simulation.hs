@@ -5,8 +5,10 @@
 
 module EFA.Application.Simulation where
 
+
 import EFA.Application.Utility (quantityTopology)
 import qualified EFA.Application.Sweep as Sweep
+import EFA.Application.OneStorage (Name(Name))
 
 import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -36,10 +38,6 @@ import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
 import Data.Map (Map)
 import Data.Monoid((<>))
-
-type EtaAssignMap node = Map (XIdx.Position node) (Name, Name)
-
-newtype Name = Name String deriving (Eq, Ord)
 
 solve ::
   (Ord c, Show c, Arith.ZeroTestable c, Arith.Constant c,

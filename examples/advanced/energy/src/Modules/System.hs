@@ -2,7 +2,7 @@ module Modules.System where
 
 import qualified EFA.Application.Utility as AppUt
 
-import EFA.Application.Simulation (EtaAssignMap, Name(Name))
+import EFA.Application.OneStorage (EtaAssignMap, Name(Name))
 import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.State.Quantity as StateFlow
@@ -99,8 +99,6 @@ flowStates =
         [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
         [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
         [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network] ]
---        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Network Water],
---        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Water Network] ]
 
 stateFlowGraph :: StateFlow.Graph Node (Result a) (Result v)
 stateFlowGraph =

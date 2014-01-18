@@ -1,15 +1,17 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 
 module Modules.Types where
 
-
-import Modules.Optimisation (EnvResult)
-import Modules.System (Node)
-
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Sequence.Quantity as SeqQty
+import qualified EFA.Flow.State.Quantity as StateQty
+import qualified EFA.Flow.State.Absolute as StateAbs
+
 import EFA.Equation.Result (Result)
 import qualified EFA.Signal.Record as Record
 
@@ -18,25 +20,31 @@ import EFA.Signal.Data (Data, Nil, (:>))
 
 import Data.Map (Map)
 
-data QuasiStationary (sweep :: (* -> *) -> * -> *) vec a =
+type EnvResult node a = StateQty.Graph node (Result a) (Result a)
+
+type EqSystem node a =
+  forall s. StateAbs.EquationSystemIgnore node s a a
+
+
+data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
   QuasiStationary {
     perStateSweep ::
-      Map Idx.State (Map [a] (EnvResult (sweep vec a))),
+      Map Idx.State (Map [a] (EnvResult node (sweep vec a))),
 
     optimalObjectivePerState ::
-      Map Idx.State (Map [a] (Maybe (a, a, EnvResult a))),
+      Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))),
 
     optimalState ::
-      Map [a] (Maybe (a, a, Idx.State, EnvResult a)) }
+      Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) } deriving (Show)
 
-data Simulation (sweep :: (* -> *) -> * -> *) vec a =
+data Simulation node (sweep :: (* -> *) -> * -> *) vec a =
   Simulation {
-    stateFlowGraph :: EnvResult (sweep vec a),
+    stateFlowGraph :: EnvResult node (sweep vec a),
     sequenceFlowGraph ::
-      SeqQty.Graph Node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
-    signals :: Record.PowerRecord Node [] a }
+      SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
+    signals :: Record.PowerRecord node [] a }  deriving (Show)
 
-data Optimisation (sweep :: (* -> *) -> * -> *) vec a =
+data Optimisation node (sweep :: (* -> *) -> * -> *) vec a =
   Optimisation {
-    quasiStationary :: QuasiStationary sweep vec a,
-    simulation :: Simulation sweep vec a }
+    quasiStationary :: QuasiStationary node sweep vec a,
+    simulation :: Simulation node sweep vec a }  deriving (Show)

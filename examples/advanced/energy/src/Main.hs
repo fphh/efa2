@@ -43,15 +43,15 @@ import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.NonIO as NonIO
 import qualified Modules.Types as Types
 
-import Modules.Optimisation (EnvResult)
+import Modules.Types (EnvResult)
 
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.DoubleSweep as DoubleSweep
+import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+
 import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Application.Optimisation as AppOpt
-import EFA.Application.Simulation (Name(Name))
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
@@ -84,17 +84,17 @@ import Control.Monad (void)
 
 
 setChargeDrive ::
-  ModSet.Params Node list sweep vec a ->
+  One.OptimalEnvParams Node list sweep vec a ->
   a ->
-  ModSet.Params Node list sweep vec a
+  One.OptimalEnvParams Node list sweep vec a
 setChargeDrive params x =
   params { One.forcingPerNode =
              Map.fromList [(System.Water, One.ChargeDrive x)] }
 
 betterFalsePosition ::
   (Ord a, Arith.Constant a) =>
-  ModSet.Params Node list sweep vec a ->
-  (ModSet.Params Node list sweep vec a -> t) ->
+  One.OptimalEnvParams Node list sweep vec a ->
+  (One.OptimalEnvParams Node list sweep vec a -> t) ->
   (t -> a) -> a -> a -> [(a, t)]
 betterFalsePosition params f accessf a1 a2 =
   go a1 a2 (f $ setChargeDrive params a1) (f $ setChargeDrive params a2)
@@ -116,8 +116,8 @@ betterFalsePosition params f accessf a1 a2 =
 findZeroCrossing ::
   (Arith.Sum t, Ord t, Arith.Product t, Arith.Constant t,
    Ord s, Arith.Constant s) =>
-  ModSet.Params Node list sweep vec t ->
-  (ModSet.Params Node list sweep vec t -> z) ->
+  One.OptimalEnvParams Node list sweep vec t ->
+  (One.OptimalEnvParams Node list sweep vec t -> z) ->
   (z -> s) ->
   t ->
   t ->
@@ -158,10 +158,10 @@ iterateUntil cnt eps ws =
   in (length start, res)
 
 iterateBalanceIO ::
-  ModSet.Params Node [] Sweep UV.Vector Double ->
+  One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
-  EnvResult (Sweep UV.Vector Double) ->
-  IO (EnvResult (Sweep UV.Vector Double))
+  EnvResult Node (Sweep UV.Vector Double) ->
+  IO (EnvResult Node (Sweep UV.Vector Double))
 iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
   let
@@ -190,6 +190,7 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
 
 
+
   putStrLn (show len ++ "\t" ++ show bal ++ "\t" ++ show eta)
 
 {-
@@ -198,7 +199,9 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
       f ' ' = '_'
       f x = x
 
+-}
 
+{-
   Draw.xterm
            $ Draw.bgcolour LimeGreen
            $ Draw.title ("Sequence Flow Graph from Simulation\\lBalance " ++ show bal ++ "\\l")
@@ -206,12 +209,10 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
 
   Draw.xterm
-           $ Draw.bgcolour Orchid1
            $ Draw.title ("State Flow Graph from Simulation\\lBalance " ++ show bal ++ "\\l")
            $ Draw.stateFlowGraph Draw.optionsDefault
            $ StateQty.mapGraph (fmap (head . Sweep.toList)) (fmap (head . Sweep.toList)) statefg
 -}
-
 
   return statefg
 
@@ -219,8 +220,8 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
    Sweep.SweepClass sweep vec a) =>
-  ModSet.Params Node list sweep vec a->
-  EnvResult (sweep vec a)
+  One.OptimalEnvParams Node list sweep vec a->
+  EnvResult Node (sweep vec a)
 initEnv params = AppOpt.initialEnv params System.stateFlowGraph
 
 
@@ -234,9 +235,9 @@ main1 = do
   tabPower <- Table.read "../maps/power.txt.bak"
 
   let etaMap =
-         Map.mapKeys Name $
+         Map.mapKeys One.Name $
          CT.makeEtaFunctions2D
-            (Map.mapKeys (\(Name str) -> str) ModSet.scaleTableEta)
+            (Map.mapKeys (\(One.Name str) -> str) ModSet.scaleTableEta)
             tabEta
 
   let
@@ -253,22 +254,30 @@ main1 = do
       prest = Sig.convert $ transform r
       plocal = Sig.convert $ transform l
 
+      reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos ModSet.reqs
+
       reqsRec :: Record.PowerRecord Node Vector Double
       reqsRec =
         Record.Record (Sig.convert time)
-                      (Map.fromList (zip ModSet.reqs [prest, plocal]))
+                      (Map.fromList (zip reqsPos [prest, plocal]))
 
-      pts = DoubleSweep.mkPts2 ModSet.sweepPts
+      -- pts = DoubleSweep.mkPts2 ModSet.sweepPts
 
-      optParams :: ModSet.Params Node [] Sweep UV.Vector Double
+ -- print pts
+
+  let
+      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
       optParams =
         One.OptimalEnvParams
-          etaMap
-          pts
-          ModSet.forcingMap
           System.topology
-          ModSet.dofs
-          ModSet.reqs
+          ModSet.initStorageState
+          ModSet.initStorageSeq
+          etaMap
+          System.etaAssignMap
+          ModSet.sweepPts
+          ModSet.forcingMap
+          (ReqsAndDofs.reqsPos ModSet.reqs)
+          (ReqsAndDofs.dofsPos ModSet.dofs)
           ModSet.sweepLength
 
 
@@ -282,3 +291,4 @@ main1 = do
 
 main :: IO ()
 main = main1
+

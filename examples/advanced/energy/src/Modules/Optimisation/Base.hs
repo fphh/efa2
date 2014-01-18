@@ -5,16 +5,12 @@
 
 module Modules.Optimisation.Base where
 
-import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Utility as ModUt
-import qualified Modules.Setting as ModSet
+import Modules.Types (EnvResult)
 
-import Modules.Optimisation (EnvResult)
-import Modules.System (Node)
-
-import EFA.Application.Sweep (Sweep)
 import qualified EFA.Application.DoubleSweep as DoubleSweep
+import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
@@ -52,30 +48,37 @@ import EFA.Equation.Result (Result(Determined), toMaybe)
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.List as List
 import qualified Data.Set as Set
-import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
+import Data.Vector (Vector)
+import Data.Monoid (Monoid)
 
 import Control.Monad (join)
 import Control.Applicative (liftA2)
 
 
+
 perStateSweep ::
-  (Ord a, Show a, UV.Unbox a, Arith.ZeroTestable (sweep vec a),
+  (Node.C node,
+   Ord a, Show a, UV.Unbox a, Arith.ZeroTestable (sweep vec a),
    Arith.Product (sweep vec a), Arith.Constant a,
    Sweep.SweepVector vec a, Sweep.SweepMap sweep vec a a,
    Sweep.SweepClass sweep vec a) =>
-  ModSet.Params System.Node f sweep vec a ->
-  StateQty.Graph Node (Result (sweep vec a)) (Result (sweep vec a)) ->
-  Map Idx.State (Map (f a) (EnvResult (sweep vec a)))
+  One.OptimalEnvParams node list sweep vec a ->
+  StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
+  Map Idx.State (Map (list a) (EnvResult node (sweep vec a)))
 perStateSweep params stateFlowGraph =
   Map.mapWithKey f states
   where states = StateQty.states stateFlowGraph
-        f state _ = DoubleSweep.doubleSweep solveFunc (One.points params)
+        reqsAndDofs = map TopoIdx.Power
+                      $ ReqsAndDofs.unReqs (One.reqsPos params)
+                        ++ ReqsAndDofs.unDofs (One.dofsPos params)
 
+        f state _ = DoubleSweep.doubleSweep solveFunc (One.points params)
           where solveFunc =
                   Optimisation.solve
+                    reqsAndDofs
                     (AppOpt.eraseXAndEtaFromState state stateFlowGraph)
-                    System.etaAssignMap
+                    (One.etaAssignMap params)
                     (One.etaMap params)
                     state
 
@@ -84,11 +87,12 @@ perStateSweep params stateFlowGraph =
 forcing ::
   (Arith.Constant a, Arith.Sum a, Ord a,
    UV.Unbox a, Show a, Ord (sweep vec a), Arith.Sum (sweep vec a),
+   Ord node, Show node,
    Sweep.SweepClass sweep vec a,
    Sweep.SweepMap sweep vec a a) =>
-  ModSet.Params System.Node list sweep vec a ->
+  One.OptimalEnvParams node list sweep vec a ->
   Idx.State ->
-  StateQty.Graph Node b (Result (sweep vec a)) ->
+  StateQty.Graph node b (Result (sweep vec a)) ->
   Result (sweep vec a)
 forcing params state graph = Determined $
   case ModUt.getFlowTopology state graph of
@@ -115,10 +119,20 @@ forcing params state graph = Determined $
 
 
 optimalObjectivePerState ::
-  (Ord a, Show a, UV.Unbox a, Arith.Constant a, Arith.Sum a) =>
-  ModSet.Params System.Node list Sweep UV.Vector a ->
-  Map Idx.State (Map (list a) (EnvResult (Sweep UV.Vector a))) ->
-  Map Idx.State (Map (list a) (Maybe (a, a, EnvResult a)))
+  (Ord a, Show a, UV.Unbox a, Arith.Constant a, Arith.Sum a,
+   Node.C node, Show node,
+   Monoid (sweep vec Bool),
+   Ord (sweep vec a),
+   Arith.Product (sweep vec a),
+   Sweep.SweepVector vec Bool,
+   Sweep.SweepClass sweep vec Bool,
+   Sweep.SweepMap sweep vec a Bool,
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Sweep.SweepMap sweep vec a a) =>
+  One.OptimalEnvParams node list sweep vec a ->
+  Map Idx.State (Map (list a) (EnvResult node (sweep vec a))) ->
+  Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
 optimalObjectivePerState params =
   Map.mapWithKey $
     Map.map
@@ -127,10 +141,10 @@ optimalObjectivePerState params =
 
 
 
-
 selectOptimalState ::
-  Map Idx.State (Map [Double] (Maybe (Double, Double, EnvResult Double))) ->
-  Map [Double] (Maybe (Double, Double, Idx.State, EnvResult Double))
+  (Ord a) =>
+  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
+  Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 selectOptimalState =
   List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxBy ModUt.fst4))
   . map (\(st, m) -> Map.map (fmap (\(objVal, eta, env) -> (objVal, eta, st, env))) m)
@@ -196,12 +210,12 @@ filterPowerRecordList params (Sequ.List recs) =
 -- damit man die Funktion auch für andere Positionen verwenden kann.
 
 signCorrectedOptimalPowerMatrices ::
-  (Ord v, Arith.Sum v, Arith.Constant v) =>
-  ModSet.Params Node [] sweep vec v ->
-  Map [v] (Maybe (Double, Double, Idx.State, EnvResult v)) ->
-  [TopoIdx.Position Node] ->
-  Map (TopoIdx.Position Node) (Sig.PSignal2 Vector Vector (Maybe (Result v)))
-signCorrectedOptimalPowerMatrices params m ppos =
+  (Ord v, Arith.Sum v, Arith.Constant v, Show node, Ord node) =>
+  One.OptimalEnvParams node [] sweep vec v ->
+  Map [v] (Maybe (Double, Double, Idx.State, EnvResult node v)) ->
+  ReqsAndDofs.Dofs (TopoIdx.Position node) ->
+  Map (TopoIdx.Position node) (Sig.PSignal2 Vector Vector (Maybe (Result v)))
+signCorrectedOptimalPowerMatrices params m (ReqsAndDofs.Dofs ppos) =
   Map.fromList $ map g ppos
   where g pos = (pos, ModUt.to2DMatrix $ Map.map f m)
           where f Nothing = Nothing
@@ -220,10 +234,11 @@ signCorrectedOptimalPowerMatrices params m ppos =
 
 
 isFlowDirectionPositive ::
-  ModSet.Params Node list sweep vec v ->
+  (Ord node, Show node) =>
+  One.OptimalEnvParams node list sweep vec v ->
   Idx.State ->
-  TopoIdx.Position Node ->
-  EnvResult v ->
+  TopoIdx.Position node ->
+  EnvResult node v ->
   Bool
 isFlowDirectionPositive params state (TopoIdx.Position f t) graph =
   case Set.toList es of
@@ -244,15 +259,6 @@ isFlowDirectionPositive params state (TopoIdx.Position f t) graph =
         es = Graph.adjacentEdges topo f
                `Set.intersection` Graph.adjacentEdges topo t
 
-{-
-getEdgeFromPosition ::
-  Idx.State ->
-  TopoIdx.Position Node ->
-  EnvResult Double ->
-  Maybe (Graph.EitherEdge Node)
--}
-
-
 
 getEdgeFromPosition ::
   (Ord (e a), Ord a, Show (e a), Show a, Graph.Edge e) =>
@@ -270,13 +276,14 @@ getEdgeFromPosition state (TopoIdx.Position f t) =
                      `Set.intersection` Graph.adjacentEdges flowTopo t
   in fmap g . ModUt.getFlowTopology state
 
-extractOptimalPowerMatricesPerState ::
-  (Ord b) =>
-  Map Idx.State (Map [b] (Maybe (a1, EnvResult Double))) ->
-  [TopoIdx.Position Node] ->
-  Map (TopoIdx.Position Node)
-      (Map Idx.State (Sig.PSignal2 Vector Vector (Maybe (Result Double))))
 
+
+extractOptimalPowerMatricesPerState ::
+  (Ord b, Ord node) =>
+  Map Idx.State (Map [b] (Maybe (a1, EnvResult node Double))) ->
+  [TopoIdx.Position node] ->
+  Map (TopoIdx.Position node)
+      (Map Idx.State (Sig.PSignal2 Vector Vector (Maybe (Result Double))))
 extractOptimalPowerMatricesPerState m ppos =
   Map.map (Map.map ModUt.to2DMatrix)
   $ Map.fromList $ map (\p -> (p, Map.mapWithKey (f p) m)) ppos
@@ -296,8 +303,8 @@ seqFlowBalance = fmap (f . Storage.nodes . fst) . SeqQty.storages
 
 stateFlowBalance ::
   (Arith.Sum a, UV.Unbox a, Arith.Sum (sweep vec a)) =>
-  EnvResult (sweep vec a) ->
-  Map Node (Result (sweep vec a))
+  EnvResult node (sweep vec a) ->
+  Map node (Result (sweep vec a))
 stateFlowBalance = fmap (f . Storage.nodes) . StateQty.storages
   where f pm = liftA2 (Arith.~-) (PartMap.exit pm) (PartMap.init pm)
 

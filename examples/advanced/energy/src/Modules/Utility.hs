@@ -3,8 +3,7 @@
 
 module Modules.Utility where
 
-import Modules.Optimisation (EnvResult)
-import Modules.System (Node)
+import qualified Modules.Types as Types
 
 import qualified EFA.Flow.Topology as Topology
 import qualified EFA.Flow.Topology.Index as TopoIdx
@@ -77,9 +76,9 @@ getMaxEta = resolveInvalidPts nan snd3
 
 
 getMaxPos ::
-  (Arith.Constant a, StateQty.Lookup (Idx.InPart part qty)) =>
-  Idx.InPart part qty Node ->
-  Map k0 (Map k1 (Maybe (a, a, EnvResult a))) -> Map k0 (Map k1 a)
+  (Arith.Constant a, StateQty.Lookup (Idx.InPart part qty), Ord node) =>
+  Idx.InPart part qty node ->
+  Map k0 (Map k1 (Maybe (a, a, Types.EnvResult node a))) -> Map k0 (Map k1 a)
 getMaxPos pos = resolveInvalidPts nan (f . StateQty.lookup pos . thd3)
   where f (Just (Determined x)) = x
         f _ = nan
@@ -102,7 +101,8 @@ getFlowTopology state =
   fmap Topology.topology . Map.lookup state . State.states
 
 toPowerMatrix ::
-  Map k0 (Map k1 (Maybe Double)) -> Map k0 (Map k1 Double)
+  (Arith.Constant a) =>
+  Map k0 (Map k1 (Maybe a)) -> Map k0 (Map k1 a)
 toPowerMatrix = resolveInvalidPts nan id
 
 

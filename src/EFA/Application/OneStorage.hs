@@ -2,8 +2,7 @@
 module EFA.Application.OneStorage where
 
 import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.DoubleSweep as DoubleSweep
-import EFA.Application.Simulation (Name)
+import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.SequenceState.Index as Idx
@@ -49,23 +48,29 @@ type OptimalPower node = Map Idx.State [(TopoIdx.Position node)]
 
 optimalPower :: [(Idx.State, [(TopoIdx.Position node)])] -> OptimalPower node
 optimalPower = Map.fromList
-{-
-  List.foldr f Map.empty
-  where f (s, lst) =
-          Map.insertWith' (++) s (map (uncurry (XIdxState.power s)) lst)
--}
 
+
+
+type EtaAssignMap node = Map (TopoIdx.Position node) (Name, Name)
+
+newtype InitStorageState node a = InitStorageState { unInitStorageState :: Map node a }
+newtype InitStorageSeq node a = InitStorageSeq { unInitStorageSeq :: Map node a }
+
+
+newtype Name = Name String deriving (Eq, Ord, Show)
 
 type OptimalEtaWithEnv node f v =
   Map Idx.State (Map (TopoIdx.Position node) (Map (f v) (v, v, v)))
 
 data OptimalEnvParams node f sweep vec a = OptimalEnvParams {
-  etaMap :: Map Name (a -> a),
-  points :: Map (f a) (DoubleSweep.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),
-  forcingPerNode :: Map node (SocDrive a),
   systemTopology :: Topology.Topology node,
-  dofs :: [TopoIdx.Position node],
-  reqs :: [TopoIdx.Position node],
---  one :: sweep vec a
+  initStorageState :: InitStorageState node a,
+  initStorageSeq :: InitStorageSeq node a,
+  etaMap :: Map Name (a -> a),
+  etaAssignMap :: EtaAssignMap node,
+  points :: Map (f a) (ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),
+  forcingPerNode :: Map node (SocDrive a),
+  reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
+  dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   sweepLength :: Int
   }

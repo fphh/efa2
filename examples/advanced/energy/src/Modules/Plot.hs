@@ -10,13 +10,10 @@ import qualified Modules.Utility as ModUt
 import qualified Modules.Setting as ModSet
 import qualified Modules.Types as Types
 
-import qualified Modules.Optimisation as Optimisation
-
 import qualified EFA.Application.Plot as AppPlot
 import qualified EFA.Application.Sweep as Sweep
 
 import qualified EFA.Application.OneStorage as One
-import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Plot as Plot
@@ -30,6 +27,7 @@ import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.SystemEta as StateEta
 
 import qualified EFA.Graph as Graph
+import qualified EFA.Graph.Topology.Node as Node
 
 import EFA.Equation.Result (Result(Determined))
 import qualified EFA.Equation.Arithmetic as Arith
@@ -42,8 +40,10 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified Graphics.Gnuplot.ColorSpecification as ColorSpec
+import qualified Graphics.Gnuplot.Value.Tuple as Tuple
+import qualified Graphics.Gnuplot.Value.Atom as Atom
 
-import Data.GraphViz.Attributes.Colors.X11 (X11Color(LimeGreen, Orchid1))
+import Data.GraphViz.Attributes.Colors.X11 (X11Color(LimeGreen, Lavender))
 
 
 import qualified Data.Map as Map; import Data.Map (Map)
@@ -51,14 +51,16 @@ import Data.GraphViz.Types.Canonical (DotGraph)
 import Data.Text.Lazy (Text)
 import qualified Data.Vector.Unboxed as UV
 import Data.Vector (Vector)
+import Data.Tuple.HT (fst3, snd3)
 
 import Data.Monoid ((<>), mconcat)
 import Control.Applicative (liftA2)
 
 
 frameOpts ::
-  Opts.T (Graph3D.T Double Double Double) ->
-  Opts.T (Graph3D.T Double Double Double)
+  (Atom.C a) =>
+  Opts.T (Graph3D.T a a a) ->
+  Opts.T (Graph3D.T a a a)
 frameOpts =
 --  Plot.heatmap .
 --  Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0, 1) .
@@ -114,25 +116,30 @@ plotSweeps func title =
             (func mat)
 
 
-
+{-
 plotMapOfMaps ::
-  (Show state, Show k1) =>
-  Map state (Map k1 (Sig.PSignal2 Vector Vector (Maybe (Result Double)))) -> IO ()
+  (Show state, Show k, Tuple.C a, Atom.C a, Arith.Constant a) =>
+  Map state (Map k (Sig.PSignal2 Vector Vector (Maybe (Result a)))) -> IO ()
+-}
+plotMapOfMaps ::
+  (Show state, Show k) =>
+  Map state (Map k (Sig.PSignal2 Vector Vector (Maybe (Result Double)))) ->
+  IO ()
 plotMapOfMaps =
   concurrentlyMany_
   . Map.elems
   . Map.mapWithKey (plotMaps (Sig.map ModUt.nothing2Nan) . show)
 
 plotGraphMaps ::
-  (FormatValue.FormatValue a, Show a) =>
+  (FormatValue.FormatValue a, Show a, Node.C node) =>
   String ->
-  Map [a] (Maybe (a, a, Optimisation.EnvResult a)) ->
+  Map [a] (Maybe (a, a, Types.EnvResult node a)) ->
   IO ()
 plotGraphMaps title =
   sequence_ . Map.elems . Map.mapWithKey
     (\reqs -> maybe (return ())
         (\(objVal, eta, graph) ->
-              Draw.xterm $ Draw.bgcolour Orchid1
+              Draw.xterm $ Draw.bgcolour Lavender
                          $ Draw.title ( title
                                         ++ "\\lreqs " ++ show reqs
                                         ++ "\\lObjective Value " ++ show objVal
@@ -142,23 +149,27 @@ plotGraphMaps title =
 
 
 plotGraphMapOfMaps ::
-  (FormatValue.FormatValue a, Show a) =>
+  (FormatValue.FormatValue a, Show a, Node.C node) =>
   Map Idx.State
-      (Map [a] (Maybe (a, a, Optimisation.EnvResult a))) ->
+      (Map [a] (Maybe (a, a, Types.EnvResult node a))) ->
   IO ()
 plotGraphMapOfMaps =
   sequence_ . Map.elems . Map.mapWithKey (plotGraphMaps . show)
 
 plotOptimalObjectivePerState ::
-  (Show a, FormatValue.FormatValue a) =>
-  Types.Optimisation sweep vec a -> IO ()
+  (Show a, FormatValue.FormatValue a, Node.C node) =>
+  Types.Optimisation node sweep vec a -> IO ()
 plotOptimalObjectivePerState =
   plotGraphMapOfMaps . Types.optimalObjectivePerState . Types.quasiStationary
 
+
 plotPerEdge ::
- (Vector.Walker l, Vector.Storage l Double, Vector.FromList l) =>
-  ModSet.Params Node list sweep vec Double ->
-  Record.PowerRecord Node l Double ->
+  (Vector.Walker l, Vector.Storage l a, Vector.FromList l,
+   Arith.Constant a,
+   Tuple.C a, Atom.C a,
+   Node.C node, Show node) =>
+  One.OptimalEnvParams node list sweep vec a ->
+  Record.PowerRecord node l a ->
   IO ()
 plotPerEdge params rec = do
   let recs = map f $ Graph.edges $ One.systemTopology params
@@ -168,16 +179,20 @@ plotPerEdge params rec = do
     map (AppPlot.record "plotSimulationPerEdge" DefaultTerm.cons show id) recs
 
 plotSimulationSignalsPerEdge ::
-  ModSet.Params Node list sweep vec Double ->
-  Types.Optimisation sweep vec Double ->
+  (Show node, Node.C node, Arith.Constant a, Tuple.C a, Atom.C a) =>
+  One.OptimalEnvParams node list sweep vec a ->
+  Types.Optimisation node sweep vec a ->
   IO ()
 plotSimulationSignalsPerEdge params =
   plotPerEdge params . Types.signals . Types.simulation
 
 
 plotSimulationSignals ::
-  ModSet.Params Node list sweep vec Double ->
-  Types.Optimisation sweep vec Double ->
+  (Show node, Ord node,
+   Arith.Constant a,
+   Tuple.C a, Atom.C a) =>
+  One.OptimalEnvParams Node list sweep vec a ->
+  Types.Optimisation node sweep vec a ->
   IO ()
 plotSimulationSignals _ =
   AppPlot.record "Signals" DefaultTerm.cons show id
@@ -187,36 +202,17 @@ plotSimulationSignals _ =
 to2DMatrix :: (Ord b) => Map [b] a -> Sig.PSignal2 Vector Vector a
 to2DMatrix = ModUt.to2DMatrix
 
-{-
-surfaceWithOptsWithGrid ::
-  (Plot.Surface tcX tcY tcZ1) =>
-  String -> term -> (LineSpec.T -> LineSpec.T) ->
-  ( Opts.T graph ->
-    Opts.T (Graph3D.T (Plot.Value tcX) (Plot.Value tcY) (Plot.Value tcZ1))) ->
-  tcZ1 -> tcX -> tcY -> tcZ -> IO ()
-surfaceWithOptsWithGrid ti terminal opts fopts grid x y z =
-  Plot.run terminal
-    (fopts $ Plot.xyFrameAttr ti x y)
-    (Plot.surface opts x y z <> Plot.surface opts x y grid)
--}
+
 
 defaultPlot :: String -> Sig.PSignal2 Vector Vector Double -> IO ()
 defaultPlot title =
   AppPlot.surfaceWithOpts
     title DefaultTerm.cons id id frameOpts varRestPower varLocalPower
 
-{-
-defaultPlotWithGrid ::
-  String -> Sig.PSignal2 Vector Vector Double -> Sig.PSignal2 Vector Vector Double -> IO ()
-defaultPlotWithGrid title grid =
-  surfaceWithOptsWithGrid
-    title DefaultTerm.cons id frameOpts grid varRestPower varLocalPower
--}
-
 withFuncToMatrix ::
   (Ord b, Arith.Constant a) =>
-  ((b, b, Idx.State, Optimisation.EnvResult b) -> a) ->
-  Types.Optimisation sweep vec b -> Sig.PSignal2 Vector Vector a
+  ((b, b, Idx.State, Types.EnvResult node b) -> a) ->
+  Types.Optimisation node sweep vec b -> Sig.PSignal2 Vector Vector a
 withFuncToMatrix func =
   to2DMatrix
   . Map.map (maybe ModUt.nan func)
@@ -225,55 +221,55 @@ withFuncToMatrix func =
 
 plotMax ::
   String ->
-  ((Double, Double, Idx.State, Optimisation.EnvResult Double) -> Double) ->
-  Types.Optimisation sweep vec Double ->
+  ((Double, Double, Idx.State, Types.EnvResult node Double) -> Double) ->
+  Types.Optimisation node sweep vec Double ->
   IO ()
 plotMax title func =
   defaultPlot title
   . withFuncToMatrix func
 
 
-{-
-plotMax2 ::
-  String ->
-  ((Double, Double, Idx.State, Optimisation.EnvResult Double) -> Double) ->
-  Types.Optimisation sweep vec Double ->
-  IO ()
-plotMax2 title func res =
-  let grid = bestStateCurve res
-  in defaultPlotWithGrid title grid
-     $ withFuncToMatrix func res
--}
-
-plotMaxEta :: Types.Optimisation sweep vec Double -> IO ()
+plotMaxEta :: Types.Optimisation node sweep vec Double -> IO ()
 plotMaxEta = plotMax "Maximal Eta of All States" ModUt.snd4
 
-plotMaxObj :: Types.Optimisation sweep vec Double -> IO ()
+plotMaxObj :: Types.Optimisation node sweep vec Double -> IO ()
 plotMaxObj = plotMax "Maximal Objective of All States" ModUt.fst4
 
 bestStateCurve ::
   (Ord b, Arith.Constant a, Num a) =>
-  Types.Optimisation sweep vec b -> Sig.PSignal2 Vector Vector a
+  Types.Optimisation node sweep vec b -> Sig.PSignal2 Vector Vector a
 bestStateCurve =
   withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . ModUt.thd4)
 
-plotMaxState :: Types.Optimisation sweep vec Double -> IO ()
+plotMaxState :: Types.Optimisation node sweep vec Double -> IO ()
 plotMaxState =
   defaultPlot "Best State of All States"
   . bestStateCurve
 
-plotMaxStateContour :: Types.Optimisation sweep vec Double -> IO ()
+plotMaxStateContour ::
+  (Ord a) => Types.Optimisation node sweep vec a -> IO ()
 plotMaxStateContour =
   AppPlot.surfaceWithOpts
     "Best State of All States"
     DefaultTerm.cons id id (Plot.contour . frameOpts) varRestPower varLocalPower
   . bestStateCurve
 
+{-
+plotMaxPerState ::
+  (Ord a, Arith.Constant a, Tuple.C a, Atom.C a) =>
+  String ->
+  (Map Idx.State
+       (Map [a] (Maybe (a, a, Types.EnvResult node a)))
+     -> Map Idx.State (Map [a] a)) ->
+  Types.Optimisation node sweep vec a ->
+  IO ()
+-}
 plotMaxPerState ::
   String ->
-  (Map Idx.State (Map [Double] (Maybe (Double, Double, Optimisation.EnvResult Double)))
+  (Map Idx.State
+       (Map [Double] (Maybe (Double, Double, Types.EnvResult node Double)))
      -> Map Idx.State (Map [Double] Double)) ->
-  Types.Optimisation sweep vec Double ->
+  Types.Optimisation node sweep vec Double ->
   IO ()
 plotMaxPerState title func =
   plotMaps id title
@@ -283,19 +279,23 @@ plotMaxPerState title func =
   . Types.quasiStationary
 
 plotMaxObjPerState ::
-  Types.Optimisation sweep vec Double ->
-  IO ()
-plotMaxObjPerState = plotMaxPerState "Maximal Objective Per State" ModUt.getMaxObj
+--  (Arith.Constant a, Ord a, Tuple.C a, Atom.C a) =>
+  Types.Optimisation node sweep vec Double -> IO ()
+plotMaxObjPerState =
+  plotMaxPerState "Maximal Objective Per State" ModUt.getMaxObj
 
 plotMaxEtaPerState ::
-  Types.Optimisation sweep vec Double ->
-  IO ()
-plotMaxEtaPerState = plotMaxPerState "Maximal Eta Per State" ModUt.getMaxEta
+--  (Arith.Constant a, Ord a, Tuple.C a, Atom.C a) =>
+  Types.Optimisation node sweep vec Double -> IO ()
+plotMaxEtaPerState =
+  plotMaxPerState "Maximal Eta Per State" ModUt.getMaxEta
 
 
 plotMaxPosPerState ::
-  (Show (qty Node), Show part, StateQty.Lookup (Idx.InPart part qty)) =>
-  Idx.InPart part qty Node -> Types.Optimisation sweep vec Double -> IO ()
+  (-- Arith.Constant a, Ord a, Tuple.C a, Atom.C a,
+   Show (qty node), Ord node,
+   Show part, StateQty.Lookup (Idx.InPart part qty)) =>
+  Idx.InPart part qty node -> Types.Optimisation node sweep vec Double -> IO ()
 plotMaxPosPerState pos =
   plotMaxPerState
     ("Maximal Position " ++ show pos ++ " per state")
@@ -308,24 +308,55 @@ matrix2ListOfMatrices len = zipWith g [0 .. len-1] . repeat
 
 
 sweepResultTo2DMatrix ::
-  (Ord b, Sweep.SweepClass Sweep vec a, Arith.Constant a) =>
+  (Ord b, Sweep.SweepClass sweep vec a, Arith.Constant a) =>
   Int ->
-  Map [b] (Result (Sweep vec a)) -> Sig.PSignal2 Vector Vector (Sweep vec a)
+  Map [b] (Result (sweep vec a)) -> Sig.PSignal2 Vector Vector (sweep vec a)
 sweepResultTo2DMatrix len = Sig.map f . ModUt.to2DMatrix
   where f (Determined x) = x
         f _ = Sweep.fromRational len ModUt.nan
 
 
 plotPerStateSweep ::
-  (Arith.Product (Sweep vec Double), Sweep.SweepVector vec Double, Show (vec Double),
-   Sweep.SweepClass Sweep vec Double) =>
-  Int -> String -> Types.Optimisation Sweep vec Double -> IO ()
+  (Show (vec Double),
+   Node.C node,
+   Arith.Product (sweep vec Double),
+   Sweep.SweepVector vec Double,
+   Sweep.SweepClass sweep vec Double) =>
+  Int -> String -> Types.Optimisation node sweep vec Double -> IO ()
 plotPerStateSweep len title =
-  plotSweeps id title
-  . Map.map (matrix2ListOfMatrices len . Sig.map Sweep.toList . sweepResultTo2DMatrix len)
+  plotSweeps id (title ++ ", etaSys")
+  . Map.map (matrix2ListOfMatrices len
+             . Sig.map Sweep.toList
+             . sweepResultTo2DMatrix len)
   . Map.map (Map.map StateEta.etaSys)
   . Types.perStateSweep
   . Types.quasiStationary
+
+plotOptimal ::
+  Ord b =>
+  ((b, b, Types.EnvResult node b) -> Double) ->
+  String ->
+  Types.Optimisation node sweep vec b -> IO ()
+plotOptimal f title =
+  AppPlot.surfaceWithOpts title
+            DefaultTerm.cons
+            id
+            (Graph3D.typ "lines")
+            frameOpts varRestPower varLocalPower
+  . Map.elems
+  . Map.map (to2DMatrix . fmap (m2n . fmap f))
+  . Types.optimalObjectivePerState
+  . Types.quasiStationary
+  where m2n Nothing = ModUt.nan
+        m2n (Just x) = x
+
+plotOptimalObjs, plotOptimalEtas ::
+  Types.Optimisation node sweep vec Double -> IO ()
+plotOptimalObjs =
+  plotOptimal fst3 ("Maximal Objective Function Surfaces")
+plotOptimalEtas =
+  plotOptimal snd3 "Maximal Eta Surfaces"
+
 
 
 findTile :: Ord t => [t] -> [t] -> t -> t -> [(t, t)]
@@ -390,8 +421,12 @@ plotReqs prest plocal = do
 
 plotSimulationGraphs ::
   (FormatValue.FormatValue b, UV.Unbox b,
-   Sweep.SweepClass sweep vec b, Sweep.SweepVector vec b) =>
-  (String -> DotGraph Text -> IO ()) -> Types.Optimisation sweep vec b -> IO ()
+   Node.C node,
+   Sweep.SweepClass sweep vec b,
+   Sweep.SweepVector vec b) =>
+  (String -> DotGraph Text -> IO ()) ->
+  Types.Optimisation node sweep vec b ->
+  IO ()
 plotSimulationGraphs terminal (Types.Optimisation _ sim) = do
   let g = fmap (head . Sweep.toList)
 
@@ -403,7 +438,7 @@ plotSimulationGraphs terminal (Types.Optimisation _ sim) = do
 
 
   terminal "state_"
-    $ Draw.bgcolour Orchid1
+    $ Draw.bgcolour Lavender
     $ Draw.title "State Flow Graph from Simulation"
     $ Draw.stateFlowGraph Draw.optionsDefault
     $ StateQty.mapGraph g g (Types.stateFlowGraph sim)

@@ -26,3 +26,7 @@ data
          storages :: Storages node storageLabel carryLabel,
          states :: States node edge stateLabel nodeLabel flowLabel
       }
+
+
+instance Show (Graph a b c d e f g) where
+         show _ = "<State.Graph>"
