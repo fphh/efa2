@@ -1357,13 +1357,19 @@ interp1Lin :: (Show d1,
                SV.Find v1,
                SV.Singleton v1,
                SV.Lookup v1,
-               Show (v1 d1)) =>
+               Show (v1 d1),
+               Constant d1,
+               SV.Zipper v1,
+               SV.Walker v1,
+               SV.Storage v1 Bool,
+               SV.Len (v1 d1)) =>
               String ->
               TC Signal t1 (Data (v1 :> Nil) d1) ->
               TC Signal t2 (Data (v1 :> Nil) d1) ->
               TC Sample t1 (Data Nil d1) ->
               TC Sample t2 (Data Nil d1)
-interp1Lin=interp1LinOld
+--interp1Lin=interp1LinOld
+interp1Lin=interp1LinNew
 
 interp1LinOld :: (Show d1,
                Product d1,
@@ -1535,7 +1541,11 @@ interp1LinSig ::  (Show d1,
                    SV.Singleton v1,
                    SV.Lookup v1,
                    SV.Walker v1,
-                   Show (v1 d1)) =>
+                   Show (v1 d1), 
+                   Constant d1,
+                   SV.Zipper v1,
+                   SV.Storage v1 Bool,
+                   SV.Len (v1 d1)) =>
                    String ->
                    TC Signal t1 (Data (v1 :> Nil) d1) ->
                    TC Signal t2 (Data (v1 :> Nil) d1) ->
@@ -1579,7 +1589,12 @@ interp2WingProfile :: (Show (v1 d1), Show (v2 (v1 d1)),
                        SV.Lookup v2 ,
                        SV.Singleton v1,
                        SV.Lookup v1,
-                       Product d1) =>
+                       Product d1,
+                       Constant d1,
+                      SV.Zipper v1,
+                      SV.Walker v1,
+                      SV.Storage v1 Bool,
+                      SV.Len (v1 d1)) =>
                       String ->
                       TC Signal t1 (Data (v1 :> Nil) d1) ->
                       TC Signal t2 (Data (v2 :> v1 :> Nil) d1) ->
@@ -1587,7 +1602,8 @@ interp2WingProfile :: (Show (v1 d1), Show (v2 (v1 d1)),
                       TC Sample t1 (Data Nil d1) ->
                       TC Sample t2 (Data Nil d1) ->
                       TC Sample t3 (Data Nil d1)
-interp2WingProfile=interp2WingProfileOld
+--interp2WingProfile=interp2WingProfileOld
+interp2WingProfile=interp2WingProfileNew
 
 -- | Interpolate a 3-signal x-y surface, where in x points are aligned in rows
 -- | TODO - interp2WinProfile verallgemeinern, so dass es statt mit Signal auch mit TestRow klappt
@@ -1760,7 +1776,12 @@ interp2WingProfileWithSignal :: (SV.Zipper v3,
                                  SV.Lookup v1,
                                  SV.Lookup v2,
                                  SV.Find v1,
-                                 Product d) =>
+                                 Product d, 
+                                 Constant d,
+                                 SV.Zipper v1,
+                                 SV.Walker v1,
+                                 SV.Storage v1 Bool,
+                                 SV.Len (v1 d)) =>
                                 String ->
                     TC Signal t1 (Data (v1 :> Nil) d) ->
                     TC Signal t2 (Data (v2 :> v1 :> Nil) d) ->

@@ -352,7 +352,8 @@ unionWithNewTime ::
   ( Eq (v d), Show d, Show (v d),
     Ord id, Show id, Product d, Ord d,
     V.Filter v, V.FromList v, V.Storage v d, V.Walker v,
-    V.Singleton v, V.Lookup v, V.Find v, V.Sort v) =>
+    V.Singleton v, V.Lookup v, V.Find v, V.Sort v, Constant d,
+    V.Zipper v,V.Storage v Bool,V.Len (v d)) =>
   NonEmpty.T [] (Record S.Signal S.Signal (Typ A T Tt) t2 id v d d) ->
   Record S.Signal S.Signal (Typ A T Tt) t2 id v d d
 unionWithNewTime rs = Record newTime $
@@ -451,7 +452,8 @@ norm rec = map S.norm rec
 -- | Add interpolated data points in an existing record
 newTimeBase ::
   (Product d, Ord d, V.Find v, Show d, Show (v d),
-   V.Lookup v, V.Walker v, V.Singleton v, V.Storage v d) =>
+   V.Lookup v, V.Walker v, V.Singleton v, V.Storage v d, 
+   Constant d, V.Zipper v, V.Storage v Bool, V.Len (v d)) =>
   String ->
   Record Signal Signal (Typ A T Tt) t2 id v d d ->
   TSignal v d ->
