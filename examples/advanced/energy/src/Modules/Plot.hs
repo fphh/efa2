@@ -4,7 +4,6 @@
 
 module Modules.Plot where
 
-import Modules.System (Node)
 import Modules.Setting (varRestPower, varLocalPower)
 import qualified Modules.Utility as ModUt
 import qualified Modules.Setting as ModSet
@@ -25,6 +24,7 @@ import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.SystemEta as StateEta
+import qualified EFA.Flow.State.Index as StateIdx
 
 import qualified EFA.Graph as Graph
 import qualified EFA.Graph.Topology.Node as Node
@@ -36,6 +36,8 @@ import qualified EFA.Report.FormatValue as FormatValue
 import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+import qualified Graphics.Gnuplot.Terminal as Terminal
+
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
@@ -51,7 +53,7 @@ import Data.GraphViz.Types.Canonical (DotGraph)
 import Data.Text.Lazy (Text)
 import qualified Data.Vector.Unboxed as UV
 import Data.Vector (Vector)
-import Data.Tuple.HT (fst3, snd3)
+import Data.Tuple.HT (fst3, snd3, thd3)
 
 import Data.Monoid ((<>), mconcat)
 import Control.Applicative (liftA2)
@@ -191,23 +193,35 @@ plotSimulationSignals ::
   (Show node, Ord node,
    Arith.Constant a,
    Tuple.C a, Atom.C a) =>
-  One.OptimalEnvParams Node list sweep vec a ->
   Types.Optimisation node sweep vec a ->
   IO ()
-plotSimulationSignals _ =
+plotSimulationSignals =
   AppPlot.record "Signals" DefaultTerm.cons show id
   . Types.signals
   . Types.simulation
+
+plotGivenSignals ::
+  (Show node, Ord node,
+   Arith.Constant a,
+   Tuple.C a, Atom.C a) =>
+  Types.Optimisation node sweep vec a ->
+  IO ()
+plotGivenSignals =
+  AppPlot.record "GivenSignals" DefaultTerm.cons show id
+  . Types.givenSignals
+  . Types.simulation
+
 
 to2DMatrix :: (Ord b) => Map [b] a -> Sig.PSignal2 Vector Vector a
 to2DMatrix = ModUt.to2DMatrix
 
 
-
-defaultPlot :: String -> Sig.PSignal2 Vector Vector Double -> IO ()
-defaultPlot title =
+defaultPlot ::
+  (Terminal.C term) =>
+  term -> String -> Sig.PSignal2 Vector Vector Double -> IO ()
+defaultPlot terminal title =
   AppPlot.surfaceWithOpts
-    title DefaultTerm.cons id id frameOpts varRestPower varLocalPower
+    title terminal id id frameOpts varRestPower varLocalPower
 
 withFuncToMatrix ::
   (Ord b, Arith.Constant a) =>
@@ -220,20 +234,28 @@ withFuncToMatrix func =
   . Types.quasiStationary
 
 plotMax ::
+  (Terminal.C term) =>
+  term ->
   String ->
   ((Double, Double, Idx.State, Types.EnvResult node Double) -> Double) ->
   Types.Optimisation node sweep vec Double ->
   IO ()
-plotMax title func =
-  defaultPlot title
+plotMax term title func =
+  defaultPlot term title
   . withFuncToMatrix func
 
 
-plotMaxEta :: Types.Optimisation node sweep vec Double -> IO ()
-plotMaxEta = plotMax "Maximal Eta of All States" ModUt.snd4
+plotMaxEta ::
+  (Terminal.C term) =>
+  (FilePath -> term) -> Types.Optimisation node sweep vec Double -> IO ()
+plotMaxEta term =
+  plotMax (term "plotMaxEta") "Maximal Eta of All States" ModUt.snd4
 
-plotMaxObj :: Types.Optimisation node sweep vec Double -> IO ()
-plotMaxObj = plotMax "Maximal Objective of All States" ModUt.fst4
+plotMaxObj ::
+  (Terminal.C term) =>
+  (FilePath -> term) -> Types.Optimisation node sweep vec Double -> IO ()
+plotMaxObj term =
+  plotMax (term "plotMaxObj") "Maximal Objective of All States" ModUt.fst4
 
 bestStateCurve ::
   (Ord b, Arith.Constant a, Num a) =>
@@ -241,9 +263,11 @@ bestStateCurve ::
 bestStateCurve =
   withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . ModUt.thd4)
 
-plotMaxState :: Types.Optimisation node sweep vec Double -> IO ()
-plotMaxState =
-  defaultPlot "Best State of All States"
+plotMaxState ::
+  (Terminal.C term) =>
+  (FilePath -> term) -> Types.Optimisation node sweep vec Double -> IO ()
+plotMaxState term =
+  defaultPlot (term "plotMaxState") "Best State of All States"
   . bestStateCurve
 
 plotMaxStateContour ::
@@ -301,6 +325,7 @@ plotMaxPosPerState pos =
     ("Maximal Position " ++ show pos ++ " per state")
     (ModUt.getMaxPos pos)
 
+
 matrix2ListOfMatrices ::
   Int -> Sig.PSignal2 Vector Vector [a] -> [Sig.PSignal2 Vector Vector a]
 matrix2ListOfMatrices len = zipWith g [0 .. len-1] . repeat
@@ -332,11 +357,17 @@ plotPerStateSweep len title =
   . Types.perStateSweep
   . Types.quasiStationary
 
+{-
 plotOptimal ::
   Ord b =>
   ((b, b, Types.EnvResult node b) -> Double) ->
   String ->
   Types.Optimisation node sweep vec b -> IO ()
+-}
+plotOptimal ::
+  Ord b =>
+  (Idx.State -> (b, b, Types.EnvResult node b) -> Double) ->
+  String -> Types.Optimisation node sweep vec b -> IO ()
 plotOptimal f title =
   AppPlot.surfaceWithOpts title
             DefaultTerm.cons
@@ -344,7 +375,7 @@ plotOptimal f title =
             (Graph3D.typ "lines")
             frameOpts varRestPower varLocalPower
   . Map.elems
-  . Map.map (to2DMatrix . fmap (m2n . fmap f))
+  . Map.mapWithKey (\k -> to2DMatrix . fmap (m2n . fmap (f k)))
   . Types.optimalObjectivePerState
   . Types.quasiStationary
   where m2n Nothing = ModUt.nan
@@ -353,9 +384,20 @@ plotOptimal f title =
 plotOptimalObjs, plotOptimalEtas ::
   Types.Optimisation node sweep vec Double -> IO ()
 plotOptimalObjs =
-  plotOptimal fst3 ("Maximal Objective Function Surfaces")
+  plotOptimal (const fst3) "Maximal Objective Function Surfaces"
 plotOptimalEtas =
-  plotOptimal snd3 "Maximal Eta Surfaces"
+  plotOptimal (const snd3) "Maximal Eta Surfaces"
+
+
+plotMaxPos ::
+  (-- Arith.Constant a, Ord a, Tuple.C a, Atom.C a,
+   Ord node, Show node) =>
+  (node, node) -> Types.Optimisation node sweep vec Double -> IO ()
+plotMaxPos (f, t) =
+  plotOptimal (\st -> (g . StateQty.lookup (StateIdx.power st f t) . thd3))
+              ("Maximal powers at " ++ show (f, t))
+  where g (Just (Determined x)) = x
+        g _ = ModUt.nan
 
 
 
@@ -431,13 +473,13 @@ plotSimulationGraphs terminal (Types.Optimisation _ sim) = do
   let g = fmap (head . Sweep.toList)
 
 
-  terminal "seq_"
+  terminal "seq"
     $ Draw.bgcolour LimeGreen
     $ Draw.title "Sequence Flow Graph from Simulation"
     $ Draw.seqFlowGraph Draw.optionsDefault (Types.sequenceFlowGraph sim)
 
 
-  terminal "state_"
+  terminal "state"
     $ Draw.bgcolour Lavender
     $ Draw.title "State Flow Graph from Simulation"
     $ Draw.stateFlowGraph Draw.optionsDefault
