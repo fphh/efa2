@@ -59,6 +59,8 @@ import qualified EFA.IO.TableParser as Table
 
 import qualified EFA.Equation.Arithmetic as Arith
 
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+
 import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Data.Map as Map
@@ -69,6 +71,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
 import Control.Monad (void)
+import Control.Concurrent (forkIO)
 
 
 iterateBalanceIO ::
@@ -95,6 +98,9 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
     ModPlot.plotOptimalEtas opt,
     ModPlot.plotOptimalObjs opt ]
 
+  ModPlot.plotGivenSignals opt
+  ModPlot.plotSimulationSignals opt
+
   concurrentlyMany_ [
     Draw.xterm $ Draw.topology (One.systemTopology params),
     ModPlot.plotSimulationSignalsPerEdge params opt ]
@@ -110,15 +116,14 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
     ModPlot.plotMaxObjPerState opt ]
 
   concurrentlyMany_ [
-    ModPlot.plotMaxEta opt,
-    ModPlot.plotMaxObj opt,
-    ModPlot.plotMaxState opt,
+    ModPlot.plotMaxEta (const DefaultTerm.cons) opt,
+    ModPlot.plotMaxObj (const DefaultTerm.cons) opt,
+    ModPlot.plotMaxState (const DefaultTerm.cons) opt,
     ModPlot.plotMaxStateContour opt ]
 
 
 
   --ModPlot.plotSimulationSignalsPerEdge params opt
-  ModPlot.plotSimulationSignals params opt
 
   ModPlot.plotSimulationGraphs (const Draw.xterm) opt
 
@@ -156,12 +161,13 @@ main = do
         CT.getPowerSignalsWithSameTime tabPower
           ("rest" !: "local" !: Empty.Cons)
 
-      transform = Sig.offset 0.1 . Sig.scale 2.9
-      -- transform = id
+      --transform = Sig.offset 0.1 . Sig.scale 2.9
+      transformRest = Sig.offset 2 . Sig.scale 0.9
+      transformLocal = Sig.offset 0.1 . Sig.scale 0.9
 
       prest, plocal :: Sig.PSignal Vector Double
-      prest = Sig.convert $ transform r
-      plocal = Sig.convert $ transform l
+      prest = Sig.convert $ transformRest r
+      plocal = Sig.convert $ transformLocal l
 
 
       reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos ModSet.reqs
@@ -170,7 +176,6 @@ main = do
       reqsRec =
         Record.Record (Sig.convert time)
                       (Map.fromList (zip reqsPos [prest, plocal]))
-
 
 
       optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
@@ -186,6 +191,9 @@ main = do
           (ReqsAndDofs.reqsPos ModSet.reqs)
           (ReqsAndDofs.dofsPos ModSet.dofs)
           ModSet.sweepLength
+
+
+  void $ forkIO $ ModPlot.plotReqs prest plocal
 
   void $
      ModUt.nestM 5

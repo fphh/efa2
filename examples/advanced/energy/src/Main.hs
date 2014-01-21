@@ -39,6 +39,7 @@ module Main where
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Utility as ModUt
 import qualified Modules.Setting as ModSet
+import qualified Modules.Plot as ModPlot
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.NonIO as NonIO
 import qualified Modules.Types as Types
@@ -56,6 +57,7 @@ import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Flow.State.SystemEta as StateEta
+import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
@@ -70,6 +72,8 @@ import EFA.Equation.Arithmetic ((~*), (~+), (~-), (~/))
 
 import EFA.Equation.Arithmetic (Sign(Zero, Positive, Negative))
 
+import qualified Graphics.Gnuplot.Terminal.PNG as PNG
+
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
 import qualified Data.Empty as Empty
@@ -77,9 +81,11 @@ import qualified Data.Empty as Empty
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
-import Data.Tuple.HT (thd3)
+import Control.Monad (void, zipWithM_)
 
-import Control.Monad (void)
+import Text.Printf (printf)
+
+import Data.Time.Clock (getCurrentTime)
 
 
 
@@ -112,6 +118,7 @@ betterFalsePosition params f accessf a1 a2 =
                 else if yz ~* y2 < Arith.zero
                         then go x2 z f2 fz
                         else go x1 z fnew fz
+
 
 findZeroCrossing ::
   (Arith.Sum t, Ord t, Arith.Product t, Arith.Constant t,
@@ -146,6 +153,7 @@ findZeroCrossing params f accessf xstart step =
                 (_, Zero)  -> []
 
 
+
 iterateUntil ::
   (Enum a, Num a, Ord a, Arith.Sum b, Ord b) =>
   a -> b -> [(c, b, e)] -> (Int, (a, (c, b, e)))
@@ -167,10 +175,10 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
   let
       perStateSweep = Base.perStateSweep params stateFlowGraphOpt
 
-      g sweeps pars =
-        let --(stfg, sefg, givenSigs) =
-            Types.Optimisation _ sim =
-              NonIO.optimiseAndSimulate pars reqsRec sweeps
+      g pars =
+        let opt2@(Types.Optimisation _ sim) =
+              NonIO.optimiseAndSimulate pars reqsRec perStateSweep
+
             rec = Record.partIntegrate (Types.signals sim)
 
             net2wat = TopoIdx.ppos System.Network System.Water
@@ -178,43 +186,66 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
             Sig.TC (Data bl) =
               Sig.neg $ Sig.sum $ Record.getSig rec net2wat
 
-        in (Types.stateFlowGraph sim, Types.sequenceFlowGraph sim, bl)
+        in (opt2, bl)
 
-      (len, (_, _, (statefg, _, bal))) =
-        snd $ iterateUntil (100 :: Int) (1e-6)
-            $ findZeroCrossing params (g perStateSweep) thd3 0 1
+
+      fzc = findZeroCrossing params g snd 0 1
+
+      lst = iterateUntil (100 :: Int) (1e-6) fzc
+      (len, (forcing, _, (opt, bal))) = snd $ lst
+
+  time <- getCurrentTime
+  let timeStr = map f $ show time
+      f ' ' = '_'
+      f x = x
+
+      makeFileName n dir =
+        dir ++ "/" ++ (printf "%5.5d_" (n :: Int)) ++ timeStr ++ ".png"
+
+      plot n (_, _, (opt2, _)) = do
+        ModPlot.plotSimulationGraphs (Draw.png . makeFileName n) opt
+
+        ModPlot.plotMaxState (PNG.cons . makeFileName n) opt2
+        return ()
+
+
+      statefg = Types.stateFlowGraph $ Types.simulation opt
 
       eta = case StateEta.etaSys statefg of
                  Determined e -> UV.head (Sweep.fromSweep e)
                  _ -> error "Main.iterateBalanceIO"
 
 
+  putStrLn (show len ++ "\t" ++ show forcing ++ "\t" ++ show bal ++ "\t" ++ show eta)
 
+  zipWithM_ plot (take len [0..]) fzc
 
-  putStrLn (show len ++ "\t" ++ show bal ++ "\t" ++ show eta)
-
-{-
-  time <- getCurrentTime
-  let timeStr = map f $ show time
-      f ' ' = '_'
-      f x = x
-
--}
-
-{-
-  Draw.xterm
-           $ Draw.bgcolour LimeGreen
-           $ Draw.title ("Sequence Flow Graph from Simulation\\lBalance " ++ show bal ++ "\\l")
-           $ Draw.seqFlowGraph Draw.optionsDefault seqfg
-
-
-  Draw.xterm
-           $ Draw.title ("State Flow Graph from Simulation\\lBalance " ++ show bal ++ "\\l")
-           $ Draw.stateFlowGraph Draw.optionsDefault
-           $ StateQty.mapGraph (fmap (head . Sweep.toList)) (fmap (head . Sweep.toList)) statefg
--}
 
   return statefg
+
+
+forcingSweep  ::
+  One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
+  Record.PowerRecord Node Vector Double ->
+  EnvResult Node (Sweep UV.Vector Double) ->
+  IO ()
+forcingSweep params reqsRec stateFlowGraphOpt = do
+  let 
+      perStateSweep = Base.perStateSweep params stateFlowGraphOpt
+      --stPower = StateIdx.power (Idx.State 3) System.Network System.Water
+
+      forcings = [-1, -0.5, 0, 0.5, 1]
+      ps = map (setChargeDrive params) forcings
+
+      f p = do
+        let opt = NonIO.optimiseAndSimulate p reqsRec perStateSweep
+
+        -- ModPlot.plotMaxObj () opt
+        -- ModPlot.plotMaxPosPerState stPower opt
+        ModPlot.plotMaxPos (System.Network, System.Water) opt
+
+  mapM_ f ps
+
 
 
 initEnv ::
@@ -248,11 +279,13 @@ main1 = do
         CT.getPowerSignalsWithSameTime tabPower
           ("rest" !: "local" !: Empty.Cons)
 
-      transform = Sig.offset 0.1 . Sig.scale 2.9
+      -- transform = Sig.offset 0.1 . Sig.scale 2.9
+      transformRest = Sig.offset 2 . Sig.scale 0.9
+      transformLocal = Sig.offset 0.1 . Sig.scale 0.9
 
       prest, plocal :: Sig.PSignal Vector Double
-      prest = Sig.convert $ transform r
-      plocal = Sig.convert $ transform l
+      prest = Sig.convert $ transformRest r
+      plocal = Sig.convert $ transformLocal l
 
       reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos ModSet.reqs
 
@@ -281,13 +314,21 @@ main1 = do
           ModSet.sweepLength
 
 
-  putStrLn $ "Steps\tBalance\t\t\tEta\t"
+{-
+  void $ forcingSweep optParams reqsRec
+       $ AppOpt.storageEdgeXFactors optParams 3 3
+       $ AppOpt.initialEnv optParams System.stateFlowGraph
+
+-}
+
+  putStrLn $ "Steps\tForcing\t\t\tBalance\t\t\tEta\t"
 
   void $
      ModUt.nestM 5
         (iterateBalanceIO optParams reqsRec)
         ( AppOpt.storageEdgeXFactors optParams 3 3
           $ AppOpt.initialEnv optParams System.stateFlowGraph)
+
 
 main :: IO ()
 main = main1

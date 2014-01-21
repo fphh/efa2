@@ -156,7 +156,7 @@ simulation params dofsMatrices reqsRec =
           mempty
 
 
-  in Types.Simulation stateFlowGraphSim sequenceFlowGraphSim recZeroCross
+  in Types.Simulation stateFlowGraphSim sequenceFlowGraphSim givenSigs recZeroCross
 
 
 toSweep ::

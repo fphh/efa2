@@ -12,13 +12,17 @@ import qualified EFA.Flow.Sequence.Quantity as SeqQty
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.Absolute as StateAbs
 
+
 import EFA.Equation.Result (Result)
+
 import qualified EFA.Signal.Record as Record
-
-
 import EFA.Signal.Data (Data, Nil, (:>))
 
+import Data.Vector (Vector)
+
 import Data.Map (Map)
+
+
 
 type EnvResult node a = StateQty.Graph node (Result a) (Result a)
 
@@ -42,6 +46,9 @@ data Simulation node (sweep :: (* -> *) -> * -> *) vec a =
     stateFlowGraph :: EnvResult node (sweep vec a),
     sequenceFlowGraph ::
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
+
+    givenSignals :: Record.PowerRecord node Vector a,
+
     signals :: Record.PowerRecord node [] a }  deriving (Show)
 
 data Optimisation node (sweep :: (* -> *) -> * -> *) vec a =
