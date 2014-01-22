@@ -30,6 +30,7 @@ Flag buildTools
 
 Library
   Build-Depends:
+    time >= 1.4,
     graphviz >=2999.13 && <2999.16,
     gnuplot >=0.5.2 && <0.6,
     colour >=2.3 && <2.4,
@@ -76,6 +77,7 @@ Library
     EFA.Utility.Trace
     EFA.Utility.TypeConstructor
     EFA.Utility.List
+    EFA.Utility.Filename
     EFA.Signal.Sequence
     EFA.Signal.Typ
     EFA.Signal.Data
