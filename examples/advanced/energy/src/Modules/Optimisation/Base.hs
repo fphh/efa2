@@ -141,6 +141,24 @@ optimalObjectivePerState params =
 
 
 
+expectedValuePerState ::
+  (Monoid (sweep vec Bool),
+   Arith.Product (sweep vec a),
+   Sweep.SweepVector vec Bool,
+   Sweep.SweepMap sweep vec a Bool,
+   Sweep.SweepClass sweep vec Bool,
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Fractional a, Ord a, UV.Unbox a,
+   Arith.Constant a,
+   Node.C node) =>
+  Map Idx.State (Map (list a) (EnvResult node (sweep vec a))) ->
+  Map Idx.State (Map (list a) (Maybe a))
+expectedValuePerState =
+  Map.map (Map.map DoubleSweep.expectedValue)
+
+
+
 selectOptimalState ::
   (Ord a) =>
   Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->

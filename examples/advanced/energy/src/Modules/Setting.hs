@@ -30,13 +30,13 @@ rest =  [0.1, 0.2 .. 3]
 water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]
 
-
 {-
-local = [1,2]
-rest =  [3,4]
-water = [5,6]
-gas =   [7,8]
+local = [0.1, 0.15 .. 1.1]
+rest =  [2, 2.05 .. 3]
+water = [0.1, 0.2 .. 0.8]
+gas =   [0.1, 0.2 .. 0.8]
 -}
+
 
 reqs :: ReqsAndDofs.Reqs (TopoIdx.Position System.Node, [Double])
 reqs = ReqsAndDofs.Reqs $
@@ -76,10 +76,10 @@ legend _ = "Undefined"
 
 scaleTableEta :: Map One.Name (Double, Double)
 scaleTableEta = Map.fromList $
-  (System.storage,     (4, 0.6)) :
-  (System.gas,         (2, 0.7)) :
+  (System.storage,     (1, 0.6)) :
+  (System.gas,         (1, 0.7)) :
   (System.transformer, (3, 0.95)) :
-  (System.coal,        (3, 0.45)) :
+  (System.coal,        (4, 0.45)) :
   (System.local,       (3, 1)) :
   (System.rest,        (3, 1)) :
   []

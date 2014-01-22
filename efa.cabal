@@ -291,6 +291,7 @@ Executable example-energy
       vector,
       time,
       text,
+      directory,
       base
   Else
     Buildable: False
@@ -320,6 +321,7 @@ Executable example-energy2
       vector,
       time,
       text,
+      directory,
       base
   Else
     Buildable: False

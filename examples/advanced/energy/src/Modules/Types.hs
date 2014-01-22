@@ -38,6 +38,9 @@ data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
     optimalObjectivePerState ::
       Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))),
 
+    expectedEtaPerState ::
+      Map Idx.State (Map [a] (Maybe a)),
+
     optimalState ::
       Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) } deriving (Show)
 

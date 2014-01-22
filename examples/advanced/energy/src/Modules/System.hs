@@ -16,6 +16,8 @@ import EFA.Equation.Result (Result)
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
+import qualified EFA.Utility.Filename as Filename
+
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
@@ -52,6 +54,9 @@ instance Node.C Node where
          Rest -> Node.AlwaysSink
          LocalNetwork -> Node.Crossing
          LocalRest -> Node.AlwaysSink
+
+instance Filename.Filename Node where
+  filename = show
 
 topology :: Topo.Topology Node
 topology = Topo.plainFromLabeled labeledTopology

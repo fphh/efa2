@@ -90,7 +90,9 @@ to2DMatrix ::
   Sig.TC tr (Typ x y z) (Data (v2 :> v1 :> Nil) a)
 to2DMatrix =
   Sig.fromList2 . List.transpose . Map.elems .
-  Map.mapKeysWith (++) head . fmap (:[])
+  Map.mapKeysWith (++) f . fmap (:[])
+  where f (x:_) = x
+        f [] = error "to2DMatrix: empty list"
 
 getFlowTopology ::
   Idx.State ->

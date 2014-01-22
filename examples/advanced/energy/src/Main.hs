@@ -54,10 +54,11 @@ import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Application.Optimisation as AppOpt
 
+import qualified EFA.Graph.Topology.Node as Node
+
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Flow.State.SystemEta as StateEta
-import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
@@ -72,8 +73,6 @@ import EFA.Equation.Arithmetic ((~*), (~+), (~-), (~/))
 
 import EFA.Equation.Arithmetic (Sign(Zero, Positive, Negative))
 
-import qualified Graphics.Gnuplot.Terminal.PNG as PNG
-
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
 import qualified Data.Empty as Empty
@@ -83,10 +82,7 @@ import qualified Data.Vector.Unboxed as UV
 
 import Control.Monad (void, zipWithM_)
 
-import Text.Printf (printf)
-
 import Data.Time.Clock (getCurrentTime)
-
 
 
 setChargeDrive ::
@@ -165,6 +161,18 @@ iterateUntil cnt eps ws =
       p (n, (_, step, _)) = n < cnt && (Arith.abs step > eps)
   in (length start, res)
 
+
+eta ::
+  (Node.C node, UV.Unbox a,
+   Arith.Product (sweep UV.Vector a),
+   Sweep.SweepClass sweep UV.Vector a) =>
+  Types.Optimisation node sweep UV.Vector a -> a
+eta opt =
+  case StateEta.etaSys (Types.stateFlowGraph $ Types.simulation opt) of
+       Determined e -> UV.head (Sweep.fromSweep e)
+       _ -> error "Main.iterateBalanceIO"
+
+
 iterateBalanceIO ::
   One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
@@ -179,7 +187,7 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
         let opt2@(Types.Optimisation _ sim) =
               NonIO.optimiseAndSimulate pars reqsRec perStateSweep
 
-            rec = Record.partIntegrate (Types.signals sim)
+            rec = Record.partIntegrate (Types.givenSignals sim)
 
             net2wat = TopoIdx.ppos System.Network System.Water
 
@@ -195,33 +203,33 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
       (len, (forcing, _, (opt, bal))) = snd $ lst
 
   time <- getCurrentTime
-  let timeStr = map f $ show time
-      f ' ' = '_'
-      f x = x
+  -- ModPlot.perStateSweep (ModPlot.gpPNG time 0) params opt
 
-      makeFileName n dir =
-        dir ++ "/" ++ (printf "%5.5d_" (n :: Int)) ++ timeStr ++ ".png"
 
-      plot n (_, _, (opt2, _)) = do
-        ModPlot.plotSimulationGraphs (Draw.png . makeFileName n) opt
+  let
 
-        ModPlot.plotMaxState (PNG.cons . makeFileName n) opt2
+      plot n (fcing, _, (opt2, bl)) = do
+        -- ModPlot.simulationGraphs ModPlot.gpXTerm opt2
+        -- ModPlot.simulationGraphs (ModPlot.dotPNG time n) opt2
+        -- ModPlot.optimalEtas (ModPlot.gpPNG time n) opt2
+        -- ModPlot.optimalObjs (ModPlot.gpPNG time n) opt2
+        -- ModPlot.maxEtaPerState (ModPlot.gpPNG time n) opt2
+        -- ModPlot.optimalObjectivePerState ModPlot.dotXTerm opt2
+        -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG time n) opt2
+        ModPlot.simulationSignals (ModPlot.gpPNG time n) opt2
+        ModPlot.givenSignals (ModPlot.gpPNG time n) opt2
+
+        putStrLn $ "\t" ++ show fcing ++ "\t" ++ show bl ++ "\t" ++ show (eta opt2)
+
         return ()
 
 
-      statefg = Types.stateFlowGraph $ Types.simulation opt
-
-      eta = case StateEta.etaSys statefg of
-                 Determined e -> UV.head (Sweep.fromSweep e)
-                 _ -> error "Main.iterateBalanceIO"
-
-
-  putStrLn (show len ++ "\t" ++ show forcing ++ "\t" ++ show bal ++ "\t" ++ show eta)
-
   zipWithM_ plot (take len [0..]) fzc
+  putStrLn (show len ++ "\t" ++ show forcing ++ "\t" 
+                     ++ show bal ++ "\t" ++ show (eta opt))
 
 
-  return statefg
+  return (Types.stateFlowGraph $ Types.simulation opt)
 
 
 forcingSweep  ::
@@ -232,17 +240,24 @@ forcingSweep  ::
 forcingSweep params reqsRec stateFlowGraphOpt = do
   let 
       perStateSweep = Base.perStateSweep params stateFlowGraphOpt
-      --stPower = StateIdx.power (Idx.State 3) System.Network System.Water
 
-      forcings = [-1, -0.5, 0, 0.5, 1]
+      forcings = [-0.085, -0.0849 .. -0.084]
       ps = map (setChargeDrive params) forcings
 
       f p = do
         let opt = NonIO.optimiseAndSimulate p reqsRec perStateSweep
+            forcing = case Map.lookup System.Water (One.forcingPerNode p) of
+                           Just (One.ChargeDrive fo) -> fo
+                           _ -> error $ "forcingSweep"
 
-        -- ModPlot.plotMaxObj () opt
-        -- ModPlot.plotMaxPosPerState stPower opt
-        ModPlot.plotMaxPos (System.Network, System.Water) opt
+            rec = Record.partIntegrate (Types.givenSignals $ Types.simulation opt)
+
+            net2wat = TopoIdx.ppos System.Water System.Network
+
+            Sig.TC (Data balance) =
+              Sig.neg $ Sig.sum $ Record.getSig rec net2wat
+
+        putStrLn (show forcing ++ "\t" ++ show balance ++ "\t" ++ show (eta opt))
 
   mapM_ f ps
 
@@ -263,6 +278,7 @@ main1 :: IO()
 main1 = do
 
   tabEta <- Table.read "../maps/eta.txt"
+
   tabPower <- Table.read "../maps/power.txt.bak"
 
   let etaMap =
@@ -280,19 +296,36 @@ main1 = do
           ("rest" !: "local" !: Empty.Cons)
 
       -- transform = Sig.offset 0.1 . Sig.scale 2.9
-      transformRest = Sig.offset 2 . Sig.scale 0.9
-      transformLocal = Sig.offset 0.1 . Sig.scale 0.9
+      transformRest1 = Sig.offset 2 . Sig.scale 0.9
+      transformRest2 = Sig.offset 2.2 . Sig.scale 0.6
 
-      prest, plocal :: Sig.PSignal Vector Double
-      prest = Sig.convert $ transformRest r
-      plocal = Sig.convert $ transformLocal l
+
+      transformLocal1 = Sig.offset 0.2 . Sig.scale 0.7
+      transformLocal2 = Sig.offset 0.4 . Sig.scale 0.5
+
+      prest1, prest2, plocal1, plocal2 :: Sig.PSignal Vector Double
+      prest1 = Sig.convert $ transformRest1 r
+      prest2 = Sig.convert $ transformRest2 r
+
+      plocal1 = Sig.convert $ transformLocal1 l
+      plocal2 = Sig.convert $ transformLocal2 l
 
       reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos ModSet.reqs
 
+      la = case Sig.viewR time of
+                Just (_, x) -> x
+                _ -> error "Sig.viewR time"
+
+      ctime = Sig.convert time
+
+      t = Sig.map (/2) (ctime Sig..++ Sig.offset (Sig.fromSample la) ctime)
+
+      prest = prest1 Sig..++ prest2
+      plocal = plocal1 Sig..++ plocal2
+
       reqsRec :: Record.PowerRecord Node Vector Double
       reqsRec =
-        Record.Record (Sig.convert time)
-                      (Map.fromList (zip reqsPos [prest, plocal]))
+        Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
 
       -- pts = DoubleSweep.mkPts2 ModSet.sweepPts
 
@@ -318,8 +351,9 @@ main1 = do
   void $ forcingSweep optParams reqsRec
        $ AppOpt.storageEdgeXFactors optParams 3 3
        $ AppOpt.initialEnv optParams System.stateFlowGraph
-
 -}
+
+  -- void $ ModPlot.plotReqs prest plocal
 
   putStrLn $ "Steps\tForcing\t\t\tBalance\t\t\tEta\t"
 
