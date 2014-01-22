@@ -97,12 +97,14 @@ simulation params dofsMatrices reqsRec =
 
 
       dofsSignals :: Map (TopoIdx.Position node) (Sig.PSignal Vector Double)
-      dofsSignals =
-        for dofsMatrices $ \mat ->
+      dofsSignals = Map.mapWithKey f dofsMatrices
+        where f key mat = Sig.tzipWith (Sig.interp2WingProfile ("simulation-interpolate Signals" ++ show key) 
+                                        ModSet.varRestPower1D ModSet.varLocalPower mat) prest plocal
+{-        for dofsMatrices $ \mat ->
           Sig.tzipWith
-            (Sig.interp2WingProfile "solveAndCalibrateAvgEffWithGraph"
+            (Sig.interp2WingProfile "simulation-interolateSignals"
               ModSet.varRestPower1D ModSet.varLocalPower mat)
-            prest plocal
+            prest plocal -}
 
       givenSigs = Record.addSignals (Map.toList dofsSignals) reqsRec
 

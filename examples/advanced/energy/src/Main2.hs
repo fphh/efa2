@@ -93,14 +93,14 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
   let
       -- xPos = StateIdx.x (Idx.State 3) System.Network System.Water
       len = One.sweepLength params
-
+{-
   concurrentlyMany_ [
     ModPlot.plotOptimalEtas opt,
     ModPlot.plotOptimalObjs opt ]
-
+-}
   ModPlot.plotGivenSignals opt
   ModPlot.plotSimulationSignals opt
-
+{-
   concurrentlyMany_ [
     Draw.xterm $ Draw.topology (One.systemTopology params),
     ModPlot.plotSimulationSignalsPerEdge params opt ]
@@ -120,6 +120,7 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
     ModPlot.plotMaxObj (const DefaultTerm.cons) opt,
     ModPlot.plotMaxState (const DefaultTerm.cons) opt,
     ModPlot.plotMaxStateContour opt ]
+-}
 
 
 
@@ -163,7 +164,7 @@ main = do
 
       --transform = Sig.offset 0.1 . Sig.scale 2.9
       transformRest = Sig.offset 2 . Sig.scale 0.9
-      transformLocal = Sig.offset 0.1 . Sig.scale 0.9
+      transformLocal = Sig.offset 0.2 . Sig.scale 0.8
 
       prest, plocal :: Sig.PSignal Vector Double
       prest = Sig.convert $ transformRest r
@@ -193,7 +194,7 @@ main = do
           ModSet.sweepLength
 
 
-  void $ forkIO $ ModPlot.plotReqs prest plocal
+--  void $ forkIO $ ModPlot.plotReqs prest plocal
 
   void $
      ModUt.nestM 5
