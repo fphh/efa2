@@ -75,6 +75,7 @@ Library
     EFA.Utility.TotalMap
     EFA.Utility.Trace
     EFA.Utility.TypeConstructor
+    EFA.Utility.List
     EFA.Signal.Sequence
     EFA.Signal.Typ
     EFA.Signal.Data
