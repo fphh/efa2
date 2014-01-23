@@ -90,6 +90,7 @@ Library
     EFA.Signal.Colour
     EFA.Signal.Plot
     EFA.Signal.ConvertTable
+    EFA.Signal.Interp
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
