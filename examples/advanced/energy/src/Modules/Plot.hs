@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -8,6 +9,7 @@ import Modules.Setting (varRestPower, varLocalPower)
 import qualified Modules.Utility as ModUt
 import qualified Modules.Setting as ModSet
 import qualified Modules.Types as Types
+import qualified Modules.System as System
 
 import qualified EFA.Application.Plot as AppPlot
 import qualified EFA.Application.Sweep as Sweep
@@ -33,12 +35,18 @@ import EFA.Equation.Result (Result(Determined))
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Report.FormatValue as FormatValue
 
+import EFA.Signal.Plot (label)
+
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.List (vhead, vlast)
 import EFA.Utility.Filename (filename, Filename)
+import EFA.Utility.Show (showEdge)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Graphics.Gnuplot.Terminal.PNG as PNG
+import qualified Graphics.Gnuplot.Terminal.SVG as SVG
+import qualified Graphics.Gnuplot.Terminal.PostScript as PS
+
 import qualified Graphics.Gnuplot.Terminal as Terminal
 
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
@@ -76,7 +84,10 @@ frameOpts =
 --  Plot.heatmap .
 --  Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0, 1) .
   -- Plot.cbrange (0.2, 1) .
-  Plot.xyzlabel "Local [W]" "Rest [W]" ""
+  Plot.xyzlabelnode
+      (Just System.LocalRest)
+      (Just System.Rest)
+      Nothing
   . Plot.missing "NaN"
   . Plot.paletteGH
   . Plot.depthorder
@@ -102,7 +113,7 @@ plotMaps terminal func title =
           let str = filename (title, state)
           t <- terminal str
           AppPlot.surfaceWithOpts
-            str
+            title
             t
             id
             id
@@ -161,10 +172,10 @@ plotGraphMaps terminal title =
               let str = filename title </> filename reqs 
               terminal str
                    $ Draw.bgcolour Lavender
-                   $ Draw.title (str ++ "\\lreqs " ++ show reqs
-                                     ++ "\\lObjective Value " ++ show objVal
-                                     ++ "\\leta " ++ show eta
-                                     ++ "\\l")
+                   $ Draw.title (title ++ "\\lreqs " ++ show reqs
+                                       ++ "\\lObjective Value " ++ show objVal
+                                       ++ "\\leta " ++ show eta
+                                       ++ "\\l")
                    $ Draw.stateFlowGraph Draw.optionsDefault graph))
 
 
@@ -182,7 +193,6 @@ optimalObjectivePerState ::
   Types.Optimisation node sweep vec a -> IO ()
 optimalObjectivePerState terminal =
   plotGraphMapOfMaps terminal . Types.optimalObjectivePerState . Types.quasiStationary
-
 
 perEdge ::
   (Vector.Walker l, Vector.Storage l a, Vector.FromList l,
@@ -202,7 +212,7 @@ perEdge terminal params rec =
         let ti = "Simulation Per Edge"
             str = filename ti </> (filename $ Map.keys $ Record.recordSignalMap r)
         t <- terminal str
-        AppPlot.record ti t show id r
+        AppPlot.record ti t showEdge id r
   in concurrentlyMany_ $ map g recs
 
 simulationSignalsPerEdge ::
@@ -218,7 +228,7 @@ simulationSignalsPerEdge terminal params =
 
 
 simulationSignals ::
-  (Show node, Ord node,
+  (Show node, Ord node, Node.C node,
    Terminal.C term,
    Arith.Constant a,
    Tuple.C a, Atom.C a) =>
@@ -228,12 +238,12 @@ simulationSignals ::
 simulationSignals terminal opt = do
   let str = "Simulation Signals"
   t <- terminal $ filename str
-  AppPlot.record str t show id
+  AppPlot.record str t showEdge id
     $ Types.signals
     $ Types.simulation opt
 
 givenSignals ::
-  (Show node, Ord node,
+  (Show node, Ord node, Node.C node,
    Terminal.C term,
    Arith.Constant a,
    Tuple.C a, Atom.C a) =>
@@ -243,7 +253,7 @@ givenSignals ::
 givenSignals terminal opt = do
   let str = "Given Signals"
   t <- terminal $ filename str
-  AppPlot.record str t show id
+  AppPlot.record str t showEdge id
     $ Types.givenSignals
     $ Types.simulation opt
 
@@ -251,6 +261,9 @@ givenSignals terminal opt = do
 to2DMatrix :: (Ord b) => Map [b] a -> Sig.PSignal2 Vector Vector a
 to2DMatrix = ModUt.to2DMatrix
 
+m2n :: (Arith.Constant a) => Maybe a -> a
+m2n Nothing = ModUt.nan
+m2n (Just x) = x
 
 defaultPlot ::
   (Terminal.C term) =>
@@ -400,8 +413,6 @@ expectedEtaPerState terminal =
   . Map.map (to2DMatrix . Map.map m2n)
   . Types.expectedEtaPerState
   . Types.quasiStationary
-  where m2n Nothing = ModUt.nan
-        m2n (Just x) = x
 
 plotOptimal ::
   (Terminal.C term, Ord b) =>
@@ -415,11 +426,9 @@ plotOptimal terminal f title =
             (Graph3D.typ "lines")
             frameOpts varRestPower varLocalPower
   . Map.elems
-  . Map.mapWithKey (\k -> to2DMatrix . fmap (m2n . fmap (f k)))
+  . Map.mapWithKey (\state -> label (show state) . to2DMatrix . fmap (m2n . fmap (f state)))
   . Types.optimalObjectivePerState
   . Types.quasiStationary
-  where m2n Nothing = ModUt.nan
-        m2n (Just x) = x
 
 optimalObjs, optimalEtas ::
   (Terminal.C term) =>
@@ -526,26 +535,61 @@ simulationGraphs terminal (Types.Optimisation _ sim) = do
     $ StateQty.mapGraph g g (Types.stateFlowGraph sim)
 
 
+
+
+
+dot ::
+  (FilePath -> DotGraph Text -> IO ()) ->
+  String -> UTCTime -> Int -> FilePath -> DotGraph Text -> IO ()
+dot terminal suffix time n dir g = do
+  let thisdir = "tmp" </> filename time </> dir
+      fname = thisdir </> printf "%6.6d" n <.> suffix
+  createDirectoryIfMissing True thisdir
+  terminal fname g
+
 dotXTerm :: b -> DotGraph Text -> IO ()
 dotXTerm = const Draw.xterm
 
 dotPNG :: UTCTime -> Int -> FilePath -> DotGraph Text -> IO ()
-dotPNG time n dir g = do
-  let thisdir = "tmp" </> filename time </> dir
-      fname = thisdir </> printf "%6.6d" n <.> "png"
-  createDirectoryIfMissing True thisdir
-  Draw.png fname g
+dotPNG = dot Draw.png "png"
 
+dotSVG :: UTCTime -> Int -> FilePath -> DotGraph Text -> IO ()
+dotSVG = dot Draw.svg "svg"
+
+dotPS :: UTCTime -> Int -> FilePath -> DotGraph Text -> IO ()
+dotPS = dot Draw.eps "eps"
+
+
+gp :: (FilePath -> term) -> String -> UTCTime -> Int -> FilePath -> IO term
+gp terminal suffix time n dir = do
+  let thisdir = "tmp" </> filename time </> dir
+      fname = thisdir </> printf "%6.6d" n <.> suffix
+  createDirectoryIfMissing True thisdir
+  return $ terminal fname
 
 gpXTerm :: b -> IO (DefaultTerm.T)
 gpXTerm = const $ return DefaultTerm.cons
 
-gpPNG :: UTCTime -> Int -> FilePath -> IO PNG.T
-gpPNG time n dir = do
-  let thisdir = "tmp" </> filename time </> dir
-      fname = thisdir </> printf "%6.6d" n <.> "png"
-  createDirectoryIfMissing True thisdir
-  return $ PNG.cons fname
+gpPNG ::  UTCTime -> Int -> FilePath -> IO PNG.T
+gpPNG = gp PNG.cons "png"
 
+gpSVG ::  UTCTime -> Int -> FilePath -> IO SVG.T
+gpSVG = gp SVG.cons "svg"
 
+gpPS ::  UTCTime -> Int -> FilePath -> IO PS.T
+gpPS = gp PS.cons "ps"
 
+{-
+
+class PNG a where
+      png :: UTCTime -> Int -> FilePath -> a
+
+type T a = DotGraph Text -> IO ()
+
+instance PNG (DotGraph Text -> IO ()) where
+         png = dotPNG
+
+instance PNG (IO PNG.T) where
+         png = gp PNG.cons
+
+-}

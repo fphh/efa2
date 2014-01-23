@@ -187,9 +187,9 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
         let opt2@(Types.Optimisation _ sim) =
               NonIO.optimiseAndSimulate pars reqsRec perStateSweep
 
-            rec = Record.partIntegrate (Types.givenSignals sim)
+            rec = Record.partIntegrate (Types.signals sim)
 
-            net2wat = TopoIdx.ppos System.Network System.Water
+            net2wat = TopoIdx.ppos System.Water System.Network
 
             Sig.TC (Data bl) =
               Sig.neg $ Sig.sum $ Record.getSig rec net2wat
@@ -203,28 +203,31 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
       (len, (forcing, _, (opt, bal))) = snd $ lst
 
   time <- getCurrentTime
-  -- ModPlot.perStateSweep (ModPlot.gpPNG time 0) params opt
+  print time
 
+  -- aeusserer Loop
+  ModPlot.perStateSweep (ModPlot.gpPNG time 0) params opt
 
   let
 
+      -- innerer Loop
       plot n (fcing, _, (opt2, bl)) = do
-        -- ModPlot.simulationGraphs ModPlot.gpXTerm opt2
-        -- ModPlot.simulationGraphs (ModPlot.dotPNG time n) opt2
-        -- ModPlot.optimalEtas (ModPlot.gpPNG time n) opt2
-        -- ModPlot.optimalObjs (ModPlot.gpPNG time n) opt2
-        -- ModPlot.maxEtaPerState (ModPlot.gpPNG time n) opt2
-        -- ModPlot.optimalObjectivePerState ModPlot.dotXTerm opt2
-        -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG time n) opt2
-        ModPlot.simulationSignals (ModPlot.gpPNG time n) opt2
-        ModPlot.givenSignals (ModPlot.gpPNG time n) opt2
 
-        putStrLn $ "\t" ++ show fcing ++ "\t" ++ show bl ++ "\t" ++ show (eta opt2)
+        -- ModPlot.simulationGraphs (ModPlot.dotXTerm) opt2
+        -- ModPlot.simulationGraphs (ModPlot.dotPNG time n) opt2
+        -- ModPlot.optimalEtas ModPlot.gpXTerm opt2
+        -- ModPlot.optimalObjs (ModPlot.gpXTerm) opt2
+        -- ModPlot.maxEtaPerState (ModPlot.gpXTerm) opt2
+        -- ModPlot.optimalObjectivePerState ModPlot.dotXTerm opt2
+        -- ModPlot.simulationSignals (ModPlot.gpXTerm) opt2
+        -- ModPlot.givenSignals ModPlot.gpXTerm opt2
+
+        putStrLn $ show n ++ "\t" ++ show fcing ++ "\t" ++ show bl ++ "\t" ++ show (eta opt2)
 
         return ()
 
 
-  zipWithM_ plot (take len [0..]) fzc
+  zipWithM_ plot (take len [0 :: Int ..]) fzc
   putStrLn (show len ++ "\t" ++ show forcing ++ "\t" 
                      ++ show bal ++ "\t" ++ show (eta opt))
 

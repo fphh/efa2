@@ -24,18 +24,18 @@ import qualified Data.Vector.Unboxed as UV
 
 local, rest, water, gas :: [Double]
 
-
+{-
 local = [0.1, 0.2 .. 3]
 rest =  [0.1, 0.2 .. 3]
 water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]
+-}
 
-{-
 local = [0.1, 0.15 .. 1.1]
 rest =  [2, 2.05 .. 3]
 water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]
--}
+
 
 
 reqs :: ReqsAndDofs.Reqs (TopoIdx.Position System.Node, [Double])
