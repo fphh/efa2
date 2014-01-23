@@ -78,6 +78,7 @@ Library
     EFA.Utility.TypeConstructor
     EFA.Utility.List
     EFA.Utility.Filename
+    EFA.Utility.Show
     EFA.Signal.Sequence
     EFA.Signal.Typ
     EFA.Signal.Data

@@ -9,7 +9,7 @@ module EFA.Signal.Plot (
    run,
    signal,
    signalFrameAttr,
-   heatmap, xyzrange3d, cbrange, xyzlabel, depthorder,
+   heatmap, xyzrange3d, cbrange, xyzlabel, xyzlabelnode, depthorder,
    paletteGH, paletteGray, paletteHSV, missing, contour,
    Signal,
    Value,
@@ -48,12 +48,16 @@ import EFA.Signal.Data (Data, (:>), Nil, NestedList)
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic (Sum, Product, (~*), Constant)
 
+import qualified EFA.Graph.Topology.Node as Node
+
 import EFA.Report.Typ
           (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
+
+import EFA.Utility.Show (showNode)
 
 import qualified Graphics.Gnuplot.Advanced as Plot
 
@@ -244,6 +248,17 @@ xyzlabel xstr ystr zstr =
   Opts.xLabel xstr .
   Opts.yLabel ystr .
   Opts.zLabel zstr
+
+xyzlabelnode ::
+  (Atom.C x, Atom.C y, Atom.C z, Node.C node) =>
+  (Maybe node) -> (Maybe node) -> (Maybe node) ->
+  Opts.T (Graph3D.T x y z) -> Opts.T (Graph3D.T x y z)
+xyzlabelnode xnode ynode znode =
+  Opts.xLabel (f xnode) .
+  Opts.yLabel (f ynode) .
+  Opts.zLabel (f znode)
+  where f = maybe "" showNode
+
 
 paletteGH ::
   (Graph.C graph) => Opts.T graph -> Opts.T graph

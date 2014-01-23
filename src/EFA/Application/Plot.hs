@@ -120,19 +120,6 @@ surface ::
 surface ti terminal x y z =
   surfaceWithOpts ti terminal id id id x y z
 
-{-
-combineWith ::
-  (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
-  (tcZ -> tcZ -> tcZ) ->
-  String -> term ->
-  (LineSpec.T -> LineSpec.T) ->
-  (Int -> String) ->
-  tcX -> tcY -> tcZ -> tcZ -> IO ()
-combineWith f ti terminal opts legend x y z0 z1 =
-  Plot.run terminal (Plot.xyFrameAttr ti x y) $
-    Plot.surface opts legend x y (Sig.zipWith f z0 z1)
--}
-
 
 -- | Plotting Signals against each other -----------------------------
 
@@ -218,7 +205,8 @@ recordList_extract ::
    [id] ->
    IO ()
 recordList_extract ti term showKey opts xs idList =
-   Plot.run term (Plot.recordFrameAttr ti) (Plot.recordList showKey opts varOpts $ map (\(x,y) -> (x,Record.extract idList y)) xs)
+   Plot.run term (Plot.recordFrameAttr ti) (Plot.recordList showKey opts varOpts
+     $ map (\(x,y) -> (x,Record.extract idList y)) xs)
    where
      varOpts n = LineSpec.lineStyle n
 
