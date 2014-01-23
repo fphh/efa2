@@ -79,7 +79,7 @@ scaleTableEta = Map.fromList $
   (System.storage,     (1, 0.6)) :
   (System.gas,         (1, 0.7)) :
   (System.transformer, (3, 0.95)) :
-  (System.coal,        (4, 0.45)) :
+  (System.coal,        (7, 0.45)) :
   (System.local,       (3, 1)) :
   (System.rest,        (3, 1)) :
   []

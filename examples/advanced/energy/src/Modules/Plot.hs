@@ -81,7 +81,7 @@ frameOpts ::
   Opts.T (Graph3D.T a a a) ->
   Opts.T (Graph3D.T a a a)
 frameOpts =
---  Plot.heatmap .
+  Plot.heatmap .
 --  Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0, 1) .
   -- Plot.cbrange (0.2, 1) .
   Plot.xyzlabelnode
@@ -267,10 +267,11 @@ m2n (Just x) = x
 
 defaultPlot ::
   (Terminal.C term) =>
-  term -> String -> Sig.PSignal2 Vector Vector Double -> IO ()
-defaultPlot terminal title =
+  IO term -> String -> Sig.PSignal2 Vector Vector Double -> IO ()
+defaultPlot terminal title xs = do
+  t <- terminal
   AppPlot.surfaceWithOpts
-    title terminal id id frameOpts varRestPower varLocalPower
+    title t (LineSpec.title "") id frameOpts varRestPower varLocalPower xs
 
 withFuncToMatrix ::
   (Ord b, Arith.Constant a) =>
@@ -284,7 +285,7 @@ withFuncToMatrix func =
 
 plotMax ::
   (Terminal.C term) =>
-  term ->
+  IO term ->
   String ->
   ((Double, Double, Idx.State, Types.EnvResult node Double) -> Double) ->
   Types.Optimisation node sweep vec Double ->
@@ -296,13 +297,13 @@ plotMax term title func =
 
 maxEta ::
   (Terminal.C term) =>
-  (FilePath -> term) -> Types.Optimisation node sweep vec Double -> IO ()
+  (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
 maxEta term =
   plotMax (term "plotMaxEta") "Maximal Eta of All States" ModUt.snd4
 
 maxObj ::
   (Terminal.C term) =>
-  (FilePath -> term) -> Types.Optimisation node sweep vec Double -> IO ()
+  (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
 maxObj term =
   plotMax (term "plotMaxObj") "Maximal Objective of All States" ModUt.fst4
 
@@ -314,7 +315,7 @@ bestStateCurve =
 
 maxState ::
   (Terminal.C term) =>
-  (FilePath -> term) -> Types.Optimisation node sweep vec Double -> IO ()
+  (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
 maxState term =
   defaultPlot (term "plotMaxState") "Best State of All States"
   . bestStateCurve

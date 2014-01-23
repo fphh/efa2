@@ -59,6 +59,11 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Flow.State.SystemEta as StateEta
+import qualified EFA.Flow.State.Index as StateIdx
+import qualified EFA.Flow.State.Quantity as StateQty
+
+import qualified EFA.Flow.Part.Index as Idx
+import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
@@ -72,6 +77,8 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~*), (~+), (~-), (~/))
 
 import EFA.Equation.Arithmetic (Sign(Zero, Positive, Negative))
+
+import EFA.Utility.List (vhead)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
@@ -182,6 +189,7 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
   let
       perStateSweep = Base.perStateSweep params stateFlowGraphOpt
+      net2wat = TopoIdx.ppos System.Water System.Network
 
       g pars =
         let opt2@(Types.Optimisation _ sim) =
@@ -189,7 +197,6 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
             rec = Record.partIntegrate (Types.signals sim)
 
-            net2wat = TopoIdx.ppos System.Water System.Network
 
             Sig.TC (Data bl) =
               Sig.neg $ Sig.sum $ Record.getSig rec net2wat
@@ -197,30 +204,40 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
         in (opt2, bl)
 
 
-      fzc = findZeroCrossing params g snd 0 1
+      fzc = findZeroCrossing params g snd (-1) 1
 
       lst = iterateUntil (100 :: Int) (1e-6) fzc
       (len, (forcing, _, (opt, bal))) = snd $ lst
 
   time <- getCurrentTime
-  print time
+  -- print time
+
+  let first = fmap (vhead "iterateBalanceIO" . Sweep.toList)
 
   -- aeusserer Loop
   ModPlot.perStateSweep (ModPlot.gpPNG time 0) params opt
+
+  Draw.xterm $ Draw.stateFlowGraph Draw.optionsDefault
+             $ StateQty.mapGraph first first stateFlowGraphOpt
 
   let
 
       -- innerer Loop
       plot n (fcing, _, (opt2, bl)) = do
 
+        let stoPos = StateIdx.power (Idx.State 0) System.Network System.Water
         -- ModPlot.simulationGraphs (ModPlot.dotXTerm) opt2
-        -- ModPlot.simulationGraphs (ModPlot.dotPNG time n) opt2
-        -- ModPlot.optimalEtas ModPlot.gpXTerm opt2
-        -- ModPlot.optimalObjs (ModPlot.gpXTerm) opt2
-        -- ModPlot.maxEtaPerState (ModPlot.gpXTerm) opt2
+
+        -- ModPlot.simulationGraphs (ModPlot.dotXTerm) opt2
+        --ModPlot.simulationGraphs (ModPlot.dotPNG time n) opt2
+        --ModPlot.optimalEtas (ModPlot.gpPNG time n) opt2
+        --ModPlot.optimalObjs (ModPlot.gpPNG time n) opt2
+        --ModPlot.maxEtaPerState (ModPlot.gpPNG time n) opt2
+        ModPlot.maxPosPerState (ModPlot.gpPNG time n) stoPos opt2
         -- ModPlot.optimalObjectivePerState ModPlot.dotXTerm opt2
         -- ModPlot.simulationSignals (ModPlot.gpXTerm) opt2
         -- ModPlot.givenSignals ModPlot.gpXTerm opt2
+        --ModPlot.maxState (ModPlot.gpPNG time n) opt2
 
         putStrLn $ show n ++ "\t" ++ show fcing ++ "\t" ++ show bl ++ "\t" ++ show (eta opt2)
 
@@ -356,7 +373,7 @@ main1 = do
        $ AppOpt.initialEnv optParams System.stateFlowGraph
 -}
 
-  -- void $ ModPlot.plotReqs prest plocal
+  -- void $ ModPlot.requirements prest plocal
 
   putStrLn $ "Steps\tForcing\t\t\tBalance\t\t\tEta\t"
 
