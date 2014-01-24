@@ -30,6 +30,7 @@ Flag buildTools
 
 Library
   Build-Depends:
+    time >= 1.4,
     graphviz >=2999.13 && <2999.16,
     gnuplot >=0.5.2 && <0.6,
     colour >=2.3 && <2.4,
@@ -75,6 +76,9 @@ Library
     EFA.Utility.TotalMap
     EFA.Utility.Trace
     EFA.Utility.TypeConstructor
+    EFA.Utility.List
+    EFA.Utility.Filename
+    EFA.Utility.Show
     EFA.Signal.Sequence
     EFA.Signal.Typ
     EFA.Signal.Data
@@ -273,6 +277,7 @@ Executable example-energy
       Modules.Optimisation
       Modules.Optimisation.NonIO
       Modules.Optimisation.Base
+      Modules.Optimisation.Loop
       Modules.System
       Modules.Plot
       Modules.Utility
@@ -289,39 +294,10 @@ Executable example-energy
       vector,
       time,
       text,
+      directory,
       base
   Else
     Buildable: False
-
-
-Executable example-energy2
-  Hs-Source-Dirs: examples/advanced/energy/src
-  Main-Is: Main2.hs
-  Other-Modules:
-      Modules.Setting
-      Modules.Optimisation
-      Modules.Optimisation.NonIO
-      Modules.Optimisation.Base
-      Modules.System
-      Modules.Plot
-      Modules.Utility
-  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      gnuplot,
-      graphviz,
-      utility-ht,
-      containers,
-      non-empty,
-      filepath,
-      vector,
-      time,
-      text,
-      base
-  Else
-    Buildable: False
-
 
 Executable example-time
   Main-Is: examples/elementary/time/Main.hs

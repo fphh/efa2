@@ -92,6 +92,11 @@ toList ::
 toList = fromSweepVector . fromSweep
 {-# INLINE toList #-}
 
+
+expectedValue ::
+  (Num a, UV.Unbox a, Fractional a) => Sweep UV.Vector a -> a
+expectedValue (Sweep xs) = UV.sum xs / fromIntegral (UV.length xs)
+
 class SweepMap (sweep :: (* -> *) -> * -> *) vec a b where
   map :: (a -> b) -> sweep vec a -> sweep vec b
 
@@ -144,3 +149,6 @@ instance (UV.Unbox a, Eq a, Num a, Arith.Constant a) =>
 instance (FormatValue.FormatValue a, UV.Unbox a) =>
          FormatValue.FormatValue (Sweep UV.Vector a) where
   formatValue = FormatValue.formatValue . toList
+
+
+

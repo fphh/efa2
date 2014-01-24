@@ -143,6 +143,25 @@ optimalSolutionState2 forcing env =
             in Just (x, y, env2)
           _ -> Nothing
 
+
+
+expectedValue ::
+  (Fractional a, Ord a, Monoid (sweep vec Bool), UV.Unbox a,
+   Node.C node, Arith.Product (sweep vec a), Arith.Constant a,
+   Sweep.SweepVector vec a, Sweep.SweepVector vec Bool,
+   Sweep.SweepMap sweep vec a Bool, Sweep.SweepClass sweep vec a,
+   Sweep.SweepClass sweep vec Bool) =>
+  StateFlow.Graph node (Result (sweep vec a)) (Result (sweep vec a)) -> Maybe a
+expectedValue env =
+  case (checkGreaterZero env, StateEta.etaSys env) of
+       (Determined condVec, Determined esys) ->
+         let condLst = Sweep.toList condVec
+             esysLst = Sweep.toList esys
+             (s, n) = List.foldl' f (0, 0) $ zip condLst esysLst
+             f (t, m) (c, e) = if c then (t+e, m+1) else (s, n)
+         in if n /= 0 then Just (s/n) else Nothing
+       _ -> Nothing
+
 foldMap2 ::
   (Monoid c, Node.C node) =>
   (a -> c) -> (v -> c) -> StateFlow.Graph node a v -> c
@@ -172,3 +191,5 @@ checkGreaterZero = fold . StateFlow.mapGraphWithVar
                  (Determined w) -> Determined $ Sweep.map (> Arith.zero) w
                  _ -> Undetermined
           _ -> Undetermined)
+
+

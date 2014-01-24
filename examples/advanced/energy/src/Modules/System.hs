@@ -16,10 +16,14 @@ import EFA.Equation.Result (Result)
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
+import qualified EFA.Utility.Filename as Filename
+
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
 import EFA.Signal.Record (SigId(SigId))
+
+import qualified EFA.Report.Format as Format
 
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -40,7 +44,12 @@ data Node =
    deriving (Eq, Ord, Enum, Show)
 
 instance Node.C Node where
-   display = Node.displayDefault
+   display Network = Format.literal "High Voltage"
+   display LocalNetwork = Format.literal "Low Voltage"
+   display Rest = Format.literal "Residual I"
+   display LocalRest = Format.literal "Residual II"
+   display x = Node.displayDefault x
+
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
    typ t =
@@ -52,6 +61,9 @@ instance Node.C Node where
          Rest -> Node.AlwaysSink
          LocalNetwork -> Node.Crossing
          LocalRest -> Node.AlwaysSink
+
+instance Filename.Filename Node where
+  filename = show
 
 topology :: Topo.Topology Node
 topology = Topo.plainFromLabeled labeledTopology
@@ -99,6 +111,12 @@ flowStates =
         [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
         [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
         [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network] ]
+
+{-
+        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Network Water],
+        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Water Network] ]
+-}
+
 
 stateFlowGraph :: StateFlow.Graph Node (Result a) (Result v)
 stateFlowGraph =

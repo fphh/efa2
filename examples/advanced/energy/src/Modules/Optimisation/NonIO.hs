@@ -58,7 +58,7 @@ import Control.Functor.HT (for)
 
 quasiStationaryOptimisation ::
   (Show node, Node.C node,
-   Ord a, Show a, UV.Unbox a, Arith.Constant a,
+   Ord a, Show a, UV.Unbox a, Arith.Constant a, Fractional a,
    Ord (sweep vec a),
    Monoid (sweep vec Bool),
    Arith.Product (sweep vec a),
@@ -73,8 +73,9 @@ quasiStationaryOptimisation ::
   Types.QuasiStationary node sweep vec a
 quasiStationaryOptimisation params perStateSweep =
   let a = Base.optimalObjectivePerState params perStateSweep
-      b = Base.selectOptimalState a
-  in Types.QuasiStationary perStateSweep a b
+      b = Base.expectedValuePerState perStateSweep
+      c = Base.selectOptimalState a
+  in Types.QuasiStationary perStateSweep a b c
 
 simulation ::
   forall node sweep vec list.

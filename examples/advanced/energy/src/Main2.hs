@@ -48,8 +48,6 @@ import EFA.Application.Sweep (Sweep)
 import qualified EFA.Application.Optimisation as AppOpt
 import EFA.Application.OneStorage (Name(Name))
 
-import qualified EFA.Flow.Draw as Draw
-
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
@@ -59,7 +57,6 @@ import qualified EFA.IO.TableParser as Table
 
 import qualified EFA.Equation.Arithmetic as Arith
 
-import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 import EFA.Utility.Async (concurrentlyMany_)
 
@@ -71,7 +68,6 @@ import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
 import Control.Monad (void)
-import Control.Concurrent (forkIO)
 
 
 iterateBalanceIO ::
@@ -84,52 +80,14 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
   let
       perStateSweep = Base.perStateSweep params stateFlowGraphOpt
 
-
       opt = NonIO.optimiseAndSimulate params reqsRec perStateSweep
 
-
-
-
-  let
-      -- xPos = StateIdx.x (Idx.State 3) System.Network System.Water
-      len = One.sweepLength params
-{-
   concurrentlyMany_ [
-    ModPlot.plotOptimalEtas opt,
-    ModPlot.plotOptimalObjs opt ]
--}
-  ModPlot.plotGivenSignals opt
-  ModPlot.plotSimulationSignals opt
-{-
-  concurrentlyMany_ [
-    Draw.xterm $ Draw.topology (One.systemTopology params),
-    ModPlot.plotSimulationSignalsPerEdge params opt ]
+    ModPlot.maxEtaPerState ModPlot.gpXTerm opt ]
 
 
-  -- ModPlot.plotOptimalObjectivePerState opt
-
-
-  concurrentlyMany_ [
-    ModPlot.plotPerStateSweep len "Sweep per State" opt,
-    ModPlot.plotMaxEtaPerState opt,
-    -- ModPlot.plotMaxPosPerState xPos opt,
-    ModPlot.plotMaxObjPerState opt ]
-
-  concurrentlyMany_ [
-    ModPlot.plotMaxEta (const DefaultTerm.cons) opt,
-    ModPlot.plotMaxObj (const DefaultTerm.cons) opt,
-    ModPlot.plotMaxState (const DefaultTerm.cons) opt,
-    ModPlot.plotMaxStateContour opt ]
--}
-
-
-
-  --ModPlot.plotSimulationSignalsPerEdge params opt
-
-  ModPlot.plotSimulationGraphs (const Draw.xterm) opt
-
-  --ModPlot.plotSimulationGraphs (Draw.pdf . ("pdf/"++) . (++ (timeStr ++ ".pdf"))) opt
-
+  ModPlot.givenSignals ModPlot.gpXTerm opt
+  ModPlot.simulationSignals ModPlot.gpXTerm opt
 
   return $ Types.stateFlowGraph $ Types.simulation opt
 
@@ -162,9 +120,13 @@ main = do
         CT.getPowerSignalsWithSameTime tabPower
           ("rest" !: "local" !: Empty.Cons)
 
-      --transform = Sig.offset 0.1 . Sig.scale 2.9
+      -- transform = Sig.offset 0.1 . Sig.scale 2.9
+
       transformRest = Sig.offset 2 . Sig.scale 0.9
       transformLocal = Sig.offset 0.2 . Sig.scale 0.8
+
+      --transformRest = transform
+      --transformLocal = transform
 
       prest, plocal :: Sig.PSignal Vector Double
       prest = Sig.convert $ transformRest r
@@ -194,7 +156,7 @@ main = do
           ModSet.sweepLength
 
 
---  void $ forkIO $ ModPlot.plotReqs prest plocal
+  void $ ModPlot.requirements prest plocal
 
   void $
      ModUt.nestM 5
