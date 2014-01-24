@@ -66,8 +66,6 @@ import qualified Data.Vector.Unboxed as UV
 import Data.Vector (Vector)
 import Data.Tuple.HT (fst3, snd3, thd3)
 
-import Data.Time.Clock (UTCTime)
-
 import Data.Monoid ((<>), mconcat)
 import Control.Applicative (liftA2)
 
@@ -77,12 +75,12 @@ import System.FilePath.Posix ((</>), (<.>))
 import Text.Printf (printf)
 
 frameOpts ::
-  (Atom.C a) =>
+  (Atom.C a, Fractional a, Tuple.C a) =>
   Opts.T (Graph3D.T a a a) ->
   Opts.T (Graph3D.T a a a)
 frameOpts =
-  Plot.heatmap .
---  Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0, 1) .
+--  Plot.heatmap .
+  Plot.xyzrange3d (1.9, 3) (0.1, 1.1) (0.16, 0.31) .
   -- Plot.cbrange (0.2, 1) .
   Plot.xyzlabelnode
       (Just System.LocalRest)
@@ -95,7 +93,7 @@ frameOpts =
 
 
 plotMaps ::
-  (Filename state,
+  (Filename state, Show state,
    Terminal.C term,
    Plot.Surface
      (Sig.PSignal2 Vector Vector Double)
@@ -113,16 +111,17 @@ plotMaps terminal func title =
           let str = filename (title, state)
           t <- terminal str
           AppPlot.surfaceWithOpts
-            title
+            (title ++ ", " ++ show state)
             t
             id
-            id
+            -- id
+            (Graph3D.typ "lines")
             frameOpts varRestPower varLocalPower
             (func mat)
 
 
 plotSweeps ::
-  (Filename state,
+  (Filename state, Show state,
    Terminal.C term,
    Plot.Surface
      (Sig.PSignal2 Vector Vector Double)
@@ -140,7 +139,7 @@ plotSweeps terminal func title =
           let str = filename (title, state)
           t <- terminal str
           AppPlot.surfaceWithOpts
-            str
+            (title ++ ", " ++ show state)
             t
             id
             (Graph3D.typ "lines")
@@ -150,9 +149,9 @@ plotSweeps terminal func title =
 
 
 plotMapOfMaps ::
-  (Show state, Terminal.C term, Filename k) =>
+  (Show a, Terminal.C term, Show state, Filename state) =>
   (FilePath -> IO term) ->
-  Map state (Map k (Sig.PSignal2 Vector Vector (Maybe (Result Double)))) ->
+  Map a (Map state (Sig.PSignal2 Vector Vector (Maybe (Result Double)))) ->
   IO ()
 plotMapOfMaps terminal =
   concurrentlyMany_
@@ -271,7 +270,7 @@ defaultPlot ::
 defaultPlot terminal title xs = do
   t <- terminal
   AppPlot.surfaceWithOpts
-    title t (LineSpec.title "") id frameOpts varRestPower varLocalPower xs
+    title t (LineSpec.title "") (Graph3D.typ "lines") frameOpts varRestPower varLocalPower xs
 
 withFuncToMatrix ::
   (Ord b, Arith.Constant a) =>
@@ -299,7 +298,8 @@ maxEta ::
   (Terminal.C term) =>
   (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
 maxEta term =
-  plotMax (term "plotMaxEta") "Maximal Eta of All States" ModUt.snd4
+  plotMax (term "plotMaxEta") "Maximal Objective of All States" 
+    ModUt.snd4
 
 maxObj ::
   (Terminal.C term) =>
@@ -353,7 +353,7 @@ maxObjPerState terminal =
   maxPerState terminal "Maximal Objective Per State" ModUt.getMaxObj
 
 maxEtaPerState terminal =
-  maxPerState terminal "Maximal Eta Per State" ModUt.getMaxEta
+  maxPerState terminal "Maximal Objective Per State" ModUt.getMaxEta
 
 
 maxPosPerState ::
@@ -541,7 +541,7 @@ simulationGraphs terminal (Types.Optimisation _ sim) = do
 
 dot ::
   (FilePath -> DotGraph Text -> IO ()) ->
-  String -> UTCTime -> Int -> FilePath -> DotGraph Text -> IO ()
+  String -> String -> Int -> FilePath -> DotGraph Text -> IO ()
 dot terminal suffix time n dir g = do
   let thisdir = "tmp" </> filename time </> dir
       fname = thisdir </> printf "%6.6d" n <.> suffix
@@ -551,17 +551,17 @@ dot terminal suffix time n dir g = do
 dotXTerm :: b -> DotGraph Text -> IO ()
 dotXTerm = const Draw.xterm
 
-dotPNG :: UTCTime -> Int -> FilePath -> DotGraph Text -> IO ()
+dotPNG :: String -> Int -> FilePath -> DotGraph Text -> IO ()
 dotPNG = dot Draw.png "png"
 
-dotSVG :: UTCTime -> Int -> FilePath -> DotGraph Text -> IO ()
+dotSVG :: String -> Int -> FilePath -> DotGraph Text -> IO ()
 dotSVG = dot Draw.svg "svg"
 
-dotPS :: UTCTime -> Int -> FilePath -> DotGraph Text -> IO ()
+dotPS :: String -> Int -> FilePath -> DotGraph Text -> IO ()
 dotPS = dot Draw.eps "eps"
 
 
-gp :: (FilePath -> term) -> String -> UTCTime -> Int -> FilePath -> IO term
+gp :: (FilePath -> term) -> String -> String -> Int -> FilePath -> IO term
 gp terminal suffix time n dir = do
   let thisdir = "tmp" </> filename time </> dir
       fname = thisdir </> printf "%6.6d" n <.> suffix
@@ -571,13 +571,13 @@ gp terminal suffix time n dir = do
 gpXTerm :: b -> IO (DefaultTerm.T)
 gpXTerm = const $ return DefaultTerm.cons
 
-gpPNG ::  UTCTime -> Int -> FilePath -> IO PNG.T
+gpPNG ::  String -> Int -> FilePath -> IO PNG.T
 gpPNG = gp PNG.cons "png"
 
-gpSVG ::  UTCTime -> Int -> FilePath -> IO SVG.T
+gpSVG ::  String -> Int -> FilePath -> IO SVG.T
 gpSVG = gp SVG.cons "svg"
 
-gpPS ::  UTCTime -> Int -> FilePath -> IO PS.T
+gpPS ::  String -> Int -> FilePath -> IO PS.T
 gpPS = gp PS.cons "ps"
 
 {-

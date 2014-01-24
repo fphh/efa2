@@ -112,6 +112,12 @@ flowStates =
         [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
         [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network] ]
 
+{-
+        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Network Water],
+        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Water Network] ]
+-}
+
+
 stateFlowGraph :: StateFlow.Graph Node (Result a) (Result v)
 stateFlowGraph =
    StateFlow.graphFromStates flowStates

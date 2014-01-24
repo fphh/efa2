@@ -116,3 +116,5 @@ flipPower = Idx.liftInPart $
 
 nestM :: (Monad m) => Int -> (a -> m a) -> a -> m a
 nestM n act = foldr (>=>) return (replicate n act)
+
+
