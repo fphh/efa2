@@ -40,7 +40,7 @@ import EFA.Signal.Plot (label)
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.List (vhead, vlast)
 import EFA.Utility.Filename (filename, Filename)
-import EFA.Utility.Show (showEdge)
+import EFA.Utility.Show (showEdge, showNode)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Graphics.Gnuplot.Terminal.PNG as PNG
@@ -56,7 +56,7 @@ import qualified Graphics.Gnuplot.ColorSpecification as ColorSpec
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 
-import Data.GraphViz.Attributes.Colors.X11 (X11Color(LimeGreen, Lavender))
+import Data.GraphViz.Attributes.Colors.X11 (X11Color(DarkSeaGreen2, Lavender))
 
 
 import qualified Data.Map as Map; import Data.Map (Map)
@@ -76,12 +76,14 @@ import Text.Printf (printf)
 
 frameOpts ::
   (Atom.C a, Fractional a, Tuple.C a) =>
+--  Opts.T (Graph3D.T a a a) -> Opts.T (Graph3D.T a a a)) ->
   Opts.T (Graph3D.T a a a) ->
   Opts.T (Graph3D.T a a a)
 frameOpts =
 --  Plot.heatmap .
-  Plot.xyzrange3d (1.9, 3) (0.1, 1.1) (0.16, 0.31) .
+  -- Plot.xyzrange3d (1.9, 3) (0.1, 1.1) (0.16, 0.31) .
   -- Plot.cbrange (0.2, 1) .
+
   Plot.xyzlabelnode
       (Just System.LocalRest)
       (Just System.Rest)
@@ -89,8 +91,6 @@ frameOpts =
   . Plot.missing "NaN"
   . Plot.paletteGH
   . Plot.depthorder
-
-
 
 plotMaps ::
   (Filename state, Show state,
@@ -225,6 +225,16 @@ simulationSignalsPerEdge ::
 simulationSignalsPerEdge terminal params =
   perEdge terminal params . Types.signals . Types.simulation
 
+record :: 
+  (Ord node, Node.C node, Terminal.C term,
+   Vector.Walker l, Vector.Storage l a,
+   Vector.FromList l, Arith.Constant a,
+   Tuple.C a, Atom.C a) =>
+  (FilePath -> IO term) ->
+  String -> Record.PowerRecord node l a -> IO ()
+record terminal ti rec = do
+  t <- terminal $ filename ti
+  AppPlot.record ti t showEdge id rec
 
 simulationSignals ::
   (Show node, Ord node, Node.C node,
@@ -270,7 +280,8 @@ defaultPlot ::
 defaultPlot terminal title xs = do
   t <- terminal
   AppPlot.surfaceWithOpts
-    title t (LineSpec.title "") (Graph3D.typ "lines") frameOpts varRestPower varLocalPower xs
+--    title t (LineSpec.title "") (Graph3D.typ "lines") frameOpts varRestPower varLocalPower xs
+    title t (LineSpec.title "") id frameOpts varRestPower varLocalPower xs
 
 withFuncToMatrix ::
   (Ord b, Arith.Constant a) =>
@@ -281,6 +292,8 @@ withFuncToMatrix func =
   . Map.map (maybe ModUt.nan func)
   . Types.optimalState
   . Types.quasiStationary
+
+
 
 plotMax ::
   (Terminal.C term) =>
@@ -294,18 +307,31 @@ plotMax term title func =
   . withFuncToMatrix func
 
 
+maxPos ::
+  (Ord node, Show node, Filename node, Node.C node,
+   Terminal.C term) =>
+  TopoIdx.Position node -> 
+  (FilePath -> IO term) ->
+  Types.Optimisation node sweep vec Double -> IO ()
+maxPos pos@(TopoIdx.Position f t) terminal =
+  plotMax (terminal $ filename ("maxPos", pos))
+          ("Maximal Value for: " ++ showEdge pos)
+          (\(_, _, st, env) -> g $ StateQty.lookup (StateIdx.power st f t) env)
+  where g (Just (Determined x)) = x
+        g _ = ModUt.nan
+
 maxEta ::
   (Terminal.C term) =>
   (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
 maxEta term =
-  plotMax (term "plotMaxEta") "Maximal Objective of All States" 
+  plotMax (term "maxEta") "Maximal Eta of All States" 
     ModUt.snd4
 
 maxObj ::
   (Terminal.C term) =>
   (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
 maxObj term =
-  plotMax (term "plotMaxObj") "Maximal Objective of All States" ModUt.fst4
+  plotMax (term "maxObj") "Maximal Objective of All States" ModUt.fst4
 
 bestStateCurve ::
   (Ord b, Arith.Constant a, Num a) =>
@@ -317,16 +343,18 @@ maxState ::
   (Terminal.C term) =>
   (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
 maxState term =
-  defaultPlot (term "plotMaxState") "Best State of All States"
+  defaultPlot (term "maxState") "Best State of All States"
   . bestStateCurve
 
 maxStateContour ::
-  (Ord a) => Types.Optimisation node sweep vec a -> IO ()
-maxStateContour =
+  (Terminal.C term, Ord a) =>
+  (FilePath -> IO term) -> Types.Optimisation node sweep vec a -> IO ()
+maxStateContour terminal opt = do
+  term <- terminal "maxStateContour"
   AppPlot.surfaceWithOpts
     "Best State of All States"
-    DefaultTerm.cons id id (Plot.contour . frameOpts) varRestPower varLocalPower
-  . bestStateCurve
+    term id id (Plot.contour . frameOpts) varRestPower varLocalPower
+    $ bestStateCurve opt
 
 
 maxPerState ::
@@ -443,26 +471,24 @@ optimalEtas terminal opt = do
   t <- terminal "optimalEtas"
   plotOptimal t (const snd3) "Maximal Eta Surfaces" opt
 
-maxPos ::
-  (Ord node, Show node, Terminal.C term) =>
+optimalPos ::
+  (Node.C node, Filename node, Terminal.C term) =>
+  TopoIdx.Position node ->
   (FilePath -> IO term) ->
-  (node, node) -> Types.Optimisation node sweep vec Double -> IO ()
-maxPos terminal (f, t) opt = do
-  term <- terminal "maxPos"
-  plotOptimal
-    term
-    (\st -> (g . StateQty.lookup (StateIdx.power st f t) . thd3))
-    ("Maximal powers at " ++ show (f, t))
-    opt
+  Types.Optimisation node sweep vec Double -> IO ()
+optimalPos pos@(TopoIdx.Position f t) terminal opt = do
+  term <- terminal $ filename ("optimalPos", pos)
+  let str = "Optimal " ++ showEdge pos
+  plotOptimal term (\st -> (g . StateQty.lookup (StateIdx.power st f t) . thd3)) str opt
   where g (Just (Determined x)) = x
         g _ = ModUt.nan
 
-findTile :: Ord t => [t] -> [t] -> t -> t -> [(t, t)]
+findTile :: (Ord t) => [t] -> [t] -> t -> t -> [(t, t)]
 findTile xs ys x y =
   let (xa, xb) = findInterval x xs
       (ya, yb) = findInterval y ys
 
-      findInterval :: (Ord a) => a -> [a] -> (a, a)
+      --findInterval :: (Ord a) => a -> [a] -> (a, a)
       findInterval z zs = (vlast "findTile" as, vhead "findTile" bs)
         where (as, bs) = span (<=z) zs
 
@@ -474,10 +500,12 @@ findTile xs ys x y =
 
 
 requirements ::
+  (Terminal.C term) =>
+  (FilePath -> IO term) ->
   Sig.PSignal Vector Double ->
   Sig.PSignal Vector Double ->
   IO ()
-requirements prest plocal = do
+requirements terminal prest plocal = do
   let rs = Sig.toList prest
       ls = Sig.toList plocal
 
@@ -487,7 +515,7 @@ requirements prest plocal = do
       sigStyle _ =
         LineSpec.pointSize 1 $
         LineSpec.pointType 7 $
-        LineSpec.lineWidth 1 $
+        LineSpec.lineWidth 2 $
           LineSpec.lineColor ColorSpec.red $
         LineSpec.deflt
 
@@ -506,10 +534,13 @@ requirements prest plocal = do
 
         in Plot.xy tileStyle xsSig [AppPlot.label "" ysSig]
 
-
-  Plot.run DefaultTerm.cons (Plot.xyFrameAttr "Reqs" prest plocal)
+  t <- terminal "requirements"
+  Plot.run t
+    ( Opts.yLabel (showNode System.Rest) $
+      Opts.xLabel (showNode System.LocalRest) $
+      Plot.xyFrameAttr "Requirements" prest plocal)
     ( (mconcat $ map f ts)
-      <> Plot.xy sigStyle [prest] [AppPlot.label "Power" plocal])
+      <> Plot.xy sigStyle [prest] [AppPlot.label "" plocal])
 
 
 simulationGraphs ::
@@ -524,7 +555,7 @@ simulationGraphs terminal (Types.Optimisation _ sim) = do
   let g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
   terminal "simulationGraphsSequence"
-    $ Draw.bgcolour LimeGreen
+    $ Draw.bgcolour DarkSeaGreen2
     $ Draw.title "Sequence Flow Graph from Simulation"
     $ Draw.seqFlowGraph Draw.optionsDefault (Types.sequenceFlowGraph sim)
 

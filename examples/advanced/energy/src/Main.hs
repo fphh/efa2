@@ -38,9 +38,12 @@ module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
+import qualified Modules.Plot as ModPlot
+
 import qualified Modules.Optimisation.Loop as ModLoop
 
 import Modules.Types (EnvResult)
+
 
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
@@ -56,7 +59,13 @@ import qualified EFA.Signal.ConvertTable as CT
 
 import qualified EFA.IO.TableParser as Table
 
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+
 import qualified EFA.Equation.Arithmetic as Arith
+
+import qualified EFA.Flow.Draw as Draw
+
+import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
@@ -64,6 +73,7 @@ import qualified Data.Empty as Empty
 
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
+
 
 
 import Text.Printf (printf)
@@ -114,6 +124,8 @@ main1 = do
       plocal1 = Sig.convert $ transformLocal1 l
       plocal2 = Sig.convert $ transformLocal2 l
 
+-- ACHTUNG ACHTUNG hieran muessen wir uns orientieren !!! 26.01.2014
+
       reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos ModSet.reqs
 
       la = case Sig.viewR time of
@@ -127,13 +139,21 @@ main1 = do
       prest = prest1 Sig..++ prest2
       plocal = plocal1 Sig..++ plocal2
 
+-- ACHTUNG ACHTUNG wir haben local und rest verwechselt !!! 26.01.2014
       reqsRec :: Record.PowerRecord Node Vector Double
       reqsRec =
         Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
 
-      -- pts = DoubleSweep.mkPts2 ModSet.sweepPts
 
- -- print pts
+  concurrentlyMany_ [
+    Draw.xterm $ Draw.labeledTopology $ System.labeledTopology,
+    Draw.xterm $
+      Draw.flowTopologies $
+      StateAnalysis.advanced System.topology ]
+
+  concurrentlyMany_ [
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
+    ModPlot.requirements ModPlot.gpXTerm prest plocal ]
 
   let
       optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
@@ -157,18 +177,18 @@ main1 = do
        $ AppOpt.initialEnv optParams System.stateFlowGraph
 -}
 
-  -- void $ ModPlot.requirements prest plocal
+
 
   putStrLn $ printf "%6s%24s%24s%24s%24s" 
                     "Step" "StepSize" "Forcing" "Balance" "Eta"
 
-  let ol = ModLoop.outerLoop
+  let ol = --ModLoop.uniqueInnerLoopX
+           ModLoop.outerLoop
              (ModLoop.iterateBalance optParams reqsRec)
              ( AppOpt.storageEdgeXFactors optParams 3 3
                $ AppOpt.initialEnv optParams System.stateFlowGraph )
 
-
-  let numberOfLoops = 2
+  let numberOfLoops = 5
 
   mapM_ putStrLn (ModLoop.showOuterLoop numberOfLoops ol)
 
@@ -178,5 +198,4 @@ main1 = do
 
 main :: IO ()
 main = main1
-
 

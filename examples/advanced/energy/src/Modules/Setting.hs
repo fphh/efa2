@@ -31,6 +31,10 @@ water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]
 -}
 
+{-
+
+-}
+
 local = [0.1, 0.15 .. 1.1]
 rest =  [2, 2.05 .. 3]
 water = [0.1, 0.2 .. 0.8]
@@ -74,16 +78,16 @@ legend 0 = "Laden"
 legend 1 = "Entladen"
 legend _ = "Undefined"
 
+
 scaleTableEta :: Map One.Name (Double, Double)
 scaleTableEta = Map.fromList $
-  (System.storage,     (1, 0.6)) :
+  (System.storage,     (1, 0.9)) :
   (System.gas,         (1, 0.7)) :
   (System.transformer, (3, 0.95)) :
   (System.coal,        (7, 0.45)) :
   (System.local,       (3, 1)) :
   (System.rest,        (3, 1)) :
   []
-
 
 restScale, localScale :: Double
 restScale = 0.3
