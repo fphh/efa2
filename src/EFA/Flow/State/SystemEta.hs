@@ -15,7 +15,7 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
-import EFA.Equation.Result (Result(Determined))
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import EFA.Utility.Map (Caller)
 
@@ -29,7 +29,6 @@ import Control.Applicative (liftA2)
 
 import Data.Foldable (Foldable, foldMap)
 
-import Debug.Trace
 
 etaSys ::
    (Node.C node, Arith.Product v) =>
@@ -38,20 +37,29 @@ etaSys =
    SystemEta.etaSys . fmap FlowTopo.topology . StateQty.states
 
 
-{-
+
 etaSys2 ::
-   (Node.C node, Arith.Product v, Show node, Show v) =>
-   StateQty.Graph node (Result v) (Result v) -> Result v
--}
+  (Ord node, Node.C node,
+   Arith.Constant a,
+   Arith.Product (sweep vec a),
+   Sweep.SweepClass sweep vec a) =>
+  StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
+  Result (sweep vec a)
 etaSys2 sq =
    let es = fmap FlowTopo.topology $ StateQty.states sq
 
        x = Map.elems $ fmap (PartMap.init . Storage.nodes) (StateQty.storages sq)
        y = Map.elems $ fmap (PartMap.exit . Storage.nodes) (StateQty.storages sq)
 
-       s@(Determined t):_ = zipWith (liftA2 (Arith.~-)) x y
+       err str = error ("EFA.Flow.State.SystemEta.etaSys2: " ++ str)
 
-       w = liftA2 (Arith.~*) (Determined $ Sweep.replicate t 20) s
+       (s, t) = case zipWith (liftA2 (Arith.~-)) x y of
+                     [] -> err "empty list"
+                     Undetermined:_ -> err "Undetermined"
+                     s0@(Determined t0):_ -> (s0, t0)
+
+       w = liftA2 (Arith.~*) 
+             (Determined $ Sweep.replicate t (Arith.fromRational 20)) s
 
        nodes = fmap Graph.nodeLabels es
 
@@ -66,7 +74,7 @@ etaSys2 sq =
        sumRes =
           foldl1 (liftA2 (~+)) . foldMap Map.elems
 
-   in liftA2 (Arith.~/) (liftA2 (~+) w (sumRes sinks)) (sumRes sources)
+   in liftA2 (Arith.~/) (sumRes sinks) (liftA2 (Arith.~+) w (sumRes sources))
 
 
 
