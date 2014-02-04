@@ -80,13 +80,13 @@ labeledTopology2 :: Topo.LabeledTopology Node
 labeledTopology2 = AppUt.topologyFromLabeledEdges edgeList2
 
 edgeList :: AppUt.LabeledEdgeList Node
-edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
-               (Water, Network, "WaterPlant","Water","ElWater"),
+edgeList = [(Coal, Network, "Coal\\lPlant", "Coal","ElCoal"),
+               (Water, Network, "Water\\lPlant","Water","ElWater"),
 
-               (Network, Rest,"toRest","toRest","toRest"),
-               (Network, LocalNetwork, "Transformer", "HighVoltage", "LowVoltage"),
-               (Gas, LocalNetwork,"GasPlant","Gas","ElGas"),
-               (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
+               (Network, Rest,"100%","toRest","toRest"),
+               (Network, LocalNetwork, "Trans-\\lformer", "HighVoltage", "LowVoltage"),
+               (Gas, LocalNetwork,"Gas\\lPlant","Gas","ElGas"),
+               (LocalNetwork, LocalRest, "100%", "toLocalRest", "toLocalRest")]
 
 
 edgeList2 :: AppUt.LabeledEdgeList Node

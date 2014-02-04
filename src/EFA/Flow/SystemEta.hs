@@ -18,7 +18,6 @@ import Control.Applicative (liftA2)
 
 import Data.Foldable (Foldable, foldMap)
 
-
 etaSys ::
    (Node.C n, Graph.Edge e, Ord (e n),
     Arith.Sum v, Arith.Product v,
@@ -37,4 +36,4 @@ etaSys sq =
        sumRes =
           foldl1 (liftA2 (~+)) . foldMap Map.elems
 
-   in  liftA2 (~/) (sumRes sinks) (sumRes sources)
+   in liftA2 (~/) (sumRes sinks) (sumRes sources)

@@ -22,17 +22,19 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined))
 
 import qualified EFA.Flow.State.SystemEta as StateEta
-import qualified EFA.Flow.State.Index as StateIdx
+-- import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.Topology.Index as TopoIdx
-import qualified EFA.Flow.Part.Index as Idx
+--import qualified EFA.Flow.Part.Index as Idx
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Data (Data(Data))
 
-import EFA.Utility.List (vhead)
+import EFA.Utility.List (vhead, vlast)
+import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Data.Map as Map
+import qualified Data.List as List
 import qualified Data.Vector.Unboxed as UV
 import Data.Vector (Vector)
 import Data.Maybe (catMaybes)
@@ -57,6 +59,13 @@ data OuterLoopItem node sweep vec a = OuterLoopItem {
 newtype OuterLoop node sweep vec a =
   OuterLoop { unOuterLoop :: [OuterLoopItem node sweep vec a] }
 
+uniqueInnerLoopX ::
+  Eq a => OuterLoop node sweep vec a -> OuterLoop node sweep vec a
+uniqueInnerLoopX (OuterLoop ol) = OuterLoop (map f ol)
+  where f oli = oli { innerLoop = InnerLoop $ map (vlast "uniqueInnerLoopX")
+                                            $ List.groupBy g fzcs }
+          where InnerLoop fzcs = innerLoop oli
+        g a b = snd (yfzc a) == snd (yfzc b)
 
 setChargeDrive ::
   One.OptimalEnvParams Node list sweep vec a ->
@@ -87,6 +96,7 @@ betterFalsePosition params f accessf a1 a2 =
                 else if yz ~* y2 < Arith.zero
                         then go x2 z f2 fz
                         else go x1 z fnew fz
+
 
 
 eta ::
@@ -193,13 +203,18 @@ iterateLoops cnt olif ilf (OuterLoop ol) =
         f (OuterLoopItem nos _ _ _ _ (InnerLoop il)) = take nos il
         g n o = zipWith (ilf n) [0..] (f o) ++ [olif n o]
 
+
 showOuterLoopItem ::
   (UV.Unbox a, Arith.Product (sweep UV.Vector a),
    PrintfArg a,
    Node.C node, Sweep.SweepClass sweep UV.Vector a) =>
   Int -> OuterLoopItem node sweep UV.Vector a -> Maybe String
-showOuterLoopItem _ (OuterLoopItem nos ss f bal opt _il) =
-  Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
+showOuterLoopItem _ (OuterLoopItem nos ss f bal _opt _il) =
+  Just $ printf "%6d%24e%24e%24e\n" nos ss f bal
+--  Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
+
+  -- Just $ printf "%24e%24e\n" f bal
+
 
 
 showFindZeroCrossing ::
@@ -208,14 +223,19 @@ showFindZeroCrossing ::
   Int -> Int ->
   FindZeroCrossing a (Types.Optimisation node sweep UV.Vector a, a) ->
   Maybe String
-showFindZeroCrossing _olcnt ilcnt (FindZeroCrossing x st (opt, bal)) =
-  Just $ printf "%6d%24e%24e%24e%24e" ilcnt st x bal (eta opt)
+showFindZeroCrossing _olcnt ilcnt (FindZeroCrossing f st (_opt, bal)) =
+  Just $ printf "%6d%24e%24e%24e" ilcnt st f bal -- (eta opt)
+--  Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
+
+  -- Just $ printf "%24e%24e" f bal
+
 
 showOuterLoop ::
   (PrintfArg a, UV.Unbox a, Arith.Product (sweep UV.Vector a),
    Node.C node, Sweep.SweepClass sweep UV.Vector a, Show node) =>
    Int ->
    OuterLoop node sweep UV.Vector a -> [String]
+
 showOuterLoop cnt ol =
   catMaybes $ iterateLoops cnt showOuterLoopItem showFindZeroCrossing ol
 
@@ -223,14 +243,31 @@ showOuterLoop cnt ol =
 
 printOuterLoopItem ::
   (Arith.Product (sweep UV.Vector Double),
-   Node.C node, Sweep.SweepClass sweep UV.Vector Double) =>
-  One.OptimalEnvParams node f sweep UV.Vector Double ->
-  Int -> OuterLoopItem node sweep UV.Vector Double -> Maybe (IO ())
+   Sweep.SweepClass sweep UV.Vector Double) =>
+  One.OptimalEnvParams Node f sweep UV.Vector Double ->
+  Int -> OuterLoopItem Node sweep UV.Vector Double -> Maybe (IO ())
 printOuterLoopItem _params olcnt (OuterLoopItem _ _ _ _ opt _il) =
   Just $ do
-    let dir = printf "outer-loop-%6.6d" olcnt
-    ModPlot.simulationGraphs (ModPlot.dotPNG dir 0) opt
+    let -- dir = printf "outer-loop-%6.6d" olcnt
+        stoPos = TopoIdx.Position System.Water System.Network
+        gasPos = TopoIdx.Position System.Gas System.LocalNetwork
 
+    putStrLn (printf "Loop %6.6d" olcnt)
+
+    concurrentlyMany_ [
+      ModPlot.simulationGraphs ModPlot.dotXTerm opt,
+      ModPlot.simulationSignals ModPlot.gpXTerm opt,
+      ModPlot.maxPos stoPos ModPlot.gpXTerm opt,
+      ModPlot.maxPos gasPos ModPlot.gpXTerm opt,
+      ModPlot.maxState ModPlot.gpXTerm opt,
+      ModPlot.maxObj ModPlot.gpXTerm opt ]
+
+{-
+    ModPlot.maxPos stoPos (ModPlot.gpPNG dir 0) opt
+    ModPlot.maxPos gasPos (ModPlot.gpPNG dir 0) opt
+    ModPlot.maxState (ModPlot.gpPNG dir 0) opt
+    ModPlot.maxEta (ModPlot.gpPNG dir 0) opt
+-}
 
 printFindZeroCrossing ::
   (Arith.Product (sweep UV.Vector Double),
@@ -239,23 +276,30 @@ printFindZeroCrossing ::
   Int -> Int ->
   FindZeroCrossing Double (Types.Optimisation Node sweep UV.Vector Double, Double) ->
   Maybe (IO ())
-printFindZeroCrossing _params olcnt ilcnt (FindZeroCrossing _ _ (opt, _)) =
+printFindZeroCrossing _params _olcnt _ilcnt (FindZeroCrossing _ _ (_opt, _)) =
+  Nothing
+{-
   Just $ do
     let dir = printf "outer-loop-%6.6d" olcnt
-        stoPos = StateIdx.power (Idx.State 0) System.Network System.Water
+        stoPos = TopoIdx.Position System.Water System.Network
 
-    ModPlot.optimalEtas (ModPlot.gpPNG dir ilcnt) opt
+    ModPlot.maxEta (ModPlot.gpPNG dir ilcnt) opt
     ModPlot.optimalObjs (ModPlot.gpPNG dir ilcnt) opt
-    ModPlot.maxEtaPerState (ModPlot.gpPNG dir ilcnt) opt
-    ModPlot.maxPosPerState (ModPlot.gpPNG dir ilcnt) stoPos opt
+    ModPlot.simulationGraphs (ModPlot.dotPNG dir ilcnt) opt
+
+   -- ModPlot.maxEtaPerState (ModPlot.gpPNG dir ilcnt) opt
+   -- ModPlot.maxPosPerState (ModPlot.gpPNG dir ilcnt) stoPos opt
+
+    ModPlot.maxPos stoPos (ModPlot.gpPNG dir ilcnt) opt
 
     -- das aktiviert das schreiben der zustandsflussgraphen 
     -- pro parzelle (Achtung, ziemlich viel!!!)
     -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG dir ilcnt) opt
-    ModPlot.simulationSignals (ModPlot.gpPNG dir ilcnt) opt
-    ModPlot.givenSignals (ModPlot.gpPNG dir ilcnt) opt
+    -- ModPlot.simulationSignals (ModPlot.gpPNG dir ilcnt) opt
+    -- ModPlot.givenSignals (ModPlot.gpPNG dir ilcnt) opt
     ModPlot.maxState (ModPlot.gpPNG dir ilcnt) opt
-
+    -- ModPlot.maxStateContour (ModPlot.gpPNG dir ilcnt) opt
+-}
 
 
 printOuterLoop ::
@@ -266,6 +310,7 @@ printOuterLoop ::
   OuterLoop Node sweep UV.Vector Double -> [IO ()]
 printOuterLoop params cnt ol =
   catMaybes $ iterateLoops cnt (printOuterLoopItem params) (printFindZeroCrossing params) ol
+
 
 
 
