@@ -1,7 +1,7 @@
 module EFA.Signal.Interp where
 
 import qualified Prelude as P
-import Prelude ((==),(>=), (>),Show,Eq, String, Ord,error,(++), ($), show, Bool(True, False))
+import Prelude ((==),(>=), (>),Show,Eq, String, Ord,error,(++), ($), show, Bool(True, False),fmap,Functor)
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
@@ -13,6 +13,59 @@ data Pos = Within | Outside
 
 data Pos_New = HitLeft | Inside | HitRight | Outside_New
 data Val a = Inter a | Extra a | Invalid deriving (Show, Eq)
+
+instance Functor Val where
+  fmap _ Invalid = Invalid 
+  fmap f (Extra x) = (Extra $ f x) 
+  fmap f (Inter x) = (Inter $ f x) 
+
+instance (Arith.Sum a) => Arith.Sum (Val a) where
+  x ~+ y = combine (~+) x y
+  {-# INLINE (~+) #-}
+
+  x ~- y =  combine (~-) x y
+  {-# INLINE (~-) #-}
+
+  negate x =  fmap Arith.negate x
+  {-# INLINE negate #-}
+
+
+instance (Arith.Product a, Arith.Constant a) =>
+         Arith.Product (Val  a) where
+  x ~* y = combine (~*) x y
+  {-# INLINE (~*) #-}
+
+  x ~/ y = combine (~/) x y
+  {-# INLINE (~/) #-}
+
+  recip x = fmap Arith.recip x
+  {-# INLINE recip #-}
+
+  constOne _ = Inter $ Arith.one
+  {-# INLINE constOne #-}
+
+{-
+instance Arith.Integrate (Sweep vec a) where
+  type Scalar (Sweep vec a) = (Sweep vec a)
+  integrate = id
+  {-# INLINE integrate #-}
+
+
+instance (UV.Unbox a, Eq a, Num a, Arith.Constant a) =>
+         Arith.ZeroTestable (Sweep UV.Vector a) where
+  allZeros (Sweep x) = UV.and (UV.map (Arith.zero ==) x)
+  {-# INLINE allZeros #-}
+
+  coincidingZeros (Sweep x) (Sweep y) =
+    UV.or $ UV.zipWith (\a b -> a == Arith.zero && b == Arith.zero) x y
+
+instance (FormatValue.FormatValue a, UV.Unbox a) =>
+         FormatValue.FormatValue (Sweep UV.Vector a) where
+  formatValue = FormatValue.formatValue . toList
+
+-}
+
+
 
 isExtra:: Val a -> Bool
 isExtra (Extra _) = True
@@ -130,3 +183,15 @@ getPos (x1,x2) x = case (x P.== x1, x P.> x1 , x P.< x2 , x P.== x2) of
   (_,True,False,_) -> Outside_New
   (_,_,_,_) -> error "Error in getPos - Impossible branch" 
   
+combine :: (a -> a -> a) -> Val a -> Val a -> Val a
+combine _ Invalid _ = Invalid
+combine _ _ Invalid = Invalid
+combine f (Extra x) (Extra y) = Extra $ f x y
+combine f (Extra x) (Inter y) = Extra $ f x y
+combine f (Inter x) (Extra y) = Extra $ f x y
+combine f (Inter x) (Inter y) = Inter $ f x y
+
+
+combineResults:: Val a -> Val a -> Val a -> Val a
+combineResults x y z = combine (\ v _ -> v) z h
+  where h= combine (\ v _ -> v) x y  
