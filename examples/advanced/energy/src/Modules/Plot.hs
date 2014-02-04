@@ -8,12 +8,11 @@ module Modules.Plot where
 import Modules.Setting (varRestPower, varLocalPower)
 import qualified Modules.Utility as ModUt
 import qualified Modules.Setting as ModSet
-import qualified Modules.Types as Types
 import qualified Modules.System as System
 
 import qualified EFA.Application.Plot as AppPlot
 import qualified EFA.Application.Sweep as Sweep
-
+import qualified EFA.Application.Type as Type
 import qualified EFA.Application.OneStorage as One
 
 import qualified EFA.Signal.Signal as Sig
@@ -161,7 +160,7 @@ plotGraphMaps ::
   (FormatValue.FormatValue a, Show a, Filename [a], Node.C node) =>
   (String -> DotGraph Text -> IO ()) ->
   String ->
-  Map [a] (Maybe (a, a, Types.EnvResult node a)) ->
+  Map [a] (Maybe (a, a, Type.EnvResult node a)) ->
   IO ()
 plotGraphMaps terminal title =
   sequence_ . Map.elems . Map.mapWithKey
@@ -180,7 +179,7 @@ plotGraphMaps terminal title =
 plotGraphMapOfMaps ::
   (FormatValue.FormatValue a, Show a, Filename [a], Node.C node) =>
   (String -> DotGraph Text -> IO ()) ->
-  Map Idx.State (Map [a] (Maybe (a, a, Types.EnvResult node a))) ->
+  Map Idx.State (Map [a] (Maybe (a, a, Type.EnvResult node a))) ->
   IO ()
 plotGraphMapOfMaps terminal =
   sequence_ . Map.elems . Map.mapWithKey (plotGraphMaps terminal . show)
@@ -188,9 +187,9 @@ plotGraphMapOfMaps terminal =
 optimalObjectivePerState ::
   (Show a, FormatValue.FormatValue a, Filename [a], Node.C node) =>
   (String -> DotGraph Text -> IO ()) ->
-  Types.Optimisation node sweep vec a -> IO ()
+  Type.Optimisation node sweep vec a -> IO ()
 optimalObjectivePerState terminal =
-  plotGraphMapOfMaps terminal . Types.optimalObjectivePerState . Types.quasiStationary
+  plotGraphMapOfMaps terminal . Type.optimalObjectivePerState . Type.quasiStationary
 
 perEdge ::
   (Vector.Walker l, Vector.Storage l a, Vector.FromList l,
@@ -219,10 +218,10 @@ simulationSignalsPerEdge ::
    Terminal.C term) =>
   (FilePath -> IO term) ->
   One.OptimalEnvParams node list sweep vec a ->
-  Types.Optimisation node sweep vec a ->
+  Type.Optimisation node sweep vec a ->
   IO ()
 simulationSignalsPerEdge terminal params =
-  perEdge terminal params . Types.signals . Types.simulation
+  perEdge terminal params . Type.signals . Type.simulation
 
 record :: 
   (Ord node, Node.C node, Terminal.C term,
@@ -241,14 +240,14 @@ simulationSignals ::
    Arith.Constant a,
    Tuple.C a, Atom.C a) =>
   (FilePath -> IO term) ->
-  Types.Optimisation node sweep vec a ->
+  Type.Optimisation node sweep vec a ->
   IO ()
 simulationSignals terminal opt = do
   let str = "Simulation Signals"
   t <- terminal $ filename str
   AppPlot.record str t showEdge id
-    $ Types.signals
-    $ Types.simulation opt
+    $ Type.signals
+    $ Type.simulation opt
 
 givenSignals ::
   (Show node, Ord node, Node.C node,
@@ -256,14 +255,14 @@ givenSignals ::
    Arith.Constant a,
    Tuple.C a, Atom.C a) =>
   (FilePath -> IO term) ->
-  Types.Optimisation node sweep vec a ->
+  Type.Optimisation node sweep vec a ->
   IO ()
 givenSignals terminal opt = do
   let str = "Given Signals"
   t <- terminal $ filename str
   AppPlot.record str t showEdge id
-    $ Types.givenSignals
-    $ Types.simulation opt
+    $ Type.givenSignals
+    $ Type.simulation opt
 
 
 to2DMatrix :: (Ord b) => Map [b] a -> Sig.PSignal2 Vector Vector a
@@ -284,13 +283,13 @@ defaultPlot terminal title xs = do
 
 withFuncToMatrix ::
   (Ord b, Arith.Constant a) =>
-  ((b, b, Idx.State, Types.EnvResult node b) -> a) ->
-  Types.Optimisation node sweep vec b -> Sig.PSignal2 Vector Vector a
+  ((b, b, Idx.State, Type.EnvResult node b) -> a) ->
+  Type.Optimisation node sweep vec b -> Sig.PSignal2 Vector Vector a
 withFuncToMatrix func =
   to2DMatrix
   . Map.map (maybe ModUt.nan func)
-  . Types.optimalState
-  . Types.quasiStationary
+  . Type.optimalState
+  . Type.quasiStationary
 
 
 
@@ -298,8 +297,8 @@ plotMax ::
   (Terminal.C term) =>
   IO term ->
   String ->
-  ((Double, Double, Idx.State, Types.EnvResult node Double) -> Double) ->
-  Types.Optimisation node sweep vec Double ->
+  ((Double, Double, Idx.State, Type.EnvResult node Double) -> Double) ->
+  Type.Optimisation node sweep vec Double ->
   IO ()
 plotMax term title func =
   defaultPlot term title
@@ -311,7 +310,7 @@ maxPos ::
    Terminal.C term) =>
   TopoIdx.Position node -> 
   (FilePath -> IO term) ->
-  Types.Optimisation node sweep vec Double -> IO ()
+  Type.Optimisation node sweep vec Double -> IO ()
 maxPos pos@(TopoIdx.Position f t) terminal =
   plotMax (terminal $ filename ("maxPos", pos))
           ("Maximal Value for: " ++ showEdge pos)
@@ -321,33 +320,33 @@ maxPos pos@(TopoIdx.Position f t) terminal =
 
 maxEta ::
   (Terminal.C term) =>
-  (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
+  (FilePath -> IO term) -> Type.Optimisation node sweep vec Double -> IO ()
 maxEta term =
   plotMax (term "maxEta") "Maximal Eta of All States" 
     ModUt.snd4
 
 maxObj ::
   (Terminal.C term) =>
-  (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
+  (FilePath -> IO term) -> Type.Optimisation node sweep vec Double -> IO ()
 maxObj term =
   plotMax (term "maxObj") "Maximal Objective of All States" ModUt.fst4
 
 bestStateCurve ::
   (Ord b, Arith.Constant a, Num a) =>
-  Types.Optimisation node sweep vec b -> Sig.PSignal2 Vector Vector a
+  Type.Optimisation node sweep vec b -> Sig.PSignal2 Vector Vector a
 bestStateCurve =
   withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . ModUt.thd4)
 
 maxState ::
   (Terminal.C term) =>
-  (FilePath -> IO term) -> Types.Optimisation node sweep vec Double -> IO ()
+  (FilePath -> IO term) -> Type.Optimisation node sweep vec Double -> IO ()
 maxState term =
   defaultPlot (term "maxState") "Best State of All States"
   . bestStateCurve
 
 maxStateContour ::
   (Terminal.C term, Ord a) =>
-  (FilePath -> IO term) -> Types.Optimisation node sweep vec a -> IO ()
+  (FilePath -> IO term) -> Type.Optimisation node sweep vec a -> IO ()
 maxStateContour terminal opt = do
   term <- terminal "maxStateContour"
   AppPlot.surfaceWithOpts
@@ -361,21 +360,21 @@ maxPerState ::
   (FilePath -> IO term) ->
   String ->
   (Map Idx.State
-       (Map [Double] (Maybe (Double, Double, Types.EnvResult node Double)))
+       (Map [Double] (Maybe (Double, Double, Type.EnvResult node Double)))
      -> Map Idx.State (Map [Double] Double)) ->
-  Types.Optimisation node sweep vec Double ->
+  Type.Optimisation node sweep vec Double ->
   IO ()
 maxPerState terminal title func =
   plotMaps terminal id title
   . Map.map to2DMatrix
   . func
-  . Types.optimalObjectivePerState
-  . Types.quasiStationary
+  . Type.optimalObjectivePerState
+  . Type.quasiStationary
 
 maxObjPerState, maxEtaPerState ::
   (Terminal.C term) =>
   (FilePath -> IO term) ->
-  Types.Optimisation node sweep vec Double -> IO ()
+  Type.Optimisation node sweep vec Double -> IO ()
 maxObjPerState terminal =
   maxPerState terminal "Maximal Objective Per State" ModUt.getMaxObj
 
@@ -388,7 +387,7 @@ maxPosPerState ::
    Show part, StateQty.Lookup (Idx.InPart part qty),
    Terminal.C term) =>
   (FilePath -> IO term) ->
-  Idx.InPart part qty node -> Types.Optimisation node sweep vec Double -> IO ()
+  Idx.InPart part qty node -> Type.Optimisation node sweep vec Double -> IO ()
 maxPosPerState terminal pos =
   maxPerState
     terminal
@@ -420,34 +419,34 @@ perStateSweep ::
    Terminal.C term) =>
   (FilePath -> IO term) ->
   One.OptimalEnvParams node f sweep vec a ->
-  Types.Optimisation node sweep vec Double -> IO ()
+  Type.Optimisation node sweep vec Double -> IO ()
 perStateSweep terminal params =
   let len = One.sweepLength params
   in plotSweeps terminal id "Per State Sweep"
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
-     . Map.map (Map.map fst3)
-     . Types.perStateSweep
-     . Types.quasiStationary
+     . Map.map (Map.map Type.etaSys)
+     . Type.perStateSweep
+     . Type.quasiStationary
 
 {-
 expectedEtaPerState ::
   (Terminal.C term) =>
   (FilePath -> IO term) ->
-  Types.Optimisation node sweep vec Double -> IO ()
+  Type.Optimisation node sweep vec Double -> IO ()
 expectedEtaPerState terminal =
   plotSweeps terminal id "Expected Value Per State"
   . Map.map (to2DMatrix . Map.map m2n)
-  . Types.expectedEtaPerState
-  . Types.quasiStationary
+  . Type.expectedEtaPerState
+  . Type.quasiStationary
 -}
 
 plotOptimal ::
   (Terminal.C term, Ord b) =>
   term ->
-  (Idx.State -> (b, b, Types.EnvResult node b) -> Double) ->
-  String -> Types.Optimisation node sweep vec b -> IO ()
+  (Idx.State -> (b, b, Type.EnvResult node b) -> Double) ->
+  String -> Type.Optimisation node sweep vec b -> IO ()
 plotOptimal terminal f title =
   AppPlot.surfaceWithOpts title
             terminal
@@ -456,13 +455,13 @@ plotOptimal terminal f title =
             frameOpts varRestPower varLocalPower
   . Map.elems
   . Map.mapWithKey (\state -> label (show state) . to2DMatrix . fmap (m2n . fmap (f state)))
-  . Types.optimalObjectivePerState
-  . Types.quasiStationary
+  . Type.optimalObjectivePerState
+  . Type.quasiStationary
 
 optimalObjs, optimalEtas ::
   (Terminal.C term) =>
   (FilePath -> IO term) ->
-  Types.Optimisation node sweep vec Double -> IO ()
+  Type.Optimisation node sweep vec Double -> IO ()
 optimalObjs terminal opt = do
   t <- terminal "optimalObjs"
   plotOptimal t (const fst3) "Maximal Objective Function Surfaces" opt
@@ -475,7 +474,7 @@ optimalPos ::
   (Node.C node, Filename node, Terminal.C term) =>
   TopoIdx.Position node ->
   (FilePath -> IO term) ->
-  Types.Optimisation node sweep vec Double -> IO ()
+  Type.Optimisation node sweep vec Double -> IO ()
 optimalPos pos@(TopoIdx.Position f t) terminal opt = do
   term <- terminal $ filename ("optimalPos", pos)
   let str = "Optimal " ++ showEdge pos
@@ -549,22 +548,22 @@ simulationGraphs ::
    Sweep.SweepClass sweep vec b,
    Sweep.SweepVector vec b) =>
   (String -> DotGraph Text -> IO ()) ->
-  Types.Optimisation node sweep vec b ->
+  Type.Optimisation node sweep vec b ->
   IO ()
-simulationGraphs terminal (Types.Optimisation _ sim) = do
+simulationGraphs terminal (Type.Optimisation _ sim) = do
   let g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
   terminal "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
     $ Draw.title "Sequence Flow Graph from Simulation"
-    $ Draw.seqFlowGraph Draw.optionsDefault (Types.sequenceFlowGraph sim)
+    $ Draw.seqFlowGraph Draw.optionsDefault (Type.sequenceFlowGraph sim)
 
 
   terminal "simulationGraphsState"
     $ Draw.bgcolour Lavender
     $ Draw.title "State Flow Graph from Simulation"
     $ Draw.stateFlowGraph Draw.optionsDefault
-    $ StateQty.mapGraph g g (Types.stateFlowGraph sim)
+    $ StateQty.mapGraph g g (Type.stateFlowGraph sim)
 
 
 

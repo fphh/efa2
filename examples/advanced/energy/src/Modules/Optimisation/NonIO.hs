@@ -8,15 +8,12 @@ module Modules.Optimisation.NonIO where
 
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Optimisation.Base as Base
-
 import qualified Modules.Utility as ModUt
 import qualified Modules.Setting as ModSet
-import qualified Modules.Types as Types
-
 import Modules.Optimisation (external)
 
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
-
+import qualified EFA.Application.Type as Type
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Simulation as AppSim
@@ -68,17 +65,13 @@ quasiStationaryOptimisation ::
    Sweep.SweepClass sweep vec Bool,
    Sweep.SweepClass sweep vec a) =>
   One.OptimalEnvParams node [] sweep vec a ->
-  Map Idx.State
-      (Map [a]
-           ( Result (sweep vec a),
-             Result (sweep vec Bool),
-             Types.EnvResult node (sweep vec a)) ) ->
-  Types.QuasiStationary node sweep vec a
+  Map Idx.State (Map [a] (Type.PerStateSweep node sweep vec a)) ->
+  Type.QuasiStationary node sweep vec a
 quasiStationaryOptimisation params perStateSweep =
   let a = Base.optimalObjectivePerState params perStateSweep
       -- b = Base.expectedValuePerState perStateSweep
       c = Base.selectOptimalState a
-  in Types.QuasiStationary perStateSweep a {- b -} c
+  in Type.QuasiStationary perStateSweep a {- b -} c
 
 simulation ::
   forall node sweep vec list.
@@ -92,7 +85,7 @@ simulation ::
   One.OptimalEnvParams node list sweep vec Double ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector Vector Double) ->
   Record.PowerRecord node Vector Double ->
-  Types.Simulation node sweep vec Double
+  Type.Simulation node sweep vec Double
 simulation params dofsMatrices reqsRec =
   let (prest, plocal) =
         case map (Record.getSig reqsRec) (ReqsAndDofs.unReqs $ One.reqsPos params) of
@@ -149,7 +142,7 @@ simulation params dofsMatrices reqsRec =
             (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
             mempty (One.unInitStorageSeq $ One.initStorageSeq params))
 
-      stateFlowGraphSim :: Types.EnvResult node (sweep vec Double)
+      stateFlowGraphSim :: Type.EnvResult node (sweep vec Double)
       stateFlowGraphSim =
         StateEqAbs.solveOpts
           Optimisation.options
@@ -160,7 +153,7 @@ simulation params dofsMatrices reqsRec =
           mempty
 
 
-  in Types.Simulation stateFlowGraphSim sequenceFlowGraphSim givenSigs recZeroCross
+  in Type.Simulation stateFlowGraphSim sequenceFlowGraphSim givenSigs recZeroCross
 
 
 toSweep ::
@@ -178,11 +171,8 @@ optimiseAndSimulate ::
   (Show node, Node.C node) =>
   One.OptimalEnvParams node [] Sweep UV.Vector Double ->
   Record.PowerRecord node Vector Double ->
-  Map Idx.State (Map [Double]
-      ( Result (Sweep UV.Vector Double),
-        Result (Sweep UV.Vector Bool),
-        Types.EnvResult node (Sweep UV.Vector Double)) ) ->
-  Types.Optimisation node Sweep UV.Vector Double
+  Map Idx.State (Map [Double] (Type.PerStateSweep node Sweep UV.Vector Double)) ->
+  Type.Optimisation node Sweep UV.Vector Double
 optimiseAndSimulate params reqsRec perStateSweep =
   let optimalResult = quasiStationaryOptimisation params perStateSweep
 
@@ -190,9 +180,9 @@ optimiseAndSimulate params reqsRec perStateSweep =
         Map.map (Sig.map ModUt.nothing2Nan) $
           Base.signCorrectedOptimalPowerMatrices
             params
-            (Types.optimalState optimalResult)
+            (Type.optimalState optimalResult)
             (One.dofsPos params)
 
-  in Types.Optimisation
+  in Type.Optimisation
        optimalResult
        (simulation params dofsMatrices reqsRec)

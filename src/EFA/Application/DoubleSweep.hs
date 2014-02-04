@@ -10,6 +10,7 @@ module EFA.Application.DoubleSweep where
 
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+import qualified EFA.Application.Type as Type
 
 import qualified EFA.Signal.Signal as Sig
 
@@ -117,7 +118,6 @@ findBestIndex cond esys force =
              then (i, f2, es2)
              else acc
 
-
 optimalSolutionState2 ::
   (Ord a, Node.C node, Arith.Constant a,
    Arith.Product (sweep vec a),
@@ -127,12 +127,12 @@ optimalSolutionState2 ::
    Sweep.SweepVector vec Bool,
    Sweep.SweepClass sweep vec Bool,
    Sweep.SweepMap sweep vec a Bool) =>
-  (StateFlow.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
+  ( Map Idx.State (Map node (Maybe (sweep vec a))) ->
     Result (sweep vec a)) ->
-  (Result (sweep vec a), Result (sweep vec Bool), StateFlow.Graph node (Result (sweep vec a)) (Result (sweep vec a))) ->
+  Type.PerStateSweep node sweep vec a ->
   Maybe (a, a, StateFlow.Graph node (Result a) (Result a))
-optimalSolutionState2 forcing (esys, condVec, env) =
-  let force = forcing env
+optimalSolutionState2 forcing (Type.PerStateSweep esys condVec powerMap env) =
+  let force = forcing powerMap
       bestIdx = liftA3 findBestIndex condVec esys (liftA2 (Arith.~+) force esys)
   in case bestIdx of
           Determined (Just (n, x, y)) ->

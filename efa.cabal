@@ -175,6 +175,7 @@ Library
     EFA.Application.OneStorage
     EFA.Application.StateAnalysis
     EFA.Application.ReqsAndDofs
+    EFA.Application.Type
     EFA.Example.Topology.LinearOne
     EFA.Example.Topology.LinearTwo
     EFA.Example.Topology.Tripod

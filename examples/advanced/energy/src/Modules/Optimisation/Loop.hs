@@ -6,13 +6,15 @@ module Modules.Optimisation.Loop where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Plot as ModPlot
-import qualified Modules.Types as Types
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.NonIO as NonIO
 
+
+import qualified EFA.Application.Type as Type
+import EFA.Application.Type (EnvResult)
+import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import EFA.Application.Sweep (Sweep)
-import qualified EFA.Application.OneStorage as One
 
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -53,8 +55,8 @@ data OuterLoopItem node sweep vec a = OuterLoopItem {
   stepSize :: a,
   forcing :: a,
   balance :: a,
-  optimisation :: Types.Optimisation node sweep vec a,
-  innerLoop :: InnerLoop a (Types.Optimisation node sweep vec a, a) }
+  optimisation :: Type.Optimisation node sweep vec a,
+  innerLoop :: InnerLoop a (Type.Optimisation node sweep vec a, a) }
 
 newtype OuterLoop node sweep vec a =
   OuterLoop { unOuterLoop :: [OuterLoopItem node sweep vec a] }
@@ -103,9 +105,9 @@ eta ::
   (Node.C node, UV.Unbox a,
    Arith.Product (sweep UV.Vector a),
    Sweep.SweepClass sweep UV.Vector a) =>
-  Types.Optimisation node sweep UV.Vector a -> a
+  Type.Optimisation node sweep UV.Vector a -> a
 eta opt =
-  case StateEta.etaSys (Types.stateFlowGraph $ Types.simulation opt) of
+  case StateEta.etaSys (Type.stateFlowGraph $ Type.simulation opt) of
        Determined e -> UV.head (Sweep.fromSweep e)
        _ -> error "Main.iterateBalanceIO"
 
@@ -154,7 +156,7 @@ iterateUntil maxStepCnt eps ws =
 iterateBalance ::
   One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
-  Types.EnvResult Node (Sweep UV.Vector Double) ->
+  EnvResult Node (Sweep UV.Vector Double) ->
   OuterLoopItem Node Sweep UV.Vector Double
 iterateBalance params reqsRec stateFlowGraphOpt =
   let
@@ -163,7 +165,7 @@ iterateBalance params reqsRec stateFlowGraphOpt =
 
       g pars = (opt2, bl)
         where opt2 = NonIO.optimiseAndSimulate pars reqsRec perStateSweep
-              rec = Record.partIntegrate (Types.signals $ Types.simulation opt2)
+              rec = Record.partIntegrate (Type.signals $ Type.simulation opt2)
               Sig.TC (Data bl) = Sig.neg $ Sig.sum $ Record.getSig rec net2wat
 
       fzc = findZeroCrossing params g snd (-1) 1
@@ -174,13 +176,13 @@ iterateBalance params reqsRec stateFlowGraphOpt =
 
 
 outerLoop ::
-  (Types.EnvResult node (sweep vec a) -> OuterLoopItem node sweep vec a) ->
-  Types.EnvResult node (sweep vec a) ->
+  (EnvResult node (sweep vec a) -> OuterLoopItem node sweep vec a) ->
+  EnvResult node (sweep vec a) ->
   OuterLoop node sweep vec a
 outerLoop ib = 
   let go inEnv =
         let oli = ib inEnv
-            outEnv = Types.stateFlowGraph $ Types.simulation $ optimisation oli
+            outEnv = Type.stateFlowGraph $ Type.simulation $ optimisation oli
         in oli : go outEnv
   in OuterLoop . go
 
@@ -193,7 +195,7 @@ iterateLoops ::
   (Int -> OuterLoopItem node sweep vec a -> Maybe b) ->
   (Int ->
     Int -> 
-    FindZeroCrossing a (Types.Optimisation node sweep vec a, a) ->
+    FindZeroCrossing a (Type.Optimisation node sweep vec a, a) ->
     Maybe b) ->
   OuterLoop node sweep vec a ->
   [Maybe b]
@@ -221,7 +223,7 @@ showFindZeroCrossing ::
   (UV.Unbox a, Arith.Product (sweep UV.Vector a),
    Node.C node, Sweep.SweepClass sweep UV.Vector a, PrintfArg a) =>
   Int -> Int ->
-  FindZeroCrossing a (Types.Optimisation node sweep UV.Vector a, a) ->
+  FindZeroCrossing a (Type.Optimisation node sweep UV.Vector a, a) ->
   Maybe String
 showFindZeroCrossing _olcnt ilcnt (FindZeroCrossing f st (opt, bal)) =
   Just $ printf "%6d%24e%24e%24e%24e" ilcnt st f bal (eta opt)
@@ -274,7 +276,7 @@ printFindZeroCrossing ::
    Sweep.SweepClass sweep UV.Vector Double) =>
   One.OptimalEnvParams Node f sweep vec Double ->
   Int -> Int ->
-  FindZeroCrossing Double (Types.Optimisation Node sweep UV.Vector Double, Double) ->
+  FindZeroCrossing Double (Type.Optimisation Node sweep UV.Vector Double, Double) ->
   Maybe (IO ())
 printFindZeroCrossing _params _olcnt _ilcnt (FindZeroCrossing _ _ (_opt, _)) =
   Nothing
@@ -318,7 +320,7 @@ printOuterLoop params cnt ol =
 forcingSweep  ::
   One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
-  Types.EnvResult Node (Sweep UV.Vector Double) ->
+  EnvResult Node (Sweep UV.Vector Double) ->
   IO ()
 forcingSweep params reqsRec stateFlowGraphOpt = do
   let 
@@ -333,7 +335,7 @@ forcingSweep params reqsRec stateFlowGraphOpt = do
                            Just (One.ChargeDrive fo) -> fo
                            _ -> error $ "forcingSweep"
 
-            rec = Record.partIntegrate (Types.givenSignals $ Types.simulation opt)
+            rec = Record.partIntegrate (Type.givenSignals $ Type.simulation opt)
 
             net2wat = TopoIdx.ppos System.Water System.Network
 
@@ -354,8 +356,8 @@ forcingSweep params reqsRec stateFlowGraphOpt = do
 iterateBalanceIO ::
   One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
-  Types.EnvResult Node (Sweep UV.Vector Double) ->
-  IO (Types.EnvResult Node (Sweep UV.Vector Double))
+  EnvResult Node (Sweep UV.Vector Double) ->
+  IO (EnvResult Node (Sweep UV.Vector Double))
 iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
   let
@@ -363,10 +365,10 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
       net2wat = TopoIdx.ppos System.Water System.Network
 
       g pars =
-        let opt2@(Types.Optimisation _ sim) =
+        let opt2@(Type.Optimisation _ sim) =
               NonIO.optimiseAndSimulate pars reqsRec perStateSweep
 
-            rec = Record.partIntegrate (Types.signals sim)
+            rec = Record.partIntegrate (Type.signals sim)
 
 
             Sig.TC (Data bl) =
@@ -426,7 +428,7 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
 
 
-  return (Types.stateFlowGraph $ Types.simulation opt)
+  return (Type.stateFlowGraph $ Type.simulation opt)
 
 
 findZeroCrossing ::

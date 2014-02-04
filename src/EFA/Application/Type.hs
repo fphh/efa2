@@ -5,7 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 
-module Modules.Types where
+module EFA.Application.Type where
 
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Sequence.Quantity as SeqQty
@@ -30,12 +30,18 @@ type EqSystem node a =
   forall s. StateAbs.EquationSystemIgnore node s a a
 
 
+data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
+  PerStateSweep {
+    etaSys :: Result (sweep vec a),
+    condVec :: Result (sweep vec Bool),
+    storagePowerMap :: Map Idx.State (Map node (Maybe (sweep vec a))),
+    envResult :: EnvResult node (sweep vec a) }
+
+
 data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
   QuasiStationary {
     perStateSweep ::
-      Map Idx.State (Map [a] ( Result (sweep vec a),
-                               Result (sweep vec Bool),
-                               EnvResult node (sweep vec a)) ),
+      Map Idx.State (Map [a] (PerStateSweep node sweep vec a)),
 
     optimalObjectivePerState ::
       Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))),

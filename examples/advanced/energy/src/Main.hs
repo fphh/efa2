@@ -42,9 +42,7 @@ import qualified Modules.Setting as ModSet
 
 import qualified Modules.Optimisation.Loop as ModLoop
 
-import Modules.Types (EnvResult)
-
-
+import EFA.Application.Type (EnvResult)
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs

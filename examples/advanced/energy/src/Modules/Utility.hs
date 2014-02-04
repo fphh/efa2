@@ -3,7 +3,7 @@
 
 module Modules.Utility where
 
-import qualified Modules.Types as Types
+import qualified EFA.Application.Type as Type
 
 import qualified EFA.Flow.Topology as Topology
 import qualified EFA.Flow.Topology.Index as TopoIdx
@@ -78,7 +78,7 @@ getMaxEta = resolveInvalidPts nan snd3
 getMaxPos ::
   (Arith.Constant a, StateQty.Lookup (Idx.InPart part qty), Ord node) =>
   Idx.InPart part qty node ->
-  Map k0 (Map k1 (Maybe (a, a, Types.EnvResult node a))) -> Map k0 (Map k1 a)
+  Map k0 (Map k1 (Maybe (a, a, Type.EnvResult node a))) -> Map k0 (Map k1 a)
 getMaxPos pos = resolveInvalidPts nan (f . StateQty.lookup pos . thd3)
   where f (Just (Determined x)) = x
         f _ = nan
