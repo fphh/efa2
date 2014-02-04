@@ -1368,59 +1368,7 @@ interp1Lin :: (Show d1,
               TC Signal t2 (Data (v1 :> Nil) d1) ->
               TC Sample t1 (Data Nil d1) ->
               TC Sample t2 (Data Nil d1)
---interp1Lin=interp1LinOld
-interp1Lin=interp1LinNew
-
-interp1LinOld :: (Show d1,
-               Product d1,
-               Ord d1,
-               SV.Storage v1 d1,
-               SV.Find v1,
-               SV.Singleton v1,
-               SV.Lookup v1,
-               Show (v1 d1)) =>
-              String ->
-              TC Signal t1 (Data (v1 :> Nil) d1) ->
-              TC Signal t2 (Data (v1 :> Nil) d1) ->
-              TC Sample t1 (Data Nil d1) ->
-              TC Sample t2 (Data Nil d1)
-interp1LinOld caller xSig ySig (TC (Data xVal)) =
-  toSample $ ((y2 ~- y1) ~/ (x2 ~- x1)) ~* (xVal ~- x1) ~+ y1
-  where
-        sIdx@(SignalIdx idx) =
-          P.maybe (error msg) id $ findIndex (P.> xVal) xSig
-        -- prevent negativ index when interpolating on first element
-        TC (Data x1) = getSample xSig $ SignalIdx $
-          if idx P.== 0 then error msg else idx-1
-        TC (Data x2) = getSample xSig sIdx
-        -- prevent negativ index when interpolating on first element
-        TC (Data y1) = getSample ySig $ SignalIdx $
-          if idx P.== 0 then error msg else idx-1
-        TC (Data y2) = getSample ySig sIdx
-        msg = "interp1Lin - Out of Range: " ++ caller ++ ": "++ P.show xVal
-          ++ "\nxsig = " ++ P.show xSig
-          ++ "\nysig = " ++ P.show ySig
-
-
-interp1LinNew :: (Show d1,
-               Product d1,
-               Ord d1,
-               SV.Storage v1 d1,
-               SV.Find v1,
-               SV.Singleton v1,
-               SV.Lookup v1,
-               Show (v1 d1),
-               Constant d1,
-               SV.Zipper v1,
-               SV.Walker v1,
-               SV.Storage v1 Bool,
-               SV.Len (v1 d1)) =>
-              String ->
-              TC Signal t1 (Data (v1 :> Nil) d1) ->
-              TC Signal t2 (Data (v1 :> Nil) d1) ->
-              TC Sample t1 (Data Nil d1) ->
-              TC Sample t2 (Data Nil d1)
-interp1LinNew caller xSig ySig x = map Interp.unpack $ interp1LinValid (caller++">interp1LinNew")
+interp1Lin caller xSig ySig x = map Interp.unpack $ interp1LinValid (caller++">interp1LinNew")
                                    Interp.Linear Interp.ExtrapNone xSig ySig x
 
 
@@ -1623,76 +1571,6 @@ interp2WingProfile :: (Show (v1 d1), Show (v2 (v1 d1)),
                        SV.Lookup v1,
                        Product d1,
                        Constant d1,
-                      SV.Zipper v1,
-                      SV.Walker v1,
-                      SV.Storage v1 Bool,
-                      SV.Len (v1 d1)) =>
-                      String ->
-                      TC Signal t1 (Data (v1 :> Nil) d1) ->
-                      TC Signal t2 (Data (v2 :> v1 :> Nil) d1) ->
-                      TC Signal t3 (Data (v2 :> v1 :> Nil) d1) ->
-                      TC Sample t1 (Data Nil d1) ->
-                      TC Sample t2 (Data Nil d1) ->
-                      TC Sample t3 (Data Nil d1)
---interp2WingProfile=interp2WingProfileOld
-interp2WingProfile=interp2WingProfileNew
-
--- | Interpolate a 3-signal x-y surface, where in x points are aligned in rows
--- | TODO - interp2WinProfile verallgemeinern, so dass es statt mit Signal auch mit TestRow klappt
-interp2WingProfileOld :: (Show (v1 d1), Show (v2 (v1 d1)),
-                       SV.Storage v1 d1, Show d1,
-                       Ord d1,
-                       SV.Find v1,
-                       Eq (v1 d1),
-                       SV.Storage v2 (v1 d1),
-                       SV.Singleton v2,
-                       SV.Lookup v2 ,
-                       SV.Singleton v1,
-                       SV.Lookup v1,
-                       Product d1) =>
-                      String ->
-                      TC Signal t1 (Data (v1 :> Nil) d1) ->
-                      TC Signal t2 (Data (v2 :> v1 :> Nil) d1) ->
-                      TC Signal t3 (Data (v2 :> v1 :> Nil) d1) ->
-                      TC Sample t1 (Data Nil d1) ->
-                      TC Sample t2 (Data Nil d1) ->
-                      TC Sample t3 (Data Nil d1)
-interp2WingProfileOld caller xSig ySig zSig xLookup yLookup =
-   TC $ Data $ (z2 ~- z1) ~/ (x2 ~- x1) ~* (fromSample xLookup ~- x1) ~+ z1
-   where
-        -- find indices in x-axis
-        xIdx2@(SignalIdx idx) =
-          P.maybe (error msg) id $ findIndex (P.>= fromSample xLookup) xSig
-        xIdx1 = SignalIdx $ if idx P.== 0 then error msg else idx-1
-
-        -- get y and z data columns
-        yRow1 = getColumn ySig xIdx1
-        yRow2 = getColumn ySig xIdx2
-        zRow1 = getColumn zSig xIdx1
-        zRow2 = getColumn zSig xIdx2
-
-        -- interpolate on y in these data columns
-        newCaller = caller ++ ">interp2WingProfile"
-        z1 = fromSample $ interp1LinOld newCaller yRow1 zRow1 yLookup
-        z2 = fromSample $ interp1LinOld newCaller yRow2 zRow2 yLookup
-        x1 = fromSample $ getSample xSig xIdx1
-        x2 = fromSample $ getSample xSig xIdx2
-        msg = "interp2WingProfile - Out of Range: called by " ++ caller ++ ": "
-              ++ P.show xLookup ++ ", " ++ P.show yLookup ++ "\n"
-              ++ P.show xSig ++ "\n" ++ P.show ySig
-
-interp2WingProfileNew :: (Show (v1 d1), Show (v2 (v1 d1)),
-                       SV.Storage v1 d1, Show d1,
-                       Ord d1,
-                       SV.Find v1,
-                       Eq (v1 d1),
-                       SV.Storage v2 (v1 d1),
-                       SV.Singleton v2,
-                       SV.Lookup v2 ,
-                       SV.Singleton v1,
-                       SV.Lookup v1,
-                       Product d1,
-                       Constant d1,
                        SV.Zipper v1,
                       SV.Walker v1,
                       SV.Storage v1 Bool,
@@ -1704,7 +1582,7 @@ interp2WingProfileNew :: (Show (v1 d1), Show (v2 (v1 d1)),
                       TC Sample t1 (Data Nil d1) ->
                       TC Sample t2 (Data Nil d1) ->
                       TC Sample t3 (Data Nil d1)
-interp2WingProfileNew caller xSig ySig zSig x y =
+interp2WingProfile caller xSig ySig zSig x y =
   map Interp.unpack $ interp2WingProfileValid
   ( caller ++ ">interp2WingProfileNew") Interp.Linear Interp.ExtrapNone xSig ySig zSig x y
 
