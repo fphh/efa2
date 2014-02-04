@@ -81,13 +81,13 @@ instance (UV.Unbox a) => SweepVector UV.Vector a where
   {-# INLINE toSweepVector #-}
 
 fromList ::
-  (UV.Unbox a, SweepClass sweep vec a, SweepVector vec a) =>
+  (SweepClass sweep vec a, SweepVector vec a) =>
   [a] -> sweep vec a
 fromList = toSweep . toSweepVector
 {-# INLINE fromList #-}
 
 toList ::
-  (UV.Unbox a, SweepClass sweep vec a, SweepVector vec a) =>
+  (SweepClass sweep vec a, SweepVector vec a) =>
   sweep vec a -> [a]
 toList = fromSweepVector . fromSweep
 {-# INLINE toList #-}

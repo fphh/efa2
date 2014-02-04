@@ -209,9 +209,9 @@ showOuterLoopItem ::
    PrintfArg a,
    Node.C node, Sweep.SweepClass sweep UV.Vector a) =>
   Int -> OuterLoopItem node sweep UV.Vector a -> Maybe String
-showOuterLoopItem _ (OuterLoopItem nos ss f bal _opt _il) =
-  Just $ printf "%6d%24e%24e%24e\n" nos ss f bal
---  Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
+showOuterLoopItem _ (OuterLoopItem nos ss f bal opt _il) =
+  --Just $ printf "%6d%24e%24e%24e\n" nos ss f bal
+  Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
 
   -- Just $ printf "%24e%24e\n" f bal
 
@@ -223,9 +223,9 @@ showFindZeroCrossing ::
   Int -> Int ->
   FindZeroCrossing a (Types.Optimisation node sweep UV.Vector a, a) ->
   Maybe String
-showFindZeroCrossing _olcnt ilcnt (FindZeroCrossing f st (_opt, bal)) =
-  Just $ printf "%6d%24e%24e%24e" ilcnt st f bal -- (eta opt)
---  Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
+showFindZeroCrossing _olcnt ilcnt (FindZeroCrossing f st (opt, bal)) =
+  Just $ printf "%6d%24e%24e%24e%24e" ilcnt st f bal (eta opt)
+  -- Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
 
   -- Just $ printf "%24e%24e" f bal
 

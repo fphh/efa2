@@ -96,7 +96,7 @@ optimalSolutionGeneric f =
 
 
 findBestIndex ::
-  (UV.Unbox a, Ord a, Arith.Constant a, Show a,
+  (Ord a, Arith.Constant a,
    Sweep.SweepVector vec a,
    Sweep.SweepClass sweep vec a,
    Sweep.SweepVector vec Bool,
@@ -119,7 +119,7 @@ findBestIndex cond esys force =
 
 
 optimalSolutionState2 ::
-  (UV.Unbox a, Ord a, Node.C node, Arith.Constant a, Show a,
+  (Ord a, Node.C node, Arith.Constant a,
    Arith.Product (sweep vec a),
    Sweep.SweepVector vec a,
    Sweep.SweepClass sweep vec a,
@@ -129,12 +129,10 @@ optimalSolutionState2 ::
    Sweep.SweepMap sweep vec a Bool) =>
   (StateFlow.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
     Result (sweep vec a)) ->
-  StateFlow.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
+  (Result (sweep vec a), Result (sweep vec Bool), StateFlow.Graph node (Result (sweep vec a)) (Result (sweep vec a))) ->
   Maybe (a, a, StateFlow.Graph node (Result a) (Result a))
-optimalSolutionState2 forcing env =
-  let condVec = checkGreaterZero env
-      esys = StateEta.etaSys env
-      force = forcing env
+optimalSolutionState2 forcing (esys, condVec, env) =
+  let force = forcing env
       bestIdx = liftA3 findBestIndex condVec esys (liftA2 (Arith.~+) force esys)
   in case bestIdx of
           Determined (Just (n, x, y)) ->

@@ -62,10 +62,13 @@ perStateSweep ::
    Ord a, Show a, UV.Unbox a, Arith.ZeroTestable (sweep vec a),
    Arith.Product (sweep vec a), Arith.Constant a,
    Sweep.SweepVector vec a, Sweep.SweepMap sweep vec a a,
-   Sweep.SweepClass sweep vec a) =>
+   Sweep.SweepClass sweep vec a,
+   Monoid (sweep vec Bool),
+   Sweep.SweepMap sweep vec a Bool,
+   Sweep.SweepClass sweep vec Bool) =>
   One.OptimalEnvParams node list sweep vec a ->
   StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
-  Map Idx.State (Map (list a) (EnvResult node (sweep vec a)))
+  Map Idx.State (Map (list a) (Result (sweep vec a), Result (sweep vec Bool), EnvResult node (sweep vec a)))
 perStateSweep params stateFlowGraph =
   Map.mapWithKey f states
   where states = StateQty.states stateFlowGraph
@@ -86,8 +89,7 @@ perStateSweep params stateFlowGraph =
 
 forcing ::
   (Arith.Constant a, Arith.Sum a, Ord a,
-   UV.Unbox a, Show a, Ord (sweep vec a), Arith.Sum (sweep vec a),
-   Ord node, Show node,
+   Ord (sweep vec a), Arith.Sum (sweep vec a), Ord node, Show node,
    Sweep.SweepClass sweep vec a,
    Sweep.SweepMap sweep vec a a) =>
   One.OptimalEnvParams node list sweep vec a ->
@@ -113,15 +115,15 @@ forcing params state graph = Determined $
         g _ _ (Graph.EUnDirEdge _) = zero
 
         h soc p =
-          maybe (error $ "forcing failed, because position not found: " ++ show p)
+          maybe (error $ "forcing failed, because position not found: "
+                         ++ show p)
                 (Sweep.map (One.getSocDrive soc Arith.~*))
                 (join $ fmap toMaybe $ StateQty.lookup p graph)
 
 
 optimalObjectivePerState ::
-  (Ord a, Show a, UV.Unbox a, Arith.Constant a, Arith.Sum a,
-   Node.C node, Show node,
-   Monoid (sweep vec Bool),
+  (Ord a, Arith.Constant a, Arith.Sum a,
+   Show node, Node.C node, Monoid (sweep vec Bool),
    Ord (sweep vec a),
    Arith.Product (sweep vec a),
    Sweep.SweepVector vec Bool,
@@ -131,7 +133,10 @@ optimalObjectivePerState ::
    Sweep.SweepClass sweep vec a,
    Sweep.SweepMap sweep vec a a) =>
   One.OptimalEnvParams node list sweep vec a ->
-  Map Idx.State (Map (list a) (EnvResult node (sweep vec a))) ->
+  Map Idx.State
+      (Map (list a) ( Result (sweep vec a),
+                      Result (sweep vec Bool),
+                      EnvResult node (sweep vec a))) ->
   Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
 optimalObjectivePerState params =
   Map.mapWithKey $
@@ -141,6 +146,7 @@ optimalObjectivePerState params =
 
 
 
+{-
 expectedValuePerState ::
   (Monoid (sweep vec Bool),
    Arith.Product (sweep vec a),
@@ -156,7 +162,7 @@ expectedValuePerState ::
   Map Idx.State (Map (list a) (Maybe a))
 expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
-
+-}
 
 
 selectOptimalState ::

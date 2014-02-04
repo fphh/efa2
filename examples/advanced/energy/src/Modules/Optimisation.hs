@@ -11,6 +11,8 @@ import qualified Modules.Types as Types
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.DoubleSweep as DoubleSweep
+
 import EFA.Application.OneStorage
   (EtaAssignMap, Name, InitStorageState(InitStorageState))
 import EFA.Application.Simulation (makeEtaFuncGiven2)
@@ -19,6 +21,7 @@ import qualified EFA.Flow.State as State
 import qualified EFA.Flow.State.Absolute as StateAbs
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.Index as XIdx
+import qualified EFA.Flow.State.SystemEta as StateEta
 
 import qualified EFA.Flow.Sequence.Absolute as SeqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqQty
@@ -41,6 +44,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Foldable as Fold
 import qualified Data.Vector.Unboxed as UV
+import Data.Monoid (Monoid)
 
 import Data.Monoid ((<>), mempty)
 
@@ -64,26 +68,29 @@ solve ::
    Sweep.SweepMap sweep vec a a, Arith.Sum (sweep vec a),
    Sweep.SweepVector vec a, Sweep.SweepClass sweep vec a,
    Arith.ZeroTestable (sweep vec a),
-   Arith.Product (sweep vec a)) =>
+   Arith.Product (sweep vec a),
+   Monoid (sweep vec Bool),
+   Sweep.SweepMap sweep vec a Bool,
+   Sweep.SweepClass sweep vec Bool) =>
   [TopoIdx.Power node] ->
   Types.EnvResult node (sweep vec a) ->
   EtaAssignMap node ->
   Map Name (a -> a) ->
   Idx.State ->
   ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a ->
-  Types.EnvResult node (sweep vec a)
+  (Result (sweep vec a), Result (sweep vec Bool), Types.EnvResult node (sweep vec a))
 solve reqsAndDofs stateFlowGraph etaAssign etaFunc state params =
   let ss = Sweep.unList (ReqsAndDofs.reqs params)
            ++ Sweep.unList (ReqsAndDofs.dofs params)
-  in StateAbs.solveOpts
-      options
-      (AppOpt.givenAverageWithoutState state
-          (Map.fromList (zip reqsAndDofs ss))
-          stateFlowGraph)
-      ((StateAbs.withExpressionGraph $
-           Fold.foldMap (makeEtaFuncGiven2 etaAssign etaFunc) .
-           Map.lookup state . StateQty.states)
-       <>  commonGiven state stateFlowGraph)
+      res = StateAbs.solveOpts
+              options
+              (AppOpt.givenAverageWithoutState state
+                (Map.fromList (zip reqsAndDofs ss)) stateFlowGraph)
+              ((StateAbs.withExpressionGraph $
+                Fold.foldMap (makeEtaFuncGiven2 etaAssign etaFunc) .
+                Map.lookup state . StateQty.states)
+                <>  commonGiven state stateFlowGraph)
+  in (StateEta.etaSys res, DoubleSweep.checkGreaterZero res, res)
 
 commonGiven ::
   (Node.C node, Ord node,

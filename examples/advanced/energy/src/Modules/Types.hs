@@ -33,16 +33,18 @@ type EqSystem node a =
 data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
   QuasiStationary {
     perStateSweep ::
-      Map Idx.State (Map [a] (EnvResult node (sweep vec a))),
+      Map Idx.State (Map [a] ( Result (sweep vec a),
+                               Result (sweep vec Bool),
+                               EnvResult node (sweep vec a)) ),
 
     optimalObjectivePerState ::
       Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))),
 
-    expectedEtaPerState ::
-      Map Idx.State (Map [a] (Maybe a)),
+    --expectedEtaPerState ::
+    --  Map Idx.State (Map [a] (Maybe a)),
 
     optimalState ::
-      Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) } deriving (Show)
+      Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) }
 
 data Simulation node (sweep :: (* -> *) -> * -> *) vec a =
   Simulation {
@@ -52,9 +54,9 @@ data Simulation node (sweep :: (* -> *) -> * -> *) vec a =
 
     givenSignals :: Record.PowerRecord node Vector a,
 
-    signals :: Record.PowerRecord node [] a }  deriving (Show)
+    signals :: Record.PowerRecord node [] a }
 
 data Optimisation node (sweep :: (* -> *) -> * -> *) vec a =
   Optimisation {
     quasiStationary :: QuasiStationary node sweep vec a,
-    simulation :: Simulation node sweep vec a }  deriving (Show)
+    simulation :: Simulation node sweep vec a }

@@ -25,7 +25,6 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.State.Quantity as StateQty
-import qualified EFA.Flow.State.SystemEta as StateEta
 import qualified EFA.Flow.State.Index as StateIdx
 
 import qualified EFA.Graph as Graph
@@ -428,11 +427,11 @@ perStateSweep terminal params =
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
-     . Map.map (Map.map StateEta.etaSys)
+     . Map.map (Map.map fst3)
      . Types.perStateSweep
      . Types.quasiStationary
 
-
+{-
 expectedEtaPerState ::
   (Terminal.C term) =>
   (FilePath -> IO term) ->
@@ -442,6 +441,7 @@ expectedEtaPerState terminal =
   . Map.map (to2DMatrix . Map.map m2n)
   . Types.expectedEtaPerState
   . Types.quasiStationary
+-}
 
 plotOptimal ::
   (Terminal.C term, Ord b) =>

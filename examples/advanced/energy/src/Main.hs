@@ -38,7 +38,7 @@ module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
-import qualified Modules.Plot as ModPlot
+-- import qualified Modules.Plot as ModPlot
 
 import qualified Modules.Optimisation.Loop as ModLoop
 
@@ -59,13 +59,13 @@ import qualified EFA.Signal.ConvertTable as CT
 
 import qualified EFA.IO.TableParser as Table
 
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+--import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Equation.Arithmetic as Arith
 
-import qualified EFA.Flow.Draw as Draw
+--import qualified EFA.Flow.Draw as Draw
 
-import EFA.Utility.Async (concurrentlyMany_)
+-- import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
@@ -144,7 +144,7 @@ main1 = do
       reqsRec =
         Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
 
-
+{-
   concurrentlyMany_ [
     Draw.xterm $ Draw.labeledTopology $ System.labeledTopology,
     Draw.xterm $
@@ -154,6 +154,7 @@ main1 = do
   concurrentlyMany_ [
     ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
     ModPlot.requirements ModPlot.gpXTerm prest plocal ]
+-}
 
   let
       optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
@@ -192,7 +193,7 @@ main1 = do
 
   mapM_ putStrLn (ModLoop.showOuterLoop numberOfLoops ol)
 
-  sequence_ (ModLoop.printOuterLoop optParams numberOfLoops ol)
+  -- sequence_ (ModLoop.printOuterLoop optParams numberOfLoops ol)
 
   return ()
 

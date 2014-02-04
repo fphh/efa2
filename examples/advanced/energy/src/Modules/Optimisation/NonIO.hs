@@ -55,27 +55,30 @@ import Data.Monoid (Monoid, mempty, (<>))
 
 import Control.Functor.HT (for)
 
-
 quasiStationaryOptimisation ::
-  (Show node, Node.C node,
-   Ord a, Show a, UV.Unbox a, Arith.Constant a, Fractional a,
-   Ord (sweep vec a),
+  (Ord a, Ord (sweep vec a),
    Monoid (sweep vec Bool),
    Arith.Product (sweep vec a),
-   Sweep.SweepVector vec a,
+   Arith.Constant a,
+   Node.C node, Show node,
    Sweep.SweepVector vec Bool,
-   Sweep.SweepMap sweep vec a a,
+   Sweep.SweepVector vec a,
    Sweep.SweepMap sweep vec a Bool,
-   Sweep.SweepClass sweep vec a,
-   Sweep.SweepClass sweep vec Bool) =>
+   Sweep.SweepMap sweep vec a a,
+   Sweep.SweepClass sweep vec Bool,
+   Sweep.SweepClass sweep vec a) =>
   One.OptimalEnvParams node [] sweep vec a ->
-  Map Idx.State (Map [a] (Types.EnvResult node (sweep vec a))) ->
+  Map Idx.State
+      (Map [a]
+           ( Result (sweep vec a),
+             Result (sweep vec Bool),
+             Types.EnvResult node (sweep vec a)) ) ->
   Types.QuasiStationary node sweep vec a
 quasiStationaryOptimisation params perStateSweep =
   let a = Base.optimalObjectivePerState params perStateSweep
-      b = Base.expectedValuePerState perStateSweep
+      -- b = Base.expectedValuePerState perStateSweep
       c = Base.selectOptimalState a
-  in Types.QuasiStationary perStateSweep a b c
+  in Types.QuasiStationary perStateSweep a {- b -} c
 
 simulation ::
   forall node sweep vec list.
@@ -175,15 +178,20 @@ optimiseAndSimulate ::
   (Show node, Node.C node) =>
   One.OptimalEnvParams node [] Sweep UV.Vector Double ->
   Record.PowerRecord node Vector Double ->
-  Map Idx.State (Map [Double] (Types.EnvResult node (Sweep UV.Vector Double))) ->
+  Map Idx.State (Map [Double]
+      ( Result (Sweep UV.Vector Double),
+        Result (Sweep UV.Vector Bool),
+        Types.EnvResult node (Sweep UV.Vector Double)) ) ->
   Types.Optimisation node Sweep UV.Vector Double
 optimiseAndSimulate params reqsRec perStateSweep =
   let optimalResult = quasiStationaryOptimisation params perStateSweep
 
       dofsMatrices =
         Map.map (Sig.map ModUt.nothing2Nan) $
-          Base.signCorrectedOptimalPowerMatrices params (Types.optimalState optimalResult)
-          (One.dofsPos params)
+          Base.signCorrectedOptimalPowerMatrices
+            params
+            (Types.optimalState optimalResult)
+            (One.dofsPos params)
 
   in Types.Optimisation
        optimalResult
