@@ -120,9 +120,12 @@ newtype SignalIdx = SignalIdx Int deriving (Show, Eq, Ord)
 instance Enum SignalIdx where
    fromEnum = unSignalIdx
    toEnum = SignalIdx
-
+   
 unSignalIdx :: SignalIdx -> Int
 unSignalIdx (SignalIdx x) = x
+
+indexAdd :: SignalIdx -> Int -> SignalIdx
+indexAdd (SignalIdx x) y = SignalIdx $ x P.+ y
 
 
 data Range = Range SignalIdx SignalIdx
@@ -1449,25 +1452,32 @@ interp1LinValid_new :: (Product a,
                    TC Signal t2 (Data (v :> Nil) a) ->
                    TC Sample t1 (Data Nil a) ->
                    TC Sample t2 (Data Nil (Interp.Val a))
-interp1LinValid_new caller inMethod exMethod xSig ySig (TC (Data x)) =
-  if not $ isMonoton then   error $ "Error in interp1LinValid called by "
-                            ++ caller ++ ": xSig not rising monotonically x:" ++ show xSig
-  else case findIndex (> x) xSig of
-  (Just (SignalIdx idx)) -> case idx==0 of
-      True -> f "extrapLeft" 1
-      False -> f "interpolate" idx
-  Nothing -> f "extrapRight" $ (len xSig) P.- 1
+interp1LinValid_new caller inMethod exMethod xSig ySig x@(TC (Data xVal)) = 
+  TC $ Data $ Interp.dim1_new (caller++ ">interp1LinValid_new") inMethod exMethod 
+  (getX (indexAdd idx (-1)), getX idx) (getY (indexAdd idx (-1)), getY idx) xVal
   where
+    idx = interpIndex (caller++ ">interp1LinValid_new") xSig x  
     isMonoton = all (==True) $ deltaMap (\ xa xb -> xb >= xa) xSig
-    getX ix = fromSample $ getSample xSig (SignalIdx ix) 
-    getY ix = fromSample $ getSample ySig (SignalIdx ix) 
-    f ca ix = TC $ Data $ Interp.dim1_new 
-              (caller++ ">interp1LinValid-"++ ca)  
-              inMethod exMethod 
-              (getX (ix-1), getX ix) 
-              (getY (ix-1), getY ix) x
+    getX ix = fromSample $ getSample xSig $ ix
+    getY ix = fromSample $ getSample ySig $ ix
+
                      
-                     
+interpIndex:: (SV.Storage v a, SV.Len (v a), SV.Zipper v,
+                  SV.Walker v,Ord a,
+                  SV.Storage v Bool,
+                  SV.Singleton v,
+                  SV.Find v,
+                  Show (v a)) => 
+            String -> TC Signal t1 (Data (v :> Nil) a) -> TC Sample t1 (Data Nil a) -> SignalIdx
+interpIndex caller sig (TC (Data x)) =  if not $ isMonoton then  error $ "Error in interpCase called by "
+                            ++ caller ++ ": Signal not rising monotonically:" ++ show sig
+  else case findIndex (> x) sig of
+  (Just (SignalIdx idx)) -> case idx==0 of
+      True -> SignalIdx 1
+      False -> SignalIdx idx
+  Nothing -> SignalIdx $ (len sig) P.- 1
+  where
+    isMonoton = all (==True) $ deltaMap (\ xa xb -> xb >= xa) sig
 
 getSample ::  (SV.Singleton v1,
                Eq d1,
