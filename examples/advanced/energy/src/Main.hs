@@ -179,7 +179,7 @@ main1 = do
 
 
   putStrLn $ printf "%6s%24s%24s%24s%24s" 
-                    "Step" "StepSize" "Forcing" "Balance" "Eta"
+                    "Step" "Forcing" "Balance" "Eta" "StepSize"
 
   let ol = --ModLoop.uniqueInnerLoopX
            ModLoop.outerLoop

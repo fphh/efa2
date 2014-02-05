@@ -99,8 +99,6 @@ betterFalsePosition params f accessf a1 a2 =
                         then go x2 z f2 fz
                         else go x1 z fnew fz
 
-
-
 eta ::
   (Node.C node, UV.Unbox a,
    Arith.Product (sweep UV.Vector a),
@@ -112,11 +110,11 @@ eta opt =
        _ -> error "Main.iterateBalanceIO"
 
 findZeroCrossing ::
-  (Arith.Sum t, Ord t, Arith.Product t, Arith.Constant t,
-   Ord s, Arith.Constant s) =>
+  (Arith.Sum t, Ord t, Arith.Product t,
+   Arith.Constant t) =>
   One.OptimalEnvParams Node list sweep vec t ->
   (One.OptimalEnvParams Node list sweep vec t -> z) ->
-  (z -> s) ->
+  (z -> t) ->
   t ->
   t ->
   [FindZeroCrossing t z]
@@ -132,26 +130,41 @@ findZeroCrossing params f accessf xstart step =
       let x1 = x0 ~+ st
           y1 = f $ setChargeDrive params x1
 
-          _2 = Arith.fromInteger 4
-
-      in FindZeroCrossing x0 st y0 :
+ --         _3 = Arith.fromInteger 3
+          _2 = Arith.fromInteger 2
+          newStepSize = (Arith.abs st) ~/(Arith.one ~+ (Arith.abs $ accessf y0) ~/ (Arith.abs $ accessf y1))
+          
+      -- VARIANT A: Simple
+      in {-if False then FindZeroCrossing x0 st y0 :
            case (Arith.sign $ accessf y0, Arith.sign $ accessf y1) of
-                (Negative, Negative) -> go x1 y1 (st ~* _2)
-                (Positive, Positive) -> go x1 y1 (st ~* _2)
-                (Negative, Positive) -> go x0 y0 (st ~/ _2)
-                (Positive, Negative) -> go x0 y0 (st ~/ _2)
+                (Negative, Negative) -> go x1 y1 ((Arith.abs st) ~* _2)
+                (Positive, Positive) -> go x1 y1 (Arith.negate $ (Arith.abs st) ~* _2)
+                (Negative, Positive) -> go x1 y1 (Arith.negate $ (Arith.abs st) ~/ _3)
+                (Positive, Negative) -> go x1 y1 ((Arith.abs st) ~/ _3)
                 (Zero, _)  -> []
                 (_, Zero)  -> []
-
+                
+        else -- VARIANT B: Estimating zero crossing position -}
+           FindZeroCrossing x0 st y0 :
+           case (Arith.sign $ accessf y0, Arith.sign $ accessf y1) of
+                -- Crossing not found increase step 
+                (Negative, Negative) -> go x1 y1 ((Arith.abs st) ~* _2)
+                (Positive, Positive) -> go x1 y1 (Arith.negate $ (Arith.abs st) ~* _2)
+                -- Zero crossing occured, step into the middle  
+                (Negative, Positive) -> go x1 y1 (Arith.negate $ newStepSize)
+                (Positive, Negative) -> go x1 y1 (Arith.abs newStepSize)
+                (Zero, _)  -> []
+                (_, Zero)  -> []
+                
 iterateUntil ::
-  (Arith.Sum t, Ord t) =>
+  (Arith.Sum t, Ord t, Arith.Constant t) =>
+  (z -> t) ->
   Int -> t ->
   [FindZeroCrossing t z] ->
   (Int, FindZeroCrossing t z)
-iterateUntil maxStepCnt eps ws =
+iterateUntil accessf maxStepCnt eps ws =
   vhead "interateUntil" $ dropWhile p (zip [0..] ws)
-  where p (n, fzc) = n < maxStepCnt-1 && eps < Arith.abs (stepfzc fzc)
-
+  where p (n, fzc) = n < maxStepCnt-1 && eps < Arith.abs (accessf $ yfzc fzc)
 
 iterateBalance ::
   One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
@@ -170,7 +183,7 @@ iterateBalance params reqsRec stateFlowGraphOpt =
 
       fzc = findZeroCrossing params g snd (-1) 1
       (numOfSteps, FindZeroCrossing force sSize (opt, bal)) =
-        iterateUntil 100 (1e-6) fzc
+        iterateUntil snd 100 (Arith.fromRational 0.1) fzc
 
   in OuterLoopItem numOfSteps sSize force bal opt (InnerLoop fzc)
 
@@ -185,10 +198,6 @@ outerLoop ib =
             outEnv = Type.stateFlowGraph $ Type.simulation $ optimisation oli
         in oli : go outEnv
   in OuterLoop . go
-
-
-
-
 
 iterateLoops ::
   Int ->
@@ -226,7 +235,7 @@ showFindZeroCrossing ::
   FindZeroCrossing a (Type.Optimisation node sweep UV.Vector a, a) ->
   Maybe String
 showFindZeroCrossing _olcnt ilcnt (FindZeroCrossing f st (opt, bal)) =
-  Just $ printf "%6d%24e%24e%24e%24e" ilcnt st f bal (eta opt)
+  Just $ printf "%6d%24e%24e%24e%24e" ilcnt f bal (eta opt) st
   -- Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
 
   -- Just $ printf "%24e%24e" f bal
