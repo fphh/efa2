@@ -19,7 +19,6 @@ import EFA.Signal.Interp(ExtrapMethod(ExtrapLinear),
 
 import Test.QuickCheck.All (quickCheckAll)
 
-
 check :: TC Signal.Sample (Typ UT UT UT) (Data Nil (Interp.Val Double)) ->
          TC Signal.Sample (Typ UT UT UT) (Data Nil (Interp.Val Double))->
          Bool
@@ -94,7 +93,7 @@ prop_interp1LinValid_Vertical = foldl (&&) True tests -- all (==True) tests
 
     ySig :: UTSignal [] Double
     ySig = TC $ Data [1, 2, 3]
-
+    
     tests = [(interp1LinValid "Signal Test" Interp.Linear ExtrapLinear xSig ySig
               (TC $ Data 1)) `check` (TC $ Data $ Inter 1.5),
              (interp1LinValid "Signal Test" Interp.Linear ExtrapLinear xSig ySig

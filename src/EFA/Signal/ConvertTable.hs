@@ -11,7 +11,7 @@ import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.IO.TableParserTypes (T(T))
 import qualified EFA.IO.TableParserTypes as TPT
 
-import EFA.Equation.Arithmetic (Product)
+import EFA.Equation.Arithmetic (Product, Constant)
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.NonEmpty as NonEmpty
@@ -74,7 +74,7 @@ convertToSignal3D (T _ ds) =
 
 -- Only first column of table is used.
 makeEtaFunctions2D ::
-  (Product d, Ord d, Show d) =>
+  (Product d, Ord d, Show d, Constant d) =>
   Map String (d, d) ->
   TPT.Map d -> Map String (d -> d)
 makeEtaFunctions2D sm = Map.mapWithKey f
