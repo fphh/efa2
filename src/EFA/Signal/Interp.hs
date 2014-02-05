@@ -9,9 +9,7 @@ import EFA.Equation.Arithmetic
 
 import Data.Ord (compare,Ordering(GT,EQ,LT))
 
-data Pos = Within | Outside
-
-data Pos_New = HitLeft | Inside | HitRight | Outside_New
+data Pos_New = HitLeft | Inside | HitRight | Outside
 data Val a = Inter a | Extra a | Invalid deriving (Show, Eq)
 
 instance Functor Val where
@@ -104,49 +102,12 @@ dim1 :: (Eq a,Ord a, Sum a, Product a, Show a) =>
               String ->
               Method a ->
               ExtrapMethod a ->
-              Pos->
               (a,a) -> (a,a) -> a -> Val a
 
-dim1 caller inmethod exmethod interpos (x1,x2) (y1,y2) x = case compare x2 x1 of
-  LT -> error ("Error in interp1Core called by " ++ caller ++ ": x1 greater than x2")
-  EQ -> case interpos of
-            Within -> Inter $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)
-            Outside -> case exmethod of
-              ExtrapLinear ->  Invalid
-              ExtrapLinear2 ->  Invalid
-              ExtrapLast ->  Extra $ nearest1 (x1,x2) (y1,y2) x
-              (ExtrapVal val) ->  Extra $ val
-              ExtrapNone ->  Invalid
-              ExtrapError -> error ("Error in interp1Core called by " ++ caller ++
-                                      ": Method ExtrapError - Extrapolation not allowed" ++
-                                      "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
-
-  GT ->  if x == x1 then Inter y1
-              else case interpos of
-                Within -> case inmethod of
-                  Linear -> Inter $ lin1 (x1,x2) (y1,y2) x
-                  Linear2 -> Inter $ lin1_twice (x1,x2) (y1,y2) x
-                  Nearest -> Inter $ nearest1 (x1,x2) (y1,y2) x
-                Outside -> case exmethod of
-                  ExtrapLinear ->  Extra $ lin1 (x1,x2) (y1,y2) x
-                  ExtrapLinear2 ->  Extra $ lin1_twice (x1,x2) (y1,y2) x
-                  ExtrapLast ->  Extra $ nearest1 (x1,x2) (y1,y2) x
-                  (ExtrapVal val) ->  Extra $ val
-                  ExtrapNone ->  Invalid
-                  ExtrapError -> error ("Error in interp1Core called by " ++ caller ++
-                                      ": Method ExtrapError - Extrapolation not allowed" ++
-                                      "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
-
-dim1_new :: (Eq a,Ord a, Sum a, Product a, Show a) =>
-              String ->
-              Method a ->
-              ExtrapMethod a ->
-              (a,a) -> (a,a) -> a -> Val a
-
-dim1_new caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
+dim1 caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
   LT -> error ("Error in interp1Core called by " ++ caller ++ ": x1 greater than x2")
   EQ -> case getPos (x1,x2) x of
-            Outside_New -> case exmethod of
+            Outside -> case exmethod of
               ExtrapLinear ->  Invalid
               ExtrapLinear2 ->  Invalid
               ExtrapLast ->  Extra $ nearest1 (x1,x2) (y1,y2) x
@@ -164,7 +125,7 @@ dim1_new caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
                   Linear -> Inter $ lin1 (x1,x2) (y1,y2) x
                   Linear2 -> Inter $ lin1_twice (x1,x2) (y1,y2) x
                   Nearest -> Inter $ nearest1 (x1,x2) (y1,y2) x
-                Outside_New -> case exmethod of
+                Outside -> case exmethod of
                   ExtrapLinear ->  Extra $ lin1 (x1,x2) (y1,y2) x
                   ExtrapLinear2 ->  Extra $ lin1_twice (x1,x2) (y1,y2) x
                   ExtrapLast ->  Extra $ nearest1 (x1,x2) (y1,y2) x
@@ -176,11 +137,12 @@ dim1_new caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
 
 getPos :: (Eq a, Ord a) => (a,a) -> a -> Pos_New
 getPos (x1,x2) x = case (x P.== x1, x P.> x1 , x P.< x2 , x P.== x2) of   
-  (True,_,_,_) -> HitLeft
-  (_,_,_,True) -> HitRight
+  (True,_,_,False) -> HitLeft
+  (False,_,_,True) -> HitRight
+  (True,_,_,True) -> Inside -- aplies when step in signal => x1=x2=x
   (_,True,True,_) -> Inside
-  (_,False,True,_) -> Outside_New
-  (_,True,False,_) -> Outside_New
+  (_,False,True,_) -> Outside
+  (_,True,False,_) -> Outside
   (_,_,_,_) -> error "Error in getPos - Impossible branch" 
   
 combine :: (a -> a -> a) -> Val a -> Val a -> Val a

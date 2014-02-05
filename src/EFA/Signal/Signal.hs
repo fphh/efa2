@@ -18,7 +18,7 @@ import EFA.Signal.Data
            Vec2, UVec, UVec2, UVec2L)
 import EFA.Signal.Typ
 import qualified EFA.Signal.Interp as Interp
-import EFA.Signal.Interp(ExtrapMethod, Val(Inter),isInvalid,isExtra)
+import EFA.Signal.Interp(ExtrapMethod)
 
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -1393,68 +1393,8 @@ interp1LinValid :: (Product a,
                    TC Signal t2 (Data (v :> Nil) a) ->
                    TC Sample t1 (Data Nil a) ->
                    TC Sample t2 (Data Nil (Interp.Val a))
-interp1LinValid caller inMethod exMethod xSig ySig (TC (Data x)) =
-  if not $ isMonoton then   error $ "Error in interp1LinValid called by "
-                            ++ caller ++ ": xSig not rising monotonically x:" ++ show xSig
-  else case maybeIdx of
-  (Just (SignalIdx idx)) -> case (idx==0, x0 == x) of
-         -- extrapolation to the left
-          (True,_) -> TC $ Data $ Interp.dim1 (caller++ ">interp1LinValid-extrapLeft")  inMethod exMethod Interp.Outside (x0,x1) (y0,y1) x
-         --just hitting the very left point
-          (False,True) -> if x0 == x1 then TC $ Data $ Interp.dim1 (caller++">interp1LinValid-leftHit") inMethod exMethod Interp.Within
-                                       (x0,x1) (y0,y1) x
-                            else TC $ Data $ Inter y0
-         -- interpolation
-          (False,False) -> TC $ Data $ Interp.dim1 (caller++">interp1LinValid-interpolation") inMethod exMethod Interp.Within (xi0,xi1) (yi0,yi1) x
-     where
-       xi1 = fromSample $ getSample xSig (SignalIdx idx)
-       yi1 = fromSample $ getSample ySig (SignalIdx idx)
-       xi0 = fromSample $ getSample xSig (SignalIdx $ idx P.- 1)
-       yi0 = fromSample $ getSample ySig (SignalIdx $ idx P.- 1)
-
-
-  Nothing   -> if x == xm1
-               -- just hitting the right point
-               then if xm0 == xm1 then TC $ Data $ Interp.dim1 (caller++">interp1LinValid-rightHit") inMethod exMethod Interp.Within
-                                       (xm0,xm1) (ym0,ym1) x
-                                       else TC $ Data $ Inter ym1
-                 -- Extrapolation to the right
-               else TC $ Data $ Interp.dim1 (caller++">interp1LinValid-extrapRight") inMethod exMethod Interp.Outside
-                    (xm0,xm1) (ym0,ym1) x
-
-  where
-    maxIdx = (len xSig) P.- 1
-    isMonoton = all (==True) $ deltaMap (\ xa xb -> xb >= xa) xSig
-    maybeIdx = findIndex (> x) xSig
-
-    xm0 = fromSample $ getSample xSig (SignalIdx $ maxIdx P.- 1)
-    xm1 = fromSample $ getSample xSig (SignalIdx maxIdx)
-    ym0 = fromSample $ getSample ySig (SignalIdx $ maxIdx P.- 1)
-    ym1 = fromSample $ getSample ySig (SignalIdx maxIdx)
-    x0 = fromSample $ getSample xSig (SignalIdx 0)
-    x1 = fromSample $ getSample xSig (SignalIdx 1)
-    y0 = fromSample $ getSample ySig (SignalIdx 0)
-    y1 = fromSample $ getSample ySig (SignalIdx 1)
-
-interp1LinValid_new :: (Product a,
-                    SV.Zipper v,
-                    SV.Walker v,
-                    SV.Storage v Bool,
-                    SV.Len (v a),
-                    Ord a,Show (v a),Show a,
-                    SV.Storage v a,
-                    SV.Find v,
-                    SV.Singleton v,
-                    SV.Lookup v) =>
-                   String ->
-                   Interp.Method a ->
-                   Interp.ExtrapMethod a ->
-                   TC Signal t1 (Data (v :> Nil) a) ->
-                   TC Signal t2 (Data (v :> Nil) a) ->
-                   TC Sample t1 (Data Nil a) ->
-                   TC Sample t2 (Data Nil (Interp.Val a))
-interp1LinValid_new caller inMethod exMethod xSig ySig x@(TC (Data xVal)) = 
-  TC $ Data $ Interp.dim1_new (caller++ ">interp1LinValid_new") inMethod exMethod 
+interp1LinValid caller inMethod exMethod xSig ySig x@(TC (Data xVal)) = 
+  TC $ Data $ Interp.dim1 (caller++ ">interp1LinValid_new") inMethod exMethod 
   (getX (indexAdd idx (-1)), getX idx) (getY (indexAdd idx (-1)), getY idx) xVal
   where
     idx = interpIndex (caller++ ">interp1LinValid_new") xSig x  
@@ -1466,15 +1406,22 @@ interpIndex:: (SV.Storage v a, SV.Len (v a), SV.Zipper v,
                   SV.Walker v,Ord a,
                   SV.Storage v Bool,
                   SV.Singleton v,
-                  SV.Find v,
+                  SV.Find v,(SV.Lookup v),
                   Show (v a)) => 
             String -> TC Signal t1 (Data (v :> Nil) a) -> TC Sample t1 (Data Nil a) -> SignalIdx
-interpIndex caller sig (TC (Data x)) =  if not $ isMonoton then  error $ "Error in interpCase called by "
+interpIndex caller sig (TC (Data x)) =  if not $ isMonoton then  error $ "Error in interpIndex called by "
                             ++ caller ++ ": Signal not rising monotonically:" ++ show sig
+  else if (len sig) P.< 2  then error $ "Error in interpIndex called by "
+                            ++ caller ++ ": Signal contains only one Sample:" ++ show sig                        
   else case findIndex (> x) sig of
   (Just (SignalIdx idx)) -> case idx==0 of
       True -> SignalIdx 1
-      False -> SignalIdx idx
+      False -> if idx >=2 then 
+                  -- Special case, that we just hit a step => x1==x2==x
+                  if (getSample sig (SignalIdx $ idx-2) == getSample sig (SignalIdx $ idx-1)) && 
+                     (getSample sig (SignalIdx $ idx-1) == (TC $ Data $ x))
+                  then SignalIdx $ idx-1 else SignalIdx idx
+                else SignalIdx idx                                                                                                      
   Nothing -> SignalIdx $ (len sig) P.- 1
   where
     isMonoton = all (==True) $ deltaMap (\ xa xb -> xb >= xa) sig
@@ -1622,91 +1569,7 @@ interp2WingProfileValid :: (SV.Len (v a),
                       TC Sample t1 (Data Nil a) ->
                       TC Sample t2 (Data Nil a) ->
                       TC Sample t3 (Data Nil (Interp.Val a))
-interp2WingProfileValid caller inMethod exMethod xSig ySig zSig (TC (Data x)) y =
-  if not $ isMonoton then   error $ "Error in interp1LinValid called by "
-                            ++ caller ++ ": xSig not rising monotonically x:" ++ show xSig
-  else case maybeIdx of
-  (Just (SignalIdx idx)) -> case (idx==0, x0 == x) of
-         -- extrapolation to the left
-          (True,_) -> g "extraLeft" (x0,x1) (ys0,ys1) (zs0,zs1) x y Interp.Outside
-
-          --just hitting the very left point
-          (False,True) -> if x0 == x1 then g "leftHit-x0=x1"(x0,x1) (ys0,ys1) (zs0,zs1) x y Interp.Within
-                             else interp1LinValid (caller ++ ">interp2WingProfileValid-leftHit") inMethod exMethod ys0 zs0 y
-         -- interpolation
-          (False,False) -> g "interp" (xi0,xi1) (ysi0,ysi1) (zsi0,zsi1) x y Interp.Within
-     where
-       xi0 = fromSample $ getSample xSig (SignalIdx $ idx P.- 1)
-       xi1 = fromSample $ getSample xSig (SignalIdx idx)
-       ysi0 = getColumn ySig (SignalIdx $ idx P.- 1)
-       ysi1 = getColumn ySig (SignalIdx idx)
-       zsi0 = getColumn zSig (SignalIdx $ idx P.- 1)
-       zsi1 = getColumn zSig (SignalIdx idx)
-
-  Nothing   -> if x == xm1
-               -- just hitting the right point
-               then if xm0 == xm1 then g "rightHit-x0=x1" (xm0,xm1) (ysm0,ysm1) (zsm0,zsm1) x y Interp.Within
-                                       else interp1LinValid (caller ++ ">interp2WingProfileValid-rightHit") inMethod exMethod ysm1 zsm1 y
-                 -- Extrapolation to the right
-               else g "extraRight" (xm0,xm1) (ysm0,ysm1) (zsm0,zsm1) x y Interp.Outside
-
-
-  where
-    maxIdx = (len xSig) P.- 1
-    isMonoton = all (==True) $ deltaMap (\ xa xb -> xb >= xa) xSig
-    maybeIdx = findIndex (> x) xSig
-
-    x0 = fromSample $ getSample xSig (SignalIdx 0)
-    x1 = fromSample $ getSample xSig (SignalIdx 1)
-    xm0 = fromSample $ getSample xSig (SignalIdx $ maxIdx P.- 1)
-    xm1 = fromSample $ getSample xSig (SignalIdx maxIdx)
-
-    ys0 = getColumn ySig (SignalIdx 0)
-    ys1 = getColumn ySig (SignalIdx 1)
-    ysm0 = getColumn ySig (SignalIdx $ maxIdx P.- 1)
-    ysm1 = getColumn ySig (SignalIdx maxIdx)
-
-    zs0 = getColumn zSig (SignalIdx 0)
-    zs1 = getColumn zSig (SignalIdx 1)
-    zsm0 = getColumn zSig (SignalIdx $ maxIdx P.- 1)
-    zsm1 = getColumn zSig (SignalIdx maxIdx)
-    
-    g cs (xa,xb) (ysa,ysb) (zsa,zsb) xVal yVal ipos = TC $ Data $ f  zaVal zbVal zVal
-      where
-        zVal = Interp.dim1 (caller ++ ">interp2WingProfileValid-" ++ cs ++"zVal") inMethod exMethod ipos (xa,xb) (Interp.unpack zaVal,Interp.unpack zbVal) xVal
-        zaVal = fromSample $ interp1LinValid (caller ++ ">interp2WingProfileValid" ++ cs ++"zaVal") inMethod exMethod ysa zsa yVal
-        zbVal = fromSample $ interp1LinValid (caller ++ ">interp2WingProfileValid" ++ cs ++"zbVal") inMethod exMethod ysb zsb yVal
-                                                                                                                        
-        f v1 v2 v3  | isInvalid v1 ||isInvalid v2 || isInvalid v3 = Interp.Invalid
-        f v1 v2 v3@(Inter zv) | isExtra v1 || isExtra v2 || isExtra v3 = Interp.Extra zv
-        f _ _ v3  = v3
-
-interp2WingProfileValid_new :: (SV.Len (v a),
-                            Show (v a),
-                            SV.Storage v Bool,
-                            Show a,
-                            SV.Zipper v,
-                            SV.Walker v,
-                       SV.Storage v a,
-                       Ord a,
-                       SV.Find v,
-                       Eq (v a),
-                       SV.Storage v2 (v a),
-                       SV.Singleton v2,
-                       SV.Lookup v2 ,
-                       SV.Singleton v,
-                       SV.Lookup v,
-                       Product a, Constant a) =>
-                      String  ->
-                      Interp.Method a ->
-                      ExtrapMethod a ->
-                      TC Signal t1 (Data (v :> Nil) a) ->
-                      TC Signal t2 (Data (v2 :> v :> Nil) a) ->
-                      TC Signal t3 (Data (v2 :> v :> Nil) a) ->
-                      TC Sample t1 (Data Nil a) ->
-                      TC Sample t2 (Data Nil a) ->
-                      TC Sample t3 (Data Nil (Interp.Val a))
-interp2WingProfileValid_new caller inMethod exMethod xSig ySig zSig x y = TC $ Data $ Interp.combineResults z1 z2 z
+interp2WingProfileValid caller inMethod exMethod xSig ySig zSig x y = TC $ Data $ Interp.combineResults z1 z2 z
    where
      idx = interpIndex (caller++ ">interp1LinValid_new") xSig x
      x1 = fromSample $ getSample xSig (indexAdd idx (-1))
@@ -1715,9 +1578,9 @@ interp2WingProfileValid_new caller inMethod exMethod xSig ySig zSig x y = TC $ D
      ys2 = getColumn ySig idx
      zs1 = getColumn zSig (indexAdd idx (-1))
      zs2 = getColumn zSig idx
-     z1 = fromSample $ interp1LinValid_new (caller ++ ">interp2WingProfileValid_new-z1") inMethod exMethod ys1 zs1 y
-     z2 = fromSample $ interp1LinValid_new (caller ++ ">interp2WingProfileValid_new-z2") inMethod exMethod ys2 zs2 y
-     z = Interp.dim1_new (caller ++ ">interp2WingProfileValid_new-z") inMethod exMethod (x1,x2) (Interp.unpack z1, Interp.unpack z2) (fromSample x)
+     z1 = fromSample $ interp1LinValid (caller ++ ">interp2WingProfileValid_new-z1") inMethod exMethod ys1 zs1 y
+     z2 = fromSample $ interp1LinValid (caller ++ ">interp2WingProfileValid_new-z2") inMethod exMethod ys2 zs2 y
+     z = Interp.dim1 (caller ++ ">interp2WingProfileValid_new-z") inMethod exMethod (x1,x2) (Interp.unpack z1, Interp.unpack z2) (fromSample x)
 
 interp2WingProfileWithSignal :: (SV.Zipper v3,
                                  SV.Walker v3,
