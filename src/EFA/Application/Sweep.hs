@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module EFA.Application.Sweep where
 
@@ -101,11 +102,11 @@ class SweepMap (sweep :: (* -> *) -> * -> *) vec a b where
   map :: (a -> b) -> sweep vec a -> sweep vec b
 
 instance (UV.Unbox a, UV.Unbox b, SweepClass sweep UV.Vector a,
+          SweepClass sweep UV.Vector (a, b),
           SweepClass sweep UV.Vector b) =>
          SweepMap sweep UV.Vector a b where
   map f = toSweep . UV.map f . fromSweep
   {-# INLINE map #-}
-
 
 instance (Arith.Sum a, UV.Unbox a) => Arith.Sum (Sweep UV.Vector a) where
   (Sweep x) ~+ (Sweep y) = Sweep $ UV.zipWith (~+) x y

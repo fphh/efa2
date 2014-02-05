@@ -52,21 +52,22 @@ import Data.Monoid (Monoid, mempty, (<>))
 
 import Control.Functor.HT (for)
 
+
 quasiStationaryOptimisation ::
-  (Ord a, Ord (sweep vec a),
-   Monoid (sweep vec Bool),
-   Arith.Product (sweep vec a),
+  (Ord a, Ord (sweep UV.Vector a), UV.Unbox a,
+   Monoid (sweep UV.Vector Bool),
+   Arith.Product (sweep UV.Vector a),
    Arith.Constant a,
    Node.C node, Show node,
-   Sweep.SweepVector vec Bool,
-   Sweep.SweepVector vec a,
-   Sweep.SweepMap sweep vec a Bool,
-   Sweep.SweepMap sweep vec a a,
-   Sweep.SweepClass sweep vec Bool,
-   Sweep.SweepClass sweep vec a) =>
-  One.OptimalEnvParams node [] sweep vec a ->
-  Map Idx.State (Map [a] (Type.PerStateSweep node sweep vec a)) ->
-  Type.QuasiStationary node sweep vec a
+   Sweep.SweepVector UV.Vector Bool,
+   Sweep.SweepVector UV.Vector a,
+   Sweep.SweepMap sweep UV.Vector a Bool,
+   Sweep.SweepMap sweep UV.Vector a a,
+   Sweep.SweepClass sweep UV.Vector Bool,
+   Sweep.SweepClass sweep UV.Vector a) =>
+  One.OptimalEnvParams node [] sweep UV.Vector a ->
+  Map Idx.State (Map [a] (Type.PerStateSweep node sweep UV.Vector a)) ->
+  Type.QuasiStationary node sweep UV.Vector a
 quasiStationaryOptimisation params perStateSweep =
   let a = Base.optimalObjectivePerState params perStateSweep
       -- b = Base.expectedValuePerState perStateSweep

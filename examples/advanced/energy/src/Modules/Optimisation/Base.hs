@@ -147,18 +147,18 @@ forcing params state m = Determined $
 
 
 optimalObjectivePerState ::
-  (Ord a, Arith.Constant a, Arith.Sum a,
-   Show node, Node.C node, Monoid (sweep vec Bool),
-   Ord (sweep vec a),
-   Arith.Product (sweep vec a),
-   Sweep.SweepVector vec Bool,
-   Sweep.SweepClass sweep vec Bool,
-   Sweep.SweepMap sweep vec a Bool,
-   Sweep.SweepVector vec a,
-   Sweep.SweepClass sweep vec a,
-   Sweep.SweepMap sweep vec a a) =>
-  One.OptimalEnvParams node list sweep vec a ->
-  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep vec a)) ->
+  (Ord a, Arith.Constant a, Arith.Sum a, UV.Unbox a,
+   Show node, Node.C node, Monoid (sweep UV.Vector Bool),
+   Ord (sweep UV.Vector a),
+   Arith.Product (sweep UV.Vector a),
+   Sweep.SweepVector UV.Vector Bool,
+   Sweep.SweepClass sweep UV.Vector Bool,
+   Sweep.SweepMap sweep UV.Vector a Bool,
+   Sweep.SweepVector UV.Vector a,
+   Sweep.SweepClass sweep UV.Vector a,
+   Sweep.SweepMap sweep UV.Vector a a) =>
+  One.OptimalEnvParams node list sweep UV.Vector a ->
+  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
 optimalObjectivePerState params =
   Map.mapWithKey $

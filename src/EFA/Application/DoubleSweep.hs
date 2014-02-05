@@ -44,6 +44,7 @@ import qualified Control.Monad.Trans.Writer as MW
 
 import Control.Applicative (liftA3)
 
+
 -- | Map a two dimensional load room (varX, varY) and find per load situation
 -- | the optimal solution in the 2d-solution room (two degrees of freevarOptX varOptY)
 
@@ -95,42 +96,49 @@ optimalSolutionGeneric f =
   fmap (NonEmpty.maximumBy (comparing fst)) . NonEmpty.fetch .
   mapMaybe (\x -> fmap (flip (,) x) $ f x)
 
-
 findBestIndex ::
-  (Ord a, Arith.Constant a,
-   Sweep.SweepVector vec a,
-   Sweep.SweepClass sweep vec a,
-   Sweep.SweepVector vec Bool,
-   Sweep.SweepClass sweep vec Bool) =>
-  (sweep (vec :: * -> *) Bool) ->
-  (sweep vec a) ->
-  (sweep vec a) ->
+  (Ord a, Arith.Constant a, UV.Unbox a,
+   Sweep.SweepVector UV.Vector a,
+   Sweep.SweepClass sweep UV.Vector a,
+   Sweep.SweepVector UV.Vector Bool,
+   Sweep.SweepClass sweep UV.Vector Bool) =>
+  (sweep UV.Vector Bool) ->
+  (sweep UV.Vector a) ->
+  (sweep UV.Vector a) ->
   Maybe (Int, a, a)
-findBestIndex cond esys force =
-  if (or c) then Just res else Nothing
-  where c = Sweep.toList cond
-        start = (0, Arith.zero, Arith.zero)
-        res = List.foldl' f start 
-                    (List.zip4 [0..] (Sweep.toList cond) 
-                               (Sweep.toList esys) (Sweep.toList force))
-        f acc@(_, fo, _) (i, b, es2, f2) =
+
+findBestIndex cond esys force = res
+  where
+
+        c1 = Sweep.fromSweep cond
+        e1 = Sweep.fromSweep esys
+        f1 = Sweep.fromSweep force
+
+        start = (0, 0, Arith.zero, Arith.zero)
+
+        res = case UV.foldl' f start (UV.zipWith3 (,,) c1 e1 f1) of
+                   (x, _, ch, d) -> Just (x, ch, d)
+
+        f (bestIdx, cnt, fo, eo) (b, es2, f2) =
           if b && f2 > fo
-             then (i, f2, es2)
-             else acc
+             then (cnt, cnt+1, f2, es2)
+             else (bestIdx, cnt+1, fo, eo)
+
 
 optimalSolutionState2 ::
-  (Ord a, Node.C node, Arith.Constant a,
-   Arith.Product (sweep vec a),
-   Sweep.SweepVector vec a,
-   Sweep.SweepClass sweep vec a,
-   Monoid (sweep vec Bool),
-   Sweep.SweepVector vec Bool,
-   Sweep.SweepClass sweep vec Bool,
-   Sweep.SweepMap sweep vec a Bool) =>
-  ( Map Idx.State (Map node (Maybe (sweep vec a))) ->
-    Result (sweep vec a)) ->
-  Type.PerStateSweep node sweep vec a ->
+  (Ord a, Node.C node, Arith.Constant a, UV.Unbox a,
+   Arith.Product (sweep UV.Vector a),
+   Sweep.SweepVector UV.Vector a,
+   Sweep.SweepClass sweep UV.Vector a,
+   Monoid (sweep UV.Vector Bool),
+   Sweep.SweepVector UV.Vector Bool,
+   Sweep.SweepClass sweep UV.Vector Bool,
+   Sweep.SweepMap sweep UV.Vector a Bool) =>
+  ( Map Idx.State (Map node (Maybe (sweep UV.Vector a))) ->
+    Result (sweep UV.Vector a)) ->
+  Type.PerStateSweep node sweep UV.Vector a ->
   Maybe (a, a, StateFlow.Graph node (Result a) (Result a))
+
 optimalSolutionState2 forcing (Type.PerStateSweep esys condVec powerMap env) =
   let force = forcing powerMap
       bestIdx = liftA3 findBestIndex condVec esys (liftA2 (Arith.~+) force esys)

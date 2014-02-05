@@ -79,20 +79,22 @@ toPowerMap ::
 toPowerMap params graph = Map.mapWithKey f states
   where forcings = One.forcingPerNode params
         states = fmap Topology.topology $ State.states graph
-        f state flowTopo = Map.mapWithKey g forcings
-          where g stoNode _ = h adjs
-                  where adjs = case Set.toList $ Graph.adjacentEdges flowTopo stoNode of
-                                    [x] -> x
-                                    _ -> error $ "toPowerMap: more or less than one adjacent edge to node"
-                                                 ++ show stoNode
-                        h (Graph.EDirEdge (Graph.DirEdge from to)) =
-                          if stoNode == from 
-                             then join $ fmap toMaybe $ StateQty.lookup p graph
-                             else fmap Arith.negate $ join $ fmap toMaybe 
-                                                    $ StateQty.lookup (ModUt.flipPower p) graph
+        f state flowTopo = Map.mapWithKey (g state flowTopo) forcings
 
-                          where p = StateIdx.power state from to
-                        h _ = error "toPowerMap: undir edge"
+        look p = join $ fmap toMaybe $ StateQty.lookup p graph
+
+        g state flowTopo stoNode _ =
+          h $ case Set.toAscList $ Graph.adjacentEdges flowTopo stoNode of
+                   [x] -> x
+                   _ -> error $ "toPowerMap: more or less than one adjacent edge to node"
+                                ++ show stoNode
+          where 
+                h (Graph.EDirEdge (Graph.DirEdge from to)) =
+                  (if stoNode == from
+                      then look
+                      else fmap Arith.negate . look . ModUt.flipPower)
+                      (StateIdx.power state from to)          
+                h _ = error "toPowerMap: undir edge"
 
 solve ::
   (Node.C node, Ord node, Show node,
@@ -114,8 +116,6 @@ solve ::
   Type.PerStateSweep node sweep vec a
 solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
   let 
-      -- pts = One.points params
-
       ss = Sweep.unList (ReqsAndDofs.reqs pts)
            ++ Sweep.unList (ReqsAndDofs.dofs pts)
       res = StateAbs.solveOpts
