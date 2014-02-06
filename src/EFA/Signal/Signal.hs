@@ -214,6 +214,32 @@ zipWith f (TC da1) (TC da2) =
    TC $ D.zipWith f da1 da2
 
 {-
+zipWith3 ::
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3) =>
+   (d1 -> d2 -> d3 -> d4) ->
+   TC s typ1 (Data c d1) ->
+   TC s typ2 (Data c d2) ->
+   TC s typ3 (Data c d3) ->
+   TC s typ4 (Data c d4)
+zipWith3 f (TC da1) (TC da2) (TC da3)=
+   TC $ D.zipWith g da1 (D.zip da2 da3)
+   where g (x,(y,z)) = f (x,y,z) 
+-}
+
+zipWith3 ::
+   (D.ZipWith c,
+    D.Storage c d4,
+    D.Storage c d3,
+    D.Storage c (d3 -> d4),
+    D.Storage c d2, D.Storage c d1) =>
+   (d1 -> d2 -> d3 -> d4) ->
+   TC s typ1 (Data c d1) ->
+   TC s typ2 (Data c d2) ->
+   TC s typ3 (Data c d3) ->
+   TC s typ4 (Data c d4)
+zipWith3 f xs ys zs = changeSignalType $ zipWith g (changeSignalType (zipWith f xs ys)) zs
+   where g x y = x y
+{-
 zipWithGeneric ::
    (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3) =>
    (d1 -> d2 -> d3) ->
@@ -249,6 +275,21 @@ tzipWithGeneric ::
 tzipWithGeneric f xs ys = zipWithGeneric g xs ys
    where g x y = fromSampleGeneric $ f (toSampleGeneric x) (toSampleGeneric y)
 -}
+
+tzipWith3 ::
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3, 
+    D.Storage c (d3 -> d4), D.Storage c d4) =>
+   (TC Sample t1 (Data Nil d1) ->
+    TC Sample t2 (Data Nil d2) ->
+    TC Sample t3 (Data Nil d3) ->
+    TC Sample t4 (Data Nil d4)) ->
+   TC s1 t1 (Data c d1) ->
+   TC s1 t2 (Data c d2) ->
+   TC s1 t3 (Data c d3) ->
+   TC s1 t4 (Data c d4)
+tzipWith3 f xs ys zs = zipWith3 g xs ys zs
+   where g x y z = fromSample $ f (toSample x) (toSample y) (toSample z)
+
 
 tzipWithSimple ::  (D.ZipWith c, D.Storage c d) =>
    (TC Sample typ (Data Nil d) ->
@@ -363,6 +404,7 @@ type TSignal v a = TC Signal (Typ A T Tt) (Data (v :> Nil) a)
 type PSignal v a = TC Signal (Typ A P Tt) (Data (v :> Nil) a)
 type UTSignal v a = TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
 type UTSignal2 v2 v1 a = TC Signal (Typ UT UT UT) (Data (v2 :> v1 :> Nil) a)
+type UTSignal3 v3 v2 v1 a = TC Signal (Typ UT UT UT) (Data (v3 :> v2 :> v1 :> Nil) a)
 type NSignal2 v2 v1 a = TC Signal (Typ A N Tt) (Data (v2 :> v1 :> Nil) a)
 type PSignal2 v2 v1 a = TC Signal (Typ A P Tt) (Data (v2 :> v1 :> Nil) a)
 type XSignal2 v2 v1 a = TC Signal (Typ A X Tt) (Data (v2 :> v1 :> Nil) a)
@@ -544,6 +586,16 @@ fromList2 ::
    (SV.FromList c1, SV.Storage c1 (c2 d), SV.FromList c2, SV.Storage c2 d) =>
    [[d]] -> TC s t (Data (c1 :> c2 :> Nil) d)
 fromList2 x = TC $ D.fromList x
+
+-- subsumed by general fromList
+fromList3 ::(SV.Storage c0 (c1 (c2 d)),
+             SV.Storage c1 (c2 d),
+             SV.Storage c2 d,
+             SV.FromList c0,
+             SV.FromList c1,
+             SV.FromList c2) => 
+   [[[d]]] -> TC s t (Data (c0 :> c1 :> c2 :> Nil) d)
+fromList3 x = TC $ D.fromList x
 
 -- subsumed by general toList
 toList2 ::
@@ -1124,6 +1176,16 @@ getColumn (TC (Data x)) idx = TC $ Data $
                                   SV.viewL $
                                   SV.lookUp x $ [unSignalIdx idx]
 
+getMatrix :: (Eq (v2 (v a)),
+              SV.Storage v3 (v2 (v a)),
+              SV.Lookup v3,
+              SV.Singleton v3) => 
+             TC s typ (Data (v3 :> v2 :> v :> Nil) a) -> SignalIdx -> TC s typ (Data (v2 :> v :> Nil) a)
+getMatrix (TC (Data x)) idx = TC $ Data $
+                                  P.fst $
+                                  P.maybe (error "Error in Signal/subSignal2D1D empty list") id $
+                                  SV.viewL $
+                                  SV.lookUp x $ [unSignalIdx idx]
 
 len :: (SV.Len (D.Apply c d)) => TC s typ (Data c d) -> Int
 len (TC x) = D.len x
@@ -1649,6 +1711,94 @@ interp2WingProfileValidWithSignal :: (Show d,
 interp2WingProfileValidWithSignal caller inMethod exMethod x1d y2d z2d xSig ySig = tzipWith
          (\x y -> interp2WingProfileValid (caller ++ ">interp2WingProfileValidWithSignal") inMethod exMethod
            x1d y2d z2d x y) xSig ySig
+
+interp3WingProfileValid :: (SV.Len (v a),
+                            Eq (v2 (v a)),
+                            SV.Storage v3 (v2 (v a)),
+                            SV.Singleton v3,
+                            SV.Lookup v3,
+                            Show (v a),
+                            SV.Storage v Bool,
+                            Show a,
+                            SV.Zipper v,
+                            SV.Walker v,
+                       SV.Storage v a,
+                       Ord a,
+                       SV.Find v,
+                       Eq (v a),
+                       SV.Storage v2 (v a),
+                       SV.Singleton v2,
+                       SV.Lookup v2 ,
+                       SV.Singleton v,
+                       SV.Lookup v,
+                       Product a, Constant a, Show (v2 (v a))) =>
+                      String  ->
+                      Interp.Method a ->
+                      ExtrapMethod a ->
+                      TC Signal t1 (Data (v :> Nil) a) ->
+                      TC Signal t2 (Data (v2 :> v :> Nil) a) ->
+                      TC Signal t3 (Data (v3 :> v2 :> v :> Nil) a) ->
+                      TC Signal t4 (Data (v3 :> v2 :> v :> Nil) a) ->
+                      TC Sample t1 (Data Nil a) ->
+                      TC Sample t2 (Data Nil a) ->
+                      TC Sample t3 (Data Nil a) ->
+                      TC Sample t4 (Data Nil (Interp.Val a))
+interp3WingProfileValid caller inMethod exMethod xSig ySig zSig vSig x y z = TC $ Data $ Interp.combineResults v1 v2 v
+ where
+
+     idx = interpIndex (caller++ ">interp1LinValid_new") xSig x
+     x1 =  fromSample $ getSample xSig (indexAdd idx (-1))
+     x2 =  fromSample $ getSample xSig idx
+     ys1 = getColumn ySig (indexAdd idx (-1))
+     ys2 = getColumn ySig idx
+     zs1 = getMatrix zSig (indexAdd idx (-1))
+     zs2 = getMatrix zSig idx
+     vs1 = getMatrix vSig (indexAdd idx (-1))
+     vs2 = getMatrix vSig idx
+     v1 =  fromSample $ interp2WingProfileValid (caller ++ ">interp2WingProfileValid_new-z1") inMethod exMethod ys1 zs1 vs1 y z
+     v2 =  fromSample $ interp2WingProfileValid  (caller ++ ">interp2WingProfileValid_new-z2") inMethod exMethod ys2 zs2 vs2 y z
+     v =  Interp.dim1 (caller ++ ">interp2WingProfileValid_new-z") inMethod exMethod (x1,x2) (Interp.unpack v1, Interp.unpack v2) (fromSample x)
+   
+
+interp3WingProfileValidWithSignal :: (SV.Len (v a),
+                            Eq (v2 (v a)),
+                            SV.Storage v3 (v2 (v a)),
+                            SV.Singleton v3,
+                            SV.Lookup v3,
+                            Show (v a),
+                            SV.Storage v Bool,
+                            Show a,
+                            SV.Zipper v,
+                            SV.Walker v,
+                       SV.Storage v a,
+                       Ord a,
+                       SV.Find v,
+                       Eq (v a),
+                       SV.Storage v2 (v a),
+                       SV.Singleton v2,
+                       SV.Lookup v2 ,
+                       SV.Singleton v,
+                       SV.Lookup v,
+                       Product a, Constant a, Show (v2 (v a)), 
+                       SV.Zipper v4,
+                      SV.Walker v4,
+                      SV.Storage v4 (Interp.Val a),
+                      SV.Storage v4 (a -> Interp.Val a),
+                      SV.Storage v4 a) =>
+                      String  ->
+                      Interp.Method a ->
+                      ExtrapMethod a ->
+                      TC Signal t1 (Data (v :> Nil) a) ->
+                      TC Signal t2 (Data (v2 :> v :> Nil) a) ->
+                      TC Signal t3 (Data (v3 :> v2 :> v :> Nil) a) ->
+                      TC Signal t4 (Data (v3 :> v2 :> v :> Nil) a) ->
+                      TC Signal t1 (Data (v4 :> Nil) a) ->
+                      TC Signal t2 (Data (v4 :> Nil) a) ->
+                      TC Signal t3 (Data (v4 :> Nil) a) ->
+                      TC Signal t4 (Data (v4 :> Nil) (Interp.Val a))
+interp3WingProfileValidWithSignal caller inMethod exMethod xSig ySig zSig vSig xs ys zs = tzipWith3
+         (\x y z -> interp3WingProfileValid (caller ++ ">interp2WingProfileValidWithSignal") inMethod exMethod
+           xSig ySig zSig vSig x y z) xs ys zs
 
 
 -- | Scale Signal by a given Number
