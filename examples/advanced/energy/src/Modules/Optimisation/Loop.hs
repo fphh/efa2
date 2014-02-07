@@ -156,6 +156,47 @@ findZeroCrossing params f accessf xstart step =
                 (Zero, _)  -> []
                 (_, Zero)  -> []
                 
+
+-- Fragen / Anmerkungen zum Code
+
+-- Abbruchkriterium in Bezug auf den Wert gehört in findZeroCrossing             
+-- findZeroCrossing sollte BalanceIteration heißen
+-- iterateBalance braucht einen neuen Namen
+--  findZeroCrossing könnte noch schlanker werden          
+
+-- | Find a solution where all states occur in the simlation signals at minimum state forcing, measurement unit ist state duration 
+
+{-
+data State = MoreForcingNeeded | CorrectForcing | NoForcingNeeded
+
+stateIteration :: 
+stateIteration params f accessf initialStateForcings thesholds = go initialStateForcings initialStatesDurations
+  where states = getAllStates f
+        initialStateDurations = f setStateDrive params initialStateForcings
+        go forcings stateflows steps = zipWith3 f forcings stateflows steps
+        _3 = Arith.fromInteger 3
+        _2 = Arith.fromInteger 2
+        where
+          f x0 y0 st thr = 
+            let x1 = x0 ~+ st
+                y1 = f $ setStateDrive params x1
+                
+                eval x y = case (x ==0 && (accessf y) > 0, (accessf y) == 0, (accessf y) < thr) of
+                  (True, _, _) -> NoForcingNeeded 
+                  (False,False,True) -> CorrectForcing
+                  (False,True,_) -> MoreForcingNeeded
+                  (False,False,False) -> LessForcingNeeded
+                  
+            in FindZeroCrossing x0 y0 st:
+               case (eval x0 y0, eval x1 y1)  of
+                       (_,NoForcingNeeded) -> []
+                       (_,CorrectForcing) -> []
+                       (MoreForcingNeeded, MoreForcingNeeded) -> go x1 y1 ((Arith.abs st) ~* _2)   
+                       (LessForcingNeeded, LessForcingNeeded) -> go x1 y1 (Arith.negate $ (Arith.abs st) ~* _2)
+                       (MoreForcingNeeded, LessForcingNeeded) -> go x1 y1 (Arith.negate $ (Arith.abs st) ~/ _3)
+                       (LessForcingNeeded, MoreForcingNeeded) -> go x1 y1 ((Arith.abs st) ~/ _3)
+-}
+
 iterateUntil ::
   (Arith.Sum t, Ord t, Arith.Constant t) =>
   (z -> t) ->
