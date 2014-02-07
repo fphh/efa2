@@ -69,6 +69,9 @@ uniqueInnerLoopX (OuterLoop ol) = OuterLoop (map f ol)
           where InnerLoop fzcs = innerLoop oli
         g a b = snd (yfzc a) == snd (yfzc b)
 
+
+-- TODO:: setChargeDrive Kante rausziehen !!! -- Ein Storage Map erzeugen und Werte übergeben !!
+
 setChargeDrive ::
   One.OptimalEnvParams Node list sweep vec a ->
   a ->
@@ -76,6 +79,18 @@ setChargeDrive ::
 setChargeDrive params newForcing =
   params { One.forcingPerNode =
              Map.fromList [(System.Water, One.ChargeDrive newForcing)] }
+{-
+
+setDrive ::
+  One.OptimalEnvParams Node list sweep vec a ->
+  (StoPos, a) -> StateMap a
+  One.OptimalEnvParams Node list sweep vec a
+setDrive params storageForcing stateForcing =
+  params { One.forcingPerNode =
+             Map.fromList [(System.Water, One.ChargeDrive newForcing)],  
+           One.stateForcing = stateMap
+           }
+-}
 
 betterFalsePosition ::
   (Ord a, Arith.Constant a) =>
@@ -171,8 +186,7 @@ data State = MoreForcingNeeded | CorrectForcing | NoForcingNeeded
 
 stateIteration :: 
 stateIteration params f accessf initialStateForcings thesholds = go initialStateForcings initialStatesDurations
-  where states = getAllStates f
-        initialStateDurations = f setStateDrive params initialStateForcings
+  where initialStateDurations = f setStateDrive params initialStateForcings
         go forcings stateflows steps = zipWith3 f forcings stateflows steps
         _3 = Arith.fromInteger 3
         _2 = Arith.fromInteger 2
@@ -180,7 +194,7 @@ stateIteration params f accessf initialStateForcings thesholds = go initialState
           f x0 y0 st thr = 
             let x1 = x0 ~+ st
                 y1 = f $ setStateDrive params x1
-                
+
                 eval x y = case (x ==0 && (accessf y) > 0, (accessf y) == 0, (accessf y) < thr) of
                   (True, _, _) -> NoForcingNeeded 
                   (False,False,True) -> CorrectForcing
