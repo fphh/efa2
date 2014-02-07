@@ -56,7 +56,6 @@ import Control.Monad (join)
 import Control.Applicative (liftA2)
 
 
-
 perStateSweep ::
   (Node.C node, Show node,
    Ord a, Show a, UV.Unbox a, Arith.ZeroTestable (sweep vec a),
@@ -86,40 +85,6 @@ perStateSweep params stateFlowGraph =
                     (One.etaMap params)
                     state
 
-
-{-
-forcing ::
-  (Arith.Constant a, Arith.Sum a, Ord a,
-   Ord (sweep vec a), Arith.Sum (sweep vec a), Ord node, Show node,
-   Sweep.SweepClass sweep vec a,
-   Sweep.SweepMap sweep vec a a) =>
-  One.OptimalEnvParams node list sweep vec a ->
-  Idx.State ->
-  StateQty.Graph node b (Result (sweep vec a)) ->
-  Result (sweep vec a)
-forcing params state graph = Determined $
-  case ModUt.getFlowTopology state graph of
-    Nothing ->
-      error $ "forcing failed, because state not found: " ++ show state
-    Just flowTopo ->
-      Set.fold (Arith.~+) zero
-        $ Map.foldWithKey f Set.empty (One.forcingPerNode params)
-      where
-        zero = Sweep.fromRational (One.sweepLength params) Arith.zero
-
-        f stoNode forcingFactor =
-          Set.union (Set.map (g forcingFactor stoNode) $ Graph.adjacentEdges flowTopo stoNode)
-
-        g ff sto (Graph.EDirEdge (Graph.DirEdge from to)) =
-          (if sto == from then h ff else Arith.negate . h ff . ModUt.flipPower) $
-             StateIdx.power state from to
-        g _ _ (Graph.EUnDirEdge _) = zero
-
-        h ff p =
-          maybe (error $ "forcing failed, because position not found: " ++ show p)
-                (Sweep.map (One.getSocDrive ff Arith.~*))
-                (join $ fmap toMaybe $ StateQty.lookup p graph)
--}
 
 forcing ::
   (Ord node, Show node,
@@ -168,23 +133,17 @@ optimalObjectivePerState params =
 
 
 
-{-
+
 expectedValuePerState ::
-  (Monoid (sweep vec Bool),
-   Arith.Product (sweep vec a),
-   Sweep.SweepVector vec Bool,
-   Sweep.SweepMap sweep vec a Bool,
-   Sweep.SweepClass sweep vec Bool,
-   Sweep.SweepVector vec a,
-   Sweep.SweepClass sweep vec a,
-   Fractional a, Ord a, UV.Unbox a,
+  (UV.Unbox a,
    Arith.Constant a,
-   Node.C node) =>
-  Map Idx.State (Map (list a) (EnvResult node (sweep vec a))) ->
+   Sweep.SweepClass sweep UV.Vector a,
+   Sweep.SweepClass sweep UV.Vector Bool) =>
+  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe a))
 expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
--}
+
 
 
 selectOptimalState ::

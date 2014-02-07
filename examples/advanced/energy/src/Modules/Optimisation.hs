@@ -57,6 +57,7 @@ import Data.Monoid ((<>), mempty)
 
 import Control.Monad (join)
 
+
 options ::
   (UV.Unbox a, Arith.Constant a,
    Sweep.SweepVector vec a,
@@ -96,6 +97,8 @@ toPowerMap params graph = Map.mapWithKey f states
                       (StateIdx.power state from to)          
                 h _ = error "toPowerMap: undir edge"
 
+
+
 solve ::
   (Node.C node, Ord node, Show node,
    Show a, Ord a, UV.Unbox a, Arith.Constant a,
@@ -126,8 +129,22 @@ solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
                 Fold.foldMap (makeEtaFuncGiven2 etaAssign etaFunc) .
                 Map.lookup state . StateQty.states)
                 <>  commonGiven state stateFlowGraph)
+
+      eta = case One.etaToOptimise params of
+                 Nothing -> StateEta.etaSys res
+                 Just (TopoIdx.Position from to) ->
+                      case StateQty.lookup
+                             (StateIdx.eta state from to)
+                             res of
+                           Just e -> e
+                           Nothing -> case StateQty.lookup
+                                             (StateIdx.eta state to from)
+                                             res of
+                                           Just e -> e
+                                           Nothing -> error "Optimise.solve: position not found"
+
   in Type.PerStateSweep
-       (StateEta.etaSys res)
+       eta
        (DoubleSweep.checkGreaterZero res)
        (toPowerMap params res)
        res

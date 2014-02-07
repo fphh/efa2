@@ -38,11 +38,12 @@ module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
--- import qualified Modules.Plot as ModPlot
+--import qualified Modules.Plot as ModPlot
 
 import qualified Modules.Optimisation.Loop as ModLoop
 
 import EFA.Application.Type (EnvResult)
+--import qualified EFA.Application.Type as Type
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
@@ -50,6 +51,12 @@ import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Application.Optimisation as AppOpt
+
+--import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Flow.State.Quantity as StateQty
+
+--import qualified EFA.Graph.Topology as Topology
+--import qualified EFA.Graph as Graph
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
@@ -61,21 +68,21 @@ import qualified EFA.IO.TableParser as Table
 
 import qualified EFA.Equation.Arithmetic as Arith
 
---import qualified EFA.Flow.Draw as Draw
+import qualified EFA.Flow.Draw as Draw
 
--- import EFA.Utility.Async (concurrentlyMany_)
+--import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility.List (vhead)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
 import qualified Data.Empty as Empty
+--import qualified Data.List as List
 
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
 
-
 import Text.Printf (printf)
-
 
 
 initEnv ::
@@ -167,7 +174,11 @@ main1 = do
           ModSet.forcingMap
           (ReqsAndDofs.reqsPos ModSet.reqs)
           (ReqsAndDofs.dofsPos ModSet.dofs)
+          -- (Just (TopoIdx.Position System.Coal System.Network))
+          Nothing
           ModSet.sweepLength
+
+  --print (map (Topology.flowNumber $ One.systemTopology optParams) System.flowStates)
 
 
 {-
@@ -178,22 +189,48 @@ main1 = do
 
 
 
-  putStrLn $ printf "%6s%24s%24s%24s%24s" 
-                    "Step" "Forcing" "Balance" "Eta" "StepSize"
+  let ienv = AppOpt.storageEdgeXFactors optParams 4 4
+               $ AppOpt.initialEnv optParams System.stateFlowGraph
 
-  let ol = --ModLoop.uniqueInnerLoopX
+      ol = --ModLoop.uniqueInnerLoopX
            ModLoop.outerLoop
              (ModLoop.iterateBalance optParams reqsRec)
-             ( AppOpt.storageEdgeXFactors optParams 3 3
-               $ AppOpt.initialEnv optParams System.stateFlowGraph )
+             ienv
 
-  let numberOfLoops = 5
+{-
+      opt = ModLoop.withChargeDrive optParams reqsRec ienv (-5.2837473962302475e-3)
+      opt2 = ModLoop.withChargeDrive optParams reqsRec (Type.stateFlowGraph $ Type.simulation opt) 0
+      opt3 = ModLoop.withChargeDrive optParams reqsRec (Type.stateFlowGraph $ Type.simulation opt2) 0
+-}
 
-  mapM_ putStrLn (ModLoop.showOuterLoop numberOfLoops ol)
+  let numberOfLoops = 10
+  let g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
-  -- sequence_ (ModLoop.printOuterLoop optParams numberOfLoops ol)
+
+  Draw.xterm
+    $ Draw.title "State Flow Graph from Simulation"
+    $ Draw.stateFlowGraph Draw.optionsDefault
+    $ StateQty.mapGraph g g ienv
+
+
+  putStrLn $ printf "%8s%8s%24s%24s%24s%24s" 
+                    "States" "Step" "Forcing" "Balance" "Eta" "StepSize"
+
+  -- mapM_ putStrLn (ModLoop.showOuterLoop numberOfLoops ol)
+
+  sequence_ (ModLoop.printOuterLoop optParams numberOfLoops ol)
+
+{-
+  concurrentlyMany_ [
+    ModPlot.maxEtaPerState ModPlot.gpXTerm opt2,
+    ModPlot.expectedEtaPerState ModPlot.gpXTerm opt2,
+    ModPlot.expectedEtaDifferencePerState ModPlot.gpXTerm opt2 ]
+
+-}
 
   return ()
+
+
 
 main :: IO ()
 main = main1

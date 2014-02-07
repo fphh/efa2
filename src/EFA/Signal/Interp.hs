@@ -7,9 +7,9 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-), Product, (~*), (~/), Constant)
 
-import Data.Ord (compare,Ordering(GT,EQ,LT))
+import Data.Ord (compare, Ordering(GT, EQ, LT))
 
-data Pos_New = HitLeft | Inside | HitRight | Outside
+data Pos = HitLeft | Inside | HitRight | Outside | Undefined
 data Val a = Inter a | Extra a | Invalid deriving (Show, Eq)
 
 instance Functor Val where
@@ -107,6 +107,7 @@ dim1 :: (Eq a,Ord a, Sum a, Product a, Show a) =>
 dim1 caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
   LT -> error ("Error in interp1Core called by " ++ caller ++ ": x1 greater than x2")
   EQ -> case getPos (x1,x2) x of
+            Undefined -> Invalid
             Outside -> case exmethod of
               ExtrapLinear ->  Invalid
               ExtrapLinear2 ->  Invalid
@@ -119,6 +120,7 @@ dim1 caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
             _   -> Inter $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)               
 
   GT ->  case getPos (x1,x2) x of
+                Undefined -> Invalid
                 HitLeft -> Inter y1
                 HitRight -> Inter y2
                 Inside -> case inmethod of
@@ -135,7 +137,7 @@ dim1 caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
                                       ": Method ExtrapError - Extrapolation not allowed" ++
                                       "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
 
-getPos :: (Eq a, Ord a) => (a,a) -> a -> Pos_New
+getPos :: (Eq a, Ord a) => (a,a) -> a -> Pos
 getPos (x1,x2) x = case (x P.== x1, x P.> x1 , x P.< x2 , x P.== x2) of   
   (True,_,_,False) -> HitLeft
   (False,_,_,True) -> HitRight
@@ -143,7 +145,7 @@ getPos (x1,x2) x = case (x P.== x1, x P.> x1 , x P.< x2 , x P.== x2) of
   (_,True,True,_) -> Inside
   (_,False,True,_) -> Outside
   (_,True,False,_) -> Outside
-  (_,_,_,_) -> error "Error in getPos - Impossible branch" 
+  (_,_,_,_) -> Undefined -- error "Error in getPos - Impossible branch" 
   
 combine :: (a -> a -> a) -> Val a -> Val a -> Val a
 combine _ Invalid _ = Invalid

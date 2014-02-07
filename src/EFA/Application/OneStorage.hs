@@ -72,5 +72,6 @@ data OptimalEnvParams node f sweep vec a = OptimalEnvParams {
   forcingPerNode :: Map node (SocDrive a),
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
+  etaToOptimise :: Maybe (TopoIdx.Position node),
   sweepLength :: Int
   }

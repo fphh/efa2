@@ -5,6 +5,7 @@ module EFA.Graph.Topology (
    flowFromPlain,
    plainFromFlow,
    plainFromLabeled,
+   flowNumber,
    outPosFromDirEdge, inPosFromDirEdge,
    dirEdgeFromOutPos, dirEdgeFromInPos,
    isActive,
@@ -15,7 +16,9 @@ module EFA.Graph.Topology (
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Graph as Graph
+import qualified EFA.Graph.Topology.Node as Node
 import EFA.Graph (Graph)
+import qualified EFA.Report.Format as Format
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Foldable as Fold
@@ -72,3 +75,37 @@ type InOut node nodeLabel =
         (Map (Graph.EitherEdge node) (),
          nodeLabel,
          Map (Graph.EitherEdge node) ())
+
+
+
+data Orientation = Dir | UnDir deriving Show
+
+flowNumber ::
+  (Node.C node) =>
+  Graph node Graph.DirEdge nodeLabel1 a1 ->
+  Graph node Graph.EitherEdge nodeLabel a ->
+  Integer
+flowNumber topo flowTopo =
+  let tlabels = map unEitherEDir $ Map.keys $ Graph.edgeLabels topo
+
+      flabels = Map.fromList $ map unEDir $ Map.keys $ Graph.edgeLabels flowTopo
+
+      unEDir (Graph.EDirEdge (Graph.DirEdge f t)) = ((f, t), Dir)
+      unEDir (Graph.EUnDirEdge (Graph.UnDirEdge f t)) = ((f, t), UnDir)
+
+      unEitherEDir (Graph.DirEdge f t) = (f, t)
+
+      g k@(f, t) =
+        case (Map.lookup k flabels, Map.lookup (t, f) flabels) of
+             (Just Dir, _) -> 0
+             (Just UnDir, _) -> 1
+             (_, Just Dir) -> 2
+             (_, Just UnDir) -> 1
+             _ -> error $ "EFA.Graph.Topology.flowNumber: edge not found "
+                          ++ Format.showRaw (Node.display f :: Format.ASCII)
+                          ++ "->"
+                          ++ Format.showRaw (Node.display t :: Format.ASCII)
+
+      toTernary xs = sum $ zipWith (*) xs $ map (3^) [0 :: Int ..]
+
+  in toTernary $ map g tlabels

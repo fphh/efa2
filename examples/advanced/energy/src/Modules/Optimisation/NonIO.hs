@@ -20,10 +20,12 @@ import qualified EFA.Application.Simulation as AppSim
 import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Graph.Topology.Node as Node
+--import qualified EFA.Graph.Topology as Topology
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Flow.Topology.Index as TopoIdx
+--import qualified EFA.Flow.Topology as FlowTopo
 
 import qualified EFA.Flow.Sequence.Absolute as SeqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqQty
@@ -32,6 +34,7 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.Absolute as StateEqAbs
+--import qualified EFA.Flow.State as FlowState
 
 import qualified EFA.Flow.SequenceState.Index as Idx
 
@@ -68,9 +71,9 @@ quasiStationaryOptimisation ::
   Type.QuasiStationary node sweep UV.Vector a
 quasiStationaryOptimisation params perStateSweep =
   let a = Base.optimalObjectivePerState params perStateSweep
-      -- b = Base.expectedValuePerState perStateSweep
+      b = Base.expectedValuePerState perStateSweep
       c = Base.selectOptimalState a
-  in Type.QuasiStationary perStateSweep a {- b -} c
+  in Type.QuasiStationary perStateSweep a b c
 
 simulation ::
   forall node sweep vec list.
@@ -143,8 +146,19 @@ simulation params dofsMatrices reqsRec =
             (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
             mempty (One.unInitStorageSeq $ One.initStorageSeq params))
 
+{-
+      renumberStates g = g { FlowState.states = m }
+        where m = Map.fromList $ map f $ Map.toList $ StateQty.states g
+              num = fromIntegral
+                    . Topology.flowNumber (One.systemTopology params)
+                    . FlowTopo.topology
+              f (idx, section) =
+                (let st = Idx.State (num section) in trace (show idx ++ " -> " ++ show st) st, section)
+
+-}
+
       stateFlowGraphSim :: Type.EnvResult node (sweep vec Double)
-      stateFlowGraphSim =
+      stateFlowGraphSim = -- renumberStates $
         StateEqAbs.solveOpts
           Optimisation.options
           (toSweep params $ StateQty.graphFromCumResult $

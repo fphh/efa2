@@ -379,8 +379,33 @@ maxObjPerState terminal =
   maxPerState terminal "Maximal Objective Per State" ModUt.getMaxObj
 
 maxEtaPerState terminal =
-  maxPerState terminal "Maximal Objective Per State" ModUt.getMaxEta
+  maxPerState terminal "Maximal Eta Per State" ModUt.getMaxEta
 
+expectedEtaPerState ::
+  (Terminal.C term) =>
+  (FilePath -> IO term) ->
+  Type.Optimisation node sweep vec Double -> IO ()
+expectedEtaPerState terminal =
+  plotSweeps terminal id "Expected Value Per State"
+  . Map.map (to2DMatrix . Map.map m2n)
+  . Type.expectedEtaPerState
+  . Type.quasiStationary
+
+
+
+
+expectedEtaDifferencePerState ::
+  (Terminal.C term) =>
+  (FilePath -> IO term) ->
+  Type.Optimisation node sweep vec Double -> IO ()
+expectedEtaDifferencePerState terminal opt =
+  plotSweeps terminal id "Difference Between Maximal Eta and Expected Value Per State"
+  $ Map.map to2DMatrix mat
+  where ev = Map.map (Map.map m2n) $ Type.expectedEtaPerState $ Type.quasiStationary opt
+        eta = ModUt.getMaxEta
+              $ Type.optimalObjectivePerState
+              $ Type.quasiStationary opt
+        mat = Map.intersectionWith (Map.intersectionWith (Arith.~-)) eta ev
 
 maxPosPerState ::
   (Show (qty node), Ord node,
@@ -429,18 +454,6 @@ perStateSweep terminal params =
      . Map.map (Map.map Type.etaSys)
      . Type.perStateSweep
      . Type.quasiStationary
-
-{-
-expectedEtaPerState ::
-  (Terminal.C term) =>
-  (FilePath -> IO term) ->
-  Type.Optimisation node sweep vec Double -> IO ()
-expectedEtaPerState terminal =
-  plotSweeps terminal id "Expected Value Per State"
-  . Map.map (to2DMatrix . Map.map m2n)
-  . Type.expectedEtaPerState
-  . Type.quasiStationary
--}
 
 plotOptimal ::
   (Terminal.C term, Ord b) =>

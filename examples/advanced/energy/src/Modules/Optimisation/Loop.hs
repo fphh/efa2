@@ -18,12 +18,14 @@ import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Graph.Topology.Node as Node
 
-import EFA.Equation.Arithmetic (Sign(Zero, Positive, Negative), (~*), (~+), (~-), (~/))
+import EFA.Equation.Arithmetic (Sign(Zero, Positive, Negative), (~*), (~+), (~/))
 import qualified EFA.Equation.Arithmetic as Arith
 
 import EFA.Equation.Result (Result(Determined))
 
 import qualified EFA.Flow.State.SystemEta as StateEta
+import qualified EFA.Flow.State.Quantity as StateQty
+
 -- import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 --import qualified EFA.Flow.Part.Index as Idx
@@ -73,12 +75,13 @@ uniqueInnerLoopX (OuterLoop ol) = OuterLoop (map f ol)
 -- TODO:: setChargeDrive Kante rausziehen !!! -- Ein Storage Map erzeugen und Werte übergeben !!
 
 setChargeDrive ::
-  One.OptimalEnvParams Node list sweep vec a ->
-  a ->
-  One.OptimalEnvParams Node list sweep vec a
+  (Ord node) =>
+  One.OptimalEnvParams node list sweep vec a ->
+  (node, a) ->
+  One.OptimalEnvParams node list sweep vec a
 setChargeDrive params newForcing =
   params { One.forcingPerNode =
-             Map.fromList [(System.Water, One.ChargeDrive newForcing)] }
+             Map.fromList [fmap One.ChargeDrive newForcing] }
 {-
 
 setDrive ::
@@ -92,6 +95,7 @@ setDrive params storageForcing stateForcing =
            }
 -}
 
+{-
 betterFalsePosition ::
   (Ord a, Arith.Constant a) =>
   One.OptimalEnvParams Node list sweep vec a ->
@@ -113,6 +117,7 @@ betterFalsePosition params f accessf a1 a2 =
                 else if yz ~* y2 < Arith.zero
                         then go x2 z f2 fz
                         else go x1 z fnew fz
+-}
 
 eta ::
   (Node.C node, UV.Unbox a,
@@ -139,18 +144,19 @@ findZeroCrossing params f accessf xstart step =
        Zero     -> [FindZeroCrossing xstart step ystart]
        Positive -> go xstart ystart (Arith.negate step)
   where
-    ystart = f $ setChargeDrive params xstart
+    ystart = f $ setChargeDrive params (System.Water, xstart)
+    _3 = Arith.fromInteger 3
+    _2 = Arith.fromInteger 2
 
     go x0 y0 st =
       let x1 = x0 ~+ st
-          y1 = f $ setChargeDrive params x1
+          y1 = f $ setChargeDrive params (System.Water, x1)
 
- --         _3 = Arith.fromInteger 3
-          _2 = Arith.fromInteger 2
+
           newStepSize = (Arith.abs st) ~/(Arith.one ~+ (Arith.abs $ accessf y0) ~/ (Arith.abs $ accessf y1))
           
       -- VARIANT A: Simple
-      in {-if False then FindZeroCrossing x0 st y0 :
+      in if False then FindZeroCrossing x0 st y0 :
            case (Arith.sign $ accessf y0, Arith.sign $ accessf y1) of
                 (Negative, Negative) -> go x1 y1 ((Arith.abs st) ~* _2)
                 (Positive, Positive) -> go x1 y1 (Arith.negate $ (Arith.abs st) ~* _2)
@@ -159,7 +165,7 @@ findZeroCrossing params f accessf xstart step =
                 (Zero, _)  -> []
                 (_, Zero)  -> []
                 
-        else -- VARIANT B: Estimating zero crossing position -}
+        else -- VARIANT B: Estimating zero crossing position
            FindZeroCrossing x0 st y0 :
            case (Arith.sign $ accessf y0, Arith.sign $ accessf y1) of
                 -- Crossing not found increase step 
@@ -179,36 +185,53 @@ findZeroCrossing params f accessf xstart step =
 -- iterateBalance braucht einen neuen Namen
 --  findZeroCrossing könnte noch schlanker werden          
 
--- | Find a solution where all states occur in the simlation signals at minimum state forcing, measurement unit ist state duration 
+-- | Find a solution where all states occur in the simlation signals at minimum state forcing, measurement unit ist state duration
 
 {-
+timesPerState opt =
+  Map.map Topology.label $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
+
+
 data State = MoreForcingNeeded | CorrectForcing | NoForcingNeeded
 
-stateIteration :: 
-stateIteration params f accessf initialStateForcings thesholds = go initialStateForcings initialStatesDurations
+--stateIteration :: 
+stateIteration params f accessf initialStateForcings thr =
+  go initialStateForcings initialStatesDurations
   where initialStateDurations = f setStateDrive params initialStateForcings
-        go forcings stateflows steps = zipWith3 f forcings stateflows steps
+        -- go forcings stateflows steps = zipWith3 f forcings stateflows steps
         _3 = Arith.fromInteger 3
         _2 = Arith.fromInteger 2
-        where
-          f x0 y0 st thr = 
+        where -- y0 = (opt, bal)
+          go x0 y0 st = 
             let x1 = x0 ~+ st
                 y1 = f $ setStateDrive params x1
 
-                eval x y = case (x ==0 && (accessf y) > 0, (accessf y) == 0, (accessf y) < thr) of
-                  (True, _, _) -> NoForcingNeeded 
-                  (False,False,True) -> CorrectForcing
-                  (False,True,_) -> MoreForcingNeeded
-                  (False,False,False) -> LessForcingNeeded
+                eval x y =
+                  case ( x ==0 && (accessf y) > 0,
+                         (accessf y) == 0,
+                         (accessf y) < thr ) of
+                       (True, _, _) -> NoForcingNeeded 
+                       (False,False,True) -> CorrectForcing
+                       (False,True,_) -> MoreForcingNeeded
+                       (False,False,False) -> LessForcingNeeded
                   
             in FindZeroCrossing x0 y0 st:
                case (eval x0 y0, eval x1 y1)  of
-                       (_,NoForcingNeeded) -> []
-                       (_,CorrectForcing) -> []
-                       (MoreForcingNeeded, MoreForcingNeeded) -> go x1 y1 ((Arith.abs st) ~* _2)   
-                       (LessForcingNeeded, LessForcingNeeded) -> go x1 y1 (Arith.negate $ (Arith.abs st) ~* _2)
-                       (MoreForcingNeeded, LessForcingNeeded) -> go x1 y1 (Arith.negate $ (Arith.abs st) ~/ _3)
-                       (LessForcingNeeded, MoreForcingNeeded) -> go x1 y1 ((Arith.abs st) ~/ _3)
+                    (_, NoForcingNeeded) -> Arith.zero
+                    (_, CorrectForcing) -> Arith.zero
+
+                    (MoreForcingNeeded, MoreForcingNeeded) -> (Arith.abs st) ~* _2
+                      --go x1 y1 ((Arith.abs st) ~* _2)
+
+                    (LessForcingNeeded, LessForcingNeeded) -> (Arith.abs st) ~* _2
+                      --go x1 y1 (Arith.negate $ (Arith.abs st) ~* _2)
+
+                    (MoreForcingNeeded, LessForcingNeeded) -> (Arith.abs st) ~/ _3
+                      --go x1 y1 (Arith.negate $ (Arith.abs st) ~/ _3)
+
+                    (LessForcingNeeded, MoreForcingNeeded) -> (Arith.abs st) ~/ _3
+                      --go x1 y1 ((Arith.abs st) ~/ _3)
+
 -}
 
 iterateUntil ::
@@ -237,10 +260,27 @@ iterateBalance params reqsRec stateFlowGraphOpt =
               Sig.TC (Data bl) = Sig.neg $ Sig.sum $ Record.getSig rec net2wat
 
       fzc = findZeroCrossing params g snd (-1) 1
+
+      -- stateForcing = stateIteration params g ( . fst
+
       (numOfSteps, FindZeroCrossing force sSize (opt, bal)) =
         iterateUntil snd 100 (Arith.fromRational 0.1) fzc
 
   in OuterLoopItem numOfSteps sSize force bal opt (InnerLoop fzc)
+
+
+withChargeDrive ::
+  One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
+  Record.PowerRecord Node Vector Double ->
+  EnvResult Node (Sweep UV.Vector Double) ->
+  Double ->
+  Type.Optimisation Node Sweep UV.Vector Double
+withChargeDrive params reqsRec stateFlowGraphOpt force =
+  let
+      perStateSweep = Base.perStateSweep params stateFlowGraphOpt
+      opt = NonIO.optimiseAndSimulate
+              (setChargeDrive params (System.Water, force)) reqsRec perStateSweep
+  in opt
 
 
 outerLoop ::
@@ -276,12 +316,8 @@ showOuterLoopItem ::
    Node.C node, Sweep.SweepClass sweep UV.Vector a) =>
   Int -> OuterLoopItem node sweep UV.Vector a -> Maybe String
 showOuterLoopItem _ (OuterLoopItem nos ss f bal opt _il) =
-  --Just $ printf "%6d%24e%24e%24e\n" nos ss f bal
-  Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
-
-  -- Just $ printf "%24e%24e\n" f bal
-
-
+  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
+  in Just $ printf "%8d%8d%24e%24e%24e%24e\n" numOfSt nos f bal (eta opt) ss
 
 showFindZeroCrossing ::
   (UV.Unbox a, Arith.Product (sweep UV.Vector a),
@@ -290,10 +326,8 @@ showFindZeroCrossing ::
   FindZeroCrossing a (Type.Optimisation node sweep UV.Vector a, a) ->
   Maybe String
 showFindZeroCrossing _olcnt ilcnt (FindZeroCrossing f st (opt, bal)) =
-  Just $ printf "%6d%24e%24e%24e%24e" ilcnt f bal (eta opt) st
-  -- Just $ printf "%6d%24e%24e%24e%24e\n" nos ss f bal (eta opt)
-
-  -- Just $ printf "%24e%24e" f bal
+  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
+  in Just $ printf "%8d%8d%24e%24e%24e%24e" numOfSt ilcnt f bal (eta opt) st
 
 
 showOuterLoop ::
@@ -315,11 +349,19 @@ printOuterLoopItem ::
 printOuterLoopItem _params olcnt (OuterLoopItem _ _ _ _ opt _il) =
   Just $ do
     let -- dir = printf "outer-loop-%6.6d" olcnt
-        stoPos = TopoIdx.Position System.Water System.Network
-        gasPos = TopoIdx.Position System.Gas System.LocalNetwork
+        --stoPos = TopoIdx.Position System.Water System.Network
+        --gasPos = TopoIdx.Position System.Gas System.LocalNetwork
 
     putStrLn (printf "Loop %6.6d" olcnt)
 
+    concurrentlyMany_ [
+      --ModPlot.maxEtaPerState ModPlot.gpXTerm opt,
+      ModPlot.simulationGraphs ModPlot.dotXTerm opt ]
+      --ModPlot.expectedEtaPerState ModPlot.gpXTerm opt,
+      --ModPlot.maxObjPerState ModPlot.gpXTerm opt ]
+
+
+{-
     concurrentlyMany_ [
       ModPlot.simulationGraphs ModPlot.dotXTerm opt,
       ModPlot.simulationSignals ModPlot.gpXTerm opt,
@@ -327,6 +369,7 @@ printOuterLoopItem _params olcnt (OuterLoopItem _ _ _ _ opt _il) =
       ModPlot.maxPos gasPos ModPlot.gpXTerm opt,
       ModPlot.maxState ModPlot.gpXTerm opt,
       ModPlot.maxObj ModPlot.gpXTerm opt ]
+-}
 
 {-
     ModPlot.maxPos stoPos (ModPlot.gpPNG dir 0) opt

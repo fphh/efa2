@@ -34,7 +34,7 @@ class (Applicative f, Foldable f) => Carry f where
 
 
 mapGraphWithVar ::
-   (Carry carry, CarryPart carry ~ part, PartIdx.Format part) =>
+   (Carry carry, CarryPart carry ~ part, PartIdx.Format part, Show part) =>
    (Idx.PartNode part node -> Maybe (FlowTopo.Sums v)) ->
    (Var.Scalar part node -> a0 -> a1) ->
    node ->

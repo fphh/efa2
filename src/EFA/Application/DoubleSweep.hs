@@ -32,7 +32,6 @@ import qualified EFA.Graph.Topology.Node as Node
 import Control.Applicative (liftA2)
 
 import qualified Data.Map as Map; import Data.Map (Map)
-import qualified Data.List as List
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
@@ -112,11 +111,11 @@ findBestIndex cond esys force = res
 
         c1 = Sweep.fromSweep cond
         e1 = Sweep.fromSweep esys
-        f1 = Sweep.fromSweep force
+        objf1 = Sweep.fromSweep force
 
         start = (0, 0, Arith.zero, Arith.zero)
 
-        res = case UV.foldl' f start (UV.zipWith3 (,,) c1 e1 f1) of
+        res = case UV.foldl' f start (UV.zipWith3 (,,) c1 e1 objf1) of
                    (x, _, ch, d) -> Just (x, ch, d)
 
         f (bestIdx, cnt, fo, eo) (b, es2, f2) =
@@ -152,21 +151,18 @@ optimalSolutionState2 forcing (Type.PerStateSweep esys condVec powerMap env) =
 
 
 expectedValue ::
-  (Fractional a, Ord a, Monoid (sweep vec Bool), UV.Unbox a,
-   Node.C node, Arith.Product (sweep vec a), Arith.Constant a,
-   Sweep.SweepVector vec a, Sweep.SweepVector vec Bool,
-   Sweep.SweepMap sweep vec a Bool, Sweep.SweepClass sweep vec a,
-   Sweep.SweepClass sweep vec Bool) =>
-  StateFlow.Graph node (Result (sweep vec a)) (Result (sweep vec a)) -> Maybe a
-expectedValue env =
-  case (checkGreaterZero env, StateEta.etaSys env) of
-       (Determined condVec, Determined esys) ->
-         let condLst = Sweep.toList condVec
-             esysLst = Sweep.toList esys
-             (s, n) = List.foldl' f (0, 0) $ zip condLst esysLst
-             f (t, m) (c, e) = if c then (t+e, m+1) else (s, n)
-         in if n /= 0 then Just (s/n) else Nothing
-       _ -> Nothing
+  (Arith.Constant a, Arith.Sum a, UV.Unbox a,
+   Sweep.SweepClass sweep UV.Vector Bool,
+   Sweep.SweepClass sweep UV.Vector a) =>
+  Type.PerStateSweep node sweep UV.Vector a -> Maybe a
+expectedValue (Type.PerStateSweep (Determined esys) (Determined condVec) _ _) =
+  Just (s Arith.~/ n)
+  where c = Sweep.fromSweep condVec
+        e = Sweep.fromSweep esys
+        (s, n) = UV.foldl' f (Arith.zero, Arith.zero) (UV.zip c e)
+        f acc@(t, cnt) (x, y) =
+          if x then (t Arith.~+ y, cnt Arith.~+ Arith.one) else acc
+expectedValue _ = Nothing
 
 foldMap2 ::
   (Monoid c, Node.C node) =>

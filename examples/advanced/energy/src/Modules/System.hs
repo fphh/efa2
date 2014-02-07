@@ -5,16 +5,16 @@ import qualified EFA.Application.Utility as AppUt
 import EFA.Application.OneStorage (EtaAssignMap, Name(Name))
 import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
-import qualified EFA.Flow.State.Quantity as StateFlow
+import qualified EFA.Flow.State.Quantity as StateQty
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
-import qualified EFA.Flow.SequenceState.Index as Idx
+--import qualified EFA.Flow.SequenceState.Index as Idx
+
+--import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Utility.Filename as Filename
 
@@ -28,10 +28,6 @@ import qualified EFA.Report.Format as Format
 import qualified Data.Map as Map
 import Data.Map (Map)
 
-
-state0, state1, state2, state3, state4, state5, state6, state7 :: Idx.State
-state0 :~ state1 :~ state2 :~ state3 :~
-  state4 :~ state5 :~ state6 :~ state7 :~ _ = Stream.enumFrom $ Idx.state0
 
 data Node =
      Coal
@@ -84,6 +80,7 @@ edgeList = [(Coal, Network, "Coal\\lPlant", "Coal","ElCoal"),
                (Water, Network, "Water\\lPlant","Water","ElWater"),
 
                (Network, Rest,"100%","toRest","toRest"),
+
                (Network, LocalNetwork, "Trans-\\lformer", "HighVoltage", "LowVoltage"),
                (Gas, LocalNetwork,"Gas\\lPlant","Gas","ElGas"),
                (LocalNetwork, LocalRest, "100%", "toLocalRest", "toLocalRest")]
@@ -106,21 +103,21 @@ powerPositonNames = Map.fromList $ concatMap f edgeList
 
 flowStates :: [Topo.FlowTopology Node]
 flowStates =
+--  StateAnalysis.advanced topology
+
    map (identifyFlowState topology) $
       [ [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network],
         [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
         [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
         [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network] ]
-
-{-
-        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Network Water],
-        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Water Network] ]
--}
+--        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Network Water],
+--        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Water Network] ]
 
 
-stateFlowGraph :: StateFlow.Graph Node (Result a) (Result v)
+stateFlowGraph :: StateQty.Graph Node (Result a) (Result v)
 stateFlowGraph =
-   StateFlow.graphFromStates flowStates
+--   StateQty.graphFromStatesWithTopology topology flowStates
+   StateQty.graphFromStates flowStates
 
 
 etaAssign ::
