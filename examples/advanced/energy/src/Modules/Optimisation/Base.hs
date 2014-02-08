@@ -147,14 +147,16 @@ expectedValuePerState =
 
 
 selectOptimalState ::
-  (Ord a) =>
+  (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a) =>
+  Map Idx.State (One.StateForcing a) ->
   Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
-selectOptimalState =
+selectOptimalState stateForcing stateMap = if (Map.keys stateForcing) == (Map.keys stateMap) then
   List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxBy ModUt.fst4))
-  . map (\(st, m) -> Map.map (fmap (\(objVal, eta, env) -> (objVal, eta, st, env))) m)
-  . Map.toList
-
+  $ map (\(st, m) -> Map.map (fmap (\(objVal, eta, env) -> (objVal Arith.~+ (One.unpackStateForcing $ stateForcing Map.! st), eta, st, env))) m)
+  $ Map.toList stateMap
+  else error ("Error in findOptimalState - StateMap and StateForcings have different State Keys: " 
+              ++ show stateForcing  ++ "\n" ++ show stateMap)
 
 envToPowerRecord ::
   (Ord node) =>
@@ -217,7 +219,7 @@ filterPowerRecordList params (Sequ.List recs) =
 signCorrectedOptimalPowerMatrices ::
   (Ord v, Arith.Sum v, Arith.Constant v, Show node, Ord node) =>
   One.OptimalEnvParams node [] sweep vec v ->
-  Map [v] (Maybe (Double, Double, Idx.State, EnvResult node v)) ->
+  Map [v] (Maybe (a, a, Idx.State, EnvResult node v)) ->
   ReqsAndDofs.Dofs (TopoIdx.Position node) ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector Vector (Maybe (Result v)))
 signCorrectedOptimalPowerMatrices params m (ReqsAndDofs.Dofs ppos) =

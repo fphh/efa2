@@ -90,7 +90,6 @@ type Condition node a v = StateQty.Graph node a (Result v) -> Bool
 
 type Forcing node a v = StateQty.Graph node a (Result v) -> v
 
-
 objectiveFunction ::
    (Node.C node, Arith.Product v) =>
    Condition node a v ->

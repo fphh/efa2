@@ -4,7 +4,8 @@ module EFA.Application.OneStorage where
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 
-import qualified EFA.Flow.State.Quantity as StateFlow
+import qualified EFA.Flow.State.Quantity as StateQty
+import EFA.Flow.State(states)
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
@@ -24,6 +25,8 @@ data SocDrive a =
   deriving (Show, Eq)
 
 
+--type ForcingPerNode node a = Map node (SocDrive a)
+
 getSocDrive ::
   (Arith.Sum a, Arith.Constant a) => SocDrive a -> a
 getSocDrive soc =
@@ -34,11 +37,22 @@ getSocDrive soc =
 
 noforcing ::
   (Arith.Constant v) =>
-  SocDrive v -> StateFlow.Graph node b (Result v) -> v
+  SocDrive v -> StateQty.Graph node b (Result v) -> v
 noforcing _ _ = Arith.zero
 
 
-nocondition :: StateFlow.Graph node b (Result v) -> Bool
+data StateForcing a = StateForcing a deriving Show
+
+unpackStateForcing :: StateForcing a -> a 
+unpackStateForcing (StateForcing x) = x 
+
+zeroStateForcing :: Arith.Constant a => StateQty.Graph node b (Result v) -> Map Idx.State (StateForcing a)
+zeroStateForcing sg = Map.map (\_ -> StateForcing Arith.zero) $ states sg
+
+
+
+
+nocondition :: StateQty.Graph node b (Result v) -> Bool
 nocondition _ = True
 
 
@@ -75,3 +89,5 @@ data OptimalEnvParams node f sweep vec a = OptimalEnvParams {
   etaToOptimise :: Maybe (TopoIdx.Position node),
   sweepLength :: Int
   }
+
+

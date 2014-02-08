@@ -14,11 +14,11 @@ import qualified EFA.Application.Type as Type
 
 import qualified EFA.Signal.Signal as Sig
 
-import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence.SystemEta as SeqEta
+--import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+--import qualified EFA.Flow.Sequence.SystemEta as SeqEta
 
 import qualified EFA.Flow.State.Quantity as StateFlow
-import qualified EFA.Flow.State.SystemEta as StateEta
+--import qualified EFA.Flow.State.SystemEta as StateEta
 
 import qualified EFA.Flow.Topology.Variable as TopoVar
 
@@ -32,13 +32,13 @@ import qualified EFA.Graph.Topology.Node as Node
 import Control.Applicative (liftA2)
 
 import qualified Data.Map as Map; import Data.Map (Map)
-import qualified Data.NonEmpty as NonEmpty
+--import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
-import Data.Maybe (mapMaybe)
+--import Data.Maybe (mapMaybe)
 import Data.Monoid (Monoid)
-import Data.Ord (comparing)
+--import Data.Ord (comparing)
 import qualified Control.Monad.Trans.Writer as MW
 
 import Control.Applicative (liftA3)
@@ -66,7 +66,7 @@ combineOptimalMaps state charge discharge =
      (\s (c, d) -> case s of Sig.ArgMax0 -> c; Sig.ArgMax1 -> d) state $
   Sig.zip charge discharge
 
-
+{-
 optimalSolution2D ::
   (Node.C node, Eq a, Ord v, Arith.Constant v) =>
   SeqEta.Condition node a v ->
@@ -76,8 +76,8 @@ optimalSolution2D ::
 optimalSolution2D cond forcing =
   optimalSolutionGeneric (SeqEta.objectiveFunction cond forcing) .
   concat . Sig.toList
-
-
+-}
+{-
 optimalSolutionState ::
   (Node.C node, Ord v, Arith.Constant v) =>
   StateEta.Condition node a v ->
@@ -94,6 +94,18 @@ optimalSolutionGeneric ::
 optimalSolutionGeneric f =
   fmap (NonEmpty.maximumBy (comparing fst)) . NonEmpty.fetch .
   mapMaybe (\x -> fmap (flip (,) x) $ f x)
+-}
+{-
+-- NEW PG
+findOptimalState ::  Map State.Idx StateForcing -> 
+                     Map State.Idx (Maybe (a, a, StateFlow.Graph node (Result a) (Result a))) 
+findOptimalState stateForcing stateMap = if Map.keys stateForcing == map.keys stateMap 
+                                         then optimalSolutionGeneric stateObjectives 
+                                         else error ("Error in findOptimalState - StateMap and StateForcings  
+                                                     have different State Keys: " ++ show stateForcing  ++ "    " 
+                                              ++ show stateMap)
+  where stateObjectives = zipWith (~+) (Map.elem stateForcing) (fst & Map.elem stateMap)
+-}
 
 findBestIndex ::
   (Ord a, Arith.Constant a, UV.Unbox a,
