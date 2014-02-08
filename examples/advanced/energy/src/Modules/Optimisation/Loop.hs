@@ -45,7 +45,7 @@ import qualified Data.Vector.Unboxed as UV
 import Data.Vector (Vector)
 import Data.Maybe (catMaybes)
 
-import Text.Printf (printf, PrintfArg)
+import Text.Printf (printf, PrintfArg,IsChar)
 
 data BalanceLoopItem a z =
   BalanceLoopItem { xfzc :: a, 
@@ -54,14 +54,15 @@ data BalanceLoopItem a z =
 
 newtype BalanceLoop a z =
   BalanceLoop { unBalanceLoop :: [BalanceLoopItem a z] }
-{-
-data StateLoopItem a z = { xfzc :: a, 
-                    stepfzc :: a, 
-                    yfzc :: z}
 
-newtype StateLoopItem a z =
+data StateLoopItem a z = StateLoopItem 
+                         { stF  :: [One.StateForcing a],  
+                           stFst :: [One.StateForcing a], 
+                           stFY :: z }
+
+newtype StateLoop a z =
   StateLoop { unStateLoop :: [StateLoopItem a z] }
--}
+
 data EtaLoopItem node sweep vec a = EtaLoopItem {
   numberOfSteps :: Int,
   stepSize :: a,
@@ -164,7 +165,7 @@ data StateForceDemand = MoreForcingNeeded | CorrectForcing |
 stateIteration :: (Arith.Constant f,Eq f, Num f,Ord f,Ord t, Num t, Eq t) => 
                   (One.StateForcings f -> res) -> (res -> Idx.State -> t) -> 
                   One.StateForcings f -> t -> One.StateForcing f -> 
-                  [([One.StateForcing f], [One.StateForcing f], res)] 
+                  [StateLoopItem f res]
 stateIteration fsys accessf initialStateForcings thr minStep = go (Map.elems initialStateForcings) initialResult initialSteps
   where initialSteps = map (\_ -> minStep) $ Map.elems initialStateForcings
         stateIndices =  Map.keys initialStateForcings
@@ -172,7 +173,7 @@ stateIteration fsys accessf initialStateForcings thr minStep = go (Map.elems ini
         _3 = Arith.fromInteger 3        
         _2 = Arith.fromInteger 2
                 
-        go xs0 y0 ss0 = (xs0,ss0,y0):go xs1 y1 ss1
+        go xs0 y0 ss0 = StateLoopItem xs0 ss0 y0:go xs1 y1 ss1
           where
            xs1 = zipWith 
                  (\(One.StateForcing x) (One.StateForcing y)-> 
@@ -205,30 +206,31 @@ iterateBalanceUntil ::
   [BalanceLoopItem t z] ->
   (Int, BalanceLoopItem t z)
 iterateBalanceUntil accessf maxStepCnt eps ws =
-  vhead "interateUntil" $ dropWhile p (zip [0..] ws)
+  vhead "interateBalanceUntil" $ dropWhile p (zip [0..] ws)
   where p (n, fzc) = n < maxStepCnt-1 && eps < Arith.abs (accessf $ yfzc fzc)
 
-{-
-iterateState :: 
-iterateState params reqsRec stateFlowGraphOpt initStateForcing = 
-  let perStateSweep = Base.perStateSweep params stateFlowGraphOpt
-      net2wat = TopoIdx.ppos System.Water System.Network
-      initStateForcing = One.zeroStateForcing stateFlowGraphOpt
--}
+iterateStateUntil ::
+  (Arith.Sum t, Ord t, Arith.Constant t) =>
+  Int ->
+  [StateLoopItem t z] ->
+  (Int, StateLoopItem t z)
+iterateStateUntil maxStepCnt ws =
+  vhead "interateStateUntil" $ dropWhile p (zip [0..] ws)
+  where p (n, fzc) = n < maxStepCnt-1
 
-iterate ::
+etaLoop ::
   One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
   EnvResult Node (Sweep UV.Vector Double) ->
   EtaLoopItem Node Sweep UV.Vector Double
-iterate params reqsRec stateFlowGraphOpt =
+etaLoop params reqsRec stateFlowGraphOpt =
   let
       perStateSweep = Base.perStateSweep params stateFlowGraphOpt
       -- Kante rausziehen
-      net2wat = TopoIdx.ppos System.Water System.Network
+      net2wat = One.storage params
       
       initStateForcing = One.zeroStateForcing stateFlowGraphOpt
-      initBattForcing = -1
+      initBattForcing = One.initialBattForcing params
       
       g pars = (opt2, bl)
         where opt2 = NonIO.optimiseAndSimulate pars initStateForcing reqsRec perStateSweep
@@ -256,16 +258,20 @@ iterate params reqsRec stateFlowGraphOpt =
 
   in EtaLoopItem numOfSteps sSize force bal opt (BalanceLoop fzc)
 
-outerLoop ::
+etaIteration ::
   (EnvResult node (sweep vec a) -> EtaLoopItem node sweep vec a) ->
   EnvResult node (sweep vec a) ->
   EtaLoop node sweep vec a
-outerLoop ib = 
+etaIteration ib = 
   let go inEnv =
         let oli = ib inEnv
             outEnv = Type.stateFlowGraphSweep $ Type.simulation $ optimisation oli
         in oli : go outEnv
   in EtaLoop . go
+
+
+-------------------------------- OutPut Below -----------------------------------
+
 
 iterateLoops ::
   Int ->
@@ -279,8 +285,8 @@ iterateLoops ::
 iterateLoops cnt olif ilf (EtaLoop ol) =
   concat $ zipWith g [0..] ols
   where ols = take cnt ol
-        f (EtaLoopItem nos _ _ _ _ (BalanceLoop il)) = take nos il
         g n o = zipWith (ilf n) [0..] (f o) ++ [olif n o]
+        f (EtaLoopItem nos _ _ _ _ (BalanceLoop il)) = take nos il
 
 
 showEtaLoopItem ::
@@ -302,7 +308,18 @@ showBalanceLoopItem _olcnt ilcnt (BalanceLoopItem f st (opt, bal)) =
   let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
   in Just $ printf "%8d%8d%24e%24e%24e%24e" numOfSt ilcnt f bal (eta opt) st
 
+showStateLoopItem ::
+  (UV.Unbox a, Arith.Product a, 
+   Node.C node, Sweep.SweepClass sweep UV.Vector a, PrintfArg a, 
+   IsChar (One.StateForcing a)) =>
+  Int -> Int -> Int ->
+  StateLoopItem a (Type.Optimisation node sweep UV.Vector a, a) ->
+  Maybe String
+showStateLoopItem _olcnt ilcnt slcnt (StateLoopItem f st (opt, bal)) =
+  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
+  in Just $ printf "%8d%8d%24e%24e%24e%24e" numOfSt slcnt f bal (eta opt) st
 
+{-
 showEtaLoop ::
   (PrintfArg a, UV.Unbox a, Arith.Product a, 
    Node.C node, Sweep.SweepClass sweep UV.Vector a, Show node) =>
@@ -311,7 +328,7 @@ showEtaLoop ::
 
 showEtaLoop cnt ol =
   catMaybes $ iterateLoops cnt showEtaLoopItem showBalanceLoopItem ol
-
+-}
 
 
 printEtaLoopItem ::
@@ -351,6 +368,16 @@ printEtaLoopItem _params olcnt (EtaLoopItem _ _ _ _ opt _il) =
     ModPlot.maxEta (ModPlot.gpPNG dir 0) opt
 -}
 
+printStateLoopItem ::
+  (Arith.Product (sweep UV.Vector Double),
+   Sweep.SweepClass sweep UV.Vector Double) =>
+  One.OptimalEnvParams Node f sweep vec Double ->
+  Int -> Int ->
+  StateLoopItem Double (Type.Optimisation Node sweep UV.Vector Double, Double) ->
+  Maybe (IO ())
+printStateLoopItem _params _olcnt _ilcnt (StateLoopItem _ _ (_opt, _)) =
+  Nothing
+
 printBalanceLoopItem ::
   (Arith.Product (sweep UV.Vector Double),
    Sweep.SweepClass sweep UV.Vector Double) =>
@@ -382,6 +409,7 @@ printBalanceLoopItem _params _olcnt _ilcnt (BalanceLoopItem _ _ (_opt, _)) =
     ModPlot.maxState (ModPlot.gpPNG dir ilcnt) opt
     -- ModPlot.maxStateContour (ModPlot.gpPNG dir ilcnt) opt
 -}
+
 
 printEtaLoop ::
   (Arith.Product (sweep UV.Vector Double),

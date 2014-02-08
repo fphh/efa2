@@ -88,7 +88,10 @@ data OptimalEnvParams node f sweep vec a = OptimalEnvParams {
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   etaToOptimise :: Maybe (TopoIdx.Position node),
-  sweepLength :: Int
+  sweepLength :: Int,
+  minStateForcing :: StateForcing a, 
+  initialBattForcing :: a,
+  storage:: TopoIdx.Position node
   }
 
 

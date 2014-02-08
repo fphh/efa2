@@ -81,6 +81,7 @@ import qualified Data.Empty as Empty
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import Text.Printf (printf)
 
@@ -177,6 +178,9 @@ main1 = do
           -- (Just (TopoIdx.Position System.Coal System.Network))
           Nothing
           ModSet.sweepLength
+          (One.StateForcing 0.1) 
+          1.0 
+          (TopoIdx.ppos System.Water System.Network)
 
   --print (map (Topology.flowNumber $ One.systemTopology optParams) System.flowStates)
 
@@ -193,8 +197,8 @@ main1 = do
                $ AppOpt.initialEnv optParams System.stateFlowGraph
 
       ol = --ModLoop.uniqueInnerLoopX
-           ModLoop.outerLoop
-             (ModLoop.iterate optParams reqsRec)
+           ModLoop.etaIteration
+             (ModLoop.etaLoop optParams reqsRec)
              ienv
 
 {-
