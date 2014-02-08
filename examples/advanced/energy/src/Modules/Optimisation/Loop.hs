@@ -47,38 +47,41 @@ import Data.Maybe (catMaybes)
 
 import Text.Printf (printf, PrintfArg)
 
+data BalanceLoopItem a z =
+  BalanceLoopItem { xfzc :: a, 
+                    stepfzc :: a, 
+                    yfzc :: z}
 
-data FindZeroCrossing a z =
-  FindZeroCrossing { xfzc :: a, stepfzc :: a, yfzc :: z }
+newtype BalanceLoop a z =
+  BalanceLoop { unBalanceLoop :: [BalanceLoopItem a z] }
+{-
+data StateLoopItem a z = { xfzc :: a, 
+                    stepfzc :: a, 
+                    yfzc :: z}
 
-newtype InnerLoop a z =
-  InnerLoop { unInnerLoop :: [FindZeroCrossing a z] }
-
-newtype StateLoop a z =
-  StateLoop { unStateLoop :: [StateLoop a z] }
-
-data OuterLoopItem node sweep vec a = OuterLoopItem {
+newtype StateLoopItem a z =
+  StateLoop { unStateLoop :: [StateLoopItem a z] }
+-}
+data EtaLoopItem node sweep vec a = EtaLoopItem {
   numberOfSteps :: Int,
   stepSize :: a,
   forcing :: a,
   balance :: a,
   optimisation :: Type.Optimisation node sweep vec a,
-  innerLoop :: InnerLoop a (Type.Optimisation node sweep vec a, a) }
+  innerLoop :: BalanceLoop a (Type.Optimisation node sweep vec a, a) }
 
-newtype OuterLoop node sweep vec a =
-  OuterLoop { unOuterLoop :: [OuterLoopItem node sweep vec a] }
+newtype EtaLoop node sweep vec a =
+  EtaLoop { unEtaLoop :: [EtaLoopItem node sweep vec a] }
 
-uniqueInnerLoopX ::
-  Eq a => OuterLoop node sweep vec a -> OuterLoop node sweep vec a
-uniqueInnerLoopX (OuterLoop ol) = OuterLoop (map f ol)
-  where f oli = oli { innerLoop = InnerLoop $ map (vlast "uniqueInnerLoopX")
+uniqueBalanceLoopX ::
+  Eq a => EtaLoop node sweep vec a -> EtaLoop node sweep vec a
+uniqueBalanceLoopX (EtaLoop ol) = EtaLoop (map f ol)
+  where f oli = oli { innerLoop = BalanceLoop $ map (vlast "uniqueBalanceLoopX")
                                             $ List.groupBy g fzcs }
-          where InnerLoop fzcs = innerLoop oli
+          where BalanceLoop fzcs = innerLoop oli
         g a b = snd (yfzc a) == snd (yfzc b)
 
-
 -- TODO:: setChargeDrive Kante rausziehen !!! -- Ein Storage Map erzeugen und Werte übergeben !!
-
 setChargeDrive ::
   (Ord node) =>
   One.OptimalEnvParams node list sweep vec a ->
@@ -88,18 +91,17 @@ setChargeDrive params newForcing =
   params { One.forcingPerNode =
              Map.fromList [fmap One.ChargeDrive newForcing] }
 
-
 eta ::
   (Node.C node, UV.Unbox a,
-   Arith.Product a) => --(sweep UV.Vector a),
+   Arith.Product a) => 
  --  Sweep.SweepClass sweep UV.Vector a) =>
   Type.Optimisation node sweep UV.Vector a -> a
 eta opt =
   case StateEta.etaSys (Type.stateFlowGraph $ Type.simulation opt) of
-       Determined (Data e) -> e --UV.head (Sweep.fromSweep e)
+       Determined (Data e) -> e 
        _ -> error "Main.iterateBalanceIO"
 
-findZeroCrossing ::
+balanceIteration ::
   (Arith.Sum t, Ord t, Arith.Product t,
    Arith.Constant t) =>
   One.OptimalEnvParams Node list sweep vec t ->
@@ -107,11 +109,11 @@ findZeroCrossing ::
   (z -> t) ->
   t ->
   t ->
-  [FindZeroCrossing t z]
-findZeroCrossing params f accessf xstart step =
+  [BalanceLoopItem t z]
+balanceIteration params f accessf xstart step =
   case Arith.sign $ accessf ystart of
        Negative -> go xstart ystart step
-       Zero     -> [FindZeroCrossing xstart step ystart]
+       Zero     -> [BalanceLoopItem xstart step ystart]
        Positive -> go xstart ystart (Arith.negate step)
   where
     ystart = f $ setChargeDrive params (System.Water, xstart)
@@ -126,7 +128,7 @@ findZeroCrossing params f accessf xstart step =
           newStepSize = (Arith.abs st) ~/(Arith.one ~+ (Arith.abs $ accessf y0) ~/ (Arith.abs $ accessf y1))
           
       -- VARIANT A: Simple
-      in if False then FindZeroCrossing x0 st y0 :
+      in if False then BalanceLoopItem x0 st y0 :
            case (Arith.sign $ accessf y0, Arith.sign $ accessf y1) of
                 (Negative, Negative) -> go x1 y1 ((Arith.abs st) ~* _2)
                 (Positive, Positive) -> go x1 y1 (Arith.negate $ (Arith.abs st) ~* _2)
@@ -136,7 +138,7 @@ findZeroCrossing params f accessf xstart step =
                 (_, Zero)  -> []
                 
         else -- VARIANT B: Estimating zero crossing position
-           FindZeroCrossing x0 st y0 :
+           BalanceLoopItem x0 st y0 :
            case (Arith.sign $ accessf y0, Arith.sign $ accessf y1) of
                 -- Crossing not found increase step 
                 (Negative, Negative) -> go x1 y1 ((Arith.abs st) ~* _2)
@@ -147,17 +149,7 @@ findZeroCrossing params f accessf xstart step =
                 (Zero, _)  -> []
                 (_, Zero)  -> []
                 
-
--- Fragen / Anmerkungen zum Code
-
--- Abbruchkriterium in Bezug auf den Wert gehört in findZeroCrossing             
--- findZeroCrossing sollte BalanceIteration heißen
--- iterateBalance braucht einen neuen Namen
---  findZeroCrossing könnte noch schlanker werden          
-
 -- | Find a solution where all states occur in the simlation signals at minimum state forcing, measurement unit ist state duration
-
-
 getStateTime :: Idx.State -> 
                 FlowState.Graph node edge sectionLabel nodeLabel storageLabel edgeLabel carryLabel-> 
                 sectionLabel
@@ -166,10 +158,11 @@ getStateTime stateIdx sfg = FlowTopo.label $ f state
         f (Just st) = st 
         f (Nothing) = error ("Error in getStateTime: State " ++ show stateIdx ++ "doesn't exist in StateflowGrapgh")
 
+data StateForceDemand = MoreForcingNeeded | CorrectForcing | 
+                        NoForcingNeeded | LessForcingNeeded
 
-data StateForceDemand = MoreForcingNeeded | CorrectForcing | NoForcingNeeded | LessForcingNeeded
-
-stateIteration :: (Arith.Constant f,Eq f, Num f,Ord f,Ord t, Num t, Eq t) => (One.StateForcings f -> res) -> (res -> Idx.State -> t) -> 
+stateIteration :: (Arith.Constant f,Eq f, Num f,Ord f,Ord t, Num t, Eq t) => 
+                  (One.StateForcings f -> res) -> (res -> Idx.State -> t) -> 
                   One.StateForcings f -> t -> One.StateForcing f -> 
                   [([One.StateForcing f], [One.StateForcing f], res)] 
 stateIteration fsys accessf initialStateForcings thr minStep = go (Map.elems initialStateForcings) initialResult initialSteps
@@ -205,33 +198,44 @@ stateIteration fsys accessf initialStateForcings thr minStep = go (Map.elems ini
           (False,False,False) -> LessForcingNeeded
 
    
-iterateUntil ::
+iterateBalanceUntil ::
   (Arith.Sum t, Ord t, Arith.Constant t) =>
   (z -> t) ->
   Int -> t ->
-  [FindZeroCrossing t z] ->
-  (Int, FindZeroCrossing t z)
-iterateUntil accessf maxStepCnt eps ws =
+  [BalanceLoopItem t z] ->
+  (Int, BalanceLoopItem t z)
+iterateBalanceUntil accessf maxStepCnt eps ws =
   vhead "interateUntil" $ dropWhile p (zip [0..] ws)
   where p (n, fzc) = n < maxStepCnt-1 && eps < Arith.abs (accessf $ yfzc fzc)
 
-iterateBalance ::
+{-
+iterateState :: 
+iterateState params reqsRec stateFlowGraphOpt initStateForcing = 
+  let perStateSweep = Base.perStateSweep params stateFlowGraphOpt
+      net2wat = TopoIdx.ppos System.Water System.Network
+      initStateForcing = One.zeroStateForcing stateFlowGraphOpt
+-}
+
+iterate ::
   One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
   EnvResult Node (Sweep UV.Vector Double) ->
-  OuterLoopItem Node Sweep UV.Vector Double
-iterateBalance params reqsRec stateFlowGraphOpt =
+  EtaLoopItem Node Sweep UV.Vector Double
+iterate params reqsRec stateFlowGraphOpt =
   let
       perStateSweep = Base.perStateSweep params stateFlowGraphOpt
+      -- Kante rausziehen
       net2wat = TopoIdx.ppos System.Water System.Network
+      
       initStateForcing = One.zeroStateForcing stateFlowGraphOpt
+      initBattForcing = -1
       
       g pars = (opt2, bl)
         where opt2 = NonIO.optimiseAndSimulate pars initStateForcing reqsRec perStateSweep
               rec = Record.partIntegrate (Type.signals $ Type.simulation opt2)
               Sig.TC (Data bl) = Sig.neg $ Sig.sum $ Record.getSig rec net2wat
 
-      fzc = findZeroCrossing params g snd (-1) 1
+      fzc = balanceIteration params g snd initBattForcing 1
       
      -- Achtung !!! -> params sind alt !!! 
       h stateForcing  = (opt2, bl)
@@ -246,76 +250,76 @@ iterateBalance params reqsRec stateFlowGraphOpt =
       fzz = stateIteration h access
             initStateForcing (1::Double) (One.StateForcing 0.001)
 
-      (numOfSteps, FindZeroCrossing force sSize (opt, bal)) =
-        iterateUntil snd 100 (Arith.fromRational 0.1) fzc
+      (numOfSteps, BalanceLoopItem force sSize (opt, bal)) =
+        iterateBalanceUntil snd 100 (Arith.fromRational 0.1) fzc
         
 
-  in OuterLoopItem numOfSteps sSize force bal opt (InnerLoop fzc)
+  in EtaLoopItem numOfSteps sSize force bal opt (BalanceLoop fzc)
 
 outerLoop ::
-  (EnvResult node (sweep vec a) -> OuterLoopItem node sweep vec a) ->
+  (EnvResult node (sweep vec a) -> EtaLoopItem node sweep vec a) ->
   EnvResult node (sweep vec a) ->
-  OuterLoop node sweep vec a
+  EtaLoop node sweep vec a
 outerLoop ib = 
   let go inEnv =
         let oli = ib inEnv
             outEnv = Type.stateFlowGraphSweep $ Type.simulation $ optimisation oli
         in oli : go outEnv
-  in OuterLoop . go
+  in EtaLoop . go
 
 iterateLoops ::
   Int ->
-  (Int -> OuterLoopItem node sweep vec a -> Maybe b) ->
+  (Int -> EtaLoopItem node sweep vec a -> Maybe b) ->
   (Int ->
     Int -> 
-    FindZeroCrossing a (Type.Optimisation node sweep vec a, a) ->
+    BalanceLoopItem a (Type.Optimisation node sweep vec a, a) ->
     Maybe b) ->
-  OuterLoop node sweep vec a ->
+  EtaLoop node sweep vec a ->
   [Maybe b]
-iterateLoops cnt olif ilf (OuterLoop ol) =
+iterateLoops cnt olif ilf (EtaLoop ol) =
   concat $ zipWith g [0..] ols
   where ols = take cnt ol
-        f (OuterLoopItem nos _ _ _ _ (InnerLoop il)) = take nos il
+        f (EtaLoopItem nos _ _ _ _ (BalanceLoop il)) = take nos il
         g n o = zipWith (ilf n) [0..] (f o) ++ [olif n o]
 
 
-showOuterLoopItem ::
-  (UV.Unbox a, Arith.Product a, -- Arith.Product (sweep UV.Vector a),
+showEtaLoopItem ::
+  (UV.Unbox a, Arith.Product a,
    PrintfArg a,
    Node.C node, Sweep.SweepClass sweep UV.Vector a) =>
-  Int -> OuterLoopItem node sweep UV.Vector a -> Maybe String
-showOuterLoopItem _ (OuterLoopItem nos ss f bal opt _il) =
+  Int -> EtaLoopItem node sweep UV.Vector a -> Maybe String
+showEtaLoopItem _ (EtaLoopItem nos ss f bal opt _il) =
   let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
   in Just $ printf "%8d%8d%24e%24e%24e%24e\n" numOfSt nos f bal (eta opt) ss
 
-showFindZeroCrossing ::
-  (UV.Unbox a, Arith.Product a, --Arith.Product (sweep UV.Vector a),
+showBalanceLoopItem ::
+  (UV.Unbox a, Arith.Product a, 
    Node.C node, Sweep.SweepClass sweep UV.Vector a, PrintfArg a) =>
   Int -> Int ->
-  FindZeroCrossing a (Type.Optimisation node sweep UV.Vector a, a) ->
+  BalanceLoopItem a (Type.Optimisation node sweep UV.Vector a, a) ->
   Maybe String
-showFindZeroCrossing _olcnt ilcnt (FindZeroCrossing f st (opt, bal)) =
+showBalanceLoopItem _olcnt ilcnt (BalanceLoopItem f st (opt, bal)) =
   let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
   in Just $ printf "%8d%8d%24e%24e%24e%24e" numOfSt ilcnt f bal (eta opt) st
 
 
-showOuterLoop ::
-  (PrintfArg a, UV.Unbox a, Arith.Product a, -- Arith.Product (sweep UV.Vector a),
+showEtaLoop ::
+  (PrintfArg a, UV.Unbox a, Arith.Product a, 
    Node.C node, Sweep.SweepClass sweep UV.Vector a, Show node) =>
    Int ->
-   OuterLoop node sweep UV.Vector a -> [String]
+   EtaLoop node sweep UV.Vector a -> [String]
 
-showOuterLoop cnt ol =
-  catMaybes $ iterateLoops cnt showOuterLoopItem showFindZeroCrossing ol
+showEtaLoop cnt ol =
+  catMaybes $ iterateLoops cnt showEtaLoopItem showBalanceLoopItem ol
 
 
 
-printOuterLoopItem ::
+printEtaLoopItem ::
   (Arith.Product (sweep UV.Vector Double),
    Sweep.SweepClass sweep UV.Vector Double) =>
   One.OptimalEnvParams Node f sweep UV.Vector Double ->
-  Int -> OuterLoopItem Node sweep UV.Vector Double -> Maybe (IO ())
-printOuterLoopItem _params olcnt (OuterLoopItem _ _ _ _ opt _il) =
+  Int -> EtaLoopItem Node sweep UV.Vector Double -> Maybe (IO ())
+printEtaLoopItem _params olcnt (EtaLoopItem _ _ _ _ opt _il) =
   Just $ do
     let -- dir = printf "outer-loop-%6.6d" olcnt
         --stoPos = TopoIdx.Position System.Water System.Network
@@ -347,14 +351,14 @@ printOuterLoopItem _params olcnt (OuterLoopItem _ _ _ _ opt _il) =
     ModPlot.maxEta (ModPlot.gpPNG dir 0) opt
 -}
 
-printFindZeroCrossing ::
+printBalanceLoopItem ::
   (Arith.Product (sweep UV.Vector Double),
    Sweep.SweepClass sweep UV.Vector Double) =>
   One.OptimalEnvParams Node f sweep vec Double ->
   Int -> Int ->
-  FindZeroCrossing Double (Type.Optimisation Node sweep UV.Vector Double, Double) ->
+  BalanceLoopItem Double (Type.Optimisation Node sweep UV.Vector Double, Double) ->
   Maybe (IO ())
-printFindZeroCrossing _params _olcnt _ilcnt (FindZeroCrossing _ _ (_opt, _)) =
+printBalanceLoopItem _params _olcnt _ilcnt (BalanceLoopItem _ _ (_opt, _)) =
   Nothing
 {-
   Just $ do
@@ -379,15 +383,14 @@ printFindZeroCrossing _params _olcnt _ilcnt (FindZeroCrossing _ _ (_opt, _)) =
     -- ModPlot.maxStateContour (ModPlot.gpPNG dir ilcnt) opt
 -}
 
-
-printOuterLoop ::
+printEtaLoop ::
   (Arith.Product (sweep UV.Vector Double),
    Sweep.SweepClass sweep UV.Vector Double) =>
   One.OptimalEnvParams Node f sweep UV.Vector Double ->
   Int ->
-  OuterLoop Node sweep UV.Vector Double -> [IO ()]
-printOuterLoop params cnt ol =
-  catMaybes $ iterateLoops cnt (printOuterLoopItem params) (printFindZeroCrossing params) ol
+  EtaLoop Node sweep UV.Vector Double -> [IO ()]
+printEtaLoop params cnt ol =
+  catMaybes $ iterateLoops cnt (printEtaLoopItem params) (printBalanceLoopItem params) ol
 
 
 

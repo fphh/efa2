@@ -194,7 +194,7 @@ main1 = do
 
       ol = --ModLoop.uniqueInnerLoopX
            ModLoop.outerLoop
-             (ModLoop.iterateBalance optParams reqsRec)
+             (ModLoop.iterate optParams reqsRec)
              ienv
 
 {-
@@ -218,7 +218,7 @@ main1 = do
 
   -- mapM_ putStrLn (ModLoop.showOuterLoop numberOfLoops ol)
 
-  sequence_ (ModLoop.printOuterLoop optParams numberOfLoops ol)
+  sequence_ (ModLoop.printEtaLoop optParams numberOfLoops ol)
 
 {-
   concurrentlyMany_ [
