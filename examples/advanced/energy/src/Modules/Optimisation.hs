@@ -58,6 +58,14 @@ import Data.Monoid ((<>), mempty)
 import Control.Monad (join)
 
 
+optionsScalar ::(Arith.Sum a, Verify.LocalVar mode (Data Nil a), 
+                 Arith.Constant a) =>
+  StateAbs.Options mode rec (Data Nil a) (Data Nil a)
+optionsScalar =
+  StateAbs.optionsBase
+    SeqStateEqSys.equalStInOutSums
+    (StorageEqSys.customOne (Data Arith.one))
+
 options ::
   (UV.Unbox a, Arith.Constant a,
    Sweep.SweepVector vec a,
@@ -69,7 +77,6 @@ options =
   StateAbs.optionsBase
     SeqStateEqSys.equalStInOutSums
     (StorageEqSys.customOne (Sweep.fromRational ModSet.sweepLength Arith.one))
-
 
 
 toPowerMap ::

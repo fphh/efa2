@@ -148,7 +148,7 @@ expectedValuePerState =
 
 selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a) =>
-  Map Idx.State (One.StateForcing a) ->
+  One.StateForcings a ->
   Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 selectOptimalState stateForcing stateMap = if (Map.keys stateForcing) == (Map.keys stateMap) then

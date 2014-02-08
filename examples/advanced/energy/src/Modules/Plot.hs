@@ -564,7 +564,7 @@ simulationGraphs ::
   Type.Optimisation node sweep vec b ->
   IO ()
 simulationGraphs terminal (Type.Optimisation _ sim) = do
-  let g = fmap (vhead "simulationGraphs" . Sweep.toList)
+  let g = id -- fmap (vhead "simulationGraphs" . Sweep.toList)
 
   terminal "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2

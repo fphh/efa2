@@ -49,6 +49,7 @@ unpackStateForcing (StateForcing x) = x
 zeroStateForcing :: Arith.Constant a => StateQty.Graph node b (Result v) -> Map Idx.State (StateForcing a)
 zeroStateForcing sg = Map.map (\_ -> StateForcing Arith.zero) $ states sg
 
+type StateForcings a = Map.Map Idx.State (StateForcing a) 
 
 
 

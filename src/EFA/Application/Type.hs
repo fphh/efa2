@@ -54,7 +54,8 @@ data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
 
 data Simulation node (sweep :: (* -> *) -> * -> *) vec a =
   Simulation {
-    stateFlowGraph :: EnvResult node (sweep vec a),
+    stateFlowGraph :: EnvResult node (Data Nil a), 
+    stateFlowGraphSweep :: EnvResult node (sweep vec a),
     sequenceFlowGraph ::
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
 

@@ -9,7 +9,7 @@ import qualified Modules.Plot as ModPlot
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.NonIO as NonIO
 
-
+import EFA.Equation.Result(Result(Determined,Undetermined))
 import qualified EFA.Application.Type as Type
 import EFA.Application.Type (EnvResult)
 import qualified EFA.Application.OneStorage as One
@@ -21,7 +21,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import EFA.Equation.Arithmetic (Sign(Zero, Positive, Negative), (~*), (~+), (~/))
 import qualified EFA.Equation.Arithmetic as Arith
 
-import EFA.Equation.Result (Result(Determined))
+--import EFA.Equation.Result (Result(Determined))
 
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.State.SystemEta as StateEta
@@ -91,12 +91,12 @@ setChargeDrive params newForcing =
 
 eta ::
   (Node.C node, UV.Unbox a,
-   Arith.Product (sweep UV.Vector a),
-   Sweep.SweepClass sweep UV.Vector a) =>
+   Arith.Product a) => --(sweep UV.Vector a),
+ --  Sweep.SweepClass sweep UV.Vector a) =>
   Type.Optimisation node sweep UV.Vector a -> a
 eta opt =
   case StateEta.etaSys (Type.stateFlowGraph $ Type.simulation opt) of
-       Determined e -> UV.head (Sweep.fromSweep e)
+       Determined (Data e) -> e --UV.head (Sweep.fromSweep e)
        _ -> error "Main.iterateBalanceIO"
 
 findZeroCrossing ::
@@ -158,10 +158,10 @@ findZeroCrossing params f accessf xstart step =
 -- | Find a solution where all states occur in the simlation signals at minimum state forcing, measurement unit ist state duration
 
 
-getStateTime :: FlowState.Graph node edge sectionLabel nodeLabel storageLabel edgeLabel carryLabel-> 
-                Idx.State -> 
+getStateTime :: Idx.State -> 
+                FlowState.Graph node edge sectionLabel nodeLabel storageLabel edgeLabel carryLabel-> 
                 sectionLabel
-getStateTime sfg stateIdx = FlowTopo.label $ f state
+getStateTime stateIdx sfg = FlowTopo.label $ f state
   where state= Map.lookup stateIdx (StateQty.states sfg) 
         f (Just st) = st 
         f (Nothing) = error ("Error in getStateTime: State " ++ show stateIdx ++ "doesn't exist in StateflowGrapgh")
@@ -169,32 +169,36 @@ getStateTime sfg stateIdx = FlowTopo.label $ f state
 
 data StateForceDemand = MoreForcingNeeded | CorrectForcing | NoForcingNeeded | LessForcingNeeded
 
-stateIteration :: (Num t, Num f, Ord f, Ord t, Arith.Constant f,Arith.Sum f) =>
-                  ([f] -> res) -> (res -> t) -> [f] -> t -> f -> [([f], [f], res)] 
-stateIteration fsys accessf initialStateForcings thr minStep = go initialStateForcings initialResult initialSteps
-  where initialSteps = map (\_ -> minStep) initialStateForcings
+stateIteration :: (Arith.Constant f,Eq f, Num f,Ord f,Ord t, Num t, Eq t) => (One.StateForcings f -> res) -> (res -> Idx.State -> t) -> 
+                  One.StateForcings f -> t -> One.StateForcing f -> 
+                  [([One.StateForcing f], [One.StateForcing f], res)] 
+stateIteration fsys accessf initialStateForcings thr minStep = go (Map.elems initialStateForcings) initialResult initialSteps
+  where initialSteps = map (\_ -> minStep) $ Map.elems initialStateForcings
+        stateIndices =  Map.keys initialStateForcings
         initialResult= fsys initialStateForcings
         _3 = Arith.fromInteger 3        
         _2 = Arith.fromInteger 2
-                --        go :: [f] -> res -> [t] -> [([f], [f], res)]
+                
         go xs0 y0 ss0 = (xs0,ss0,y0):go xs1 y1 ss1
           where
-           xs1 = zipWith (~+) xs0 ss0
-           y1 = fsys xs1
-           ss1 = zipWith (changeStep (y0,y1) )  (zip xs0 xs1) ss0 
+           xs1 = zipWith 
+                 (\(One.StateForcing x) (One.StateForcing y)-> 
+                   One.StateForcing $ x ~+ y) xs0 ss0
+           y1 = fsys (Map.fromList $ zip stateIndices xs1)
+           ss1 = zipWith3 (changeStep (y0,y1)) stateIndices (zip xs0 xs1) ss0   
 
-        changeStep (y0,y1) (x0,x1) st = 
-          case (eval x0 (accessf y0), eval x1 (accessf y1))  of
-            (_, NoForcingNeeded) -> Arith.zero
-            (_, CorrectForcing) -> Arith.zero
-            (NoForcingNeeded, _) -> Arith.zero ~+ minStep
-            (CorrectForcing,_) -> Arith.zero ~+ minStep
-            (MoreForcingNeeded, MoreForcingNeeded) -> (Arith.abs st) ~* _2
-            (LessForcingNeeded, LessForcingNeeded) -> (Arith.abs st) ~* _2
-            (MoreForcingNeeded, LessForcingNeeded) -> (Arith.abs st) ~/ _3
-            (LessForcingNeeded, MoreForcingNeeded) -> (Arith.abs st) ~/ _3
+        changeStep (y0,y1) idx (One.StateForcing x0,One.StateForcing x1) (One.StateForcing st) = 
+          case (eval x0 (accessf y0 idx), eval x1 (accessf y1 idx))  of
+            (_, NoForcingNeeded) -> One.StateForcing $ Arith.zero
+            (_, CorrectForcing) -> One.StateForcing $ Arith.zero
+            (NoForcingNeeded, _) -> One.StateForcing $ Arith.zero ~+ (One.unpackStateForcing minStep)
+            (CorrectForcing,_) -> One.StateForcing $ Arith.zero ~+ (One.unpackStateForcing minStep)
+            (MoreForcingNeeded, MoreForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~* _2
+            (LessForcingNeeded, LessForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~* _2
+            (MoreForcingNeeded, LessForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~/ _3
+            (LessForcingNeeded, MoreForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~/ _3
         
-        eval x y = case ( x ==0 && y > 0,y == 0, y < thr ) of
+        eval x y = case ( x == 0 && y > 0,y == 0, y < thr ) of
           (True, _, _) -> NoForcingNeeded 
           (False,False,True) -> CorrectForcing
           (False,True,_) -> MoreForcingNeeded
@@ -220,18 +224,27 @@ iterateBalance params reqsRec stateFlowGraphOpt =
   let
       perStateSweep = Base.perStateSweep params stateFlowGraphOpt
       net2wat = TopoIdx.ppos System.Water System.Network
-      stateForcing = One.zeroStateForcing stateFlowGraphOpt
+      initStateForcing = One.zeroStateForcing stateFlowGraphOpt
       
       g pars = (opt2, bl)
-        where opt2 = NonIO.optimiseAndSimulate pars stateForcing reqsRec perStateSweep
+        where opt2 = NonIO.optimiseAndSimulate pars initStateForcing reqsRec perStateSweep
               rec = Record.partIntegrate (Type.signals $ Type.simulation opt2)
               Sig.TC (Data bl) = Sig.neg $ Sig.sum $ Record.getSig rec net2wat
 
       fzc = findZeroCrossing params g snd (-1) 1
       
---      fzz = stateIteration (g params) fst
-
-      -- stateForcing = stateIteration params g ( . fst
+     -- Achtung !!! -> params sind alt !!! 
+      h stateForcing  = (opt2, bl)
+        where opt2 = NonIO.optimiseAndSimulate params stateForcing reqsRec perStateSweep
+              rec = Record.partIntegrate (Type.signals $ Type.simulation opt2)
+              Sig.TC (Data bl) = Sig.neg $ Sig.sum $ Record.getSig rec net2wat
+              
+      access res idx = f $ getStateTime idx  $ Type.stateFlowGraph $Type.simulation $ fst res
+        where f (Determined (Data x)) = x
+              f Undetermined  = error "State Time undetermined"
+              
+      fzz = stateIteration h access
+            initStateForcing (1::Double) (One.StateForcing 0.001)
 
       (numOfSteps, FindZeroCrossing force sSize (opt, bal)) =
         iterateUntil snd 100 (Arith.fromRational 0.1) fzc
@@ -246,7 +259,7 @@ outerLoop ::
 outerLoop ib = 
   let go inEnv =
         let oli = ib inEnv
-            outEnv = Type.stateFlowGraph $ Type.simulation $ optimisation oli
+            outEnv = Type.stateFlowGraphSweep $ Type.simulation $ optimisation oli
         in oli : go outEnv
   in OuterLoop . go
 
@@ -267,7 +280,7 @@ iterateLoops cnt olif ilf (OuterLoop ol) =
 
 
 showOuterLoopItem ::
-  (UV.Unbox a, Arith.Product (sweep UV.Vector a),
+  (UV.Unbox a, Arith.Product a, -- Arith.Product (sweep UV.Vector a),
    PrintfArg a,
    Node.C node, Sweep.SweepClass sweep UV.Vector a) =>
   Int -> OuterLoopItem node sweep UV.Vector a -> Maybe String
@@ -276,7 +289,7 @@ showOuterLoopItem _ (OuterLoopItem nos ss f bal opt _il) =
   in Just $ printf "%8d%8d%24e%24e%24e%24e\n" numOfSt nos f bal (eta opt) ss
 
 showFindZeroCrossing ::
-  (UV.Unbox a, Arith.Product (sweep UV.Vector a),
+  (UV.Unbox a, Arith.Product a, --Arith.Product (sweep UV.Vector a),
    Node.C node, Sweep.SweepClass sweep UV.Vector a, PrintfArg a) =>
   Int -> Int ->
   FindZeroCrossing a (Type.Optimisation node sweep UV.Vector a, a) ->
@@ -287,7 +300,7 @@ showFindZeroCrossing _olcnt ilcnt (FindZeroCrossing f st (opt, bal)) =
 
 
 showOuterLoop ::
-  (PrintfArg a, UV.Unbox a, Arith.Product (sweep UV.Vector a),
+  (PrintfArg a, UV.Unbox a, Arith.Product a, -- Arith.Product (sweep UV.Vector a),
    Node.C node, Sweep.SweepClass sweep UV.Vector a, Show node) =>
    Int ->
    OuterLoop node sweep UV.Vector a -> [String]

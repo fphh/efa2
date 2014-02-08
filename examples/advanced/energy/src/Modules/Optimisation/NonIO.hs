@@ -154,22 +154,37 @@ simulation params dofsMatrices reqsRec =
                     . Topology.flowNumber (One.systemTopology params)
                     . FlowTopo.topology
               f (idx, section) =
-                (let st = Idx.State (num section) in trace (show idx ++ " -> " ++ show st) st, section)
+                (let st = Idx.State (num section) in trace (show idx ++ " -> 
+                " ++ show st) st, section)
 
 -}
 
-      stateFlowGraphSim :: Type.EnvResult node (sweep vec Double)
+      stateFlowGraphSim :: Type.EnvResult node (Data Nil Double)
       stateFlowGraphSim = -- renumberStates $
         StateEqAbs.solveOpts
+          Optimisation.optionsScalar
+      --    (toSweep params $ 
+           (StateQty.graphFromCumResult $
+           StateQty.fromSequenceFlowResult False $
+           SeqQty.mapGraph id (fmap Arith.integrate) $
+           external (One.initStorageState params) sequenceFlowGraphSim)
+          mempty
+
+      stateFlowGraphSweep :: Type.EnvResult node (sweep vec Double)
+      stateFlowGraphSweep = -- renumberStates $
+        StateEqAbs.solveOpts
           Optimisation.options
-          (toSweep params $ StateQty.graphFromCumResult $
+          (toSweep params $ 
+           StateQty.graphFromCumResult $
            StateQty.fromSequenceFlowResult False $
            SeqQty.mapGraph id (fmap Arith.integrate) $
            external (One.initStorageState params) sequenceFlowGraphSim)
           mempty
 
 
-  in Type.Simulation stateFlowGraphSim sequenceFlowGraphSim givenSigs recZeroCross
+
+  in Type.Simulation stateFlowGraphSim stateFlowGraphSweep 
+     sequenceFlowGraphSim givenSigs recZeroCross
 
 
 toSweep ::
@@ -210,7 +225,7 @@ optimiseStatesAndSimulate :: (Show node, Arith.Product (sweep vec Double),
                               Sweep.SweepClass sweep vec Double,
                               Sweep.SweepMap sweep vec Double Double) =>
                              One.OptimalEnvParams node [] sweep vec Double ->
-                             Map Idx.State (One.StateForcing Double) ->
+                             One.StateForcings Double ->
                              Record.PowerRecord node Vector Double ->
                              Map Idx.State (Map [Double] (Maybe (Double, Double, Type.EnvResult node Double)))->
                              (Map [Double](Maybe (Double, Double, Idx.State, Type.EnvResult node Double)),
