@@ -9,6 +9,10 @@ import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.SystemEta as SystemEta
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Storage as Storage
+--import qualified EFA.Flow.Storage.Quantity as StoreQty
+
+--import qualified EFA.Flow.State.Index as StateIdx
+
 import qualified EFA.Flow.Part.Map as PartMap
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -24,6 +28,10 @@ import qualified Data.Map as Map
 import Data.Maybe.HT (toMaybe)
 import qualified EFA.Graph as Graph
 
+import qualified EFA.Signal.Record as Record
+import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Vector as SV
 
 import Control.Applicative (liftA2)
 
@@ -99,3 +107,32 @@ objectiveFunction ::
 objectiveFunction cond forcing env =
    let eta = detEtaSys "objectiveFunction" env
    in  toMaybe (cond env) $ (eta ~+ forcing env, eta)
+
+{-
+getBalance :: StateQty.Graph node a (Result v) -> Map.Map node v
+getBalance sfg = Map.mapWithKey f stos
+  where stos = StateQty.storages sfg
+        f node x = g $ StoreQty.lookupEnergy EFA.Flow.Storage.Index.Energy EFA.Flow.Part.Index.State node x -- (StateIdx.initSection node) x
+          where
+           g (Just x) = x 
+           g Nothing = error ("getBalance: StorageEnergy not found: " ++ show node)
+-}        
+
+-- TODO : an richtigen Platz verschieben, gehört hier eigentlich nicht hin
+
+balanceFromRecord :: (Ord node, 
+                      SV.Walker v,
+                      SV.Storage v a,
+                      Arith.Constant a, 
+                      SV.Zipper v, 
+                      SV.Singleton v,
+                      Show (v a), Node.C node) =>
+                       [TopoIdx.Position node] -> 
+                       Record.PowerRecord node v a -> 
+                       Map.Map node a
+balanceFromRecord posList rec = Map.fromList $ 
+                                zip (map (\(TopoIdx.Position x _) -> x) posList) 
+                                $ map (Sig.fromScalar . Sig.sum . 
+                                       (Record.getSig (Record.partIntegrate rec))) 
+                                 posList 
+

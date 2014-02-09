@@ -68,7 +68,7 @@ perStateSweep ::
   One.OptimalEnvParams node list sweep vec a ->
   StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
   Map Idx.State (Map (list a) (Type.PerStateSweep node sweep vec a))
-perStateSweep params stateFlowGraph =
+perStateSweep params stateFlowGraph  =
   Map.mapWithKey f states
   where states = StateQty.states stateFlowGraph
         reqsAndDofs = map TopoIdx.Power
@@ -84,6 +84,7 @@ perStateSweep params stateFlowGraph =
                     (One.etaAssignMap params)
                     (One.etaMap params)
                     state
+                    
 
 
 forcing ::
@@ -92,16 +93,17 @@ forcing ::
    Arith.Sum (sweep vec a),
    Sweep.SweepMap sweep vec a a,
    Arith.Constant a) =>
+  Map node (One.SocDrive a)->
   One.OptimalEnvParams node list sweep vec a ->
   Idx.State ->
   Map Idx.State (Map node (Maybe (sweep vec a))) ->
   Result (sweep vec a)
-forcing params state m = Determined $
+forcing stoForcings params state m = Determined $
   case Map.lookup state m of
     Nothing ->
       error $ "forcing failed, because state not found: " ++ show state
     Just powerMap ->
-        Map.foldWithKey f zero (One.forcingPerNode params)
+        Map.foldWithKey f zero stoForcings
       where
         zero = Sweep.fromRational (One.sweepLength params) Arith.zero
 
@@ -123,13 +125,14 @@ optimalObjectivePerState ::
    Sweep.SweepClass sweep UV.Vector a,
    Sweep.SweepMap sweep UV.Vector a a) =>
   One.OptimalEnvParams node list sweep UV.Vector a ->
+  Map node (One.SocDrive a)->  
   Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
-optimalObjectivePerState params =
+optimalObjectivePerState params stoForcings =
   Map.mapWithKey $
     Map.map
     . DoubleSweep.optimalSolutionState2
-    . forcing params
+    . forcing stoForcings params
 
 
 

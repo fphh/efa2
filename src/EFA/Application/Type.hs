@@ -30,6 +30,9 @@ type EqSystem node a =
   forall s. StateAbs.EquationSystemIgnore node s a a
 
 
+type PerStateSweepVariable node sweep vec a = 
+  Map Idx.State (Map node (Maybe ((sweep::(* -> *) -> * -> *) vec a)))
+
 data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
   PerStateSweep {
     etaSys :: Result (sweep vec a),
@@ -54,7 +57,7 @@ data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
 
 data Simulation node (sweep :: (* -> *) -> * -> *) vec a =
   Simulation {
-    stateFlowGraph :: EnvResult node (Data Nil a), 
+    stateFlowGraph :: EnvResult node (Data Nil a), --(sweep vec a),
     stateFlowGraphSweep :: EnvResult node (sweep vec a),
     sequenceFlowGraph ::
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),

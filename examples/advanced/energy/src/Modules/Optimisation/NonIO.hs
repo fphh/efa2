@@ -67,13 +67,14 @@ quasiStationaryOptimisation ::
    Sweep.SweepClass sweep UV.Vector Bool,
    Sweep.SweepClass sweep UV.Vector a) =>
   One.OptimalEnvParams node [] sweep UV.Vector a ->
+  Map node (One.SocDrive a) -> 
   Map Idx.State (One.StateForcing a) ->
   Map Idx.State (Map [a] (Type.PerStateSweep node sweep UV.Vector a)) ->
   Type.QuasiStationary node sweep UV.Vector a
-quasiStationaryOptimisation params stateForcing perStateSweep =
-  let a = Base.optimalObjectivePerState params perStateSweep
+quasiStationaryOptimisation params stoForcings stateForcings perStateSweep =
+  let a = Base.optimalObjectivePerState params stoForcings perStateSweep
       b = Base.expectedValuePerState perStateSweep
-      c = Base.selectOptimalState stateForcing a
+      c = Base.selectOptimalState stateForcings a
   in Type.QuasiStationary perStateSweep a b c
 
 simulation ::
@@ -201,12 +202,13 @@ toSweep params = StateQty.mapGraph f f
 optimiseAndSimulate ::
   (Show node, Node.C node) =>
   One.OptimalEnvParams node [] Sweep UV.Vector Double ->
+  Map node (One.SocDrive Double) -> 
   Map Idx.State (One.StateForcing Double) ->
   Record.PowerRecord node Vector Double ->
   Map Idx.State (Map [Double] (Type.PerStateSweep node Sweep UV.Vector Double)) ->
   Type.Optimisation node Sweep UV.Vector Double
-optimiseAndSimulate params stateForcing reqsRec perStateSweep =
-  let optimalResult = quasiStationaryOptimisation params stateForcing perStateSweep
+optimiseAndSimulate params stoForcing stateForcing reqsRec perStateSweep =
+  let optimalResult = quasiStationaryOptimisation params stoForcing stateForcing perStateSweep
 
       dofsMatrices =
         Map.map (Sig.map ModUt.nothing2Nan) $

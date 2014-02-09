@@ -163,6 +163,7 @@ main1 = do
 -}
 
   let
+
       optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
       optParams =
         One.OptimalEnvParams
@@ -172,15 +173,21 @@ main1 = do
           etaMap
           System.etaAssignMap
           ModSet.sweepPts
-          ModSet.forcingMap
           (ReqsAndDofs.reqsPos ModSet.reqs)
           (ReqsAndDofs.dofsPos ModSet.dofs)
-          -- (Just (TopoIdx.Position System.Coal System.Network))
           Nothing
           ModSet.sweepLength
-          (One.StateForcing 0.1) 
-          1.0 
-          (TopoIdx.ppos System.Water System.Network)
+          (Map.fromList [(System.Water, One.DischargeDrive 1)])
+          (Map.fromList [(System.Water, One.ChargeDrive 0.1)])
+          ([TopoIdx.ppos System.Water System.Network])
+          (One.MaxEtaIterations 3)
+          (One.MaxBalanceIterations 100)
+          (One.MaxStateIterations 100)
+          (One.BalanceThreshold 0.1)
+          (One.StateTimeThreshold 0.1)
+          (One.EtaThreshold 0.1)
+          (One.StateForcing 0.01)
+          (One.ChargeDrive 0.01)
 
   --print (map (Topology.flowNumber $ One.systemTopology optParams) System.flowStates)
 
@@ -207,7 +214,6 @@ main1 = do
       opt3 = ModLoop.withChargeDrive optParams reqsRec (Type.stateFlowGraph $ Type.simulation opt2) 0
 -}
 
-  let numberOfLoops = 10
   let g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
 
@@ -220,9 +226,9 @@ main1 = do
   putStrLn $ printf "%8s%8s%24s%24s%24s%24s" 
                     "States" "Step" "Forcing" "Balance" "Eta" "StepSize"
 
-  -- mapM_ putStrLn (ModLoop.showOuterLoop numberOfLoops ol)
+  mapM_ putStrLn (ModLoop.showEtaLoop (One.maxEtaIterations optParams) ol)
 
-  sequence_ (ModLoop.printEtaLoop optParams numberOfLoops ol)
+  sequence_ (ModLoop.printEtaLoop optParams ol)
 
 {-
   concurrentlyMany_ [

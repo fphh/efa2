@@ -81,13 +81,11 @@ options =
 
 toPowerMap ::
   (Ord node, Show node, Arith.Sum (sweep vec a)) =>
-  One.OptimalEnvParams node list sweep vec a ->
   StateQty.Graph node b (Result (sweep vec a)) ->
-  Map Idx.State (Map node (Maybe (sweep vec a)))
-toPowerMap params graph = Map.mapWithKey f states
-  where forcings = One.forcingPerNode params
-        states = fmap Topology.topology $ State.states graph
-        f state flowTopo = Map.mapWithKey (g state flowTopo) forcings
+  Type.PerStateSweepVariable node sweep vec a 
+toPowerMap graph = Map.mapWithKey f states  
+  where states = fmap Topology.topology $ State.states graph
+        f state flowTopo = Map.mapWithKey (g state flowTopo) $ State.storages graph
 
         look p = join $ fmap toMaybe $ StateQty.lookup p graph
 
@@ -153,7 +151,7 @@ solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
   in Type.PerStateSweep
        eta
        (DoubleSweep.checkGreaterZero res)
-       (toPowerMap params res)
+       (toPowerMap res)
        res
 
 commonGiven ::

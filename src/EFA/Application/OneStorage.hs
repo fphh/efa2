@@ -31,9 +31,18 @@ getSocDrive ::
   (Arith.Sum a, Arith.Constant a) => SocDrive a -> a
 getSocDrive soc =
   case soc of
-       DischargeDrive x -> x
-       ChargeDrive x -> Arith.negate x
+       DischargeDrive x -> Arith.negate x
+       ChargeDrive x -> x
        NoDrive -> Arith.zero
+       
+setSocDrive ::
+  (Arith.Sum a, Arith.Constant a,Ord a) => a -> SocDrive a
+setSocDrive x =
+  case Arith.sign x of
+       Arith.Positive -> ChargeDrive x
+       Arith.Zero -> NoDrive
+       Arith.Negative -> DischargeDrive $ Arith.negate x
+       
 
 noforcing ::
   (Arith.Constant v) =>
@@ -84,14 +93,28 @@ data OptimalEnvParams node f sweep vec a = OptimalEnvParams {
   etaMap :: Map Name (a -> a),
   etaAssignMap :: EtaAssignMap node,
   points :: Map (f a) (ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),
-  forcingPerNode :: Map node (SocDrive a),
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   etaToOptimise :: Maybe (TopoIdx.Position node),
   sweepLength :: Int,
-  minStateForcing :: StateForcing a, 
-  initialBattForcing :: a,
-  storage:: TopoIdx.Position node
+  initialBattForcing :: Map node (SocDrive a),
+  initialBattForceStep :: Map node (SocDrive a),
+  storagePositions:: [TopoIdx.Position node],
+  maxEtaIterations :: MaxEtaIterations ,
+  maxBalanceIterations:: MaxBalanceIterations ,
+  maxStateIterations:: MaxStateIterations ,
+  balanceThreshold :: BalanceThreshold a,
+  stateTimeThreshold :: StateTimeThreshold a,
+  etaThreshold :: EtaThreshold a,  
+  stateForcingSeed :: StateForcing a,   
+  balanceForcingSeed :: SocDrive a   
   }
 
-
+newtype MaxEtaIterations  =  MaxEtaIterations Int
+newtype MaxBalanceIterations  = MaxBalanceIterations Int
+newtype MaxStateIterations  = MaxStateIterations Int
+newtype BalanceThreshold  a = BalanceThreshold a
+newtype StateTimeThreshold  a = StateTimeThreshold a
+newtype EtaThreshold  a = EtaThreshold a  
+  
+  
