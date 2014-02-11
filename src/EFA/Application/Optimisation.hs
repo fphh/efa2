@@ -85,7 +85,7 @@ initialEnvWithoutState ::
   (Ord node, Arith.Constant b,
    Sweep.SweepClass sweep vec b,
    Sweep.SweepMap sweep vec b b) =>
-  One.OptimalEnvParams node f sweep vec b ->
+  One.OptimalEnvParams node f sweep vec vec2 b ->
   Maybe Idx.State ->
   StateQty.Graph node a v ->
   StateQty.Graph node (Result (sweep vec b)) (Result (sweep vec b))
@@ -164,7 +164,7 @@ initialEnv ::
   (Ord node, Arith.Constant b,
    Sweep.SweepClass sweep vec b,
    Sweep.SweepMap sweep vec b b) =>
-  One.OptimalEnvParams node f sweep vec b ->
+  One.OptimalEnvParams node f sweep vec vec2 b ->
   StateQty.Graph node a v ->
   StateQty.Graph node (Result (sweep vec b)) (Result (sweep vec b))
 initialEnv params = initialEnvWithoutState params Nothing
@@ -174,7 +174,7 @@ storageEdgeXFactors ::
   (Fractional b, Arith.Constant b,
    Sweep.SweepClass sweep vec b,
    Sweep.SweepMap sweep vec b b) =>
-  One.OptimalEnvParams node f sweep vec b ->
+  One.OptimalEnvParams node f sweep vec vec2 b ->
   Integer ->
   Integer ->
   StateQty.Graph node (Result (sweep vec b)) v ->

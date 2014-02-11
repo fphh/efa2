@@ -15,7 +15,7 @@ import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data
           (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList,
-           Vec2, UVec, UVec2, UVec2L)
+           Vec2, UVec, UVec2) --, UVec2L)
 import EFA.Signal.Typ
 import qualified EFA.Signal.Interp as Interp
 import EFA.Signal.Interp(ExtrapMethod)
@@ -416,6 +416,14 @@ type PTestRow v a = TC TestRow (Typ A P Tt) (Data (v :> Nil) a)
 type FTestRow v a = TC TestRow (Typ A F Tt) (Data (v :> Nil) a)
 type UTTestRow v a = TC TestRow (Typ UT UT UT) (Data (v :> Nil) a)
 
+-- Samples
+type DTSample a = TC Sample (Typ D T Tt) (Data Nil a)
+type TSample a = TC Sample (Typ A T Tt) (Data Nil a)
+type TSample1 v a = TC Sample (Typ A T Tt) (Data (v :> Nil) a)
+type PSample1 v a = TC Sample (Typ A P Tt) (Data (v :> Nil) a)
+type PSample a = TC Sample (Typ A P Tt) (Data Nil a)
+type PSample2 v2 v1 a = TC Sample (Typ A P Tt)  (Data (v2 :> v1 :> Nil) a)
+
 
 -- Flow Signals
 type FFSignal v a = TC FSignal (Typ A F Tt) (Data (v :> Nil) a)
@@ -436,6 +444,8 @@ type NTestRow2 v2 v1 a = TC TestRow (Typ A N Tt)  (Data (v2 :> v1 :> Nil) a)
 type FTestRow2 v2 v1 a = TC TestRow (Typ A F Tt)  (Data (v2 :> v1 :> Nil) a)
 type PTestRow2 v2 v1 a = TC TestRow (Typ A P Tt)  (Data (v2 :> v1 :> Nil) a)
 
+
+
 ----------------------------------------------------------
 -- Convenience Type Synonyms
 
@@ -443,7 +453,7 @@ type PTestRow2 v2 v1 a = TC TestRow (Typ A P Tt)  (Data (v2 :> v1 :> Nil) a)
 
 type Scal typ a = TC Scalar typ (D.Scalar a)
 
-type Sc = Scal (Typ UT UT UT) Double
+-- type Sc = Scal (Typ UT UT UT) Double
 
 type Sig1 typ a = TC Signal typ (UVec a)
 type Sig2 typ a = TC Signal typ (Vec2 a)
@@ -465,7 +475,7 @@ type Test1L typ a = TC TestRow typ (List a)
 type Test2L typ a = TC TestRow typ (List2 a)
 
 
-
+{-
 -- specific Type Synonyms
 
 -- #######################
@@ -560,7 +570,7 @@ type TVal = Scal (Typ A T Tt) Double
 type FVal = Scal (Typ A F Tt) Double
 type DTVal = Scal (Typ D T Tt) Double
 
-
+-}
 ----------------------------------------------------------
 -- from/to List
 

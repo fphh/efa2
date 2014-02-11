@@ -13,13 +13,18 @@ import EFA.Signal.Signal
            Scalar,
            Signal,
            FSignal,
-           TSigL,
+           TSignal,
+--           TSigL,
            UTSignal,
            TSignal,
-           TSamp,
-           PSamp,
-           PSamp1L,
-           PSamp2LL,
+           TSample,
+           PSample,
+           PSample1,
+           PSample2,
+--           TSamp,
+--           PSamp,
+--           PSamp1L,
+--           PSamp2LL,
            FDistrib)
 --           UTDistr,
 --           FDistr)
@@ -602,9 +607,14 @@ instance
 -- RSignal als Transponierte Form
 
 
-type Sig = (TSigL, PSamp2LL)
-type Samp1 = (TSamp, PSamp1L)
-type Samp = (TSamp, PSamp)
+--type Sig = (TSigL, PSamp2LL)
+type Sig a = (TSignal [] a, PSample2 [] [] a)
+  
+--type Samp1 = (TSamp, PSamp1L)
+type Samp1 a = (TSample a, PSample1 [] a)
+
+--type Samp = (TSamp, PSamp)
+type Samp a = (TSample a, PSample a)
 
 
 --viewL :: Sig -> Maybe (Samp1, Sig)
@@ -633,7 +643,7 @@ viewR (t,ps) =
 zipPairs :: (a,b) -> (c,d) -> ((a,c), (b,d))
 zipPairs (a,b) (c,d) = ((a,c), (b,d))
 
-len :: Sig -> Int
+len :: Sig a -> Int
 len  (t,ps) = min (S.len t) (S.len ps)
 
 singleton

@@ -11,7 +11,7 @@ import Data.Traversable (Traversable, traverse)
 
 import Data.Foldable (Foldable, foldMap)
 
-import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector.Unboxed as UV(Unbox)
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.List as List
 

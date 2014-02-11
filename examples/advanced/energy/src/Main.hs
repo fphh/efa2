@@ -43,7 +43,7 @@ import qualified Modules.Setting as ModSet
 import qualified Modules.Optimisation.Loop as ModLoop
 
 import EFA.Application.Type (EnvResult)
---import qualified EFA.Application.Type as Type
+import qualified EFA.Application.Type as Type
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
@@ -89,7 +89,7 @@ import Text.Printf (printf)
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
    Sweep.SweepClass sweep vec a) =>
-  One.OptimalEnvParams Node list sweep vec a->
+  One.OptimalEnvParams Node list sweep vec vec2 a->
   EnvResult Node (sweep vec a)
 initEnv params = AppOpt.initialEnv params System.stateFlowGraph
 
@@ -142,8 +142,8 @@ main1 = do
 
       t = Sig.map (/2) (ctime Sig..++ Sig.offset (Sig.fromSample la) ctime)
 
-      prest = prest1 Sig..++ prest2
-      plocal = plocal1 Sig..++ plocal2
+      prest = Sig.convert $ prest1 Sig..++ prest2
+      plocal = Sig.convert $ plocal1 Sig..++ plocal2
 
 -- ACHTUNG ACHTUNG wir haben local und rest verwechselt !!! 26.01.2014
       reqsRec :: Record.PowerRecord Node Vector Double
@@ -163,11 +163,15 @@ main1 = do
 -}
 
   let
+      ienv = AppOpt.storageEdgeXFactors optParams 4 4
+               $ AppOpt.initialEnv optParams System.stateFlowGraph
 
-      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
+      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Vector Double
       optParams =
         One.OptimalEnvParams
           System.topology
+          ienv
+          reqsRec
           ModSet.initStorageState
           ModSet.initStorageSeq
           etaMap
@@ -177,6 +181,7 @@ main1 = do
           (ReqsAndDofs.dofsPos ModSet.dofs)
           Nothing
           ModSet.sweepLength
+          (One.MaxInnerLoopIterations 10)
           (Map.fromList [(System.Water, One.DischargeDrive 1)])
           (Map.fromList [(System.Water, One.ChargeDrive 0.1)])
           ([TopoIdx.ppos System.Water System.Network])
@@ -204,9 +209,9 @@ main1 = do
                $ AppOpt.initialEnv optParams System.stateFlowGraph
 
       ol = --ModLoop.uniqueInnerLoopX
-           ModLoop.etaIteration
-             (ModLoop.etaLoop optParams reqsRec)
-             ienv
+           ModLoop.iterateEtaWhile optParams
+             (ModLoop.iterateInnerLoopWhile optParams)
+             (Type.stateFlowGraphSweep $ Type.simulation $ ModLoop.stateFlow)
 
 {-
       opt = ModLoop.withChargeDrive optParams reqsRec ienv (-5.2837473962302475e-3)
@@ -225,11 +230,11 @@ main1 = do
 
   putStrLn $ printf "%8s%8s%24s%24s%24s%24s" 
                     "States" "Step" "Forcing" "Balance" "Eta" "StepSize"
-
+{-
   mapM_ putStrLn (ModLoop.showEtaLoop (One.maxEtaIterations optParams) ol)
 
   sequence_ (ModLoop.printEtaLoop optParams ol)
-
+-}
 {-
   concurrentlyMany_ [
     ModPlot.maxEtaPerState ModPlot.gpXTerm opt2,

@@ -33,8 +33,10 @@ import Control.Applicative (liftA2)
 
 import qualified Data.Map as Map; import Data.Map (Map)
 --import qualified Data.NonEmpty as NonEmpty
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as UV
+--import qualified Data.Vector as V
+--import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector.Unboxed as UV(Unbox)
+import qualified EFA.Signal.Vector as Vec
 
 --import Data.Maybe (mapMaybe)
 import Data.Monoid (Monoid)
@@ -56,11 +58,18 @@ doubleSweep = Map.map
 
 
 -- verallgemeinern für n states
-combineOptimalMaps ::
-  Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax ->
-  Sig.PSignal2 V.Vector V.Vector Double ->
-  Sig.PSignal2 V.Vector V.Vector Double ->
-  Sig.PSignal2 V.Vector V.Vector Double
+combineOptimalMaps :: (Vec.Zipper vec,
+                      Vec.Walker vec,
+                      Vec.Storage vec (vec Double),
+                      Vec.Storage vec Double,
+                      Vec.Storage vec (vec (Double, Double)),
+                      Vec.Storage vec (Double, Double),
+                      Vec.Storage vec (vec Sig.ArgMax),
+                      Vec.Storage vec Sig.ArgMax) =>
+  Sig.UTSignal2 vec vec Sig.ArgMax ->
+  Sig.PSignal2 vec vec Double ->
+  Sig.PSignal2 vec vec Double ->
+  Sig.PSignal2 vec vec Double
 combineOptimalMaps state charge discharge =
   Sig.zipWith
      (\s (c, d) -> case s of Sig.ArgMax0 -> c; Sig.ArgMax1 -> d) state $
@@ -109,13 +118,15 @@ findOptimalState stateForcing stateMap = if Map.keys stateForcing == map.keys st
 
 findBestIndex ::
   (Ord a, Arith.Constant a, UV.Unbox a,
-   Sweep.SweepVector UV.Vector a,
-   Sweep.SweepClass sweep UV.Vector a,
-   Sweep.SweepVector UV.Vector Bool,
-   Sweep.SweepClass sweep UV.Vector Bool) =>
-  (sweep UV.Vector Bool) ->
-  (sweep UV.Vector a) ->
-  (sweep UV.Vector a) ->
+   Vec.Zipper vec,Vec.Storage vec (a, a),Vec.Storage vec Bool,
+   Vec.Walker vec, Vec.Storage vec (Bool, a, a),Vec.Storage vec a,
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Sweep.SweepVector vec Bool,
+   Sweep.SweepClass sweep vec Bool) =>
+  (sweep vec Bool) ->
+  (sweep vec a) ->
+  (sweep vec a) ->
   Maybe (Int, a, a)
 
 findBestIndex cond esys force = res
@@ -127,7 +138,7 @@ findBestIndex cond esys force = res
 
         start = (0, 0, Arith.zero, Arith.zero)
 
-        res = case UV.foldl' f start (UV.zipWith3 (,,) c1 e1 objf1) of
+        res = case Vec.foldl f start (Vec.zipWith (\x (y,z) -> (x,y,z)) c1 $ Vec.zip e1 objf1) of
                    (x, _, ch, d) -> Just (x, ch, d)
 
         f (bestIdx, cnt, fo, eo) (b, es2, f2) =
@@ -138,16 +149,18 @@ findBestIndex cond esys force = res
 
 optimalSolutionState2 ::
   (Ord a, Node.C node, Arith.Constant a, UV.Unbox a,
-   Arith.Product (sweep UV.Vector a),
-   Sweep.SweepVector UV.Vector a,
-   Sweep.SweepClass sweep UV.Vector a,
-   Monoid (sweep UV.Vector Bool),
-   Sweep.SweepVector UV.Vector Bool,
-   Sweep.SweepClass sweep UV.Vector Bool,
-   Sweep.SweepMap sweep UV.Vector a Bool) =>
-  ( Map Idx.State (Map node (Maybe (sweep UV.Vector a))) ->
-    Result (sweep UV.Vector a)) ->
-  Type.PerStateSweep node sweep UV.Vector a ->
+   Vec.Zipper vec,Vec.Walker vec,Vec.Storage vec a, 
+   Vec.Storage vec (Bool, a, a),Vec.Storage vec Bool,Vec.Storage vec (a, a),
+   Arith.Product (sweep vec a),
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Monoid (sweep vec Bool),
+   Sweep.SweepVector vec Bool,
+   Sweep.SweepClass sweep vec Bool,
+   Sweep.SweepMap sweep vec a Bool) =>
+  ( Map Idx.State (Map node (Maybe (sweep vec a))) ->
+    Result (sweep vec a)) ->
+  Type.PerStateSweep node sweep vec a ->
   Maybe (a, a, StateFlow.Graph node (Result a) (Result a))
 
 optimalSolutionState2 forcing (Type.PerStateSweep esys condVec powerMap env) =
@@ -162,16 +175,18 @@ optimalSolutionState2 forcing (Type.PerStateSweep esys condVec powerMap env) =
 
 
 
-expectedValue ::
-  (Arith.Constant a, Arith.Sum a, UV.Unbox a,
-   Sweep.SweepClass sweep UV.Vector Bool,
-   Sweep.SweepClass sweep UV.Vector a) =>
-  Type.PerStateSweep node sweep UV.Vector a -> Maybe a
+expectedValue ::(Vec.Walker vec, Vec.Storage vec (Bool, a),
+                 Vec.Zipper vec,Vec.Storage vec a,Vec.Storage vec Bool,
+   Arith.Constant a, Arith.Sum a, UV.Unbox a,
+   Sweep.SweepClass sweep vec Bool,
+   Sweep.SweepClass sweep vec a) =>
+  Type.PerStateSweep node sweep vec a -> Maybe a
 expectedValue (Type.PerStateSweep (Determined esys) (Determined condVec) _ _) =
   Just (s Arith.~/ n)
   where c = Sweep.fromSweep condVec
         e = Sweep.fromSweep esys
-        (s, n) = UV.foldl' f (Arith.zero, Arith.zero) (UV.zip c e)
+--        (s, n) = UV.foldl' f (Arith.zero, Arith.zero) (UV.zip c e)
+        (s, n) = Vec.foldl f (Arith.zero, Arith.zero) (Vec.zip c e)
         f acc@(t, cnt) (x, y) =
           if x then (t Arith.~+ y, cnt Arith.~+ Arith.one) else acc
 expectedValue _ = Nothing

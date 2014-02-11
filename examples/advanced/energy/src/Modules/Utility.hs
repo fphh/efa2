@@ -17,8 +17,9 @@ import EFA.Equation.Result (Result(Determined))
 
 import qualified EFA.Graph as Graph
 
-import qualified EFA.Signal.Vector as Vec
+--import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Vector as Vec
 import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Signal.Typ (Typ)
 

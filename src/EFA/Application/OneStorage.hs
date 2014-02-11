@@ -9,12 +9,18 @@ import EFA.Flow.State(states)
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
+import qualified EFA.Signal.Signal as Sig
+
+
+
 import qualified EFA.Graph.Topology as Topology
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
+import EFA.Signal.Record(PowerRecord)
 
 import qualified Data.Map as Map; import Data.Map (Map)
+import Data.Vector(Vector)
 
 -- | The 'SocDrive' data type should always contain positive values.
 -- Use 'getSocDrive' to get the drive with signs corrected.
@@ -52,14 +58,17 @@ noforcing _ _ = Arith.zero
 
 data StateForcing a = StateForcing a deriving Show
 
+instance (Arith.Sum a) => Arith.Sum (StateForcing a) where
+  (~+) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~+ y
+  (~-) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~- y
+
+-- data StateForcings a = Map Idx.State (StateForcing a) deriving Show
+
 unpackStateForcing :: StateForcing a -> a 
 unpackStateForcing (StateForcing x) = x 
 
 zeroStateForcing :: Arith.Constant a => StateQty.Graph node b (Result v) -> Map Idx.State (StateForcing a)
 zeroStateForcing sg = Map.map (\_ -> StateForcing Arith.zero) $ states sg
-
-type StateForcings a = Map.Map Idx.State (StateForcing a) 
-
 
 
 nocondition :: StateQty.Graph node b (Result v) -> Bool
@@ -86,8 +95,10 @@ newtype Name = Name String deriving (Eq, Ord, Show)
 type OptimalEtaWithEnv node f v =
   Map Idx.State (Map (TopoIdx.Position node) (Map (f v) (v, v, v)))
 
-data OptimalEnvParams node f sweep vec a = OptimalEnvParams {
+data OptimalEnvParams node f sweep vec vec2 a = OptimalEnvParams {
   systemTopology :: Topology.Topology node,
+  stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a) ) (Result (sweep vec a)),
+  reqsRec :: PowerRecord node vec2 a,
   initStorageState :: InitStorageState node a,
   initStorageSeq :: InitStorageSeq node a,
   etaMap :: Map Name (a -> a),
@@ -97,6 +108,7 @@ data OptimalEnvParams node f sweep vec a = OptimalEnvParams {
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   etaToOptimise :: Maybe (TopoIdx.Position node),
   sweepLength :: Int,
+  maxInnerLoopIterations:: MaxInnerLoopIterations ,
   initialBattForcing :: Map node (SocDrive a),
   initialBattForceStep :: Map node (SocDrive a),
   storagePositions:: [TopoIdx.Position node],
@@ -107,7 +119,9 @@ data OptimalEnvParams node f sweep vec a = OptimalEnvParams {
   stateTimeThreshold :: StateTimeThreshold a,
   etaThreshold :: EtaThreshold a,  
   stateForcingSeed :: StateForcing a,   
-  balanceForcingSeed :: SocDrive a   
+  balanceForcingSeed :: SocDrive a,   
+  varReqRoomPower1D :: Sig.PSignal vec a,
+  varReqRoomPower2D :: Sig.PSignal2 Vector vec a
   }
 
 newtype MaxEtaIterations  =  MaxEtaIterations Int
@@ -116,5 +130,10 @@ newtype MaxStateIterations  = MaxStateIterations Int
 newtype BalanceThreshold  a = BalanceThreshold a
 newtype StateTimeThreshold  a = StateTimeThreshold a
 newtype EtaThreshold  a = EtaThreshold a  
+newtype MaxInnerLoopIterations  =  MaxInnerLoopIterations Int
+
+
+type Balance node a = Map node a  
   
+type StateDurations a = Map Idx.State a  
   

@@ -50,7 +50,7 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Foldable as Fold
-import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector.Unboxed as UV(Unbox)
 import Data.Monoid (Monoid)
 import qualified Data.Set as Set
 import Data.Monoid ((<>), mempty)
@@ -114,7 +114,7 @@ solve ::
    Monoid (sweep vec Bool),
    Sweep.SweepMap sweep vec a Bool,
    Sweep.SweepClass sweep vec Bool) =>
-  One.OptimalEnvParams node list sweep vec a ->
+  One.OptimalEnvParams node list sweep vec vec2 a ->
   [TopoIdx.Power node] ->
   Type.EnvResult node (sweep vec a) ->
   EtaAssignMap node ->

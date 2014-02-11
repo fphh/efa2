@@ -18,7 +18,7 @@ import EFA.Equation.Result (Result)
 import qualified EFA.Signal.Record as Record
 import EFA.Signal.Data (Data, Nil, (:>))
 
-import Data.Vector (Vector)
+--import Data.Vector (Vector)
 
 import Data.Map (Map)
 
@@ -55,18 +55,18 @@ data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
     optimalState ::
       Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) }
 
-data Simulation node (sweep :: (* -> *) -> * -> *) vec a =
+data Simulation node (sweep :: (* -> *) -> * -> *) vec vec2 a =
   Simulation {
     stateFlowGraph :: EnvResult node (Data Nil a), --(sweep vec a),
     stateFlowGraphSweep :: EnvResult node (sweep vec a),
     sequenceFlowGraph ::
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
 
-    givenSignals :: Record.PowerRecord node Vector a,
+    givenSignals :: Record.PowerRecord node vec2 a,
 
     signals :: Record.PowerRecord node [] a }
 
-data Optimisation node (sweep :: (* -> *) -> * -> *) vec a =
+data Optimisation node (sweep :: (* -> *) -> * -> *) vec vec2 a =
   Optimisation {
     quasiStationary :: QuasiStationary node sweep vec a,
-    simulation :: Simulation node sweep vec a }
+    simulation :: Simulation node sweep vec vec2 a }
