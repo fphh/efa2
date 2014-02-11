@@ -71,9 +71,10 @@ data InnerLoopItem node a z = InnerLoopItem
                            stateLoop :: [StateLoopItem node a z]}
                          
 
-data EtaLoopItem node sweep vec a z = EtaLoopItem {
+data EtaLoopItem node sweep a z = EtaLoopItem {
   elStep :: Int,
-  stateFlowSweep :: (EnvResult node ((sweep:: (* -> *) -> * -> *) vec a)),
+  stateFlowIn :: (EnvResult node ((sweep:: (* -> *) -> * -> *) UV.Vector a)),
+  stateFlowOut :: (EnvResult node ((sweep:: (* -> *) -> * -> *) UV.Vector a)),
   innerLoop :: [InnerLoopItem node a z]} 
 
 
@@ -93,14 +94,14 @@ uniqueBalanceLoopX (EtaLoop ol) = EtaLoop (map f ol)
 eta ::
   (Node.C node, UV.Unbox a,
    Arith.Product a) => 
-  Type.Optimisation node sweep vec vec2 a -> a
+  Type.Optimisation node sweep vec sigVec a -> a
 eta opt =
   case StateEta.etaSys (Type.stateFlowGraph $ Type.simulation opt) of
        Determined (Data e) -> e 
        _ -> error "Main.iterateBalanceIO"
 
 checkBalance :: (Ord a, Arith.Sum a) => 
-                One.OptimalEnvParams a [] Sweep vec vec2 a -> 
+                One.OptimalEnvParams a [] Sweep vec sigVec a -> 
                 One.Balance node a ->  Bool
 checkBalance  params bal = all g $ Map.elems bal  
   where g x = Arith.abs x < eps
@@ -108,7 +109,7 @@ checkBalance  params bal = all g $ Map.elems bal
 
 iterateBalanceWhile ::
   (Ord node,Arith.Sum a, Ord a, Arith.Constant a) =>
-  One.OptimalEnvParams node [] Sweep vec vec2 a ->
+  One.OptimalEnvParams node [] Sweep vec sigVec a ->
   (Map.Map node (One.SocDrive a) -> z) ->
   (z -> Map.Map node a) ->
   Map.Map node (One.SocDrive a) ->
@@ -200,7 +201,7 @@ getStateTime stateIdx sfg = FlowTopo.label $ f state
 data StateForceDemand = MoreForcingNeeded | CorrectForcing | 
                         NoForcingNeeded | LessForcingNeeded
 
-checkStateTimes :: Ord a => One.OptimalEnvParams a [] Sweep vec vec2 a -> 
+checkStateTimes :: Ord a => One.OptimalEnvParams a [] Sweep vec sigVec a -> 
                One.StateDurations a -> Bool  
 checkStateTimes params stateDurations = all g $ Map.elems stateDurations 
   where g x = x > eps
@@ -210,7 +211,7 @@ checkStateTimes params stateDurations = all g $ Map.elems stateDurations
 
 iterateStateWhile ::
   (Num a,Arith.Sum a, Ord a, Arith.Constant a) =>
-  One.OptimalEnvParams node [] Sweep vec vec2 a ->
+  One.OptimalEnvParams node [] Sweep vec sigVec a ->
   (Map.Map Idx.State (One.StateForcing a) -> z) -> 
   (z -> One.StateDurations a ) -> 
   Map.Map Idx.State (One.StateForcing a) -> 
@@ -284,12 +285,12 @@ changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx
             (LessForcingNeeded, MoreForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~/ _3
 
 
-{-
+
 iterateInnerLoopWhile ::
   One.OptimalEnvParams node [] Sweep UV.Vector sigVec a ->
   EnvResult node (Sweep UV.Vector a) ->
   [InnerLoopItem node a (Type.Optimisation node Sweep UV.Vector sigVec a)]
-  -}
+  
 iterateInnerLoopWhile  params stateFlowGraphOpt = 
   takeWhile f $ iterateInnerLoop params reqsRec stateFlowGraphOpt
    where (One.MaxInnerLoopIterations maxCnt) = One.maxInnerLoopIterations params  
@@ -297,13 +298,13 @@ iterateInnerLoopWhile  params stateFlowGraphOpt =
          reqsRec = One.reqsRec params
          f x = ilStep x < maxCnt
                
-{-
-iterateInnerLoop ::
+
+iterateInnerLoop :: 
   One.OptimalEnvParams node [] Sweep vec sigVec a ->
   Record.PowerRecord node sigVec a ->
   EnvResult node (Sweep vec a) ->
-  [InnerLoopItem node a (Type.Optimisation node Sweep vec sigVec a)]
-  -}
+  [InnerLoopItem node a (Type.Optimisation node Sweep vec vec a)]
+
 iterateInnerLoop params reqsRec stateFlowGraphOpt = go 0 initialBattForcing initStateForcing
   where
      perStateSweep = Base.perStateSweep params stateFlowGraphOpt
@@ -330,14 +331,14 @@ iterateInnerLoop params reqsRec stateFlowGraphOpt = go 0 initialBattForcing init
                      statForce
 
 
-iterateEtaWhile :: One.OptimalEnvParams node [] sweep vec vec2 a ->
-                   (EnvResult node (sweep vec a) -> [InnerLoopItem node a z]) ->
-                   (InnerLoopItem node a z -> EnvResult node (sweep vec a)) ->                   
-                   [EtaLoopItem node (sweep :: (* -> *) -> * -> *) vec a z]
+iterateEtaWhile :: One.OptimalEnvParams node [] sweep UV.Vector sigVec a ->
+                   (EnvResult node (sweep UV.Vector a) -> [InnerLoopItem node a z]) ->
+                   (InnerLoopItem node a z -> EnvResult node (sweep UV.Vector a)) ->
+                   [EtaLoopItem node (sweep :: (* -> *) -> * -> *) a z]
 iterateEtaWhile params f g = takeWhile h $ go 0  $ One.stateFlowGraphOpt params 
    where h x = elStep x <  maxCnt
          (One.MaxEtaIterations maxCnt) = One.maxEtaIterations params
-         go cnt sfg = EtaLoopItem cnt sfg res : go (cnt+1) sfg1
+         go cnt sfg = EtaLoopItem cnt sfg sfg1 res : go (cnt+1) sfg1
            where
             res = f sfg
             sfg1 = g $ vhead "iterateEtaUntil" res

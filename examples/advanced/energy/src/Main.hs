@@ -212,8 +212,11 @@ main1 = do
 
       ol = --ModLoop.uniqueInnerLoopX
            ModLoop.iterateEtaWhile optParams
-             (undefined) --ModLoop.iterateInnerLoopWhile optParams)
-             (ModLoop.stateFlowSweep)
+             (ModLoop.iterateInnerLoopWhile optParams)
+             (Type.stateFlowGraphSweep . Type.simulation . ModLoop.sResult . vhead "Main" . ModLoop.stateLoop )
+
+--      g =  Type.stateFlowGraphSweep . Type.simulation . vhead "Main" . ModLoop.stateLoop
+
 
 {-
       opt = ModLoop.withChargeDrive optParams reqsRec ienv (-5.2837473962302475e-3)
@@ -221,6 +224,7 @@ main1 = do
       opt3 = ModLoop.withChargeDrive optParams reqsRec (Type.stateFlowGraph $ Type.simulation opt2) 0
 -}
 
+{-
   let g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
 
@@ -228,7 +232,7 @@ main1 = do
     $ Draw.title "State Flow Graph from Simulation"
     $ Draw.stateFlowGraph Draw.optionsDefault
     $ StateQty.mapGraph g g ienv
-
+-}
 
   putStrLn $ printf "%8s%8s%24s%24s%24s%24s" 
                     "States" "Step" "Forcing" "Balance" "Eta" "StepSize"

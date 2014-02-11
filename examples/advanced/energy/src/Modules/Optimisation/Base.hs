@@ -94,7 +94,7 @@ forcing ::
    Sweep.SweepMap sweep vec a a,
    Arith.Constant a) =>
   Map node (One.SocDrive a)->
-  One.OptimalEnvParams node list sweep vec vec2 a ->
+  One.OptimalEnvParams node list sweep vec sigVec a ->
   Idx.State ->
   Map Idx.State (Map node (Maybe (sweep vec a))) ->
   Result (sweep vec a)
@@ -124,7 +124,7 @@ optimalObjectivePerState ::
    Sweep.SweepVector UV.Vector  a,
    Sweep.SweepClass sweep UV.Vector  a,
    Sweep.SweepMap sweep UV.Vector  a a) =>
-  One.OptimalEnvParams node list sweep UV.Vector vec2 a ->
+  One.OptimalEnvParams node list sweep UV.Vector sigVec a ->
   Map node (One.SocDrive a)->  
   Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
@@ -192,7 +192,7 @@ consistentRecord (Record.Record _ m) =
 
 consistentSection ::
   (Ord t5, Show t5, Node.C node, Arith.Constant t5) =>
-  One.OptimalEnvParams node list sweep vec vec2 a ->
+  One.OptimalEnvParams node list sweep vec sigVec a ->
   Sequ.Section (Record.Record t t3 t1 t4 (TopoIdx.Position node) [] t2 t5) ->
   Bool
 consistentSection params (Sequ.Section _ _ rec) =
@@ -204,7 +204,7 @@ consistentSection params (Sequ.Section _ _ rec) =
 
 filterPowerRecordList ::
   (Ord a, Show a, Arith.Constant a, Node.C node) =>
-  One.OptimalEnvParams node list sweep vec vec2 a ->
+  One.OptimalEnvParams node list sweep vec sigVec a ->
   Sequ.List (Record.PowerRecord node [] a) ->
   ( Sequ.List (Record.PowerRecord node [] a),
     Sequ.List (Record.PowerRecord node [] a) )
@@ -219,12 +219,12 @@ filterPowerRecordList params (Sequ.List recs) =
 
 signCorrectedOptimalPowerMatrices ::
   (Ord a, Arith.Sum a, Arith.Constant a, Show node, Ord node,
-   Vec.Storage vec2 (Maybe (Result a)),
-   Vec.FromList vec2) =>
-  One.OptimalEnvParams node [] sweep vec vec2 a ->
+   Vec.Storage sigVec (Maybe (Result a)),
+   Vec.FromList sigVec) =>
+  One.OptimalEnvParams node [] sweep vec sigVec a ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) ->
   ReqsAndDofs.Dofs (TopoIdx.Position node) ->
-  Map (TopoIdx.Position node) (Sig.PSignal2 Vector vec2 (Maybe (Result a)))
+  Map (TopoIdx.Position node) (Sig.PSignal2 Vector sigVec (Maybe (Result a)))
 signCorrectedOptimalPowerMatrices params m (ReqsAndDofs.Dofs ppos) =
   Map.fromList $ map g ppos
   where g pos = (pos, ModUt.to2DMatrix $ Map.map f m)
@@ -245,7 +245,7 @@ signCorrectedOptimalPowerMatrices params m (ReqsAndDofs.Dofs ppos) =
 
 isFlowDirectionPositive ::
   (Ord node, Show node) =>
-  One.OptimalEnvParams node list sweep vec vec2 a ->
+  One.OptimalEnvParams node list sweep vec sigVec a ->
   Idx.State ->
   TopoIdx.Position node ->
   EnvResult node a ->

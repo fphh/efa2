@@ -122,8 +122,8 @@ data OptimalEnvParams node f sweep sweepVec sigVec a = OptimalEnvParams {
   etaThreshold :: EtaThreshold a,  
   stateForcingSeed :: StateForcing a,   
   balanceForcingSeed :: SocDrive a,   
-  varReqRoomPower1D :: Sig.PSignal UV.Vector a,
-  varReqRoomPower2D :: Sig.PSignal2 Vector UV.Vector a
+  varReqRoomPower1D :: Sig.PSignal sigVec a,
+  varReqRoomPower2D :: Sig.PSignal2 Vector sigVec a
   }
 
 newtype MaxEtaIterations  =  MaxEtaIterations Int
