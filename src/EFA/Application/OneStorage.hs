@@ -21,6 +21,8 @@ import EFA.Signal.Record(PowerRecord)
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector(Vector)
+import qualified Data.Vector.Unboxed as UV
+
 
 -- | The 'SocDrive' data type should always contain positive values.
 -- Use 'getSocDrive' to get the drive with signs corrected.
@@ -120,8 +122,8 @@ data OptimalEnvParams node f sweep sweepVec sigVec a = OptimalEnvParams {
   etaThreshold :: EtaThreshold a,  
   stateForcingSeed :: StateForcing a,   
   balanceForcingSeed :: SocDrive a,   
-  varReqRoomPower1D :: Sig.PSignal sweepVec a,
-  varReqRoomPower2D :: Sig.PSignal2 Vector sweepVec a
+  varReqRoomPower1D :: Sig.PSignal UV.Vector a,
+  varReqRoomPower2D :: Sig.PSignal2 Vector UV.Vector a
   }
 
 newtype MaxEtaIterations  =  MaxEtaIterations Int

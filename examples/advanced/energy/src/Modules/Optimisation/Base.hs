@@ -48,8 +48,8 @@ import EFA.Equation.Result (Result(Determined))
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.List as List
 import qualified Data.Set as Set
-import qualified Data.Vector.Unboxed as UV(Unbox)
---import Data.Vector (Vector)
+import qualified Data.Vector.Unboxed as UV
+import Data.Vector (Vector)
 import Data.Monoid (Monoid)
 
 import Control.Monad (join)
@@ -65,7 +65,7 @@ perStateSweep ::
    Monoid (sweep vec Bool),
    Sweep.SweepMap sweep vec a Bool,
    Sweep.SweepClass sweep vec Bool) =>
-  One.OptimalEnvParams node list sweep vec vec2 a ->
+  One.OptimalEnvParams node list sweep vec sigVec a ->
   StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
   Map Idx.State (Map (list a) (Type.PerStateSweep node sweep vec a))
 perStateSweep params stateFlowGraph  =
@@ -115,24 +115,18 @@ forcing stoForcings params state m = Determined $
 
 optimalObjectivePerState ::
   (Ord a, Arith.Constant a, Arith.Sum a, UV.Unbox a,
-   Show node, Node.C node, Monoid (sweep vec  Bool),
-   Ord (sweep vec  a),
-   Vec.Zipper vec,
-   Vec.Walker vec,
-   Vec.Storage vec (a, a),
-   Vec.Storage vec Bool,
-   Vec.Storage vec (Bool, a, a),
-   Vec.Storage vec a,
-   Arith.Product (sweep vec  a),
-   Sweep.SweepVector vec  Bool,
-   Sweep.SweepClass sweep vec  Bool,
-   Sweep.SweepMap sweep vec  a Bool,
-   Sweep.SweepVector vec  a,
-   Sweep.SweepClass sweep vec  a,
-   Sweep.SweepMap sweep vec  a a) =>
-  One.OptimalEnvParams node list sweep vec vec2 a ->
+   Show node, Node.C node, Monoid (sweep UV.Vector  Bool),
+   Ord (sweep UV.Vector  a),
+   Arith.Product (sweep UV.Vector  a),
+   Sweep.SweepVector UV.Vector  Bool,
+   Sweep.SweepClass sweep UV.Vector  Bool,
+   Sweep.SweepMap sweep UV.Vector  a Bool,
+   Sweep.SweepVector UV.Vector  a,
+   Sweep.SweepClass sweep UV.Vector  a,
+   Sweep.SweepMap sweep UV.Vector  a a) =>
+  One.OptimalEnvParams node list sweep UV.Vector vec2 a ->
   Map node (One.SocDrive a)->  
-  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep vec a)) ->
+  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
 optimalObjectivePerState params stoForcings =
   Map.mapWithKey $
@@ -144,23 +138,18 @@ optimalObjectivePerState params stoForcings =
 
 
 expectedValuePerState ::
-  (UV.Unbox a,
+  (UV.Unbox a, 
    Arith.Constant a,
-   Sweep.SweepClass sweep vec a,
-   Sweep.SweepClass sweep vec Bool,
-   Vec.Zipper vec,
-   Vec.Walker vec,
-   Vec.Storage vec Bool,
-   Vec.Storage vec a,
-   Vec.Storage vec (Bool, a)) =>
-  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep vec a)) ->
+   Sweep.SweepClass sweep UV.Vector a,
+   Sweep.SweepClass sweep UV.Vector Bool) =>
+  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe a))
 expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
 
 selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a) =>
-  Map Idx.State (One.StateForcing a) -> -- One.StateForcings a ->
+  Map Idx.State (One.StateForcing a) -> 
   Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 selectOptimalState stateForcing stateMap = if (Map.keys stateForcing) == (Map.keys stateMap) then
@@ -229,12 +218,13 @@ filterPowerRecordList params (Sequ.List recs) =
 -- damit man die Funktion auch für andere Positionen verwenden kann.
 
 signCorrectedOptimalPowerMatrices ::
-  (Ord a, Arith.Sum a, Arith.Constant a, Show node, Ord node, Vec.Storage vec (Maybe (Result a)),
-   Vec.Storage vec (vec (Maybe (Result a))),Vec.FromList vec) =>
+  (Ord a, Arith.Sum a, Arith.Constant a, Show node, Ord node,
+   Vec.Storage vec2 (Maybe (Result a)),
+   Vec.FromList vec2) =>
   One.OptimalEnvParams node [] sweep vec vec2 a ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) ->
   ReqsAndDofs.Dofs (TopoIdx.Position node) ->
-  Map (TopoIdx.Position node) (Sig.PSignal2 vec vec (Maybe (Result a)))
+  Map (TopoIdx.Position node) (Sig.PSignal2 Vector vec2 (Maybe (Result a)))
 signCorrectedOptimalPowerMatrices params m (ReqsAndDofs.Dofs ppos) =
   Map.fromList $ map g ppos
   where g pos = (pos, ModUt.to2DMatrix $ Map.map f m)
@@ -302,11 +292,11 @@ extractOptimalPowerMatricesPerState ::
   (Ord b, Ord node,
   Vec.Storage vec (vec (Maybe (Result a))),
   Vec.Storage vec (Maybe (Result a)),
-  Vec.FromList vec) =>
+  Vec.FromList vec) => 
   Map Idx.State (Map [b] (Maybe (a1, EnvResult node a))) ->
   [TopoIdx.Position node] ->
   Map (TopoIdx.Position node)
-      (Map Idx.State (Sig.PSignal2 vec vec (Maybe (Result a))))
+      (Map Idx.State (Sig.PSignal2 Vector vec (Maybe (Result a))))
 extractOptimalPowerMatricesPerState m ppos =
   Map.map (Map.map ModUt.to2DMatrix)
   $ Map.fromList $ map (\p -> (p, Map.mapWithKey (f p) m)) ppos

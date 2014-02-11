@@ -146,7 +146,7 @@ main1 = do
       plocal = Sig.convert $ plocal1 Sig..++ plocal2
 
 -- ACHTUNG ACHTUNG wir haben local und rest verwechselt !!! 26.01.2014
-      reqsRec :: Record.PowerRecord Node Vector Double
+      reqsRec :: Record.PowerRecord Node UV.Vector Double
       reqsRec =
         Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
 
@@ -166,7 +166,7 @@ main1 = do
       ienv = AppOpt.storageEdgeXFactors optParams 4 4
                $ AppOpt.initialEnv optParams System.stateFlowGraph
 
-      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Vector Double
+      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector UV.Vector Double
       optParams =
         One.OptimalEnvParams
           System.topology
@@ -212,8 +212,8 @@ main1 = do
 
       ol = --ModLoop.uniqueInnerLoopX
            ModLoop.iterateEtaWhile optParams
-             (ModLoop.iterateInnerLoopWhile optParams)
-             (Type.stateFlowGraphSweep $ Type.simulation $ ModLoop.stateFlow)
+             (undefined) --ModLoop.iterateInnerLoopWhile optParams)
+             (ModLoop.stateFlowSweep)
 
 {-
       opt = ModLoop.withChargeDrive optParams reqsRec ienv (-5.2837473962302475e-3)

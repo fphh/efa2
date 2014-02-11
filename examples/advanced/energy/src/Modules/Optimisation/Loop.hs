@@ -44,7 +44,7 @@ import EFA.Utility.List (vhead) --, vlast)
 import qualified Data.Monoid as Monoid
 import qualified Data.Map as Map
 --import qualified Data.List as List
-import qualified Data.Vector.Unboxed as UV(Unbox)
+import qualified Data.Vector.Unboxed as UV
 import Data.Vector (Vector)
 --import Data.Maybe (catMaybes)
 -- import Debug.Trace (trace)
@@ -73,7 +73,7 @@ data InnerLoopItem node a z = InnerLoopItem
 
 data EtaLoopItem node sweep vec a z = EtaLoopItem {
   elStep :: Int,
-  stateFlow :: (EnvResult node ((sweep:: (* -> *) -> * -> *) vec a)),
+  stateFlowSweep :: (EnvResult node ((sweep:: (* -> *) -> * -> *) vec a)),
   innerLoop :: [InnerLoopItem node a z]} 
 
 
@@ -284,29 +284,12 @@ changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx
             (LessForcingNeeded, MoreForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~/ _3
 
 
-iterateInnerLoopWhile :: (vec2 ~ Vector, Show node, Ord (Sweep vec a),Ord a, Show a, UV.Unbox a,Fractional a,Arith.Constant a,
-                      Arith.ZeroTestable a,
-                      Arith.Product a,
-                          Node.C node,
-                          Ord (Sweep vec Double),
-                          Arith.ZeroTestable (Sweep vec a),
-                      Arith.Product (Sweep vec a),
-                      Sweep.SweepVector vec a,
-                      Sweep.SweepMap Sweep vec a a,
-                      Sweep.SweepMap Sweep vec a Bool,
-                      Sweep.SweepClass Sweep vec a,
-                      Monoid.Monoid (Sweep vec Bool),
-                      Arith.ZeroTestable (Sweep vec Double),
-                      Arith.Product (Sweep vec Double),
-                      Sweep.SweepVector vec Double,
-                      Sweep.SweepVector vec Bool,
-                      Sweep.SweepMap Sweep vec Double Double,
-                      Sweep.SweepMap Sweep vec Double Bool,
-                      Sweep.SweepClass Sweep vec Double,
-                      Sweep.SweepClass Sweep vec Bool)=>
-  One.OptimalEnvParams node [] Sweep vec vec2 a ->
-  EnvResult node (Sweep vec a) ->
-  [InnerLoopItem node a (Type.Optimisation node Sweep vec vec2 a)]
+{-
+iterateInnerLoopWhile ::
+  One.OptimalEnvParams node [] Sweep UV.Vector sigVec a ->
+  EnvResult node (Sweep UV.Vector a) ->
+  [InnerLoopItem node a (Type.Optimisation node Sweep UV.Vector sigVec a)]
+  -}
 iterateInnerLoopWhile  params stateFlowGraphOpt = 
   takeWhile f $ iterateInnerLoop params reqsRec stateFlowGraphOpt
    where (One.MaxInnerLoopIterations maxCnt) = One.maxInnerLoopIterations params  
@@ -314,24 +297,13 @@ iterateInnerLoopWhile  params stateFlowGraphOpt =
          reqsRec = One.reqsRec params
          f x = ilStep x < maxCnt
                
-
-iterateInnerLoop ::(Ord a, Show a, UV.Unbox a, vec2 ~ Vector, Show node,Fractional a,Arith.Constant a,
-                      Arith.ZeroTestable a,
-                      Arith.Product a,
-                    Ord (Sweep vec a),Node.C node,
-                    Monoid.Monoid (Sweep vec Bool),
-                    Arith.ZeroTestable (Sweep vec a),
-                    Arith.Product (Sweep vec a),
-                    Sweep.SweepVector vec Bool,
-                    Sweep.SweepVector vec a,
-                    Sweep.SweepMap Sweep vec a Bool,
-                    Sweep.SweepMap Sweep vec a a,
-                    Sweep.SweepClass Sweep vec Bool,
-                    Sweep.SweepClass Sweep vec a) =>
-  One.OptimalEnvParams node [] Sweep vec vec2 a ->
-  Record.PowerRecord node vec2 a ->
+{-
+iterateInnerLoop ::
+  One.OptimalEnvParams node [] Sweep vec sigVec a ->
+  Record.PowerRecord node sigVec a ->
   EnvResult node (Sweep vec a) ->
-  [InnerLoopItem node a (Type.Optimisation node Sweep vec vec2 a)]
+  [InnerLoopItem node a (Type.Optimisation node Sweep vec sigVec a)]
+  -}
 iterateInnerLoop params reqsRec stateFlowGraphOpt = go 0 initialBattForcing initStateForcing
   where
      perStateSweep = Base.perStateSweep params stateFlowGraphOpt
