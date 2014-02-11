@@ -80,16 +80,16 @@ data EventType = LeftEvent
 -- | State changes in solver create several DataPoints with exact the same time
 -- | The resulting sections which have zero time duration are removed
 
-
-makeSequence :: forall a node .
-   (Ord node, Arith.Constant a,Ord a, Show a,Num a) =>
+{-
+makeSequence :: forall a v node .
+   (Ord node, Arith.Constant a,Ord a, Show a,Num a, V.Transpose [] v0, V.Storage [] [a]) => 
    PowerRecord node [] a ->
    Sequ.List (FlowRecord node [] a)
 makeSequence rec = fmap Record.partIntegrate sequ
   where
-   sequ = genSequ rec0 :: Sequ.List (PowerRecord node [] a)
-   rec0 = addZeroCrossings rec :: PowerRecord node [] a
-
+   sequ = genSequ rec0 -- :: Sequ.List (PowerRecord node [] a)
+   rec0 = addZeroCrossings rec -- ::PowerRecord node [] a
+-}
 -----------------------------------------------------------------------------------
 {-
 ToDo:
@@ -97,7 +97,7 @@ Must be fixed for empty signals and
 must correctly handle the last section.
 -}
 -- | Function to Generate Time Sequence
-genSequ :: forall a node .
+genSequ :: forall a (v :: * -> *) node .
    (Ord a, Show a, Constant a,Ord node) =>
    PowerRecord node [] a ->
    Sequ.List (PowerRecord node [] a)
@@ -105,7 +105,7 @@ genSequ pRec =
    removeNilSections $ Sequ.fromRangeList $ zip (sequ++[lastSec]) pRecs
   where rSig = record2RSig pRec
 
-        inc (S.SignalIdx idx) = S.SignalIdx (idx+1)
+--        inc (S.SignalIdx idx) = S.SignalIdx (idx+1)
 
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) =
@@ -116,38 +116,40 @@ genSequ pRec =
             (rHead, rTail) = maybe err id $ Record.viewL rSig
             err = error ("Error in EFA.Signal.Chop/genSequence, case 1 - empty rSig")
 
-        recyc ::
-           Record.Sig a -> Record.Samp1 a ->
-           ((Range, [Range]), (Record.Sig a, [Record.Sig a])) ->
-           ((Range, [Range]), (Record.Sig a, [Record.Sig a]))
+recyc :: (V.Len (v [a]), V.Storage v [a], V.Singleton v, 
+          Ord a, Show a, Constant a) => 
+           Record.Sig v a -> Record.Samp1 a ->
+           ((Range, [Range]), (Record.Sig v a, [Record.Sig v a])) ->
+           ((Range, [Range]), (Record.Sig v a, [Record.Sig v a]))
 
         -- Incoming rSig is at least two samples long -- detect changes
-        recyc rsig x1 (((Range lastIdx idx),sq),(secRSig, sqRSig)) |
+recyc rsig x1 (((Range lastIdx idx),sq),(secRSig, sqRSig)) |
           (Record.len rsig) >=2 = recyc rTail x2 (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
+
             (x2, rTail) = maybe err id $ Record.viewL rsig
             err = error ("Error in EFA.Signal.Chop/genSequence, case 2 - empty rSig")
             xs1 = Record.singleton x1
             xs2 = Record.singleton x2
 
-            f :: EventType -> (Record.Sig a, [Record.Sig a])
+--            f :: EventType -> (Record.Sig v a, [Record.Sig v a])
             f LeftEvent = (xs1.++xs2, sqRSig ++ [secRSig])           -- add actual Interval to next section
             f RightEvent = (xs2, sqRSig ++ [secRSig .++ xs2])     --add actual Interval to last section
             f MixedEvent = (xs2, sqRSig ++ [secRSig] ++ [xs1 .++ xs2]) -- make additional Mini--Section
             f NoEvent = (secRSig .++ xs2, sqRSig)                  -- continue incrementing
 
-            g :: EventType -> (Range, [Range])
-            g LeftEvent = (Range idx (inc idx), sq ++ [Range lastIdx idx])
-            g RightEvent = (Range (inc idx) (inc idx), sq ++ [Range lastIdx (inc idx)])
-            g MixedEvent = (Range (inc idx) (inc idx), sq ++ [Range lastIdx idx] ++ [Range idx (inc idx)])
-            g NoEvent = (Range lastIdx (inc idx), sq)
+--            g :: EventType -> (Range, [Range])
+            g LeftEvent = (Range idx (S.inc idx), sq ++ [Range lastIdx idx])
+            g RightEvent = (Range (S.inc idx) (S.inc idx), sq ++ [Range lastIdx (S.inc idx)])
+            g MixedEvent = (Range (S.inc idx) (S.inc idx), sq ++ [Range lastIdx idx] ++ [Range idx (S.inc idx)])
+            g NoEvent = (Range lastIdx (S.inc idx), sq)
 
         -- Incoming rList is only one Point long -- append last sample to last section
-        recyc rsig _ ((Range lastIdx idx, sq), (secRSig, sqRSig)) | (Record.len rsig) >=1 =
-               ((Range lastIdx (inc idx), sq), (secRSig .++ rsig, sqRSig))
+recyc rsig _ ((Range lastIdx idx, sq), (secRSig, sqRSig)) | (Record.len rsig) >=1 =
+               ((Range lastIdx (S.inc idx), sq), (secRSig .++ rsig, sqRSig))
 
         -- Incoming rList is empty -- return result
-        recyc _ _ acc = acc
+recyc _ _ acc = acc
 
 
 -- | Function to remove Nil-Sections which have same start and stop Index
@@ -189,21 +191,23 @@ stepX p1 p2
 
 --addZeroCrossings ::
 --  Record t0 t1 (Typ A T Tt) (Typ A P Tt) id0 [] a a ->
+
 addZeroCrossings :: forall a v node . 
-                    (Num a,Ord a,Show a, Arith.Product a,Constant a,
-                    V.Storage v [a], V.Transpose [] v, Ord node) =>
+                    (V.FromList v, V.Singleton v, 
+                     Num a,Ord a,Show a, Arith.Product a,Constant a,
+                    V.Storage v [a], V.Transpose [] v, Ord node, v ~ []) =>
   PowerRecord node [] a ->
   PowerRecord node [] a
 addZeroCrossings r = rsig2Record rSigNew0 r
   where rSigNew0 =
-           case record2RSig r of
+           case record2RSig r :: Record.Sig [] a of
               rSig ->
                  case liftM2 (,) (Record.viewL rSig) (Record.viewR rSig) of
                     Nothing -> error "addZeroCrossings: empty signal"
                     Just ((rHead, rTail), (_, rLast)) ->
                        f rTail rHead mempty .++ Record.singleton rLast
 
-        f :: Record.Sig a -> Record.Samp1 a -> Record.Sig a -> Record.Sig a
+--        f :: Record.Sig v a -> Record.Samp1 a -> Record.Sig v a -> Record.Sig  v a
         f rSig rold rSigNew =
            case Record.viewL rSig of
               Nothing -> rSigNew
@@ -213,8 +217,11 @@ addZeroCrossings r = rsig2Record rSigNew0 r
 -----------------------------------------------------------------------------------
 -- | Function for calculating zero Crossings
 
-getZeroCrossings :: (Show a, Arith.Product a,Ord a, Constant a, Num a,Show a) => 
-                    Record.Samp1 a -> Record.Samp1 a -> Record.Sig a
+getZeroCrossings :: (V.Storage v [a], V.Singleton v, 
+                     Show a, Arith.Product a,Ord a, Constant a, 
+                     V.Transpose [] v,V.FromList v,
+                     Num a,Show a) => 
+                    Record.Samp1 a -> Record.Samp1 a -> Record.Sig v a
 getZeroCrossings rs1@(t1,ps1) rs2 = ((S.singleton t1) .++ zeroCrossingTimes,(S.singleton ps1) .++ zeroPowers)
           where
              (zeroCrossings, zeroCrossingTimes) = calcZeroTimes rs1 rs2
@@ -227,12 +234,14 @@ type TZeroSamp a = TC S.Sample (Typ A T Tt) (Data Nil (ZeroCrossing a))
 type TZeroSamp1L a = TC S.Sample (Typ A T Tt) (Data ([] :> Nil) (ZeroCrossing a))
 
 
-calcZeroPowers :: forall a . (Ord a, Constant a, Num a,Show a) => Arith.Product a => Record.Samp1 a -> Record.Samp1 a -> TSignal [] a -> TZeroSamp1L a -> PSample2 [] [] a
+calcZeroPowers :: forall a v . (Ord a, Constant a, V.Storage v [a], V.FromList v, 
+                                V.Transpose [] v, 
+                                Num a,Show a) => Arith.Product a => Record.Samp1 a -> Record.Samp1 a -> TSignal [] a -> TZeroSamp1L a -> PSample2 v [] a
 calcZeroPowers (t1,(TC (Data ps1))) (t2,(TC (Data ps2))) zeroCrossingTimes (TC (Data tz)) = S.transpose2 $ fromSigList sigList
                where g p1 p2 tz2 = f (toSample p1) (toSample p2) (toSample tz2)
                      sigList = List.zipWith3 g ps1 ps2 tz  :: [PSignal [] a]
 
-                     f :: PSample a -> PSample a -> TZeroSamp a -> PSignal [] a
+--                     f :: PSample a -> PSample a -> TZeroSamp a -> PSignal [] a
                      f p1 p2 zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
 
 calcZeroTimes :: forall a . (Ord a, Constant a, Show a, Arith.Product a) => 
@@ -244,7 +253,7 @@ calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)
                  zeroCrossings = S.tzipWith h2 ps1 ps2  :: TZeroSamp1L a
 
                  -- | Zero crossing time per signal, if zero crossing happens otherwise empty
-                 h2 :: PSample a -> PSample a -> TZeroSamp a
+--                 h2 :: PSample a -> PSample a -> TZeroSamp a
                  h2 p1 p2 | S.sign p1 == toSample Positive && S.sign p2 == toSample Negative = calcZeroTime (t1,p1) (t2,p2)
                  h2 p1 p2 | S.sign p1 == toSample Negative && S.sign p2 == toSample Positive = calcZeroTime (t1,p1) (t2,p2)
                  h2 _  _ = toSample NoCrossing

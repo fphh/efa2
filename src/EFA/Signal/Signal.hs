@@ -127,7 +127,9 @@ unSignalIdx (SignalIdx x) = x
 
 indexAdd :: SignalIdx -> Int -> SignalIdx
 indexAdd (SignalIdx x) y = SignalIdx $ x P.+ y
-
+            
+inc :: SignalIdx -> SignalIdx
+inc (SignalIdx idx) = SignalIdx (idx P.+ 1)
 
 data Range = Range SignalIdx SignalIdx
    deriving (Eq, Show)

@@ -89,10 +89,24 @@ quasiStationaryOptimisation params stoForcings stateForcings perStateSweep =
 
 simulation ::
   forall node sweep vec vec2 list a .
-   (
+   (vec ~ Vector, Eq (vec a), Arith.ZeroTestable a, 
+    Ord a,Fractional a,
+    Show a,
+    Show (vec a),
+    SV.Zipper vec,
+    SV.Walker vec,
+    SV.Storage vec Bool,
+    SV.Storage vec a,
+    SV.Singleton vec,
+    SV.Lookup vec,
+    SV.Len (vec a),
+    SV.Find vec,
+    Arith.Constant a,
    Node.C node, Show node, Ord node,Show (vec2 a),SV.Len (vec2 a),SV.Zipper vec2,
    SV.Walker vec2,SV.Convert vec2 [],
-   SV.Storage vec2 Bool,
+   Num a, 
+--   SV.Transpose [] vec, SV.Storage vec [a],
+   SV.Storage vec2 Bool,UV.Unbox a,
    SV.Storage vec2 a,
    SV.Singleton vec2,
    SV.FromList vec2,
@@ -216,7 +230,7 @@ toSweep params = StateQty.mapGraph f f
 
 
 optimiseAndSimulate ::
-  (
+  (vec ~ Vector,Fractional a, Arith.ZeroTestable a,
     Show node, Node.C node,Ord a, 
     Show a, UV.Unbox a, 
     Arith.Constant a,Arith.Product a,Arith.Sum a,
@@ -265,7 +279,7 @@ optimiseAndSimulate params stoForcing stateForcing reqsRec perStateSweep =
        optimalResult
        (simulation params dofsMatrices reqsRec)
 
-optimiseStatesAndSimulate :: (
+optimiseStatesAndSimulate :: (vec ~ Vector,Fractional a, UV.Unbox a, Arith.ZeroTestable a,
                               Show node, Arith.Product (sweep vec a),Arith.Constant a,
                               SV.Walker vec,Ord a, Show a, Arith.Sum a,
                               SV.Storage vec (vec a),

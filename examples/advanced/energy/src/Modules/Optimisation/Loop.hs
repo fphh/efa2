@@ -284,7 +284,9 @@ changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx
             (LessForcingNeeded, MoreForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~/ _3
 
 
-iterateInnerLoopWhile :: (Show node, Ord (Sweep vec a),
+iterateInnerLoopWhile :: (vec2 ~ Vector, Show node, Ord (Sweep vec a),Ord a, Show a, UV.Unbox a,Fractional a,Arith.Constant a,
+                      Arith.ZeroTestable a,
+                      Arith.Product a,
                           Node.C node,
                           Ord (Sweep vec Double),
                           Arith.ZeroTestable (Sweep vec a),
@@ -313,7 +315,9 @@ iterateInnerLoopWhile  params stateFlowGraphOpt =
          f x = ilStep x < maxCnt
                
 
-iterateInnerLoop ::(Show node,
+iterateInnerLoop ::(Ord a, Show a, UV.Unbox a, vec2 ~ Vector, Show node,Fractional a,Arith.Constant a,
+                      Arith.ZeroTestable a,
+                      Arith.Product a,
                     Ord (Sweep vec a),Node.C node,
                     Monoid.Monoid (Sweep vec Bool),
                     Arith.ZeroTestable (Sweep vec a),
@@ -323,7 +327,7 @@ iterateInnerLoop ::(Show node,
                     Sweep.SweepMap Sweep vec a Bool,
                     Sweep.SweepMap Sweep vec a a,
                     Sweep.SweepClass Sweep vec Bool,
-                    Sweep.SweepClass Sweep vec a)=>
+                    Sweep.SweepClass Sweep vec a) =>
   One.OptimalEnvParams node [] Sweep vec vec2 a ->
   Record.PowerRecord node vec2 a ->
   EnvResult node (Sweep vec a) ->

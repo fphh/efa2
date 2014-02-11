@@ -608,7 +608,7 @@ instance
 
 
 --type Sig = (TSigL, PSamp2LL)
-type Sig a = (TSignal [] a, PSample2 [] [] a)
+type Sig v a = (TSignal [] a, PSample2 v [] a)
   
 --type Samp1 = (TSamp, PSamp1L)
 type Samp1 a = (TSample a, PSample1 [] a)
@@ -643,7 +643,7 @@ viewR (t,ps) =
 zipPairs :: (a,b) -> (c,d) -> ((a,c), (b,d))
 zipPairs (a,b) (c,d) = ((a,c), (b,d))
 
-len :: Sig a -> Int
+len :: V.Len (v [a]) => Sig v a -> Int
 len  (t,ps) = min (S.len t) (S.len ps)
 
 singleton

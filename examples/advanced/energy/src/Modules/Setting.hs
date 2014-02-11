@@ -103,13 +103,13 @@ varRestPower', varLocalPower' :: [[Double]]
 (varLocalPower', varRestPower') = CT.varMat local rest
 
 -- ist die x-Achse
-varRestPower1D :: Sig.PSignal Vector Double
+varRestPower1D :: Sig.PSignal UV.Vector Double
 varRestPower1D = Sig.fromList rest
 
 varRestPower :: Sig.PSignal2 Vector Vector Double
 varRestPower = Sig.fromList2 varRestPower'
 
-varLocalPower :: Sig.PSignal2 Vector Vector Double
+varLocalPower :: Sig.PSignal2 Vector UV.Vector Double
 varLocalPower = Sig.fromList2 varLocalPower'
 
 

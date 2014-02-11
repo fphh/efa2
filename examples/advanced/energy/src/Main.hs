@@ -193,6 +193,8 @@ main1 = do
           (One.EtaThreshold 0.1)
           (One.StateForcing 0.01)
           (One.ChargeDrive 0.01)
+          ModSet.varRestPower1D
+          ModSet.varLocalPower
 
   --print (map (Topology.flowNumber $ One.systemTopology optParams) System.flowStates)
 
