@@ -215,8 +215,6 @@ main1 = do
              (ModLoop.iterateInnerLoopWhile optParams)
              (Type.stateFlowGraphSweep . Type.simulation . ModLoop.sResult . vhead "Main" . ModLoop.stateLoop )
 
---      g =  Type.stateFlowGraphSweep . Type.simulation . vhead "Main" . ModLoop.stateLoop
-
 
 {-
       opt = ModLoop.withChargeDrive optParams reqsRec ienv (-5.2837473962302475e-3)

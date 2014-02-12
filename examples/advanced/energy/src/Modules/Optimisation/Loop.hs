@@ -35,7 +35,7 @@ import qualified EFA.Flow.State as FlowState
 import qualified EFA.Flow.Part.Index as Idx
 
 import qualified EFA.Signal.Record as Record
---import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data (Data(Data))
 
 import EFA.Utility.List (vhead) --, vlast)
@@ -67,14 +67,18 @@ data StateLoopItem node a z = StateLoopItem
 
 data InnerLoopItem node a z = InnerLoopItem
                          { ilStep :: Int,
+                           ilBForcOut :: Map.Map node (One.SocDrive a),
+                           ilBalance :: One.Balance node a,  
+                           ilSForcOut :: Map.Map Idx.State (One.StateForcing a),  
+                           ilSDurations :: One.StateDurations a,
                            balanceLoop :: [BalanceLoopItem node a z], 
                            stateLoop :: [StateLoopItem node a z]}
                          
 
-data EtaLoopItem node sweep a z = EtaLoopItem {
+data EtaLoopItem node sweep vec a z = EtaLoopItem {
   elStep :: Int,
-  stateFlowIn :: (EnvResult node ((sweep:: (* -> *) -> * -> *) UV.Vector a)),
-  stateFlowOut :: (EnvResult node ((sweep:: (* -> *) -> * -> *) UV.Vector a)),
+  stateFlowIn :: (EnvResult node ((sweep:: (* -> *) -> * -> *) vec a)),
+  stateFlowOut :: (EnvResult node ((sweep:: (* -> *) -> * -> *) vec a)),
   innerLoop :: [InnerLoopItem node a z]} 
 
 
@@ -107,32 +111,38 @@ checkBalance  params bal = all g $ Map.elems bal
   where g x = Arith.abs x < eps
         One.BalanceThreshold eps =  One.balanceThreshold params
 
-iterateBalanceWhile ::
+iterateBalanceUntil ::
   (Ord node,Arith.Sum a, Ord a, Arith.Constant a) =>
   One.OptimalEnvParams node [] Sweep vec sigVec a ->
   (Map.Map node (One.SocDrive a) -> z) ->
   (z -> Map.Map node a) ->
   Map.Map node (One.SocDrive a) ->
-  (Map.Map node (One.SocDrive a), [BalanceLoopItem node a z])
-iterateBalanceWhile params fsys accessf xsstart = 
+  (Map.Map node (One.SocDrive a))
+iterateBalanceUntil params fsys accessf xsstart = 
   (bForcing $ vhead "interateBalanceUntil" bl, bl)
-  where bl = takeWhile f $ balanceIteration fsys accessf xsstart seed
-        f x = bStep x < maxStepCnt-1 -- && (checkBalance params $ balance x)
+  where bl = dropWhile f $ balanceIteration fsys accessf xsstart seed
+        f x = bStep x < maxStepCnt-1 
         (One.MaxBalanceIterations maxStepCnt) = One.maxBalanceIterations params
         seed = One.balanceForcingSeed params
                      
 balanceIteration ::
   (Arith.Sum a, Ord a, Arith.Product a,
    Arith.Constant a,Ord node) =>
-  (Map.Map node (One.SocDrive a) -> z) ->
-  (z -> Map.Map node a) ->
+  One.OptimalEnvParams node [] Sweep vec sigVec a ->
+  Map.Map Idx.State (Map.Map [a] (Type.PerStateSweep node sweep vec a)) ->
   Map.Map node (One.SocDrive a) ->
-  One.SocDrive a ->
+  Map.Map Idx.State (One.StateForcing a) ->
   [BalanceLoopItem node a z]
-balanceIteration fsys accessf forceStart seed = go 0 forceStart initialSteps (accessf resStart) resStart
+balanceIteration params perStateSweep balForceIn statForceIn = go 0 balForceIn initialSteps (accessf resStart) resStart
   where
-    initialSteps = Map.map (\_ -> seed) forceStart
-    resStart = fsys $ forceStart
+
+    seed = One.balanceForcingSeed params
+    initialSteps = Map.map (\_ -> seed) statForceIn
+    resStart = fsys balForceIn
+    fsys bf = NonIO.optimiseAndSimulate params bf statForceIn perStateSweep
+    accessf res = StateEta.balanceFromRecord (One.storagePositions params) $ 
+                      Type.signals $ Type.simulation res
+    
     go cnt force step bal res  = BalanceLoopItem cnt force step bal res 
                                 : go (cnt+1) force1 step1 bal1 res1
                                 
@@ -181,7 +191,7 @@ balanceIteration fsys accessf forceStart seed = go 0 forceStart initialSteps (ac
                     (Zero, Negative)  ->  One.getSocDrive seed
                     (_, Zero)  ->  Arith.zero
                 
-
+-- | TODO : move to korrekt Position -- State Labels == Times ??
 
 getStateTimes :: FlowState.Graph node edge sectionLabel nodeLabel storageLabel edgeLabel carryLabel-> One.StateDurations sectionLabel
 getStateTimes sfg = Map.map g $ StateQty.states sfg
@@ -209,33 +219,35 @@ checkStateTimes params stateDurations = all g $ Map.elems stateDurations
   
   
 
-iterateStateWhile ::
-  (Num a,Arith.Sum a, Ord a, Arith.Constant a) =>
-  One.OptimalEnvParams node [] Sweep vec sigVec a ->
-  (Map.Map Idx.State (One.StateForcing a) -> z) -> 
-  (z -> One.StateDurations a ) -> 
-  Map.Map Idx.State (One.StateForcing a) -> 
-  (Map.Map Idx.State (One.StateForcing a), [StateLoopItem node a z])
-iterateStateWhile params fsys accessTimes initialStateForcings = 
+iterateStateUntil ::[StateLoopItem node a z] -> 
+
+iterateStateUntil params stateLoop = 
   (sForcing $ vhead "interateStateUntil" sl, sl) 
-  where sl = takeWhile f $ stateIteration fsys  accessTimes initialStateForcings thr seed
-        f x =  sStep x < maxStepCnt-1
+  where sl = dropWhile f $ stateLoop
+        f x =  sStep x > maxStepCnt-1
         (One.MaxStateIterations maxStepCnt) = One.maxStateIterations params 
         thr = One.stateTimeThreshold params
-        seed = One.stateForcingSeed params
+
 
 stateIteration :: (Arith.Constant a,Eq a, Num a,Ord a) => 
-                  (Map.Map Idx.State (One.StateForcing a) -> z) -> 
-                  (z -> One.StateDurations a ) -> 
-                  Map.Map Idx.State (One.StateForcing a) -> 
-                  One.StateTimeThreshold a -> 
-                  One.StateForcing a -> 
-                  [StateLoopItem node a z]
-stateIteration fsys accessTimes initialStateForcings (One.StateTimeThreshold thr) seed = 
-  go 0 initialStateForcings initialSteps initialResults 
-  where initialSteps = Map.map (\_ -> seed) initialStateForcings
-        initialResults= fsys initialStateForcings
+                  One.OptimalEnvParams node [] Sweep vec sigVec a ->
+                  Map.Map Idx.State (Map.Map [a] (Maybe (a, a, EnvResult node a))) ->
+                  Map.Map node (One.SocDrive a) ->
+                  Map.Map Idx.State (One.StateForcing a) ->
+                 [StateLoopItem node a z]
+stateIteration params optimalObjectivePerState stateForceIn  = 
+  go 0  stateForceIn initialSteps initialResults 
+  where initialSteps = Map.map (\_ -> seed) stateForceIn
+        seed = One.stateForcingSeed params
+        fsys sf = Base.selectOptimalState sf optimalObjectivePerState
+        initialResults= fsys stateForceIn
+        (One.StateTimeThreshold thr) = One.stateTimeThreshold params
         
+        accessTimes res = Map.map f $ getStateTimes $ Type.stateFlowGraph $ 
+                      Type.simulation $ res
+           where f (Determined (Data x)) = x
+                 f Undetermined  = error "State Time undetermined"
+         
         go cnt force step res  = StateLoopItem cnt force step (accessTimes res) res: 
                                  go (cnt+1) force1 step1 res1 
           where
@@ -285,11 +297,34 @@ changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx
             (LessForcingNeeded, MoreForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~/ _3
 
 
-
-iterateInnerLoopWhile ::
-  One.OptimalEnvParams node [] Sweep UV.Vector sigVec a ->
-  EnvResult node (Sweep UV.Vector a) ->
-  [InnerLoopItem node a (Type.Optimisation node Sweep UV.Vector sigVec a)]
+{-
+iterateInnerLoopWhile ::(Eq (sigVec a),
+                      Fractional a,
+                      Ord a,
+                      Show (sigVec a),
+                      Show node,
+                      Show a,
+                      UV.Unbox a,
+                      SV.Zipper sigVec,
+                      SV.Walker sigVec,
+                      SV.Storage sigVec (Maybe (Result a)),
+                      SV.Storage sigVec a,
+                      SV.Storage sigVec Bool , 
+                      SV.Singleton sigVec,
+                      SV.Lookup sigVec,
+                      SV.Len (sigVec a),
+                      SV.FromList sigVec,
+                      SV.Find sigVec,
+                      SV.Convert sigVec sigVec,
+                      SV.Convert sigVec [],
+                      SV.Convert sigVec vec,
+                      Arith.ZeroTestable a,
+                      Arith.Product a, 
+                      Node.C node, Arith.Constant a
+                      )=>
+  One.OptimalEnvParams node [] Sweep vec sigVec a ->
+  EnvResult node (Sweep vec a) ->
+  [InnerLoopItem node a (Type.Optimisation node Sweep vec sigVec a)]
   
 iterateInnerLoopWhile  params stateFlowGraphOpt = 
   takeWhile f $ iterateInnerLoop params reqsRec stateFlowGraphOpt
@@ -297,50 +332,61 @@ iterateInnerLoopWhile  params stateFlowGraphOpt =
          stateFlowGraphOpt = One.stateFlowGraphOpt params
          reqsRec = One.reqsRec params
          f x = ilStep x < maxCnt
-               
+-}             
 
-iterateInnerLoop :: 
+iterateInnerLoop :: (Ord a, Show a, Show node, UV.Unbox a,
+                     Eq a,
+                      Eq (sigVec a),
+                      Fractional a,
+                      Show (sigVec a),
+                      SV.Zipper sigVec,
+                      SV.Walker sigVec,
+                      SV.Storage sigVec Bool,
+                      SV.Storage sigVec a,
+                      SV.Storage sigVec (Maybe (Result a)), 
+                      SV.Singleton sigVec,
+                      SV.Lookup sigVec,
+                      SV.Len (sigVec a),
+                      SV.FromList sigVec,
+                      SV.Find sigVec,
+                      SV.Convert sigVec vec,
+                      SV.Convert sigVec [],
+                      SV.Convert sigVec sigVec,
+                      Arith.ZeroTestable a,
+                      Arith.Product a, 
+                      Node.C node, Arith.Constant a) =>
   One.OptimalEnvParams node [] Sweep vec sigVec a ->
-  Record.PowerRecord node sigVec a ->
-  EnvResult node (Sweep vec a) ->
-  [InnerLoopItem node a (Type.Optimisation node Sweep vec vec a)]
+  Map.Map Idx.State (Map.Map [a] (Type.PerStateSweep node sweep vec a)) ->
+  [InnerLoopItem node a (Type.Optimisation node Sweep vec sigVec a)]
 
-iterateInnerLoop params reqsRec stateFlowGraphOpt = go 0 initialBattForcing initStateForcing
+iterateInnerLoop params perStateSweep balForcIn stateForcIn = 
+  go 0 balForcIn stateForcIn
   where
-     perStateSweep = Base.perStateSweep params stateFlowGraphOpt
-     initStateForcing = One.zeroStateForcing stateFlowGraphOpt
-     initialBattForcing = One.initialBattForcing params
-      
-     g battF stateF = NonIO.optimiseAndSimulate params battF stateF reqsRec perStateSweep
-     
-     accessBalance res = StateEta.balanceFromRecord (One.storagePositions params) $ 
-                      Type.signals $ Type.simulation res
-     
-     accessTime res = Map.map f $ getStateTimes $ Type.stateFlowGraph $ 
-                      Type.simulation $ res
-        where f (Determined (Data x)) = x
-              f Undetermined  = error "State Time undetermined"
-
-     go cnt balForce statForce = InnerLoopItem cnt bl sl : go (cnt+1) balForce1 statForce1
-       where
-         (balForce1,bl) = iterateBalanceWhile params  
-                    (flip g initStateForcing) accessBalance balForce
-      
-           
-         (statForce1,sl) = iterateStateWhile params (g initialBattForcing) accessTime
-                     statForce
+   
+    go cnt balForce statForce = InnerLoopItem cnt balForce1 bal statForce1 sta balLoop statLoop : 
+                                go (cnt+1) balForce1 statForce1
+      where
+        balLoop = balanceIteration params balForce
+                    
+        balForce1 = iterateBalanceUntil checkBalance balLoop            
+                    
+        statLoop = stateIteration params balForce1 statForce
+                    
+        (statForce1,bal,sta) = iterateStateUntil checkStates balLoop
 
 
-iterateEtaWhile :: One.OptimalEnvParams node [] sweep UV.Vector sigVec a ->
-                   (EnvResult node (sweep UV.Vector a) -> [InnerLoopItem node a z]) ->
-                   (InnerLoopItem node a z -> EnvResult node (sweep UV.Vector a)) ->
-                   [EtaLoopItem node (sweep :: (* -> *) -> * -> *) a z]
-iterateEtaWhile params f g = takeWhile h $ go 0  $ One.stateFlowGraphOpt params 
-   where h x = elStep x <  maxCnt
-         (One.MaxEtaIterations maxCnt) = One.maxEtaIterations params
+iterateEtaWhile :: One.OptimalEnvParams node [] sweep vec sigVec a ->
+                   (EnvResult node (sweep vec a) -> [InnerLoopItem node a z]) ->
+                   (InnerLoopItem node a z -> EnvResult node (sweep vec a)) ->
+                   [EtaLoopItem node (sweep :: (* -> *) -> * -> *) vec a z]
+iterateEtaWhile params f g = go 0  $ One.stateFlowGraphOpt params 
+   where (One.MaxEtaIterations maxCnt) = One.maxEtaIterations params
+         balf =  One.zeroStateForcing
+         statf = One.stateForcingSeed $ One.stateFlowGraphOpt params
          go cnt sfg = EtaLoopItem cnt sfg sfg1 res : go (cnt+1) sfg1
            where
-            res = f sfg
+            sweep = Base.perStateSweep params sfg
+            res = f sweep balf statf
             sfg1 = g $ vhead "iterateEtaUntil" res
 
 

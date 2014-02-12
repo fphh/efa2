@@ -55,18 +55,16 @@ data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
     optimalState ::
       Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) }
 
-data Simulation node (sweep :: (* -> *) -> * -> *) vec vec2 a =
+data Simulation node (sweep :: (* -> *) -> * -> *) vec sigVec a =
   Simulation {
     stateFlowGraph :: EnvResult node (Data Nil a), --(sweep vec a),
     stateFlowGraphSweep :: EnvResult node (sweep vec a),
     sequenceFlowGraph ::
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
-
-    givenSignals :: Record.PowerRecord node vec2 a,
-
+    givenSignals :: Record.PowerRecord node sigVec a,
     signals :: Record.PowerRecord node [] a }
 
-data Optimisation node (sweep :: (* -> *) -> * -> *) vec vec2 a =
+data Optimisation node (sweep :: (* -> *) -> * -> *) vec sigVec a =
   Optimisation {
     quasiStationary :: QuasiStationary node sweep vec a,
-    simulation :: Simulation node sweep vec vec2 a }
+    simulation :: Simulation node sweep vec sigVec a }
