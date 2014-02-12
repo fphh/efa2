@@ -94,10 +94,10 @@ newtype InitStorageSeq node a = InitStorageSeq { unInitStorageSeq :: Map node a 
 
 newtype Name = Name String deriving (Eq, Ord, Show)
 
-type OptimalEtaWithEnv node f v =
-  Map Idx.State (Map (TopoIdx.Position node) (Map (f v) (v, v, v)))
+type OptimalEtaWithEnv node list v =
+  Map Idx.State (Map (TopoIdx.Position node) (Map (list v) (v, v, v)))
 
-data OptimalEnvParams node f sweep sweepVec sigVec a = OptimalEnvParams {
+data OptimalEnvParams node list sweep sweepVec sigVec a = OptimalEnvParams {
   systemTopology :: Topology.Topology node,
   stateFlowGraphOpt :: StateQty.Graph node (Result (sweep sweepVec a) ) (Result (sweep sweepVec a)),
   reqsRec :: PowerRecord node sigVec a,
@@ -105,7 +105,7 @@ data OptimalEnvParams node f sweep sweepVec sigVec a = OptimalEnvParams {
   initStorageSeq :: InitStorageSeq node a,
   etaMap :: Map Name (a -> a),
   etaAssignMap :: EtaAssignMap node,
-  points :: Map (f a) (ReqsAndDofs.Pair (Sweep.List sweep sweepVec) (Sweep.List sweep sweepVec) a),
+  points :: Map (list a) (ReqsAndDofs.Pair (Sweep.List sweep sweepVec) (Sweep.List sweep sweepVec) a),
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   etaToOptimise :: Maybe (TopoIdx.Position node),
@@ -122,8 +122,8 @@ data OptimalEnvParams node f sweep sweepVec sigVec a = OptimalEnvParams {
   etaThreshold :: EtaThreshold a,  
   stateForcingSeed :: StateForcing a,   
   balanceForcingSeed :: SocDrive a,   
-  varReqRoomPower1D :: Sig.PSignal sigVec a,
-  varReqRoomPower2D :: Sig.PSignal2 Vector sigVec a
+  varReqRoomPower1D :: Sig.PSignal UV.Vector a,
+  varReqRoomPower2D :: Sig.PSignal2 Vector UV.Vector a
   }
 
 newtype MaxEtaIterations  =  MaxEtaIterations Int
