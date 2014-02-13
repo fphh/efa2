@@ -89,7 +89,7 @@ import Text.Printf (printf)
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
    Sweep.SweepClass sweep vec a) =>
-  One.OptimalEnvParams Node list sweep vec vec2 a->
+  One.OptimalEnvParams Node list sweep vec varVec sigVec a->
   EnvResult Node (sweep vec a)
 initEnv params = AppOpt.initialEnv params System.stateFlowGraph
 
@@ -166,7 +166,7 @@ main1 = do
       ienv = AppOpt.storageEdgeXFactors optParams 4 4
                $ AppOpt.initialEnv optParams System.stateFlowGraph
 
-      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector UV.Vector Double
+      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector UV.Vector UV.Vector Double
       optParams =
         One.OptimalEnvParams
           System.topology
@@ -212,8 +212,6 @@ main1 = do
 
       ol = --ModLoop.uniqueInnerLoopX
            ModLoop.iterateEtaWhile optParams
-             (ModLoop.iterateInnerLoopWhile optParams)
-             (Type.stateFlowGraphSweep . Type.simulation . ModLoop.sResult . vhead "Main" . ModLoop.stateLoop )
 
 
 {-

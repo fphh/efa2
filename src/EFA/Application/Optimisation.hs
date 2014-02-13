@@ -85,13 +85,13 @@ initialEnvWithoutState ::
   (Ord node, Arith.Constant b,
    Sweep.SweepClass sweep vec b,
    Sweep.SweepMap sweep vec b b) =>
-  One.OptimalEnvParams node f sweep vec vec2 b ->
+  One.OptimisationParams node list sweep vec b ->
   Maybe Idx.State ->
   StateQty.Graph node a v ->
   StateQty.Graph node (Result (sweep vec b)) (Result (sweep vec b))
-initialEnvWithoutState params state =
+initialEnvWithoutState optParams state =
   let -- one = One.one params
-      one = Sweep.fromRational (One.sweepLength params) Arith.one
+      one = Sweep.fromRational (One.sweepLength optParams) Arith.one
       mkSweep x = Determined $ Sweep.map (const (Arith.fromRational x)) one
   in StateQty.mapGraphWithVar
        (\(Idx.ForStorage var _) _a ->
@@ -164,23 +164,23 @@ initialEnv ::
   (Ord node, Arith.Constant b,
    Sweep.SweepClass sweep vec b,
    Sweep.SweepMap sweep vec b b) =>
-  One.OptimalEnvParams node f sweep vec vec2 b ->
+  One.OptimisationParams node list sweep vec b ->
   StateQty.Graph node a v ->
   StateQty.Graph node (Result (sweep vec b)) (Result (sweep vec b))
-initialEnv params = initialEnvWithoutState params Nothing
+initialEnv optParams = initialEnvWithoutState optParams Nothing
 
 
 storageEdgeXFactors ::
   (Fractional b, Arith.Constant b,
    Sweep.SweepClass sweep vec b,
    Sweep.SweepMap sweep vec b b) =>
-  One.OptimalEnvParams node f sweep vec vec2 b ->
+  One.OptimisationParams node list sweep vec b ->
   Integer ->
   Integer ->
   StateQty.Graph node (Result (sweep vec b)) v ->
   StateQty.Graph node (Result (sweep vec b)) v
-storageEdgeXFactors params nout nin g = g { State.storages = tt }
-   where one = Sweep.fromRational (One.sweepLength params) Arith.one
+storageEdgeXFactors optParams nout nin g = g { State.storages = tt }
+   where one = Sweep.fromRational (One.sweepLength optParams) Arith.one
          tt = Map.map f $ State.storages g
          f gr = gr { Storage.edges = Map.map func $ Storage.edges gr }
          func x = x { StateQty.carryXOut = xout, StateQty.carryXIn = xin }

@@ -91,41 +91,46 @@ type EtaAssignMap node = Map (TopoIdx.Position node) (Name, Name)
 newtype InitStorageState node a = InitStorageState { unInitStorageState :: Map node a }
 newtype InitStorageSeq node a = InitStorageSeq { unInitStorageSeq :: Map node a }
 
-
 newtype Name = Name String deriving (Eq, Ord, Show)
 
 type OptimalEtaWithEnv node list v =
   Map Idx.State (Map (TopoIdx.Position node) (Map (list v) (v, v, v)))
 
-data OptimalEnvParams node list sweep sweepVec sigVec a = OptimalEnvParams {
+data SystemParams node a = SystemParams {
   systemTopology :: Topology.Topology node,
-  stateFlowGraphOpt :: StateQty.Graph node (Result (sweep sweepVec a) ) (Result (sweep sweepVec a)),
-  reqsRec :: PowerRecord node sigVec a,
-  initStorageState :: InitStorageState node a,
-  initStorageSeq :: InitStorageSeq node a,
-  etaMap :: Map Name (a -> a),
   etaAssignMap :: EtaAssignMap node,
-  points :: Map (list a) (ReqsAndDofs.Pair (Sweep.List sweep sweepVec) (Sweep.List sweep sweepVec) a),
+  etaMap :: Map Name (a -> a),    
+  storagePositions:: [TopoIdx.Position node],
+  initStorageState :: InitStorageState node a,
+  initStorageSeq :: InitStorageSeq node a}
+                           
+  
+data OptimisationParams node list sweep vec a = OptimisationParams {
+  stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),    
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
-  etaToOptimise :: Maybe (TopoIdx.Position node),
+  points :: Map (list a) (ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),
   sweepLength :: Int,
+  etaToOptimise :: Maybe (TopoIdx.Position node),
+  maxEtaIterations :: MaxEtaIterations ,  
   maxInnerLoopIterations:: MaxInnerLoopIterations ,
-  initialBattForcing :: Map node (SocDrive a),
-  initialBattForceStep :: Map node (SocDrive a),
-  storagePositions:: [TopoIdx.Position node],
-  maxEtaIterations :: MaxEtaIterations ,
   maxBalanceIterations:: MaxBalanceIterations ,
   maxStateIterations:: MaxStateIterations ,
+  initialBattForcing :: Map node (SocDrive a),
+  initialBattForceStep :: Map node (SocDrive a),
+  etaThreshold :: EtaThreshold a,    
   balanceThreshold :: BalanceThreshold a,
   stateTimeThreshold :: StateTimeThreshold a,
-  etaThreshold :: EtaThreshold a,  
   stateForcingSeed :: StateForcing a,   
-  balanceForcingSeed :: SocDrive a,   
-  varReqRoomPower1D :: Sig.PSignal UV.Vector a,
-  varReqRoomPower2D :: Sig.PSignal2 Vector UV.Vector a
+  balanceForcingSeed :: SocDrive a
   }
 
+data SimulationParams node vec a = SimulationParams {
+  varReqRoomPower1D :: Sig.PSignal vec a,
+  varReqRoomPower2D :: Sig.PSignal2 Vector vec a,
+  reqsRec :: PowerRecord node vec a}
+
+ 
 newtype MaxEtaIterations  =  MaxEtaIterations Int
 newtype MaxBalanceIterations  = MaxBalanceIterations Int
 newtype MaxStateIterations  = MaxStateIterations Int

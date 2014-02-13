@@ -11,7 +11,8 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Sequence.Quantity as SeqQty
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.Absolute as StateAbs
-
+import qualified EFA.Flow.Topology.Quantity as TopoQty
+import qualified EFA.Signal.Sequence as Sequ
 
 import EFA.Equation.Result (Result)
 
@@ -40,31 +41,40 @@ data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
     storagePowerMap :: Map Idx.State (Map node (Maybe (sweep vec a))),
     envResult :: EnvResult node (sweep vec a) }
 
-
-data QuasiStationary node (sweep :: (* -> *) -> * -> *) vec a =
-  QuasiStationary {
-    perStateSweep ::
-      Map Idx.State (Map [a] (PerStateSweep node sweep vec a)),
-
+data BalOptimisation node (sweep :: (* -> *) -> * -> *) vec a = 
+  PerStateOptimum {
     optimalObjectivePerState ::
       Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))),
-
     expectedEtaPerState ::
-      Map Idx.State (Map [a] (Maybe a)),
-
+      Map Idx.State (Map [a] (Maybe a))}
     optimalState ::
-      Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) }
+      Map [a] (Maybe (a, a, Idx.State, EnvResult node a))}
 
-data Simulation node (sweep :: (* -> *) -> * -> *) vec sigVec a =
+data StatOptimisation node (sweep :: (* -> *) -> * -> *) vec a = 
+  Optimum {
+    stateOptimalState ::
+      Map [a] (Maybe (a, a, Idx.State, EnvResult node a))}
+
+data Simulation node vec a =
   Simulation {
-    stateFlowGraph :: EnvResult node (Data Nil a), --(sweep vec a),
-    stateFlowGraphSweep :: EnvResult node (sweep vec a),
-    sequenceFlowGraph ::
-      SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
-    givenSignals :: Record.PowerRecord node sigVec a,
-    signals :: Record.PowerRecord node [] a }
+--    stateFlowGraph :: EnvResult node (Data Nil a),
+--    stateFlowGraphSweep :: EnvResult node (sweep vec a),
+--    sequenceFlowGraph ::
+--    SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
+    givenSignals :: Record.PowerRecord node vec a,
+    envSim:: TopoQty.Section node (Result (Data (vec :> Nil) a)),
+    outSignals :: Record.PowerRecord node vec a }
 
+-- | vec2 can be used to switch to vector after cutting
+data EnergyFlowAnalysis node vec vec2 a = EnergyFlowAnalysis {
+    signals :: Record.PowerRecord node vec a,
+    powerSequence :: Sequ.List (Record.PowerRecord node vec2 a),
+    sequenceFlowGraph ::
+      SeqQty.Graph node (Result (Data Nil a)) (Result (Data (vec2 :> Nil) a)),
+    stateFlowGraph :: EnvResult node (Data Nil a)}
+{-
 data Optimisation node (sweep :: (* -> *) -> * -> *) vec sigVec a =
   Optimisation {
     quasiStationary :: QuasiStationary node sweep vec a,
     simulation :: Simulation node sweep vec sigVec a }
+-}

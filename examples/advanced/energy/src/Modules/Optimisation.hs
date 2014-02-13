@@ -114,7 +114,7 @@ solve ::
    Monoid (sweep vec Bool),
    Sweep.SweepMap sweep vec a Bool,
    Sweep.SweepClass sweep vec Bool) =>
-  One.OptimalEnvParams node list sweep vec sigVec a ->
+  One.OptimisationParams node list sweep vec a ->
   [TopoIdx.Power node] ->
   Type.EnvResult node (sweep vec a) ->
   EtaAssignMap node ->

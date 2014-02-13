@@ -65,24 +65,25 @@ perStateSweep ::
    Monoid (sweep vec Bool),
    Sweep.SweepMap sweep vec a Bool,
    Sweep.SweepClass sweep vec Bool) =>
-  One.OptimalEnvParams node list sweep vec sigVec a ->
+  One.SystemParams node a ->
+  One.OptimisationParams node list sweep vec a ->
   StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
   Map Idx.State (Map (list a) (Type.PerStateSweep node sweep vec a))
-perStateSweep params stateFlowGraph  =
+perStateSweep sysParams optParams stateFlowGraph  =
   Map.mapWithKey f states
   where states = StateQty.states stateFlowGraph
         reqsAndDofs = map TopoIdx.Power
-                      $ ReqsAndDofs.unReqs (One.reqsPos params)
-                        ++ ReqsAndDofs.unDofs (One.dofsPos params)
+                      $ ReqsAndDofs.unReqs (One.reqsPos optParams)
+                        ++ ReqsAndDofs.unDofs (One.dofsPos optParams)
 
-        f state _ = DoubleSweep.doubleSweep solveFunc (One.points params)
+        f state _ = DoubleSweep.doubleSweep solveFunc (One.points optParams)
           where solveFunc =
                   Optimisation.solve
-                    params
+                    optParams
                     reqsAndDofs
                     (AppOpt.eraseXAndEtaFromState state stateFlowGraph)
-                    (One.etaAssignMap params)
-                    (One.etaMap params)
+                    (One.etaAssignMap sysParams)
+                    (One.etaMap sysParams)
                     state
                     
 
@@ -94,7 +95,7 @@ forcing ::
    Sweep.SweepMap sweep vec a a,
    Arith.Constant a) =>
   Map node (One.SocDrive a)->
-  One.OptimalEnvParams node list sweep vec sigVec a ->
+  One.OptimisationParams node list sweep vec a ->
   Idx.State ->
   Map Idx.State (Map node (Maybe (sweep vec a))) ->
   Result (sweep vec a)
@@ -124,7 +125,7 @@ optimalObjectivePerState ::
    Sweep.SweepVector UV.Vector  a,
    Sweep.SweepClass sweep UV.Vector  a,
    Sweep.SweepMap sweep UV.Vector  a a) =>
-  One.OptimalEnvParams node list sweep UV.Vector sigVec a ->
+  One.OptimisationParams node list sweep UV.Vector a ->
   Map node (One.SocDrive a)->  
   Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
@@ -192,11 +193,11 @@ consistentRecord (Record.Record _ m) =
 
 consistentSection ::
   (Ord t5, Show t5, Node.C node, Arith.Constant t5) =>
-  One.OptimalEnvParams node list sweep vec sigVec a ->
+  One.SystemParams node a ->
   Sequ.Section (Record.Record t t3 t1 t4 (TopoIdx.Position node) [] t2 t5) ->
   Bool
-consistentSection params (Sequ.Section _ _ rec) =
-  let recs = map f $ Graph.edges $ One.systemTopology params
+consistentSection sysParams (Sequ.Section _ _ rec) =
+  let recs = map f $ Graph.edges $ One.systemTopology sysParams
       f (Graph.DirEdge fr to) =
         Record.extract [TopoIdx.ppos fr to, TopoIdx.ppos to fr] rec
   in all consistentRecord recs
@@ -204,12 +205,12 @@ consistentSection params (Sequ.Section _ _ rec) =
 
 filterPowerRecordList ::
   (Ord a, Show a, Arith.Constant a, Node.C node) =>
-  One.OptimalEnvParams node list sweep vec sigVec a ->
+  One.SystemParams node a ->
   Sequ.List (Record.PowerRecord node [] a) ->
   ( Sequ.List (Record.PowerRecord node [] a),
     Sequ.List (Record.PowerRecord node [] a) )
-filterPowerRecordList params (Sequ.List recs) =
-  let (ok, bad) = List.partition (consistentSection params) recs
+filterPowerRecordList sysParams (Sequ.List recs) =
+  let (ok, bad) = List.partition (consistentSection sysParams) recs
   in (Sequ.List ok, Sequ.List bad)
 
 
@@ -219,20 +220,20 @@ filterPowerRecordList params (Sequ.List recs) =
 
 signCorrectedOptimalPowerMatrices ::
   (Ord a, Arith.Sum a, Arith.Constant a, Show node, Ord node,
-   Vec.Storage sigVec (Maybe (Result a)),
-   Vec.FromList sigVec) =>
-  One.OptimalEnvParams node [] sweep vec sigVec a ->
+   Vec.Storage varVec (Maybe (Result a)),
+   Vec.FromList varVec) =>
+  One.SystemParams node a ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) ->
   ReqsAndDofs.Dofs (TopoIdx.Position node) ->
-  Map (TopoIdx.Position node) (Sig.PSignal2 Vector sigVec (Maybe (Result a)))
-signCorrectedOptimalPowerMatrices params m (ReqsAndDofs.Dofs ppos) =
+  Map (TopoIdx.Position node) (Sig.PSignal2 Vector varVec (Maybe (Result a)))
+signCorrectedOptimalPowerMatrices systemParams m (ReqsAndDofs.Dofs ppos) =
   Map.fromList $ map g ppos
   where g pos = (pos, ModUt.to2DMatrix $ Map.map f m)
           where f Nothing = Nothing
                 f (Just (_, _, st, graph)) =
                   case StateQty.lookup (StateIdx.powerFromPosition st pos) graph of
                        Just sig -> Just $
-                         if isFlowDirectionPositive params st pos graph
+                         if isFlowDirectionPositive systemParams st pos graph
                             then sig
                             else fmap Arith.negate sig
                        _ -> fmap (const (Determined Arith.zero))
@@ -245,12 +246,12 @@ signCorrectedOptimalPowerMatrices params m (ReqsAndDofs.Dofs ppos) =
 
 isFlowDirectionPositive ::
   (Ord node, Show node) =>
-  One.OptimalEnvParams node list sweep vec sigVec a ->
+  One.SystemParams node a ->
   Idx.State ->
   TopoIdx.Position node ->
   EnvResult node a ->
   Bool
-isFlowDirectionPositive params state (TopoIdx.Position f t) graph =
+isFlowDirectionPositive sysParams state (TopoIdx.Position f t) graph =
   case Set.toList es of
        [Graph.DirEdge fe te] ->
          case flowTopoEs of
@@ -265,7 +266,7 @@ isFlowDirectionPositive params state (TopoIdx.Position f t) graph =
        _ -> error $ "More or less than exactly one edge between nodes "
                     ++ show f ++ " and " ++ show t ++ " in " ++ show es
   where flowTopoEs = fmap Graph.edgeSet $ ModUt.getFlowTopology state graph
-        topo = One.systemTopology params
+        topo = One.systemTopology sysParams
         es = Graph.adjacentEdges topo f
                `Set.intersection` Graph.adjacentEdges topo t
 
