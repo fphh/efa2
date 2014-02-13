@@ -6,7 +6,7 @@ module Modules.Optimisation.Loop where
 
 
 --import qualified Modules.System as System 
---import Modules.System (Node)
+import Modules.System (Node)
 --import qualified Modules.Plot as ModPlot
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.NonIO as NonIO
@@ -31,55 +31,56 @@ import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State as FlowState
 
 -- import qualified EFA.Flow.State.Index as StateIdx
---import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Part.Index as Idx
 
-import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.Vector as SV
-import EFA.Signal.Data (Data(Data))
+--import qualified EFA.Signal.Record as Record
+--import qualified EFA.Signal.Vector as SV
+import EFA.Signal.Data (Data(Data)) --, Apply)
 
 import EFA.Utility.List (vhead) --, vlast)
 --import EFA.Utility.Async (concurrentlyMany_)
 
-import qualified Data.Monoid as Monoid
+--import qualified Data.Monoid as Monoid
 import qualified Data.Map as Map
 --import qualified Data.List as List
 import qualified Data.Vector.Unboxed as UV
-import Data.Vector (Vector)
+--import Data.Vector (Vector)
 --import Data.Maybe (catMaybes)
 -- import Debug.Trace (trace)
 
---import Text.Printf (printf, PrintfArg,IsChar)
+import Text.Printf (printf, PrintfArg,IsChar)
 
-data BalanceLoopItem node a z =
+data BalanceLoopItem node a z0 z =
   BalanceLoopItem { bStep :: Int, 
                     bForcing :: Map.Map node (One.SocDrive a),
                     bFStep ::  Map.Map node (One.SocDrive a),
                     balance :: One.Balance node a,
-                    bResult :: z}
+                    bResult :: (z0,z)}
 
 data StateLoopItem node a z = StateLoopItem 
                          { sStep ::Int, 
                            sForcing  :: Map.Map Idx.State (One.StateForcing a),
                            sFStep :: Map.Map Idx.State (One.StateForcing a), 
                            stateDurations :: One.StateDurations a,
+                           sBalance :: One.Balance node a,
                            sResult :: z }
 
-data InnerLoopItem node a z = InnerLoopItem
+data InnerLoopItem node a z0 z = InnerLoopItem
                          { ilStep :: Int,
                            ilBForcOut :: Map.Map node (One.SocDrive a),
                            ilBalance :: One.Balance node a,
                            ilSForcOut :: Map.Map Idx.State (One.StateForcing a), 
                            ilSDurations :: One.StateDurations a,
-                           balanceLoop :: [BalanceLoopItem node a z],
+                           balanceLoop :: [BalanceLoopItem node a z0 z],
                            stateLoop :: [StateLoopItem node a z]}
                          
 
-data EtaLoopItem node sweep vec a z = EtaLoopItem {
+data EtaLoopItem node sweep vec a z0 z = EtaLoopItem {
   elStep :: Int,
   stateFlowIn :: (EnvResult node ((sweep:: (* -> *) -> * -> *) vec a)),
   stateFlowOut :: (EnvResult node ((sweep:: (* -> *) -> * -> *) vec a)),
-  innerLoop :: [InnerLoopItem node a z]} 
+  innerLoop :: [InnerLoopItem node a z0 z]} 
 
 
 
@@ -98,9 +99,9 @@ uniqueBalanceLoopX (EtaLoop ol) = EtaLoop (map f ol)
 eta ::
   (Node.C node, UV.Unbox a,
    Arith.Product a) => 
-  Type.Simulation node vec a -> a
-eta sim =
-  case StateEta.etaSys (Type.stateFlowGraph sim) of
+  Type.EnergyFlowAnalysis node vec a -> a
+eta efa =
+  case StateEta.etaSys (Type.stateFlowGraph efa) of
        Determined (Data e) -> e 
        _ -> error "Main.iterateBalanceIO"
 
@@ -113,67 +114,45 @@ checkBalance optParams bal = all g $ Map.elems bal
 
 iterateBalanceUntil ::
   (Ord node,Arith.Sum a, Ord a, Arith.Constant a) =>
-  One.OptimisationParams node [] Sweep vec varVec sigVec a ->
-  [BalanceLoopItem node a z] ->
-  Map.Map node (One.SocDrive a)
+  One.OptimisationParams node [] Sweep vec a ->
+  [BalanceLoopItem node a (Type.OptimisationPerState node a) z] ->
+  (Map.Map node (One.SocDrive a), Type.OptimalSolutionPerState node a)
 iterateBalanceUntil optParams balanceLoop =
-  bForcing $ vhead "interateBalanceUntil" $ dropWhile f balanceLoop
+  (bForcing $ lastElem, Type.optimalSolutionPerState $ fst $ bResult $ lastElem)
   where f x = bStep x < maxStepCnt-1 
         One.MaxBalanceIterations maxStepCnt = One.maxBalanceIterations optParams
+        lastElem = vhead "interateBalanceUntil" $ dropWhile f balanceLoop
                      
-{-balanceIteration ::
-  (Arith.Sum a, Ord a, Arith.Product a,
-   Arith.Constant a,Ord node, Node.C node,
-   Eq (sigVec a),
-   Fractional a,
-   Show a,
+balanceIteration::  
+  (efaVec~[], intVec ~ [], sweep ~ Sweep, a ~ d, simVec ~ [], 
+   Ord d,
+   Show d,
    Show node,
-   Show (sigVec a),
-   UV.Unbox a,
-   SV.Zipper sigVec,
-   SV.Walker sigVec,
-   SV.Storage sigVec Bool,
-   SV.Storage sigVec a,
-   SV.Storage sigVec (Maybe (Result a)),
-   SV.Singleton sigVec,
-   SV.Lookup sigVec,
-   SV.Len (sigVec a),
-   SV.FromList sigVec,
-   SV.Find sigVec,
-   SV.Convert sigVec UV.Vector,
-   SV.Convert sigVec [],
-   SV.Convert sigVec sigVec,
-   Arith.ZeroTestable a,
-   Eq (varVec a),
-   Show (varVec a),
-   SV.Zipper varVec,
-   SV.Walker varVec,
-   SV.Storage varVec Bool,
-   SV.Storage varVec (Maybe (Result a)),
-   SV.Storage varVec a,
-   SV.Singleton varVec,
-   SV.Lookup varVec,
-   SV.Len (varVec a),
-   SV.FromList varVec,
-   SV.Find varVec,
-   SV.Convert varVec varVec) =>
-  One.OptimisationParams node [] Sweep UV.Vector varVec sigVec a ->
+   UV.Unbox d,
+   Node.C node,
+   Arith.ZeroTestable d,
+   Arith.Constant d 
+   ) =>
+  One.SystemParams node a ->
+  One.OptimisationParams node [] Sweep UV.Vector a ->
+  One.SimulationParams node simVec a ->
   Map.Map Idx.State (Map.Map [a] (Type.PerStateSweep node Sweep UV.Vector a)) ->
   Map.Map node (One.SocDrive a) ->
   Map.Map Idx.State (One.StateForcing a) ->
-  [BalanceLoopItem node a (Type.BalOptimisation node Sweep UV.Vector a)]-}
+  [BalanceLoopItem node a (Type.OptimisationPerState node a)
+    (Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)]
 
-balanceIteration optParams perStateSweep balForceIn statForceIn =
+balanceIteration sysParams optParams simParams perStateSweep balForceIn statForceIn =
   go 0 balForceIn initialSteps (accessf resStart) resStart
   where
 
     seed = One.balanceForcingSeed optParams
     initialSteps = Map.map (\_ -> seed) balForceIn -- statForceIn
     resStart = fsys balForceIn
-    fsys bf = NonIO.optimiseAndSimulate optParams bf statForceIn perStateSweep
+    fsys bf = NonIO.optimiseAndSimulate sysParams optParams simParams bf statForceIn perStateSweep
     
-    accessf res = StateEta.balanceFromRecord (One.storagePositions optParams) $ 
-                      Type.signals $ Type.simulation res
+    accessf res = StateEta.balanceFromRecord (One.storagePositions sysParams) $ 
+                      Type.signals $ Type.simulation $ snd res
     
     go cnt force step bal res  = BalanceLoopItem cnt force step bal res 
                                 : go (cnt+1) force1 step1 bal1 res1
@@ -243,85 +222,64 @@ getStateTime stateIdx sfg = FlowTopo.label $ f state
 data StateForceDemand = MoreForcingNeeded | CorrectForcing | 
                         NoForcingNeeded | LessForcingNeeded
 
-checkStateTimes :: Ord a => One.OptimisationParams a [] Sweep vec varVec sigVec a -> 
+checkStateTimes :: Ord a => One.OptimisationParams a [] Sweep vec a -> 
                One.StateDurations a -> Bool  
 checkStateTimes optParams stateDurations = all g $ Map.elems stateDurations 
   where g x = x > eps
         (One.StateTimeThreshold eps) = One.stateTimeThreshold optParams
   
-  
-
--- iterateStateUntil ::[StateLoopItem node a z] -> 
-
+iterateStateUntil :: 
+  One.OptimisationParams node list sweep vec a
+  -> [StateLoopItem node a z]
+  -> (Map.Map Idx.State (One.StateForcing a),
+      One.StateDurations a,One.Balance node a)
 iterateStateUntil optParams stateLoop = 
-  (sForcing $ vhead "interateStateUntil" sl, sl) 
-  where sl = dropWhile f $ stateLoop
+  (sForcing $ lastElem , stateDurations $ lastElem, sBalance $ lastElem)
+  where lastElem = vhead "interateStateUntil" $ dropWhile f $ stateLoop
         f x =  sStep x > maxStepCnt-1
         (One.MaxStateIterations maxStepCnt) = One.maxStateIterations optParams 
         thr = One.stateTimeThreshold optParams
+        
 
 
 stateIteration ::
-  (Arith.Constant a,Eq a, Num a,Ord a, Show a,
-   Eq (sigVec a),
-   Fractional a,
-   Show (sigVec a),
+  (sigVec ~[],d ~ b,efaVec ~ [],simVec ~ [], intVec ~ [], (a ~ b),UV.Unbox b,
+  
+   Eq a, Num a,
+   Arith.Sum a,
+   Ord a,
    Show node,
-   UV.Unbox a,
-   SV.Zipper sigVec,
-   SV.Walker sigVec,
-   SV.Storage vec a,
-   SV.Storage sigVec Bool,
-   SV.Storage sigVec a,
-   SV.Storage sigVec (Maybe (Result a)),
-   SV.Singleton sigVec,
-   SV.Lookup sigVec,
-   SV.Len (sigVec a),
-   SV.FromList sigVec,
-   SV.Find sigVec,
-   SV.Convert vec UV.Vector,
-   SV.Convert sigVec UV.Vector,
-   SV.Convert sigVec [],
-   SV.Convert sigVec sigVec,
-   Arith.ZeroTestable a,
-   Arith.ZeroTestable (Sweep vec a),
-   Arith.Product (Sweep vec a),
+   Show a,
    Node.C node,
-   Sweep.SweepVector vec a,
-   Sweep.SweepMap Sweep vec a a,
-   Sweep.SweepClass Sweep vec a,
-   Eq (varVec a),
-   Show (varVec a),
-   SV.Zipper varVec,
-   SV.Walker varVec,
-   SV.Storage varVec Bool,
-   SV.Storage varVec a,
-   SV.Storage varVec (Maybe (Result a)),
-   SV.Singleton varVec,
-   SV.Lookup varVec,
-   SV.Len (varVec a),
-   SV.FromList varVec,
-   SV.Find varVec,
-   SV.Convert varVec varVec) => 
-  One.OptimisationParams node [] Sweep vec varVec sigVec a ->
+   Arith.ZeroTestable a,
+   Arith.Constant a
+  ) =>
+  One.SystemParams node a ->
+  One.OptimisationParams node [] Sweep UV.Vector a ->
+  One.SimulationParams node sigVec a ->
   Map.Map Idx.State (Map.Map [a] (Maybe (a, a, EnvResult node a))) ->
   Map.Map Idx.State (One.StateForcing a) ->
-  [StateLoopItem node a (Type.Simulation node Sweep vec sigVec a)]
-stateIteration optParams optimalObjectivePerState stateForceIn  = 
+  [StateLoopItem node a 
+   (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)]
+stateIteration sysParams optParams simParams optimalObjectivePerState stateForceIn  = 
   go 0  stateForceIn initialSteps initialResults 
   where initialSteps = Map.map (\_ -> seed) stateForceIn
         seed = One.stateForcingSeed optParams
-        fsys sf = NonIO.optimiseStatesAndSimulate optParams sf optimalObjectivePerState
+        fsys sf = NonIO.optimiseStateAndSimulate sysParams optParams simParams sf optimalObjectivePerState
         initialResults = fsys stateForceIn
         (One.StateTimeThreshold thr) = One.stateTimeThreshold optParams
         
         accessTimes res =
-          Map.map f $ getStateTimes $ Type.stateFlowGraph res
+          Map.map f $ getStateTimes $ Type.stateFlowGraph $ Type.analysis res
            where f (Determined (Data x)) = x
                  f Undetermined  = error "State Time undetermined"
+                 
+        accessBal res = StateEta.balanceFromRecord (One.storagePositions sysParams) $ 
+                      Type.signals $ Type.simulation $ res
+                
          
         go cnt force step res  =
-          StateLoopItem cnt force step (accessTimes res) res
+          StateLoopItem cnt force step (accessTimes res) bal res
             : go (cnt+1) force1 step1 res1 
           where
             force1 = Map.fromList $ zipWith g (Map.toList force) (Map.toList step)      
@@ -330,6 +288,7 @@ stateIteration optParams optimalObjectivePerState stateForceIn  =
             res1 = fsys force1 
             times = accessTimes res
             times1 = accessTimes res1
+            bal = accessBal res1
             
             step1 = Map.fromList $ zipWith3 (changeStateForce seed thr) 
                        (zip (Map.elems times)( Map.elems times1))
@@ -374,30 +333,7 @@ changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx
 
 
 {-
-iterateInnerLoopWhile ::(Eq (sigVec a),
-                      Fractional a,
-                      Ord a,
-                      Show (sigVec a),
-                      Show node,
-                      Show a,
-                      UV.Unbox a,
-                      SV.Zipper sigVec,
-                      SV.Walker sigVec,
-                      SV.Storage sigVec (Maybe (Result a)),
-                      SV.Storage sigVec a,
-                      SV.Storage sigVec Bool , 
-                      SV.Singleton sigVec,
-                      SV.Lookup sigVec,
-                      SV.Len (sigVec a),
-                      SV.FromList sigVec,
-                      SV.Find sigVec,
-                      SV.Convert sigVec sigVec,
-                      SV.Convert sigVec [],
-                      SV.Convert sigVec vec,
-                      Arith.ZeroTestable a,
-                      Arith.Product a, 
-                      Node.C node, Arith.Constant a
-                      )=>
+iterateInnerLoopWhile ::
   One.OptimisationParams node [] Sweep vec sigVec a ->
   EnvResult node (Sweep vec a) ->
   [InnerLoopItem node a (Type.Optimisation node Sweep vec sigVec a)]
@@ -410,189 +346,166 @@ iterateInnerLoopWhile  optParams stateFlowGraphOpt =
          f x = ilStep x < maxCnt
 -}             
 
-iterateInnerLoop ::
-  (Ord a, Show a, Show node, UV.Unbox a, Eq a,
-   Eq (sigVec a),
-   Fractional a,
-   Show (sigVec a),
-   SV.Zipper sigVec,
-   SV.Convert sigVec UV.Vector,
-   SV.Walker sigVec,
-   SV.Storage sigVec Bool,
-   SV.Storage sigVec a,
-   SV.Storage sigVec (Maybe (Result a)), 
-   SV.Singleton sigVec,
-   SV.Lookup sigVec,
-   SV.Len (sigVec a),
-   SV.FromList sigVec,
-   SV.Find sigVec,
-   SV.Convert sigVec [],
-   SV.Convert sigVec sigVec,
-   Arith.ZeroTestable a,
-   Arith.Product a, 
-   Node.C node, 
-   Arith.Constant a,
-   Eq (varVec a),
-   Show (varVec a),
-   SV.Zipper varVec,
-   SV.Walker varVec,
-   SV.Storage varVec a,
-   SV.Storage varVec (Maybe (Result a)),
-   SV.Storage varVec Bool,
-   SV.Singleton varVec,
-   SV.Lookup varVec,
-   SV.Len (varVec a),
-   SV.FromList varVec,
-   SV.Find varVec,
-   SV.Convert varVec varVec) =>
-  One.OptimisationParams node [] Sweep UV.Vector varVec sigVec a ->
+iterateInnerLoop :: 
+  (intVec~[], efaVec ~ [], simVec ~ [],a ~ d,sigVec ~ [],d ~ b, 
+   Ord d,
+   Show d,
+   Show node,
+   UV.Unbox d,
+   Num b,
+   Node.C node,
+   Arith.ZeroTestable d,
+   Arith.Constant d) =>
+  One.SystemParams node a ->
+  One.OptimisationParams node [] Sweep UV.Vector a ->
+  One.SimulationParams node sigVec a ->
   Map.Map Idx.State (Map.Map [a] (Type.PerStateSweep node Sweep UV.Vector a)) ->
   Map.Map node (One.SocDrive a) ->
   Map.Map Idx.State (One.StateForcing a) ->
-  [InnerLoopItem node a (Type.Optimisation node Sweep UV.Vector sigVec a)]
-iterateInnerLoop optParams perStateSweep balForceIn stateForceIn = 
+  [InnerLoopItem node a (Type.OptimisationPerState node a)
+     (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)]
+iterateInnerLoop sysParams optParams simParams perStateSweep balForceIn stateForceIn = 
   go 0 balForceIn stateForceIn
   where
     go cnt balForce statForce =
       InnerLoopItem cnt balForce1 bal statForce1 sta balLoop statLoop
         : go (cnt+1) balForce1 statForce1
-      where
-        balLoop = balanceIteration optParams perStateSweep balForce statForce
-        balForce1 = iterateBalanceUntil optParams balLoop            
-        statLoop = undefined -- stateIteration optParams balForce1 statForce
-        (statForce1,bal,sta) = undefined -- iterateStateUntil checkStates balLoop
-
-iterateEtaWhile :: 
-  (Eq (varVec a), Eq (sigVec a), Fractional a, Ord a,
-   Show (varVec a), Show (sigVec a), Show a, Show node, UV.Unbox a,
-   SV.Zipper varVec, SV.Zipper sigVec, SV.Walker varVec,
-   SV.Walker sigVec, SV.Storage varVec Bool,
-   SV.Storage varVec (Maybe (Result a)), SV.Storage varVec a,
-   SV.Storage sigVec (Maybe (Result a)), SV.Storage sigVec a,
-   SV.Storage sigVec Bool, SV.Singleton varVec, SV.Singleton sigVec,
-   SV.Lookup varVec, SV.Lookup sigVec, SV.Len (varVec a),
-   SV.Len (sigVec a), SV.FromList varVec, SV.FromList sigVec,
-   SV.Find varVec, SV.Find sigVec, SV.Convert varVec varVec,
-   SV.Convert sigVec sigVec, SV.Convert sigVec [],
-   SV.Convert sigVec vec, SV.Convert sigVec UV.Vector, Node.C node,
-   Arith.ZeroTestable a, Arith.Constant a) =>
-  One.OptimisationParams node [] Sweep UV.Vector varVec sigVec a ->
-  [EtaLoopItem node Sweep UV.Vector a (Type.Optimisation node Sweep UV.Vector sigVec a)]
-iterateEtaWhile optParams = go 0  $ One.stateFlowGraphOpt optParams 
+      where 
+        balLoop = balanceIteration sysParams optParams simParams perStateSweep balForce statForce
+        (balForce1, optimalObjectivePerState) = iterateBalanceUntil optParams balLoop            
+        statLoop = stateIteration sysParams optParams simParams optimalObjectivePerState statForce
+        (statForce1,sta,bal) = iterateStateUntil optParams statLoop
+{-
+iterateEtaWhile::(sigVec ~ [], a ~ b,
+                  Arith.Constant a,
+                  UV.Unbox a,
+                  Arith.ZeroTestable a,
+                  Node.C node,
+                  Num a,
+                  Ord a,
+                  Show a,
+                  Show node)=>
+  One.SystemParams node a ->
+  One.OptimisationParams node [] Sweep UV.Vector a ->
+  One.SimulationParams node sigVec a ->
+  [EtaLoopItem node Sweep UV.Vector a (Type.OptimisationPerState node a)
+   (Type.OptimiseStateAndSimulate node Sweep UV.Vector a [] b0 [] c0 [] a)]  -}
+iterateEtaWhile sysParams optParams simParams = go 0  $ One.stateFlowGraphOpt optParams 
    where (One.MaxEtaIterations maxCnt) = One.maxEtaIterations optParams
          balf =  One.initialBattForcing optParams
          graphStates = StateQty.states $ One.stateFlowGraphOpt optParams
          statf = Map.map (const $ One.stateForcingSeed optParams) graphStates
          go cnt sfg = EtaLoopItem cnt sfg sfg1 res : go (cnt+1) sfg1
            where
-            sweep = Base.perStateSweep optParams sfg
-            res = iterateInnerLoop optParams sweep balf statf
-            sfg1 = Type.stateFlowGraphSweep
-                   $ Type.simulation
-                   $ sResult
+            sweep = Base.perStateSweep sysParams optParams sfg
+            res = iterateInnerLoop sysParams optParams simParams sweep balf statf
+            sfg1 = Type.stateFlowGraphSweep 
+                   $ sResult 
                    $ vhead "iterateEtaUntil 2"
                    $ stateLoop
                    $ vhead "iterateEtaUntil 1" res
 
 
-{-
-etaIteration ::
-  (EnvResult node (sweep vec a) -> EtaLoopItem node a z) ->
-  EnvResult node (sweep vec a) ->
-  [EtaLoopItem node a z]
-etaIteration ib = 
-  let go inEnv =
-        let oli = ib inEnv
-            outEnv = Type.stateFlowGraphSweep $ Type.simulation $ optimisation oli
-        in oli : go outEnv
-  in go
--}
 
 -------------------------------- OutPut Below -----------------------------------
-{-
+
+{-showEtaLoop ::
+  (PrintfArg a, UV.Unbox a, Arith.Product a, Show a,
+   Node.C node, Sweep.SweepClass sweep vec a, Show node) =>
+   One.OptimisationParams node [] Sweep UV.Vector a ->
+   [EtaLoopItem node Sweep UV.Vector a z] -> [String]-}
+
+
+printfMap :: (Show k, Show a) => Map.Map k a -> String 
+printfMap m = concat $ map f $ Map.toList m
+  where f (k, x) = "(" ++ (printf "%5s" (show k)) ++ ","  ++ (printf "%5s" (show x)) ++ ")"
+    
+
+showEtaLoop optParams loop = iterateLoops optParams showEtaLoopItem showInnerLoopItem 
+              showBalanceLoopItem showStateLoopItem loop
+
 
 iterateLoops ::
-  One.MaxEtaIterations ->
-  (Int -> EtaLoopItem node a z -> Maybe b) ->
-  (Int ->
-    Int -> 
-    BalanceLoopItem node a (Type.Optimisation node sweep vec a, Map.Map node a) ->
-    Maybe b) ->
-  EtaLoop node a z ->
-  [Maybe b]
-iterateLoops (One.MaxEtaIterations cnt) olif ilf (EtaLoop ol) =
-  concat $ zipWith g [0..] ols
-  where ols = take cnt ol
-        g n o = zipWith (ilf n) [0..] (f o) ++ [olif n o]
-        f (EtaLoopItem nos _ _ _ _ (BalanceLoop il)) = take nos il
+  One.OptimisationParams node [] Sweep UV.Vector a -> 
+  (One.OptimisationParams node [] Sweep UV.Vector a -> 
+  EtaLoopItem node Sweep UV.Vector a z0 z -> o) ->
+  (One.OptimisationParams node [] Sweep UV.Vector a ->
+  InnerLoopItem node a z0 z -> o) ->
+  (One.OptimisationParams node [] Sweep UV.Vector a -> 
+  BalanceLoopItem node a z0 z -> o) ->
+  (One.OptimisationParams node [] Sweep UV.Vector a -> 
+  StateLoopItem node a z -> o) ->
+  [EtaLoopItem node Sweep UV.Vector a z0 z]->
+  [o]
+iterateLoops optParams elf ilf blf slf etaLoop =
+  concat $ map g $ take n1 etaLoop
+  where g x = [elf optParams x] ++ (concat $ take n2 $ map h $ innerLoop x)
+        h x = [ilf optParams x] ++ (take n3 $ map k $ balanceLoop x) ++ (take n4 $ map j $ stateLoop x)
+        k x = blf optParams x
+        j x = slf optParams x
+        (One.MaxEtaIterations n1) = One.maxEtaIterations optParams
+        (One.MaxInnerLoopIterations n2) = One.maxInnerLoopIterations optParams
+        (One.MaxBalanceIterations n3) = One.maxBalanceIterations optParams
+        (One.MaxStateIterations n4) = One.maxStateIterations optParams
+        
+headLine :: String
+headLine = printf "%8s%8s%24s%24s%24s%24s" "Step" "States" "Forcing" "Balance" "Eta" "StepSize"
+
+showEtaLoopItem::
+  One.OptimisationParams node [] Sweep UV.Vector a -> 
+  EtaLoopItem node Sweep UV.Vector a z0 z -> String
+showEtaLoopItem optParams (EtaLoopItem step sfgIn sfgOut _) =  
+      "EL: " ++ printf "%8d" step 
+
+showInnerLoopItem::
+  One.OptimisationParams node [] Sweep UV.Vector a -> 
+  InnerLoopItem node a z0 z -> 
+  String
+showInnerLoopItem optParams (InnerLoopItem ilStep ilBForcOut ilBalance ilSForcOut 
+   ilSDurations balanceLoop _ ) = "IL: " ++ printf "%8d" ilStep 
+
+showBalanceLoopItem::(Show a, Show node)=>
+  One.OptimisationParams node [] Sweep UV.Vector a -> 
+  BalanceLoopItem node a z0 z -> 
+  String
+showBalanceLoopItem optParams (BalanceLoopItem bStep bForcing bFStep balance _) =  
+        " BL:  " ++ printf "%2d" bStep ++ 
+        " BF:  " ++ printfMap bForcing ++ 
+        " Bal: " ++ printfMap balance
+
+showStateLoopItem :: (Show a, Show node) =>
+  One.OptimisationParams node [] Sweep UV.Vector a -> 
+  StateLoopItem node a z -> 
+  String
+showStateLoopItem optParams (StateLoopItem sStep sForcing sFStep stateDurations sBalance sResult) = 
+        " SL:  " ++ printf "%8d" sStep 
+        ++ " SF:  " ++ printfMap sForcing
+--        " Dur: " ++ printfMap stateDurations ++
+--        " Bal: " ++ printfMap sBalance
 
 
-showEtaLoopItem ::
-  (UV.Unbox a, Arith.Product a,
-   PrintfArg a,Show node, Show a,
-   Node.C node, Sweep.SweepClass sweep vec a) =>
-  Int -> EtaLoopItem node a z -> Maybe String
-showEtaLoopItem _ (EtaLoopItem nos ss f bal opt _il) =
-  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
-  in Just $ "ETA-Loop: " ++ (show numOfSt) ++ " " ++ (show nos) ++ " " ++ (show f)++ " " ++ (show bal)++ " " ++ (show $ eta opt)++ " " ++(show ss) 
-  --   printf "%8d%8d%50s%50s%50s%50s\n" numOfSt nos (show f) (show bal) (eta opt)  (show ss)
-  -- "%8d%8d%24e%24e%24e%24e\n"
-  -- (show numOfSt) ++ (show nos) ++ (show f)++ (show bal)++ (eta opt)++(show ss)   
-
-showBalanceLoopItem ::
-  (UV.Unbox a, Arith.Product a, Show a, Show node, 
-   Node.C node, Sweep.SweepClass sweep vec a, PrintfArg a) =>
-  Int -> Int ->
-  BalanceLoopItem node a (Type.Optimisation node sweep vec a, Map.Map node a) ->
-  Maybe String
-showBalanceLoopItem _olcnt ilcnt (BalanceLoopItem f st (opt, bal)) =
-  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
-  in Just $ "Balance-Loop: " ++ (show numOfSt)++" "++(show ilcnt) ++" "++(show f) ++" "++(show bal) ++" "++(show $ eta opt) ++" "++(show st)
-     --printf "%8d%8d%50s%50s%50s%50s" numOfSt ilcnt (show f) (show bal) (eta opt) (show st)
-     -- $ (show numOfSt) ++(show ilcnt) ++(show f) ++(show bal) ++(eta opt) ++(show st)
-
-
-showStateLoopItem ::
-  (UV.Unbox a, Arith.Product a,Show a, 
-   Node.C node, Sweep.SweepClass sweep vec a, PrintfArg a, 
-   IsChar (One.StateForcing a)) =>
-  Int -> Int -> Int ->
-  StateLoopItem node a z ->
-  Maybe String
-showStateLoopItem _olcnt _ slcnt (StateLoopItem f st (opt, bal)) =
-  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
-  in Just $ "State-Loop: " ++(show numOfSt) ++" "++ (show slcnt) ++" "++ (show f) ++" "++ (show bal) ++" "++ (show (eta opt)) ++" "++ (show st)
-  --   printf "%8d%8d%50s%50s%50s%50s" numOfSt slcnt f bal (eta opt) st
-  -- $ (show numOfSt) ++ (show slcnt) ++ (show f) ++ (show bal) ++ (show (eta opt)) ++ (show st) 
-
-showEtaLoop ::
-  (PrintfArg a, UV.Unbox a, Arith.Product a, Show a,
---   PrintfArg (Map.Map node a), PrintfArg (Map.Map node (One.SocDrive a)),
-   Node.C node, Sweep.SweepClass sweep vec a, Show node) =>
-   One.MaxEtaIterations ->
-   EtaLoop node a z -> [String]
-
-showEtaLoop cnt ol =
-  catMaybes $ iterateLoops cnt showEtaLoopItem showBalanceLoopItem ol
-
-
+printEtaLoop :: (UV.Unbox a, Arith.Constant a) =>
+  One.OptimisationParams node [] Sweep UV.Vector a
+  -> [EtaLoopItem node Sweep UV.Vector a z0 z] -> [IO ()]
+printEtaLoop optParams ol =
+  iterateLoops (optParams) printEtaLoopItem printInnerLoopItem printBalanceLoopItem printStateLoopItem ol
 
 printEtaLoopItem ::
   (Arith.Product (sweep vec a),
    Sweep.SweepClass sweep vec a) =>
   One.OptimisationParams node f sweep vec a ->
-  Int -> EtaLoopItem node a z -> Maybe (IO ())
-printEtaLoopItem _params olcnt (EtaLoopItem _ _ _ _ opt _il) =
-  Just $ do
-    let -- dir = printf "outer-loop-%6.6d" olcnt
+  EtaLoopItem node Sweep UV.Vector a z0 z -> IO ()
+printEtaLoopItem _params (EtaLoopItem step sfgIn sfgOut _) = print "EtaLoop"
+--  do
+--    let -- dir = printf "outer-loop-%6.6d" olcnt
         --stoPos = TopoIdx.Position System.Water System.Network
         --gasPos = TopoIdx.Position System.Gas System.LocalNetwork
 
-    putStrLn (printf "Loop %6.6d" olcnt)
+--    putStrLn (printf "Loop %6.6d" olcnt)
 
-    concurrentlyMany_ [
+--    concurrentlyMany_ [
       --ModPlot.maxEtaPerState ModPlot.gpXTerm opt,
-      ModPlot.simulationGraphs ModPlot.dotXTerm opt ]
+ --     ModPlot.simulationGraphs ModPlot.dotXTerm opt ]
       --ModPlot.expectedEtaPerState ModPlot.gpXTerm opt,
       --ModPlot.maxObjPerState ModPlot.gpXTerm opt ]
 
@@ -614,31 +527,25 @@ printEtaLoopItem _params olcnt (EtaLoopItem _ _ _ _ opt _il) =
     ModPlot.maxEta (ModPlot.gpPNG dir 0) opt
 -}
 
-printStateLoopItem ::
-  (Arith.Product (sweep vec a),
-   Sweep.SweepClass sweep vec a) =>
-  One.OptimisationParams node f sweep vec a ->
-  Int -> Int ->
-  StateLoopItem node a z ->
-  Maybe (IO ())
-printStateLoopItem _params _olcnt _ilcnt (StateLoopItem _ _ (_opt, _)) =
-  Nothing
+printInnerLoopItem::
+  One.OptimisationParams node [] Sweep UV.Vector a -> 
+  InnerLoopItem node a z0 z -> 
+  IO()
+printInnerLoopItem optParams (InnerLoopItem ilStep ilBForcOut ilBalance ilSForcOut 
+   ilSDurations balanceLoop _ ) = print "InnerLoop"
+      
+printBalanceLoopItem::
+  One.OptimisationParams node [] Sweep UV.Vector a -> 
+  BalanceLoopItem node a z0 z -> 
+  IO()
+printBalanceLoopItem optParams (BalanceLoopItem bStep bForcing bFStep balance opt) = --print "BalanceLoop" 
 
-printBalanceLoopItem ::
-  (Arith.Product (sweep vec a),
-   Sweep.SweepClass sweep vec a) =>
-  One.OptimisationParams node f sweep vec a ->
-  Int -> Int ->
-  BalanceLoopItem node a (Type.Optimisation node sweep vec a, Map.Map node a) ->
-  Maybe (IO ())
-printBalanceLoopItem _params _olcnt _ilcnt (BalanceLoopItem _ _ (_opt, _)) =
-  Nothing
-{-
-  Just $ do
-    let dir = printf "outer-loop-%6.6d" olcnt
-        stoPos = TopoIdx.Position System.Water System.Network
 
-    ModPlot.maxEta (ModPlot.gpPNG dir ilcnt) opt
+  --Just $ do
+    --let --dir = printf "outer-loop-%6.6d" bStep
+ --       stoPos = TopoIdx.Position System.Water System.Network
+--    ModPlot.maxEta ModPlot.gpXTerm opt
+{-    ModPlot.maxEta (ModPlot.gpPNG dir ilcnt) opt
     ModPlot.optimalObjs (ModPlot.gpPNG dir ilcnt) opt
     ModPlot.simulationGraphs (ModPlot.dotPNG dir ilcnt) opt
 
@@ -653,20 +560,82 @@ printBalanceLoopItem _params _olcnt _ilcnt (BalanceLoopItem _ _ (_opt, _)) =
     -- ModPlot.simulationSignals (ModPlot.gpPNG dir ilcnt) opt
     -- ModPlot.givenSignals (ModPlot.gpPNG dir ilcnt) opt
     ModPlot.maxState (ModPlot.gpPNG dir ilcnt) opt
-    -- ModPlot.maxStateContour (ModPlot.gpPNG dir ilcnt) opt
+    -- ModPlot.maxStateContour (ModPlot.gpPNG dir ilcnt) opt-}
+    print "BalanceLoop" 
+
+printStateLoopItem :: 
+  One.OptimisationParams node [] Sweep UV.Vector a -> 
+  StateLoopItem node a z -> 
+  IO()
+printStateLoopItem optParams (StateLoopItem sStep sForcing sFStep stateDurations sBalance sResult) = print "stateLoop" 
+
+
+
+{-
+
+iterateLoops ::
+  One.MaxEtaIterations ->
+  (Int -> EtaLoopItem node a z -> Maybe b) ->
+  (Int ->
+    Int -> 
+    BalanceLoopItem node a (Type.Optimisation node sweep vec a) ->
+    Maybe b) ->
+  [EtaLoopItem node a z] ->
+  [Maybe b]
+iterateLoops optParams etaLoopFunction innerLoopFunction etaLoop =
+  concat $ map g $ take n etaLoop
+  where g x = map (innerLoopFunction optParams) (etaLoopFunction x) ++ [olif n x]
+        f (EtaLoopItem cnt _ _ _ _ innerLoop) = take nos innerloop
+        (One.MaxEtaIterations n) = One.maxmaxEtaIterations optParam
+
+
+showEtaLoopItem ::
+  (UV.Unbox a, Arith.Product a,
+   PrintfArg a,Show node, Show a,
+   Node.C node, Sweep.SweepClass sweep vec a) =>
+  Int -> EtaLoopItem node Sweep UV.Vector a z -> Maybe String
+showEtaLoopItem _ (EtaLoopItem step sfgIn sfgOut il) =
+  let numOfSt = Map.size $ StateQty.states $ sfgOut
+  in Just $  printf "%8d%8d" step numOfSt
+     
+--     "ETA-Loop: " ++ (show numOfSt) ++ " " ++ (show nos) ++ " " ++ (show f)++ " " ++ (show bal)++ " " ++ (show $ eta opt)++ " " ++(show ss) 
+  --   printf "%8d%8d%50s%50s%50s%50s\n" numOfSt nos (show f) (show bal) (eta opt)  (show ss)
+  -- "%8d%8d%24e%24e%24e%24e\n"
+
+
+
+
+showBalanceLoopItem ::
+  (UV.Unbox a, Arith.Product a, Show a, Show node, 
+   Node.C node, Sweep.SweepClass sweep vec a, PrintfArg a) =>
+  Int -> Int ->
+  BalanceLoopItem node a (Type.OptimisationPerState node a,
+                           Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)
+--  BalanceLoopItem node a (Type.Optimisation node sweep vec a, Map.Map node a) ->
+  Maybe String
+showBalanceLoopItem _olcnt ilcnt (BalanceLoopItem f st (opt, bal)) =
+  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.analysis opt
+  in Just $ printf "%8d" numOfSt
+     
+     --"Balance-Loop: " ++ (show numOfSt)++" "++(show ilcnt) ++" "++(show f) ++" "++(show bal) ++" "++(show $ eta opt) ++" "++(show st)
+     --printf "%8d%8d%50s%50s%50s%50s" numOfSt ilcnt (show f) (show bal) (eta opt) (show st)
+     -- $ (show numOfSt) ++(show ilcnt) ++(show f) ++(show bal) ++(eta opt) ++(show st)
+-}
+{-
+showStateLoopItem ::
+  (UV.Unbox a, Arith.Product a,Show a, 
+   Node.C node, Sweep.SweepClass sweep vec a, PrintfArg a, 
+   IsChar (One.StateForcing a)) =>
+  Int -> Int -> Int ->
+  StateLoopItem node a z ->
+  Maybe String
+showStateLoopItem _olcnt _ slcnt (StateLoopItem f st (opt, bal)) =
+  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
+  in Just $ "State-Loop: " ++(show numOfSt) ++" "++ (show slcnt) ++" "++ (show f) ++" "++ (show bal) ++" "++ (show (eta opt)) ++" "++ (show st)
+  --   printf "%8d%8d%50s%50s%50s%50s" numOfSt slcnt f bal (eta opt) st
+  -- $ (show numOfSt) ++ (show slcnt) ++ (show f) ++ (show bal) ++ (show (eta opt)) ++ (show st) 
 -}
 
 
-printEtaLoop ::
-  (Arith.Product (sweep vec a),
-   Sweep.SweepClass sweep vec a) =>
-  One.OptimisationParams node f sweep vec a ->
-  EtaLoop node a z -> [IO ()]
-printEtaLoop optParams ol =
-  catMaybes $ iterateLoops (One.maxEtaIterations optParams)
-                            (printEtaLoopItem optParams) 
-  (printBalanceLoopItem optParams) ol
 
 
-
--}

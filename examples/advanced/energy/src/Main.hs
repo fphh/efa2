@@ -39,7 +39,7 @@ module Main where
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
 --import qualified Modules.Plot as ModPlot
-
+import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.Loop as ModLoop
 
 import EFA.Application.Type (EnvResult)
@@ -89,7 +89,7 @@ import Text.Printf (printf)
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
    Sweep.SweepClass sweep vec a) =>
-  One.OptimalEnvParams Node list sweep vec varVec sigVec a->
+  One.OptimisationParams Node list sweep vec a->
   EnvResult Node (sweep vec a)
 initEnv params = AppOpt.initialEnv params System.stateFlowGraph
 
@@ -165,36 +165,39 @@ main1 = do
   let
       ienv = AppOpt.storageEdgeXFactors optParams 4 4
                $ AppOpt.initialEnv optParams System.stateFlowGraph
+      sysParams = One.SystemParams {
+         One.systemTopology = System.topology,
+         One.etaAssignMap = System.etaAssignMap,
+         One.etaMap = etaMap,
+         One.storagePositions = ([TopoIdx.ppos System.Water System.Network]), 
+         One.initStorageState = ModSet.initStorageState,
+         One.initStorageSeq = ModSet.initStorageSeq}
+ 
+      optParams :: One.OptimisationParams Node [] Sweep UV.Vector Double
+      optParams = One.OptimisationParams {
+          One.stateFlowGraphOpt = ienv,
+          One.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs), --  ModSet.sweepPts
+          One.dofsPos = (ReqsAndDofs.dofsPos ModSet.dofs),
+          One.points = ModSet.sweepPts,
+          One.sweepLength = ModSet.sweepLength,
+          One.etaToOptimise = Nothing,
+          One.maxEtaIterations = One.MaxEtaIterations 3,
+          One.maxInnerLoopIterations = One.MaxInnerLoopIterations 10,
+          One.maxBalanceIterations = One.MaxBalanceIterations 10,
+          One.maxStateIterations = One.MaxStateIterations 10,
+          One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
+          One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
+          One.etaThreshold = One.EtaThreshold 0.1,
+          One.balanceThreshold = One.BalanceThreshold 0.1,
+          One.stateTimeThreshold = One.StateTimeThreshold 0.1,
+          One.stateForcingSeed = One.StateForcing 0.01,
+          One.balanceForcingSeed = One.ChargeDrive 0.01}
 
-      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector UV.Vector UV.Vector Double
-      optParams =
-        One.OptimalEnvParams
-          System.topology
-          ienv
-          reqsRec
-          ModSet.initStorageState
-          ModSet.initStorageSeq
-          etaMap
-          System.etaAssignMap
-          ModSet.sweepPts
-          (ReqsAndDofs.reqsPos ModSet.reqs)
-          (ReqsAndDofs.dofsPos ModSet.dofs)
-          Nothing
-          ModSet.sweepLength
-          (One.MaxInnerLoopIterations 10)
-          (Map.fromList [(System.Water, One.DischargeDrive 1)])
-          (Map.fromList [(System.Water, One.ChargeDrive 0.1)])
-          ([TopoIdx.ppos System.Water System.Network])
-          (One.MaxEtaIterations 3)
-          (One.MaxBalanceIterations 100)
-          (One.MaxStateIterations 100)
-          (One.BalanceThreshold 0.1)
-          (One.StateTimeThreshold 0.1)
-          (One.EtaThreshold 0.1)
-          (One.StateForcing 0.01)
-          (One.ChargeDrive 0.01)
-          ModSet.varRestPower1D
-          ModSet.varLocalPower
+      simParams :: One.SimulationParams Node [] Double
+      simParams = One.SimulationParams {
+          One.varReqRoomPower1D = Sig.convert $ ModSet.varRestPower1D,
+          One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
+          One.reqsRec = Base.convertRecord reqsRec}
 
   --print (map (Topology.flowNumber $ One.systemTopology optParams) System.flowStates)
 
@@ -211,7 +214,7 @@ main1 = do
                $ AppOpt.initialEnv optParams System.stateFlowGraph
 
       ol = --ModLoop.uniqueInnerLoopX
-           ModLoop.iterateEtaWhile optParams
+           ModLoop.iterateEtaWhile sysParams optParams simParams
 
 
 {-
@@ -230,13 +233,12 @@ main1 = do
     $ StateQty.mapGraph g g ienv
 -}
 
-  putStrLn $ printf "%8s%8s%24s%24s%24s%24s" 
-                    "States" "Step" "Forcing" "Balance" "Eta" "StepSize"
-{-
-  mapM_ putStrLn (ModLoop.showEtaLoop (One.maxEtaIterations optParams) ol)
 
-  sequence_ (ModLoop.printEtaLoop optParams ol)
--}
+
+  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
+
+--  sequence_ (ModLoop.printEtaLoop optParams ol)
+
 {-
   concurrentlyMany_ [
     ModPlot.maxEtaPerState ModPlot.gpXTerm opt2,

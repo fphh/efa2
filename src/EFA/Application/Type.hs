@@ -13,13 +13,15 @@ import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.Absolute as StateAbs
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Signal.Sequence as Sequ
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Data (Data, Nil, (:>))
 
---import Data.Vector (Vector)
+import Data.Vector (Vector)
 
 import Data.Map (Map)
 
@@ -27,12 +29,24 @@ import Data.Map (Map)
 
 type EnvResult node a = StateQty.Graph node (Result a) (Result a)
 
-type EqSystem node a =
-  forall s. StateAbs.EquationSystemIgnore node s a a
-
 
 type PerStateSweepVariable node sweep vec a = 
   Map Idx.State (Map node (Maybe ((sweep::(* -> *) -> * -> *) vec a)))
+
+type OptimalSolutionPerState node a = 
+  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a)))
+                     --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
+
+type AverageSolutionPerState node a = Map Idx.State (Map [a] (Maybe a))
+  --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
+
+type OptimalSolution node a = Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
+
+type ControlMatrices node vec a = Map (TopoIdx.Position node) (Sig.PSignal2 Vector vec a)
+
+type EqSystem node a =
+  forall s. StateAbs.EquationSystemIgnore node s a a
+
 
 data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
   PerStateSweep {
@@ -41,40 +55,33 @@ data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
     storagePowerMap :: Map Idx.State (Map node (Maybe (sweep vec a))),
     envResult :: EnvResult node (sweep vec a) }
 
-data BalOptimisation node (sweep :: (* -> *) -> * -> *) vec a = 
-  PerStateOptimum {
-    optimalObjectivePerState ::
-      Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))),
-    expectedEtaPerState ::
-      Map Idx.State (Map [a] (Maybe a))}
-    optimalState ::
-      Map [a] (Maybe (a, a, Idx.State, EnvResult node a))}
-
-data StatOptimisation node (sweep :: (* -> *) -> * -> *) vec a = 
-  Optimum {
-    stateOptimalState ::
-      Map [a] (Maybe (a, a, Idx.State, EnvResult node a))}
+data Interpolation node vec a = 
+  Interpolation {
+    controlMatrices :: ControlMatrices node vec a,
+    demandAndControlSignals :: Record.PowerRecord node vec a}
 
 data Simulation node vec a =
   Simulation {
---    stateFlowGraph :: EnvResult node (Data Nil a),
---    stateFlowGraphSweep :: EnvResult node (sweep vec a),
---    sequenceFlowGraph ::
---    SeqQty.Graph node (Result (Data Nil a)) (Result (Data ([] :> Nil) a)),
-    givenSignals :: Record.PowerRecord node vec a,
     envSim:: TopoQty.Section node (Result (Data (vec :> Nil) a)),
-    outSignals :: Record.PowerRecord node vec a }
+    signals :: Record.PowerRecord node vec a }
 
--- | vec2 can be used to switch to vector after cutting
-data EnergyFlowAnalysis node vec vec2 a = EnergyFlowAnalysis {
-    signals :: Record.PowerRecord node vec a,
-    powerSequence :: Sequ.List (Record.PowerRecord node vec2 a),
-    sequenceFlowGraph ::
-      SeqQty.Graph node (Result (Data Nil a)) (Result (Data (vec2 :> Nil) a)),
+data EnergyFlowAnalysis node vec a = EnergyFlowAnalysis {
+    powerSequence :: Sequ.List (Record.PowerRecord node vec a),
+    sequenceFlowGraph :: --SeqQty.Graph node (Result (Data Nil a)) (Result (Data Nil a)),
+      SeqQty.Graph node (Result (Data Nil a)) (Result (Data (vec :> Nil) a)),
     stateFlowGraph :: EnvResult node (Data Nil a)}
-{-
-data Optimisation node (sweep :: (* -> *) -> * -> *) vec sigVec a =
-  Optimisation {
-    quasiStationary :: QuasiStationary node sweep vec a,
-    simulation :: Simulation node sweep vec sigVec a }
--}
+
+data OptimisationPerState node a = OptimisePerState {
+    optimalSolutionPerState :: OptimalSolutionPerState node a,
+    averageSolutionPerState :: AverageSolutionPerState node a}
+
+data OptimiseStateAndSimulate node (sweep :: (* -> *) -> * -> *) 
+     sweepVec a intVec b simVec c efaVec d = 
+  OptimiseStateAndSimulate {
+    optimalSolution :: OptimalSolution node a,
+    interpolation :: Interpolation node intVec a,
+    simulation :: Simulation node simVec a,
+    analysis :: EnergyFlowAnalysis node efaVec d, 
+    stateFlowGraphSweep :: EnvResult node (sweep sweepVec a)}
+
+

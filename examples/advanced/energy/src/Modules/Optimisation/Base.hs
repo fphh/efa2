@@ -99,12 +99,12 @@ forcing ::
   Idx.State ->
   Map Idx.State (Map node (Maybe (sweep vec a))) ->
   Result (sweep vec a)
-forcing stoForcings params state m = Determined $
+forcing balanceForcing params state m = Determined $
   case Map.lookup state m of
     Nothing ->
       error $ "forcing failed, because state not found: " ++ show state
     Just powerMap ->
-        Map.foldWithKey f zero stoForcings
+        Map.foldWithKey f zero balanceForcing
       where
         zero = Sweep.fromRational (One.sweepLength params) Arith.zero
 
@@ -129,11 +129,11 @@ optimalObjectivePerState ::
   Map node (One.SocDrive a)->  
   Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
-optimalObjectivePerState params stoForcings =
+optimalObjectivePerState params balanceForcing =
   Map.mapWithKey $
     Map.map
     . DoubleSweep.optimalSolutionState2
-    . forcing stoForcings params
+    . forcing balanceForcing params
 
 
 
