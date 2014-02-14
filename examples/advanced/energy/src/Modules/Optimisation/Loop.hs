@@ -7,7 +7,7 @@ module Modules.Optimisation.Loop where
 
 --import qualified Modules.System as System 
 import Modules.System (Node)
---import qualified Modules.Plot as ModPlot
+import qualified Modules.Plot as ModPlot
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.NonIO as NonIO
 

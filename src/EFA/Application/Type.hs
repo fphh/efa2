@@ -48,7 +48,11 @@ type EqSystem node a =
   forall s. StateAbs.EquationSystemIgnore node s a a
 
 
-data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
+data Sweep node sweep vec a = Sweep {
+    sweepData :: Map Idx.State (Map [a] (SweepPerState node sweep vec a)),
+    sweepStoragePower :: Map Idx.State (Map node (Maybe (sweep vec a)))}
+
+data SweepPerState node (sweep :: (* -> *) -> * -> *) vec a =
   PerStateSweep {
     etaSys :: Result (sweep vec a),
     condVec :: Result (sweep vec Bool),
