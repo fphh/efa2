@@ -37,7 +37,6 @@ module EFA.Flow.State.Quantity (
    graphFromCumResult,
    graphFromStates,
    graphFromStateMap,
-   graphFromStatesWithTopology,
 
    lookupSums,
 
@@ -496,18 +495,6 @@ graphFromStates ::
    Graph node a v
 graphFromStates =
    graphFromStateMap . Map.fromList . zip [Idx.state0 ..]
-
-graphFromStatesWithTopology ::
-   (Node.C node, Unknown a, Unknown v) =>
-   Topo.Topology node ->
-   [Topo.FlowTopology node] ->
-   Graph node a v
-graphFromStatesWithTopology topo flowTopologies =
-   let es = Graph.edgeLabels topo
-       f fs = (Idx.State $ fromIntegral $ Topo.flowNumber topo fs, fs)
-   in if Map.size es < 20
-         then graphFromStateMap $ Map.fromList $ map f flowTopologies
-         else error "State.Quantity.graphFromStatesWithTopology: Graph with more than 19 edges"
 
 graphFromStateMap ::
    (Node.C node, Unknown a, Unknown v) =>

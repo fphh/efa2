@@ -4,8 +4,15 @@
 module Modules.Utility where
 
 import qualified EFA.Application.Type as Type
+import qualified EFA.Application.OneStorage as One
 
-import qualified EFA.Flow.Topology as Topology
+import qualified EFA.Graph as Graph
+import EFA.Graph (Graph)
+
+import qualified EFA.Graph.Topology as Topology
+import qualified EFA.Graph.Topology.Node as Node
+
+import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.State as State
 import qualified EFA.Flow.State.Quantity as StateQty
@@ -26,6 +33,11 @@ import EFA.Signal.Typ (Typ)
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.List as List
 import Data.Tuple.HT (fst3, snd3, thd3)
+
+import qualified EFA.Report.Format as Format
+
+import qualified Data.Bimap as Bimap
+import Data.Bimap (Bimap)
 
 import Control.Monad ((>=>))
 
@@ -101,7 +113,7 @@ getFlowTopology ::
               storageLabel edgeLabel carryLabel ->
   Maybe (Graph.Graph node edge nodeLabel edgeLabel)
 getFlowTopology state =
-  fmap Topology.topology . Map.lookup state . State.states
+  fmap FlowTopo.topology . Map.lookup state . State.states
 
 toPowerMatrix ::
   (Arith.Constant a) =>
@@ -117,5 +129,55 @@ flipPower = Idx.liftInPart $
 
 nestM :: (Monad m) => Int -> (a -> m a) -> a -> m a
 nestM n act = foldr (>=>) return (replicate n act)
+
+
+
+data Orientation = Dir | UnDir deriving Show
+
+absoluteStateIndex ::
+  (Node.C node) =>
+  Graph node Graph.DirEdge nodeLabel1 a1 ->
+  Graph node Graph.EitherEdge nodeLabel a ->
+  Idx.AbsoluteState
+absoluteStateIndex topo flowTopo =
+  let tlabels = map unEitherEDir $ Map.keys $ Graph.edgeLabels topo
+
+      flabels = Map.fromList $ map unEDir $ Map.keys $ Graph.edgeLabels flowTopo
+
+      unEDir (Graph.EDirEdge (Graph.DirEdge f t)) = ((f, t), Dir)
+      unEDir (Graph.EUnDirEdge (Graph.UnDirEdge f t)) = ((f, t), UnDir)
+
+      unEitherEDir (Graph.DirEdge f t) = (f, t)
+
+      g k@(f, t) =
+        case (Map.lookup k flabels, Map.lookup (t, f) flabels) of
+             (Just Dir, _) -> 0
+             (Just UnDir, _) -> 1
+             (_, Just Dir) -> 2
+             (_, Just UnDir) -> 1
+             _ -> error $ "EFA.Graph.Topology.flowNumber: edge not found "
+                          ++ Format.showRaw (Node.display f :: Format.ASCII)
+                          ++ "->"
+                          ++ Format.showRaw (Node.display t :: Format.ASCII)
+
+      toTernary xs = Idx.AbsoluteState $ sum $ zipWith (*) xs $ map (3^) [0 :: Int ..]
+
+  in toTernary $ map g tlabels
+
+
+
+indexConversionMap ::
+  (Node.C node) =>
+  Topology.Topology node -> StateQty.Graph node a v -> One.IndexConversionMap
+indexConversionMap topo =
+  Bimap.fromList . Map.toList . Map.map (absoluteStateIndex topo . FlowTopo.topology) . StateQty.states
+
+state2absolute ::
+  Idx.State -> One.IndexConversionMap -> Maybe Idx.AbsoluteState
+state2absolute = Bimap.lookup
+
+absolute2State ::
+  Idx.AbsoluteState -> One.IndexConversionMap -> Maybe Idx.State
+absolute2State = Bimap.lookupR
 
 

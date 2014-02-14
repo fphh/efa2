@@ -39,6 +39,7 @@ module Main where
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
 import qualified Modules.Plot as ModPlot
+import qualified Modules.Utility as ModUt
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.Loop as ModLoop
 
@@ -151,17 +152,19 @@ main1 = do
       reqsRec =
         Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
 
-
+{-
   concurrentlyMany_ [
     Draw.xterm $ Draw.labeledTopology $ System.labeledTopology,
     Draw.xterm $
       Draw.flowTopologies $
       StateAnalysis.advanced System.topology ]
+-}
 
+{-
   concurrentlyMany_ [
     ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec]
 --    ModPlot.requirements ModPlot.gpXTerm prest plocal ]
-
+-}
 
   let
       ienv = AppOpt.storageEdgeXFactors optParams 4 4
@@ -177,20 +180,21 @@ main1 = do
       optParams :: One.OptimisationParams Node [] Sweep UV.Vector Double
       optParams = One.OptimisationParams {
           One.stateFlowGraphOpt = ienv,
+          One.indexConversionMap = ModUt.indexConversionMap System.topology ienv,
           One.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs), 
           One.dofsPos = (ReqsAndDofs.dofsPos ModSet.dofs),
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
           One.etaToOptimise = Nothing,
-          One.maxEtaIterations = One.MaxEtaIterations 3,
-          One.maxInnerLoopIterations = One.MaxInnerLoopIterations 10,
+          One.maxEtaIterations = One.MaxEtaIterations 1,
+          One.maxInnerLoopIterations = One.MaxInnerLoopIterations 1,
           One.maxBalanceIterations = One.MaxBalanceIterations 10,
           One.maxStateIterations = One.MaxStateIterations 10,
           One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.1,
           One.balanceThreshold = One.BalanceThreshold 0.1,
-          One.stateTimeThreshold = One.StateTimeThreshold 0.1,
+          One.stateTimeThreshold = One.StateTimeThreshold 10,
           One.stateForcingSeed = One.StateForcing 0.01,
           One.balanceForcingSeed = One.ChargeDrive 0.01}
 
@@ -200,7 +204,7 @@ main1 = do
           One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
           One.reqsRec = Base.convertRecord reqsRec}
 
-  print (map (Topology.flowNumber $ One.systemTopology sysParams) System.flowStates)
+  print (map (ModUt.absoluteStateIndex $ One.systemTopology sysParams) System.flowStates)
 
 
 {-
@@ -236,9 +240,9 @@ main1 = do
 
 
 
---  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
+  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
 
-  sequence_ (ModLoop.printEtaLoop optParams ol)
+  -- sequence_ (ModLoop.printEtaLoop optParams ol)
 
 {-
   concurrentlyMany_ [

@@ -7,6 +7,7 @@ import Data.Word (Word)
 import qualified Prelude as P
 import Prelude hiding (init, flip)
 
+newtype AbsoluteState = AbsoluteState Integer deriving (Show, Eq, Ord)
 
 newtype State = State Word deriving (Show, Eq, Ord)
 

@@ -127,8 +127,9 @@ simulation sysParams givenSigs = Type.Simulation envSim rec
           (One.etaMap sysParams)
           givenSigs
 
-      rec = Base.envToPowerRecord envSim
-      
+      rec = (Base.envToPowerRecord envSim)
+              { Record.recordTime = Record.recordTime givenSigs }
+
 
 energyFlowAnalysis :: 
   (Ord a, Show node, SV.Convert [] vec,
@@ -230,7 +231,7 @@ optimiseAndSimulate :: (efaVec ~ simVec,intVec ~ simVec,a ~ d,intVec ~ [],
   -> One.OptimisationParams node [] sweep UV.Vector a
   -> One.SimulationParams node intVec a
   -> Map.Map node (One.SocDrive a)
-  -> Map.Map Idx.State (One.StateForcing a)
+  -> Map.Map Idx.AbsoluteState (One.StateForcing a)
   -> Map.Map
   Idx.State
   (Map.Map [a] (Type.PerStateSweep node sweep UV.Vector a))
@@ -239,9 +240,9 @@ optimiseAndSimulate :: (efaVec ~ simVec,intVec ~ simVec,a ~ d,intVec ~ [],
 optimiseAndSimulate sysParams optParams simParams balanceForcing stateForcing perStateSweep =
   let perStateOptimum  = Base.optimalObjectivePerState optParams balanceForcing perStateSweep
       perStateAverage = Base.expectedValuePerState perStateSweep
-      optimalSolution = Base.selectOptimalState stateForcing perStateOptimum
+      optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum
       interpolation = interpolateOptimalSolution sysParams optParams simParams optimalSolution
-      sim = simulation sysParams $ Type.demandAndControlSignals interpolation
+      sim = simulation sysParams $ Type.reqsAndDofsSignals interpolation
       efa = energyFlowAnalysis sysParams $ Type.signals sim
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
   
@@ -255,16 +256,16 @@ optimiseStateAndSimulate:: (d ~ a, intVec ~ [], simVec ~ [], b ~ a, efaVec ~ [])
   One.SystemParams node b
   -> One.OptimisationParams node list sweep vec a
   -> One.SimulationParams node [] b
-  -> Map.Map Idx.State (One.StateForcing b)
+  -> Map.Map Idx.AbsoluteState (One.StateForcing b)
   -> Map.Map
   Idx.State
   (Map.Map
    [b] (Maybe (b, b, Type.EnvResult node b)))
   -> Type.OptimiseStateAndSimulate node sweep vec a intVec b simVec c efaVec d
 optimiseStateAndSimulate sysParams optParams simParams stateForcing perStateOptimum =
-  let optimalSolution = Base.selectOptimalState stateForcing perStateOptimum
+  let optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum
       interpolation = interpolateOptimalSolution sysParams optParams simParams optimalSolution
-      sim = simulation sysParams  $ Type.demandAndControlSignals interpolation
+      sim = simulation sysParams  $ Type.reqsAndDofsSignals interpolation
       efa = energyFlowAnalysis sysParams $ Type.signals sim
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
   in  Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep

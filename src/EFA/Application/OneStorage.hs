@@ -22,6 +22,7 @@ import EFA.Signal.Record(PowerRecord)
 import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector(Vector)
 import qualified Data.Vector.Unboxed as UV
+import Data.Bimap (Bimap)
 
 
 -- | The 'SocDrive' data type should always contain positive values.
@@ -58,13 +59,15 @@ noforcing ::
 noforcing _ _ = Arith.zero
 
 
-data StateForcing a = StateForcing a deriving Show
+newtype StateForcing a = StateForcing a deriving Show
 
 instance (Arith.Sum a) => Arith.Sum (StateForcing a) where
   (~+) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~+ y
   (~-) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~- y
 
--- data StateForcings a = Map Idx.State (StateForcing a) deriving Show
+type IndexConversionMap =
+  Bimap Idx.State Idx.AbsoluteState
+
 
 unpackStateForcing :: StateForcing a -> a 
 unpackStateForcing (StateForcing x) = x 
@@ -85,8 +88,9 @@ optimalPower :: [(Idx.State, [(TopoIdx.Position node)])] -> OptimalPower node
 optimalPower = Map.fromList
 
 
-
 type EtaAssignMap node = Map (TopoIdx.Position node) (Name, Name)
+
+
 
 newtype InitStorageState node a = InitStorageState { unInitStorageState :: Map node a }
 newtype InitStorageSeq node a = InitStorageSeq { unInitStorageSeq :: Map node a }
@@ -106,7 +110,8 @@ data SystemParams node a = SystemParams {
                            
   
 data OptimisationParams node list sweep vec a = OptimisationParams {
-  stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),    
+  stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),
+  indexConversionMap :: IndexConversionMap,
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   points :: Map (list a) (ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),
@@ -142,5 +147,5 @@ newtype MaxInnerLoopIterations  =  MaxInnerLoopIterations Int
 
 type Balance node a = Map node a  
   
-type StateDurations a = Map Idx.State a  
+type StateDurations a = Map Idx.AbsoluteState a  
   

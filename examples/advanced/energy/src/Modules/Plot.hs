@@ -282,7 +282,7 @@ givenSignals terminal opt = do
   let str = "Given Signals"
   t <- terminal $ filename str
   AppPlot.record str t showEdge id
-    $ Type.demandAndControlSignals
+    $ Type.reqsAndDofsSignals
     $ Type.interpolation opt
 
 

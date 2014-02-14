@@ -62,7 +62,7 @@ data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
 data Interpolation node vec a = 
   Interpolation {
     controlMatrices :: ControlMatrices node vec a,
-    demandAndControlSignals :: Record.PowerRecord node vec a}
+    reqsAndDofsSignals :: Record.PowerRecord node vec a}
 
 data Simulation node vec a =
   Simulation {

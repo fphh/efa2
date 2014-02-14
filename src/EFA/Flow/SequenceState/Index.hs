@@ -7,6 +7,7 @@ module EFA.Flow.SequenceState.Index (
    PartIdx.InitOrSection, PartIdx.SectionOrExit,
    PartIdx.Section(PartIdx.Section),
    PartIdx.State(PartIdx.State),
+   PartIdx.AbsoluteState(PartIdx.AbsoluteState),
    PartIdx.section0, PartIdx.state0,
    PartIdx.initial, PartIdx.afterSection,
    PartIdx.augment,
@@ -21,7 +22,7 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.Part.Index as PartIdx
 import EFA.Flow.Part.Index
-          (State, Section, Boundary, Augmented,
+          (State, AbsoluteState, Section, Boundary, Augmented,
            Init(Init, NoInit), maybeInit, allowInit,
            Exit(Exit, NoExit), maybeExit, allowExit)
 

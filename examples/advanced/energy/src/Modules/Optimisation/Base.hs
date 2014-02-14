@@ -150,15 +150,23 @@ expectedValuePerState =
 
 selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a) =>
-  Map Idx.State (One.StateForcing a) -> 
+  One.OptimisationParams node list sweep vec a -> 
+  Map Idx.AbsoluteState (One.StateForcing a) -> 
   Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
-selectOptimalState stateForcing stateMap = if (Map.keys stateForcing) == (Map.keys stateMap) then
+selectOptimalState params stateForcing stateMap =
+  let absstateMap = One.indexConversionMap params
+  in
   List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxBy ModUt.fst4))
-  $ map (\(st, m) -> Map.map (fmap (\(objVal, eta, env) -> (objVal Arith.~+ (One.unpackStateForcing $ stateForcing Map.! st), eta, st, env))) m)
+  $ map (\(st, m) ->
+      Map.map (fmap
+        (\(objVal, eta, env) ->
+            (objVal Arith.~+ 
+             maybe (error "Base.selectOptimalState")
+                   One.unpackStateForcing
+                     (ModUt.state2absolute st absstateMap >>= flip Map.lookup stateForcing),
+                         eta, st, env))) m)
   $ Map.toList stateMap
-  else error ("Error in findOtimalState - StateMap and StateForcings have different State Keys: " 
-              ++ show stateForcing  ++ "\n" ++ show stateMap)
 
 envToPowerRecord ::
   (Ord node) =>
