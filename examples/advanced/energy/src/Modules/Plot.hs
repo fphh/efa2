@@ -103,6 +103,16 @@ frameOpts =
   String ->
   Map state a ->
   IO ()-}
+
+plotMaps :: 
+  (Show k, Filename k, Terminal.C term,
+   Plot.Surface
+   (Sig.PSignal2 Vector UV.Vector Double)
+   (Sig.PSignal2 Vector UV.Vector Double)
+   tcZ,
+   Plot.Value tcZ ~ Double) =>
+  (String -> IO term) -> (a -> tcZ) -> [Char] -> Map k a -> IO ()
+
 plotMaps terminal func title =
   concurrentlyMany_ . Map.elems . Map.mapWithKey f
   where f state mat = do
@@ -117,20 +127,22 @@ plotMaps terminal func title =
             frameOpts varRestPower varLocalPower
             (func mat)
 
-
-{-plotSweeps ::
+plotSweeps ::
   (Filename state, Show state,
    Terminal.C term,
    Plot.Surface
-     (Sig.PSignal2 Vector Vector Double)
-     (Sig.PSignal2 Vector Vector Double)
-     tcZ,
+   (Sig.PSignal2 Vector Vector Double)
+   (Sig.PSignal2 Vector Vector Double)
+   tcZ,Plot.Surface
+   (Sig.PSignal2 Vector UV.Vector Double)
+   (Sig.PSignal2 Vector UV.Vector Double)
+   tcZ,
    Plot.Value tcZ ~ Double) =>
   (FilePath -> IO term) ->
   (a -> tcZ) ->
   String ->
   Map state a ->
-  IO ()-}
+  IO ()
 plotSweeps terminal func title =
   concurrentlyMany_ . Map.elems . Map.mapWithKey f
   where f state mat = do
@@ -416,7 +428,7 @@ expectedEtaDifferencePerState terminal opt =
   plotSweeps terminal id "Difference Between Maximal Eta and Expected Value Per State"
   $ Map.map to2DMatrix mat
   where ev = Map.map (Map.map m2n) $ 
-             Type.averageSolutionPerState
+             Type.averageSolutionPerState opt
         eta = ModUt.getMaxEta
               $ Type.optimalSolutionPerState opt
         mat = Map.intersectionWith (Map.intersectionWith (Arith.~-)) eta ev
@@ -451,7 +463,7 @@ sweepResultTo2DMatrix len = Sig.map f . to2DMatrix
 
 
 perStateSweep ::
-  (Show (vec Double),
+  (Show (vec Double),a ~ Double,
    Node.C node,
    Arith.Product (sweep vec a),
    Sweep.SweepVector vec a,
@@ -459,14 +471,15 @@ perStateSweep ::
    Terminal.C term) =>
   (FilePath -> IO term) ->
   One.OptimisationParams node f sweep vec a ->
-  Type.PerStateSweep node sweep vec a -> IO ()
+  Type.Sweep node sweep vec a -> 
+  IO ()
 perStateSweep terminal params =
   let len = One.sweepLength params
   in plotSweeps terminal id "Per State Sweep"
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
-     . Map.map (Map.map Type.etaSys)
+     . Map.map (Map.map Type.etaSys). Type.sweepData
 
 plotOptimal ::
   (Terminal.C term, Ord b) =>

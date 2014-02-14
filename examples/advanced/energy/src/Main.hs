@@ -38,7 +38,7 @@ module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
---import qualified Modules.Plot as ModPlot
+import qualified Modules.Plot as ModPlot
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.Loop as ModLoop
 
@@ -55,7 +55,7 @@ import qualified EFA.Application.Optimisation as AppOpt
 --import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.State.Quantity as StateQty
 
---import qualified EFA.Graph.Topology as Topology
+import qualified EFA.Graph.Topology as Topology
 --import qualified EFA.Graph as Graph
 
 import qualified EFA.Signal.Signal as Sig
@@ -64,19 +64,20 @@ import qualified EFA.Signal.ConvertTable as CT
 
 import qualified EFA.IO.TableParser as Table
 
---import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Flow.Draw as Draw
 
---import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.List (vhead)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
 import qualified Data.Empty as Empty
 --import qualified Data.List as List
+import Control.Monad(void)
 
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
@@ -150,7 +151,7 @@ main1 = do
       reqsRec =
         Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
 
-{-
+
   concurrentlyMany_ [
     Draw.xterm $ Draw.labeledTopology $ System.labeledTopology,
     Draw.xterm $
@@ -158,9 +159,9 @@ main1 = do
       StateAnalysis.advanced System.topology ]
 
   concurrentlyMany_ [
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
-    ModPlot.requirements ModPlot.gpXTerm prest plocal ]
--}
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec]
+--    ModPlot.requirements ModPlot.gpXTerm prest plocal ]
+
 
   let
       ienv = AppOpt.storageEdgeXFactors optParams 4 4
@@ -176,7 +177,7 @@ main1 = do
       optParams :: One.OptimisationParams Node [] Sweep UV.Vector Double
       optParams = One.OptimisationParams {
           One.stateFlowGraphOpt = ienv,
-          One.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs), --  ModSet.sweepPts
+          One.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs), 
           One.dofsPos = (ReqsAndDofs.dofsPos ModSet.dofs),
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
@@ -199,7 +200,7 @@ main1 = do
           One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
           One.reqsRec = Base.convertRecord reqsRec}
 
-  --print (map (Topology.flowNumber $ One.systemTopology optParams) System.flowStates)
+  print (map (Topology.flowNumber $ One.systemTopology sysParams) System.flowStates)
 
 
 {-
@@ -217,8 +218,8 @@ main1 = do
            ModLoop.iterateEtaWhile sysParams optParams simParams
 
 
-{-
-      opt = ModLoop.withChargeDrive optParams reqsRec ienv (-5.2837473962302475e-3)
+
+{-      opt = ModLoop.withChargeDrive optParams reqsRec ienv (-5.2837473962302475e-3)
       opt2 = ModLoop.withChargeDrive optParams reqsRec (Type.stateFlowGraph $ Type.simulation opt) 0
       opt3 = ModLoop.withChargeDrive optParams reqsRec (Type.stateFlowGraph $ Type.simulation opt2) 0
 -}
@@ -235,9 +236,9 @@ main1 = do
 
 
 
-  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
+--  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
 
---  sequence_ (ModLoop.printEtaLoop optParams ol)
+  sequence_ (ModLoop.printEtaLoop optParams ol)
 
 {-
   concurrentlyMany_ [

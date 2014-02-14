@@ -5,7 +5,7 @@
 module Modules.Optimisation.Loop where
 
 
---import qualified Modules.System as System 
+import qualified Modules.System as System 
 import Modules.System (Node)
 import qualified Modules.Plot as ModPlot
 import qualified Modules.Optimisation.Base as Base
@@ -35,7 +35,7 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Part.Index as Idx
 
 --import qualified EFA.Signal.Record as Record
---import qualified EFA.Signal.Vector as SV
+import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data (Data(Data)) --, Apply)
 
 import EFA.Utility.List (vhead) --, vlast)
@@ -332,12 +332,8 @@ changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx
             (LessForcingNeeded, MoreForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~/ _3
 
 
-{-
-iterateInnerLoopWhile ::
-  One.OptimisationParams node [] Sweep vec sigVec a ->
-  EnvResult node (Sweep vec a) ->
-  [InnerLoopItem node a (Type.Optimisation node Sweep vec sigVec a)]
-  
+
+{-  
 iterateInnerLoopWhile  optParams stateFlowGraphOpt = 
   takeWhile f $ iterateInnerLoop optParams reqsRec stateFlowGraphOpt
    where (One.MaxInnerLoopIterations maxCnt) = One.maxInnerLoopIterations optParams  
@@ -409,13 +405,6 @@ iterateEtaWhile sysParams optParams simParams = go 0  $ One.stateFlowGraphOpt op
 
 -------------------------------- OutPut Below -----------------------------------
 
-{-showEtaLoop ::
-  (PrintfArg a, UV.Unbox a, Arith.Product a, Show a,
-   Node.C node, Sweep.SweepClass sweep vec a, Show node) =>
-   One.OptimisationParams node [] Sweep UV.Vector a ->
-   [EtaLoopItem node Sweep UV.Vector a z] -> [String]-}
-
-
 printfMap :: (Show k, Show a) => Map.Map k a -> String 
 printfMap m = concat $ map f $ Map.toList m
   where f (k, x) = "(" ++ (printf "%5s" (show k)) ++ ","  ++ (printf "%5s" (show x)) ++ ")"
@@ -484,7 +473,19 @@ showStateLoopItem optParams (StateLoopItem sStep sForcing sFStep stateDurations 
 --        " Bal: " ++ printfMap sBalance
 
 
-printEtaLoop :: (UV.Unbox a, Arith.Constant a) =>
+printEtaLoop :: 
+  (UV.Unbox a, Arith.Constant a, 
+   Show node,
+   SV.Walker intVec,
+   SV.Storage intVec Double,
+   SV.FromList intVec,
+   SV.Walker simVec,
+   SV.Storage simVec Double,
+   SV.FromList simVec,
+   Node.C node,
+   z~ Type.OptimiseStateAndSimulate
+   node sweep sweepVec Double intVec Double simVec c efaVec d, 
+   z0 ~ Type.OptimisationPerState node00 Double) =>
   One.OptimisationParams node [] Sweep UV.Vector a
   -> [EtaLoopItem node Sweep UV.Vector a z0 z] -> [IO ()]
 printEtaLoop optParams ol =
@@ -535,32 +536,48 @@ printInnerLoopItem optParams (InnerLoopItem ilStep ilBForcOut ilBalance ilSForcO
    ilSDurations balanceLoop _ ) = print "InnerLoop"
       
 printBalanceLoopItem::
+  (z ~ Type.OptimiseStateAndSimulate 
+   node sweep sweepVec Double intVec Double simVec c efaVec d, 
+   Show node,
+   SV.Walker intVec,
+   SV.Storage intVec Double,
+   SV.FromList intVec,
+   SV.Walker simVec,
+   SV.Storage simVec Double,
+   SV.FromList simVec,
+   Node.C node,
+   z0 ~ Type.OptimisationPerState node0 Double) =>
   One.OptimisationParams node [] Sweep UV.Vector a -> 
   BalanceLoopItem node a z0 z -> 
   IO()
-printBalanceLoopItem optParams (BalanceLoopItem bStep bForcing bFStep balance opt) = --print "BalanceLoop" 
+printBalanceLoopItem optParams (BalanceLoopItem bStep bForcing bFStep balance res) = --print "BalanceLoop" 
 
 
-  --Just $ do
-    --let --dir = printf "outer-loop-%6.6d" bStep
- --       stoPos = TopoIdx.Position System.Water System.Network
---    ModPlot.maxEta ModPlot.gpXTerm opt
-{-    ModPlot.maxEta (ModPlot.gpPNG dir ilcnt) opt
-    ModPlot.optimalObjs (ModPlot.gpPNG dir ilcnt) opt
-    ModPlot.simulationGraphs (ModPlot.dotPNG dir ilcnt) opt
+  do
+    let opt = fst res
+        opt2 = snd res
+        xTerm = ModPlot.gpPNG dir bStep
+        gTerm = ModPlot.gpXTerm
+        term = xTerm
+        dir = printf "outer-loop-%6.6d" bStep
+        stoPos = TopoIdx.Position System.Water System.Network
+--    ModPlot.maxEta xTerm opt2 
+--    ModPlot.maxEta gTerm opt2
+--    ModPlot.optimalObjs (ModPlot.gpPNG dir bStep) opt
+--    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
+    ModPlot.givenSignals term opt2
+--    ModPlot.maxEtaPerState (ModPlot.gpPNG dir bStep) opt
+   -- ModPlot.maxPosPerState (ModPlot.gpPNG dir bStep) stoPos opt
 
-   -- ModPlot.maxEtaPerState (ModPlot.gpPNG dir ilcnt) opt
-   -- ModPlot.maxPosPerState (ModPlot.gpPNG dir ilcnt) stoPos opt
-
-    ModPlot.maxPos stoPos (ModPlot.gpPNG dir ilcnt) opt
+--    ModPlot.maxPos stoPos (ModPlot.gpPNG dir bStep) opt
 
     -- das aktiviert das schreiben der zustandsflussgraphen 
     -- pro parzelle (Achtung, ziemlich viel!!!)
-    -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG dir ilcnt) opt
-    -- ModPlot.simulationSignals (ModPlot.gpPNG dir ilcnt) opt
-    -- ModPlot.givenSignals (ModPlot.gpPNG dir ilcnt) opt
-    ModPlot.maxState (ModPlot.gpPNG dir ilcnt) opt
-    -- ModPlot.maxStateContour (ModPlot.gpPNG dir ilcnt) opt-}
+    -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG dir bStep) opt
+    ModPlot.simulationSignals (ModPlot.gpPNG dir bStep) opt2
+
+--    ModPlot.maxState (ModPlot.gpPNG dir bStep) opt
+    -- ModPlot.maxStateContour (ModPlot.gpPNG dir bStep) opt-}
     print "BalanceLoop" 
 
 printStateLoopItem :: 
