@@ -51,7 +51,7 @@ import qualified Data.Map as Map
 import qualified Data.Vector.Unboxed as UV
 --import Data.Vector (Vector)
 import Data.Maybe (fromMaybe)
--- import Debug.Trace (trace)+
+import Debug.Trace (trace)
 
 import qualified Data.Bimap as Bimap
 import Data.Bimap (Bimap)
@@ -68,7 +68,7 @@ data BalanceLoopItem node a z0 z =
 data StateLoopItem node a z = StateLoopItem 
                          { sStep ::Int, 
                            sForcing  :: Map.Map Idx.AbsoluteState (One.StateForcing a),
-                           sFStep :: Map.Map Idx.AbsoluteState (One.StateForcing a), 
+                           sFStep :: Map.Map Idx.AbsoluteState (One.StateForcingStep a), 
                            stateDurations :: One.StateDurations a,
                            sBalance :: One.Balance node a,
                            sResult :: z }
@@ -113,7 +113,7 @@ eta efa =
        _ -> error "Main.iterateBalanceIO"
 
 checkBalance :: (Ord a, Arith.Sum a) => 
-                One.OptimisationParams a list sweep vec a -> 
+                One.OptimisationParams node list sweep vec a -> 
                 One.Balance node a ->  Bool
 checkBalance optParams bal = all g $ Map.elems bal  
   where g x = Arith.abs x < eps
@@ -126,7 +126,7 @@ iterateBalanceUntil ::
   (Map.Map node (One.SocDrive a), Type.OptimalSolutionPerState node a)
 iterateBalanceUntil optParams balanceLoop =
   (bForcing $ lastElem, Type.optimalSolutionPerState $ fst $ bResult $ lastElem)
-  where f x = bStep x < maxStepCnt-1 
+  where f x = (bStep x < maxStepCnt-1) -- || (checkBalance optParams $ balance x)
         One.MaxBalanceIterations maxStepCnt = One.maxBalanceIterations optParams
         lastElem = vhead "interateBalanceUntil" $ dropWhile f balanceLoop
                      
@@ -260,7 +260,7 @@ iterateStateUntil ::
 iterateStateUntil optParams stateLoop = 
   (sForcing $ lastElem , stateDurations $ lastElem, sBalance $ lastElem)
   where lastElem = vhead "interateStateUntil" $ dropWhile f $ stateLoop
-        f x =  sStep x > maxStepCnt-1
+        f x =  sStep x > maxStepCnt-1 
         (One.MaxStateIterations maxStepCnt) = One.maxStateIterations optParams 
         thr = One.stateTimeThreshold optParams
         
@@ -286,7 +286,7 @@ stateIteration ::
    (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)]
 stateIteration sysParams optParams simParams optimalObjectivePerState stateForceIn indexConversionMap = 
   go 0 stateForceIn initialSteps initialResults 
-  where initialSteps = Map.map (const $ One.StateForcing Arith.zero) stateForceIn
+  where initialSteps = Map.map (\x -> if x==0 then seed else One.DontForceState) initialTimes
         seed = One.stateForcingSeed optParams
         fsys sf = NonIO.optimiseStateAndSimulate sysParams optParams simParams sf optimalObjectivePerState indexConversionMap
         initialResults = fsys stateForceIn
@@ -309,7 +309,9 @@ stateIteration sysParams optParams simParams optimalObjectivePerState stateForce
             : go (cnt+1) force1 step1 res1
           where
             force1 = Map.fromList $ zipWith g (Map.toList force) (Map.toList step)      
-            g (idx1,One.StateForcing x) (idx2,One.StateForcing y) =
+            
+            g (idx1,One.StateForcing x) (idx2,One.DontForceState) = (idx1, One.StateForcing $ x)
+            g (idx1,One.StateForcing x) (idx2,One.StateForcingStep y) =
               if idx1 /= idx2 then error msg else (idx1, One.StateForcing $ x~+y)
 --            g (idx1,x) (idx2,y) =
 --              if idx1 /= idx2 then error msg else (idx1, x~+y)
@@ -333,13 +335,14 @@ changeStateForce:: (Eq a1, Eq a,
                     Num a1, Num a, 
                     Num a2, Ord a3, 
                     Ord a2,Arith.Constant a3) =>
-                   One.StateForcing a3
+                   One.StateForcingStep a3
                    -> a2
                    -> (a2, a2)
                    -> (One.StateForcing a, One.StateForcing a1)
-                   -> (t, One.StateForcing a3)
-                   -> (t, One.StateForcing a3)
-changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx,One.StateForcing st) = (idx,st1)
+                   -> (t, One.StateForcingStep a3)
+                   -> (t, One.StateForcingStep a3)
+changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx,One.DontForceState) = (idx,One.DontForceState)
+changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx,One.StateForcingStep st) = (idx,st1)
   where
      st1 =
        let 
@@ -353,15 +356,15 @@ changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx
                 (False, False, False) -> LessForcingNeeded
                   
        in case (eval x0 y0 thr, eval x1 y1 thr) of
-            (_, NoForcingNeeded) -> One.StateForcing $ Arith.zero
-            (_, CorrectForcing) -> One.StateForcing $ Arith.zero
-            (NoForcingNeeded, _) -> seed            
-            (CorrectForcing, MoreForcingNeeded) -> seed                        
-            (CorrectForcing, LessForcingNeeded) -> fmap Arith.negate seed
-            (MoreForcingNeeded, MoreForcingNeeded) -> if st == Arith.zero then seed else One.StateForcing $ (Arith.abs st) ~* _2
-            (LessForcingNeeded, LessForcingNeeded) -> One.StateForcing $ Arith.negate $ (Arith.abs st) ~* _2
-            (MoreForcingNeeded, LessForcingNeeded) -> One.StateForcing $ Arith.negate $ (Arith.abs st) ~/ _3
-            (LessForcingNeeded, MoreForcingNeeded) -> if st == Arith.zero then seed else One.StateForcing $ (Arith.abs st) ~/ _3
+            (_, NoForcingNeeded) -> trace "a1" $  One.StateForcingStep $ Arith.zero
+            (_, CorrectForcing) -> trace "a2" $ One.StateForcingStep $ Arith.zero
+            (NoForcingNeeded, _) -> trace "a3" $ seed            
+            (CorrectForcing, MoreForcingNeeded) -> trace "a4" $ seed                        
+            (CorrectForcing, LessForcingNeeded) -> trace "a5" $ fmap Arith.negate seed
+            (MoreForcingNeeded, MoreForcingNeeded) -> trace "a6" $ if st == Arith.zero then seed else One.StateForcingStep $ (Arith.abs st) ~* _2
+            (LessForcingNeeded, LessForcingNeeded) -> trace "a7" $ One.StateForcingStep $ Arith.negate $ (Arith.abs st) ~* _2
+            (MoreForcingNeeded, LessForcingNeeded) -> trace "a8" $ One.StateForcingStep $ Arith.negate $ (Arith.abs st) ~/ _3
+            (LessForcingNeeded, MoreForcingNeeded) -> trace "a9" $ if st == Arith.zero then seed else One.StateForcingStep $ (Arith.abs st) ~/ _3
             (x,y) -> error (show x ++" " ++ show y) 
 
 

@@ -187,15 +187,15 @@ main1 = do
           One.sweepLength = ModSet.sweepLength,
           One.etaToOptimise = Nothing,
           One.maxEtaIterations = One.MaxEtaIterations 1,
-          One.maxInnerLoopIterations = One.MaxInnerLoopIterations 1,
-          One.maxBalanceIterations = One.MaxBalanceIterations 10,
-          One.maxStateIterations = One.MaxStateIterations 20,
+          One.maxInnerLoopIterations = One.MaxInnerLoopIterations 2,
+          One.maxBalanceIterations = One.MaxBalanceIterations 20,
+          One.maxStateIterations = One.MaxStateIterations 16,
           One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.1,
           One.balanceThreshold = One.BalanceThreshold 0.1,
-          One.stateTimeThreshold = One.StateTimeThreshold 10,
-          One.stateForcingSeed = One.StateForcing 0.05,
+          One.stateTimeThreshold = One.StateTimeThreshold 0.6,
+          One.stateForcingSeed = One.StateForcingStep 0.05,
           One.balanceForcingSeed = One.ChargeDrive 0.01}
 
       simParams :: One.SimulationParams Node [] Double

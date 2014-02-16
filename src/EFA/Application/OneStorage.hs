@@ -60,9 +60,11 @@ noforcing _ _ = Arith.zero
 
 
 newtype StateForcing a = StateForcing a deriving Show
+data StateForcingStep a = StateForcingStep a | DontForceState deriving Show
 
-instance Functor StateForcing where 
-  fmap f (StateForcing x) = StateForcing $ f x
+instance Functor StateForcingStep where 
+  fmap f (StateForcingStep x) = StateForcingStep $ f x
+  fmap f (DontForceState ) = DontForceState
 
 {-
 instance (Arith.Sum a) => Arith.Sum (StateForcing a) where
@@ -136,7 +138,7 @@ data OptimisationParams node list sweep vec a = OptimisationParams {
   etaThreshold :: EtaThreshold a,    
   balanceThreshold :: BalanceThreshold a,
   stateTimeThreshold :: StateTimeThreshold a,
-  stateForcingSeed :: StateForcing a,   
+  stateForcingSeed :: StateForcingStep a,   
   balanceForcingSeed :: SocDrive a
   }
 
