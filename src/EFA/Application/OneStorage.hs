@@ -61,10 +61,21 @@ noforcing _ _ = Arith.zero
 
 newtype StateForcing a = StateForcing a deriving Show
 
+instance Functor StateForcing where 
+  fmap f (StateForcing x) = StateForcing $ f x
+
+{-
 instance (Arith.Sum a) => Arith.Sum (StateForcing a) where
   (~+) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~+ y
   (~-) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~- y
+  negate (StateForcing x) = StateForcing $ Arith.negate x
 
+instance (Arith.Product a) => Arith.Product (StateForcing a) where
+  (~*) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~* y
+  (~/) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~/ y
+  recip (StateForcing x) = StateForcing $ Arith.recip x
+  constOne (StateForcing x) = StateForcing $ Arith.constOne x
+-}
 type IndexConversionMap =
   Bimap Idx.State Idx.AbsoluteState
 
@@ -111,7 +122,6 @@ data SystemParams node a = SystemParams {
   
 data OptimisationParams node list sweep vec a = OptimisationParams {
   stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),
-  indexConversionMap :: IndexConversionMap,
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   points :: Map (list a) (ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),

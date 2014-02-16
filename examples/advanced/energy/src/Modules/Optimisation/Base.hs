@@ -152,11 +152,10 @@ selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a) =>
   One.OptimisationParams node list sweep vec a -> 
   Map Idx.AbsoluteState (One.StateForcing a) -> 
-  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
+  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) -> 
+  One.IndexConversionMap -> 
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
-selectOptimalState params stateForcing stateMap =
-  let absstateMap = One.indexConversionMap params
-  in
+selectOptimalState params stateForcing stateMap indexConversionMap =
   List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxBy ModUt.fst4))
   $ map (\(st, m) ->
       Map.map (fmap
@@ -164,7 +163,7 @@ selectOptimalState params stateForcing stateMap =
             (objVal Arith.~+ 
              maybe (error "Base.selectOptimalState")
                    One.unpackStateForcing
-                     (ModUt.state2absolute st absstateMap >>= flip Map.lookup stateForcing),
+                     (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
                          eta, st, env))) m)
   $ Map.toList stateMap
 

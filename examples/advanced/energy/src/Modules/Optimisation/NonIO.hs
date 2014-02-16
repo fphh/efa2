@@ -235,12 +235,13 @@ optimiseAndSimulate :: (efaVec ~ simVec,intVec ~ simVec,a ~ d,intVec ~ [],
   -> Map.Map
   Idx.State
   (Map.Map [a] (Type.PerStateSweep node sweep UV.Vector a))
+  -> One.IndexConversionMap
   -> (Type.OptimisationPerState node a,
       Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)
-optimiseAndSimulate sysParams optParams simParams balanceForcing stateForcing perStateSweep =
+optimiseAndSimulate sysParams optParams simParams balanceForcing stateForcing perStateSweep indexConversionMap =
   let perStateOptimum  = Base.optimalObjectivePerState optParams balanceForcing perStateSweep
       perStateAverage = Base.expectedValuePerState perStateSweep
-      optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum
+      optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
       interpolation = interpolateOptimalSolution sysParams optParams simParams optimalSolution
       sim = simulation sysParams $ Type.reqsAndDofsSignals interpolation
       efa = energyFlowAnalysis sysParams $ Type.signals sim
@@ -261,9 +262,10 @@ optimiseStateAndSimulate:: (d ~ a, intVec ~ [], simVec ~ [], b ~ a, efaVec ~ [])
   Idx.State
   (Map.Map
    [b] (Maybe (b, b, Type.EnvResult node b)))
+  -> One.IndexConversionMap
   -> Type.OptimiseStateAndSimulate node sweep vec a intVec b simVec c efaVec d
-optimiseStateAndSimulate sysParams optParams simParams stateForcing perStateOptimum =
-  let optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum
+optimiseStateAndSimulate sysParams optParams simParams stateForcing perStateOptimum indexConversionMap =
+  let optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
       interpolation = interpolateOptimalSolution sysParams optParams simParams optimalSolution
       sim = simulation sysParams  $ Type.reqsAndDofsSignals interpolation
       efa = energyFlowAnalysis sysParams $ Type.signals sim

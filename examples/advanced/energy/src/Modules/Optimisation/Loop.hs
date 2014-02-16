@@ -8,6 +8,7 @@ module Modules.Optimisation.Loop where
 import qualified Modules.System as System 
 import Modules.System (Node)
 import qualified Modules.Plot as ModPlot
+import qualified Modules.Utility as ModUt
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.NonIO as NonIO
 
@@ -23,7 +24,6 @@ import EFA.Graph (Graph)
 
 import qualified EFA.Graph.Topology as Topology
 import qualified EFA.Graph.Topology.Node as Node
-
 import EFA.Equation.Arithmetic (Sign(Zero, Positive, Negative), (~*), (~+), (~/))
 import qualified EFA.Equation.Arithmetic as Arith
 
@@ -146,17 +146,18 @@ balanceIteration::
   Map.Map Idx.State (Map.Map [a] (Type.PerStateSweep node Sweep UV.Vector a)) ->
   Map.Map node (One.SocDrive a) ->
   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
+  One.IndexConversionMap ->
   [BalanceLoopItem node a (Type.OptimisationPerState node a)
     (Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)]
 
-balanceIteration sysParams optParams simParams perStateSweep balForceIn statForceIn =
+balanceIteration sysParams optParams simParams perStateSweep balForceIn statForceIn indexConversionMap =
   go 0 balForceIn initialSteps (accessf resStart) resStart
   where
 
     seed = One.balanceForcingSeed optParams
     initialSteps = One.initialBattForceStep optParams
     resStart = fsys balForceIn
-    fsys bf = NonIO.optimiseAndSimulate sysParams optParams simParams bf statForceIn perStateSweep
+    fsys bf = NonIO.optimiseAndSimulate sysParams optParams simParams bf statForceIn perStateSweep indexConversionMap
     
     accessf res = StateEta.balanceFromRecord (One.storagePositions sysParams) $ 
                       Type.signals $ Type.simulation $ snd res
@@ -210,18 +211,25 @@ balanceIteration sysParams optParams simParams perStateSweep balForceIn statForc
                     (_, Zero)  ->  Arith.zero
                 
 -- | TODO : move to korrekt Position -- State Labels == Times ??
-
+{-
 getStateTimes ::
   (Arith.Constant sectionLabel) =>
   One.OptimisationParams node list sweep vec a ->
   FlowState.Graph node edge (Result sectionLabel) nodeLabel
     storageLabel edgeLabel carryLabel ->
-  One.StateDurations (Result sectionLabel)
-getStateTimes params sfg = Map.map g stateMap
+  One.StateDurations (Result sectionLabel)-}
+getStateTimes stateForceIn sfg = Map.mapWithKey f stateForceIn
   where timeMap = Map.map FlowTopo.label $ StateQty.states sfg
-        g st = fromMaybe (Determined Arith.zero) (Map.lookup st timeMap)
-        stateMap = Bimap.toMapR $ One.indexConversionMap params
-
+        indexMap = Bimap.toMap $ ModUt.indexConversionMap System.topology $ sfg
+        f absIdx _ = fromMaybe (Determined Arith.zero) (Map.lookup absIdx timeMapAbs)
+        timeMapAbs = Map.mapKeys g timeMap
+           where g st = indexMap Map.! st
+          
+--        g  st = (fromMaybe (Determined Arith.zero) (Map.lookup st timeMap))
+--        stateMap = Map.map f stateForceIn 
+--        f (absIdx,_) = Map.lookup st stateMap
+--        indexMap = Bimap.toMapR $ ModUt.indexConversionMap System.topology $ sfg
+                       
 -- | Find a solution where all states occur in the simlation signals at minimum state forcing, 
 -- | measurement unit ist state duration
 getStateTime ::
@@ -232,10 +240,11 @@ getStateTime ::
 getStateTime stateIdx sfg = FlowTopo.label $ f state
   where state = Map.lookup stateIdx (StateQty.states sfg) 
         f (Just st) = st 
-        f (Nothing) = error ("Error in getStateTime: State " ++ show stateIdx ++ "doesn't exist in StateflowGrapgh")
+        f (Nothing) = error ("Error in getStateTime: State " ++ show stateIdx ++ 
+                             "doesn't exist in StateflowGraph")
 
 data StateForceDemand = MoreForcingNeeded | CorrectForcing | 
-                        NoForcingNeeded | LessForcingNeeded
+                        NoForcingNeeded | LessForcingNeeded deriving Show
 
 checkStateTimes :: Ord a => One.OptimisationParams a [] Sweep vec a -> 
                One.StateDurations a -> Bool  
@@ -258,7 +267,7 @@ iterateStateUntil optParams stateLoop =
 
 
 stateIteration ::
-  (sigVec ~[],d ~ b,efaVec ~ [],simVec ~ [], intVec ~ [], (a ~ b),UV.Unbox b,
+  (sigVec ~[],d ~ b,efaVec ~ [],simVec ~ [], intVec ~ [], (a ~ b),UV.Unbox b,node~Node,
    Eq a, Num a,
    Arith.Sum a,
    Ord a,
@@ -266,25 +275,28 @@ stateIteration ::
    Show a,
    Node.C node,
    Arith.ZeroTestable a,
-   Arith.Constant a
-  ) =>
+   Arith.Constant a) =>
   One.SystemParams node a ->
   One.OptimisationParams node [] Sweep UV.Vector a ->
   One.SimulationParams node sigVec a ->
   Map.Map Idx.State (Map.Map [a] (Maybe (a, a, EnvResult node a))) ->
   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
+  One.IndexConversionMap ->
   [StateLoopItem node a 
    (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)]
-stateIteration sysParams optParams simParams optimalObjectivePerState stateForceIn  = 
+stateIteration sysParams optParams simParams optimalObjectivePerState stateForceIn indexConversionMap = 
   go 0 stateForceIn initialSteps initialResults 
   where initialSteps = Map.map (const $ One.StateForcing Arith.zero) stateForceIn
         seed = One.stateForcingSeed optParams
-        fsys sf = NonIO.optimiseStateAndSimulate sysParams optParams simParams sf optimalObjectivePerState
+        fsys sf = NonIO.optimiseStateAndSimulate sysParams optParams simParams sf optimalObjectivePerState indexConversionMap
         initialResults = fsys stateForceIn
+        initialTimes = accessTimes initialResults
+        -- forceIn = Map.map (const $ One.StateForcing Arith.zero) $ Map.filter (==0) initialTimes
+
         (One.StateTimeThreshold thr) = One.stateTimeThreshold optParams
         
         accessTimes res =
-          Map.map f $ getStateTimes optParams $ Type.stateFlowGraph $ Type.analysis res
+          Map.map f $ getStateTimes stateForceIn $ Type.stateFlowGraph $ Type.analysis res
            where f (Determined (Data x)) = x
                  f Undetermined  = error "State Time undetermined"
                  
@@ -297,8 +309,10 @@ stateIteration sysParams optParams simParams optimalObjectivePerState stateForce
             : go (cnt+1) force1 step1 res1
           where
             force1 = Map.fromList $ zipWith g (Map.toList force) (Map.toList step)      
-            g (idx1,x) (idx2,y) =
-              if idx1 /= idx2 then error msg else (idx1, x~+y)
+            g (idx1,One.StateForcing x) (idx2,One.StateForcing y) =
+              if idx1 /= idx2 then error msg else (idx1, One.StateForcing $ x~+y)
+--            g (idx1,x) (idx2,y) =
+--              if idx1 /= idx2 then error msg else (idx1, x~+y)
             res1 = fsys force1 
             times = accessTimes res
             times1 = accessTimes res1
@@ -313,6 +327,48 @@ stateIteration sysParams optParams simParams optimalObjectivePerState stateForce
                   ++ " -- differing States between Forcing,"
                   ++ " Stateduration and Step"
 
+
+
+changeStateForce:: (Eq a1, Eq a, 
+                    Num a1, Num a, 
+                    Num a2, Ord a3, 
+                    Ord a2,Arith.Constant a3) =>
+                   One.StateForcing a3
+                   -> a2
+                   -> (a2, a2)
+                   -> (One.StateForcing a, One.StateForcing a1)
+                   -> (t, One.StateForcing a3)
+                   -> (t, One.StateForcing a3)
+changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx,One.StateForcing st) = (idx,st1)
+  where
+     st1 =
+       let 
+         _3 = Arith.fromInteger 3        
+         _2 = Arith.fromInteger 2
+         eval force timeDur thr =
+           case (force == 0, timeDur == 0, timeDur < thr ) of
+                (True, False, _)      -> NoForcingNeeded 
+                (False, False, True)  -> CorrectForcing
+                (_, True, _)      -> MoreForcingNeeded
+                (False, False, False) -> LessForcingNeeded
+                  
+       in case (eval x0 y0 thr, eval x1 y1 thr) of
+            (_, NoForcingNeeded) -> One.StateForcing $ Arith.zero
+            (_, CorrectForcing) -> One.StateForcing $ Arith.zero
+            (NoForcingNeeded, _) -> seed            
+            (CorrectForcing, MoreForcingNeeded) -> seed                        
+            (CorrectForcing, LessForcingNeeded) -> fmap Arith.negate seed
+            (MoreForcingNeeded, MoreForcingNeeded) -> if st == Arith.zero then seed else One.StateForcing $ (Arith.abs st) ~* _2
+            (LessForcingNeeded, LessForcingNeeded) -> One.StateForcing $ Arith.negate $ (Arith.abs st) ~* _2
+            (MoreForcingNeeded, LessForcingNeeded) -> One.StateForcing $ Arith.negate $ (Arith.abs st) ~/ _3
+            (LessForcingNeeded, MoreForcingNeeded) -> if st == Arith.zero then seed else One.StateForcing $ (Arith.abs st) ~/ _3
+            (x,y) -> error (show x ++" " ++ show y) 
+
+
+
+
+
+{-
 changeStateForce:: (Eq a1, Eq a, 
                     Num a1, Num a, 
                     Num a2, Ord a3, 
@@ -345,7 +401,7 @@ changeStateForce seed thr (y0,y1) (One.StateForcing x0,One.StateForcing x1) (idx
             (LessForcingNeeded, LessForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~* _2
             (MoreForcingNeeded, LessForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~/ _3
             (LessForcingNeeded, MoreForcingNeeded) -> One.StateForcing $ (Arith.abs st) ~/ _3
-
+-}
 
 
 {-  
@@ -358,7 +414,7 @@ iterateInnerLoopWhile  optParams stateFlowGraphOpt =
 -}             
 
 iterateInnerLoop :: 
-  (intVec~[], efaVec ~ [], simVec ~ [],a ~ d,sigVec ~ [],d ~ b, 
+  (intVec~[], efaVec ~ [], simVec ~ [],a ~ d,sigVec ~ [],d ~ b,node~Node, 
    Ord d,
    Show d,
    Show node,
@@ -373,18 +429,19 @@ iterateInnerLoop ::
   Map.Map Idx.State (Map.Map [a] (Type.PerStateSweep node Sweep UV.Vector a)) ->
   Map.Map node (One.SocDrive a) ->
   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
+  One.IndexConversionMap ->
   [InnerLoopItem node a (Type.OptimisationPerState node a)
      (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)]
-iterateInnerLoop sysParams optParams simParams perStateSweep balForceIn stateForceIn = 
+iterateInnerLoop sysParams optParams simParams perStateSweep balForceIn stateForceIn indexConversionMap = 
   go 0 balForceIn stateForceIn
   where
     go cnt balForce statForce =
       InnerLoopItem cnt balForce1 bal statForce1 sta balLoop statLoop
         : go (cnt+1) balForce1 statForce1
       where 
-        balLoop = balanceIteration sysParams optParams simParams perStateSweep balForce statForce
-        (balForce1, optimalObjectivePerState) = iterateBalanceUntil optParams balLoop            
-        statLoop = stateIteration sysParams optParams simParams optimalObjectivePerState statForce
+        balLoop = balanceIteration sysParams optParams simParams perStateSweep balForce statForce indexConversionMap
+        (balForce1, optimalObjectivePerState) = iterateBalanceUntil optParams balLoop        
+        statLoop = stateIteration sysParams optParams simParams optimalObjectivePerState statForce indexConversionMap
         (statForce1,sta,bal) = iterateStateUntil optParams statLoop
 
 
@@ -409,13 +466,14 @@ iterateEtaWhile sysParams optParams simParams = go 0  $ One.stateFlowGraphOpt op
    where (One.MaxEtaIterations maxCnt) = One.maxEtaIterations optParams
          balf =  One.initialBattForcing optParams
          sfgo = One.stateFlowGraphOpt optParams
-         graphStates = StateQty.states sfgo
-         xs = Bimap.toMapR $ One.indexConversionMap optParams
-         statf = Map.map (const $ One.StateForcing Arith.zero) xs
+         -- graphStates = StateQty.states sfgo
+         indexMap = Bimap.toMapR $ ModUt.indexConversionMap System.topology sfgo
+         statf = Map.map (const $ One.StateForcing Arith.zero) indexMap
          go cnt sfg = EtaLoopItem cnt sfg sfg1 res : go (cnt+1) sfg1
            where
             sweep = Base.perStateSweep sysParams optParams sfg
-            res = iterateInnerLoop sysParams optParams simParams sweep balf statf
+            indexConversionMap = ModUt.indexConversionMap System.topology sfg
+            res = iterateInnerLoop sysParams optParams simParams sweep balf statf indexConversionMap
             sfg1 = Type.stateFlowGraphSweep 
                    $ sResult 
                    $ vhead "iterateEtaWhile 2"
@@ -431,6 +489,17 @@ printfMap m = concatMap f $ Map.toList m
   where f (k, x) =
           printf "%16s\t%16s\n" (show k) (show x)
 
+printfStateMap forceMap timeMap = concat$ zipWith f (Map.toList forceMap) (Map.toList timeMap) 
+  where f (Idx.AbsoluteState k, One.StateForcing x) (_, y) = 
+          "ASt :" ++ (printf "%d" k) ++ " F: " ++ (printf "%.2f" x) ++ " D: " ++ (printf "%.2f\n" y)
+
+printfBalanceFMap forceMap balanceMap = concat$ zipWith f (Map.toList forceMap) (Map.toList balanceMap) 
+  where f (k,x) (_, y) = 
+          " Sto: " ++ (printf "%10s" $ show k) ++ " F: " ++ (printf "%.2f" $ One.getSocDrive x) ++ " B: " ++ (printf "%.2f\n" y)
+
+printfBalanceMap balanceMap = concat $ map f (Map.toList balanceMap) 
+  where f (k,x) = 
+          " Sto: " ++ (printf "%10s" $ show k) ++ " B: " ++ (printf "%.2f\n" x)
 
 showEtaLoop optParams loop = iterateLoops optParams showEtaLoopItem showInnerLoopItem 
               showBalanceLoopItem showStateLoopItem loop
@@ -475,25 +544,27 @@ showInnerLoopItem::
 showInnerLoopItem optParams (InnerLoopItem ilStep ilBForcOut ilBalance ilSForcOut 
    ilSDurations balanceLoop _ ) = "IL: " ++ printf "%8d" ilStep 
 
-showBalanceLoopItem::(Show a, Show node)=>
+showBalanceLoopItem::(Show a, Show node,PrintfArg a,Arith.Constant a )=>
   One.OptimisationParams node [] Sweep UV.Vector a -> 
   BalanceLoopItem node a z0 z -> 
   String
 showBalanceLoopItem optParams (BalanceLoopItem bStep bForcing bFStep balance _) =  
-        " BL:  " ++ printf "%2d" bStep ++ 
-        " BF:  " ++ printfMap bForcing ++ 
-        " Bal: " ++ printfMap balance
+        " BL: " ++ printf "%2d" bStep ++ 
+         printfBalanceFMap bForcing balance
+        
+--        " BF:  " ++ printfMap bForcing ++ 
+--        " Bal: " ++ printfMap balance
 
-showStateLoopItem :: (Show a, Show node) =>
+showStateLoopItem :: (Show a, Show node,PrintfArg a) =>
   One.OptimisationParams node [] Sweep UV.Vector a -> 
   StateLoopItem node a z -> 
   String
 showStateLoopItem optParams (StateLoopItem sStep sForcing sFStep stateDurations sBalance sResult) = 
   printf " SL:%8d\n" sStep
   ++ "States:\t" ++ show (Map.keys stateDurations)
-  ++ "\nSF:\n" ++ printfMap sForcing 
-  ++ " Dur:\n" ++ printfMap stateDurations
-  ++ " Bal: " ++ printfMap sBalance
+  ++ "\nStateForcing And Duration:\n" ++ printfStateMap sForcing stateDurations
+--  ++ " StateDuration:\n" ++ printfMap stateDurations
+  ++ " Balance: " ++ printfBalanceMap sBalance
 
 
 printEtaLoop :: 
@@ -610,74 +681,6 @@ printStateLoopItem ::
   StateLoopItem node a z -> 
   IO()
 printStateLoopItem optParams (StateLoopItem sStep sForcing sFStep stateDurations sBalance sResult) = print "stateLoop" 
-
-
-
-{-
-
-iterateLoops ::
-  One.MaxEtaIterations ->
-  (Int -> EtaLoopItem node a z -> Maybe b) ->
-  (Int ->
-    Int -> 
-    BalanceLoopItem node a (Type.Optimisation node sweep vec a) ->
-    Maybe b) ->
-  [EtaLoopItem node a z] ->
-  [Maybe b]
-iterateLoops optParams etaLoopFunction innerLoopFunction etaLoop =
-  concat $ map g $ take n etaLoop
-  where g x = map (innerLoopFunction optParams) (etaLoopFunction x) ++ [olif n x]
-        f (EtaLoopItem cnt _ _ _ _ innerLoop) = take nos innerloop
-        (One.MaxEtaIterations n) = One.maxmaxEtaIterations optParam
-
-
-showEtaLoopItem ::
-  (UV.Unbox a, Arith.Product a,
-   PrintfArg a,Show node, Show a,
-   Node.C node, Sweep.SweepClass sweep vec a) =>
-  Int -> EtaLoopItem node Sweep UV.Vector a z -> Maybe String
-showEtaLoopItem _ (EtaLoopItem step sfgIn sfgOut il) =
-  let numOfSt = Map.size $ StateQty.states $ sfgOut
-  in Just $  printf "%8d%8d" step numOfSt
-     
---     "ETA-Loop: " ++ (show numOfSt) ++ " " ++ (show nos) ++ " " ++ (show f)++ " " ++ (show bal)++ " " ++ (show $ eta opt)++ " " ++(show ss) 
-  --   printf "%8d%8d%50s%50s%50s%50s\n" numOfSt nos (show f) (show bal) (eta opt)  (show ss)
-  -- "%8d%8d%24e%24e%24e%24e\n"
-
-
-
-
-showBalanceLoopItem ::
-  (UV.Unbox a, Arith.Product a, Show a, Show node, 
-   Node.C node, Sweep.SweepClass sweep vec a, PrintfArg a) =>
-  Int -> Int ->
-  BalanceLoopItem node a (Type.OptimisationPerState node a,
-                           Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)
---  BalanceLoopItem node a (Type.Optimisation node sweep vec a, Map.Map node a) ->
-  Maybe String
-showBalanceLoopItem _olcnt ilcnt (BalanceLoopItem f st (opt, bal)) =
-  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.analysis opt
-  in Just $ printf "%8d" numOfSt
-     
-     --"Balance-Loop: " ++ (show numOfSt)++" "++(show ilcnt) ++" "++(show f) ++" "++(show bal) ++" "++(show $ eta opt) ++" "++(show st)
-     --printf "%8d%8d%50s%50s%50s%50s" numOfSt ilcnt (show f) (show bal) (eta opt) (show st)
-     -- $ (show numOfSt) ++(show ilcnt) ++(show f) ++(show bal) ++(eta opt) ++(show st)
--}
-{-
-showStateLoopItem ::
-  (UV.Unbox a, Arith.Product a,Show a, 
-   Node.C node, Sweep.SweepClass sweep vec a, PrintfArg a, 
-   IsChar (One.StateForcing a)) =>
-  Int -> Int -> Int ->
-  StateLoopItem node a z ->
-  Maybe String
-showStateLoopItem _olcnt _ slcnt (StateLoopItem f st (opt, bal)) =
-  let numOfSt = Map.size $ StateQty.states $ Type.stateFlowGraph $ Type.simulation opt
-  in Just $ "State-Loop: " ++(show numOfSt) ++" "++ (show slcnt) ++" "++ (show f) ++" "++ (show bal) ++" "++ (show (eta opt)) ++" "++ (show st)
-  --   printf "%8d%8d%50s%50s%50s%50s" numOfSt slcnt f bal (eta opt) st
-  -- $ (show numOfSt) ++ (show slcnt) ++ (show f) ++ (show bal) ++ (show (eta opt)) ++ (show st) 
--}
-
 
 
 

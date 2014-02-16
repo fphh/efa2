@@ -164,6 +164,41 @@ absoluteStateIndex topo flowTopo =
 
   in toTernary $ map g tlabels
 
+absoluteStateIndex' ::
+  (Node.C node) =>
+  Graph node Graph.DirEdge nodeLabel1 a1 ->
+  Graph node Graph.EitherEdge nodeLabel a ->
+  Idx.State
+absoluteStateIndex' topo flowTopo =
+  let tlabels = map unEitherEDir $ Map.keys $ Graph.edgeLabels topo
+
+      flabels = Map.fromList $ map unEDir $ Map.keys $ Graph.edgeLabels flowTopo
+
+      unEDir (Graph.EDirEdge (Graph.DirEdge f t)) = ((f, t), Dir)
+      unEDir (Graph.EUnDirEdge (Graph.UnDirEdge f t)) = ((f, t), UnDir)
+
+      unEitherEDir (Graph.DirEdge f t) = (f, t)
+
+      g k@(f, t) =
+        case (Map.lookup k flabels, Map.lookup (t, f) flabels) of
+             (Just Dir, _) -> 0
+             (Just UnDir, _) -> 1
+             (_, Just Dir) -> 2
+             (_, Just UnDir) -> 1
+             _ -> error $ "EFA.Graph.Topology.flowNumber: edge not found "
+                          ++ Format.showRaw (Node.display f :: Format.ASCII)
+                          ++ "->"
+                          ++ Format.showRaw (Node.display t :: Format.ASCII)
+
+      toTernary xs = Idx.State $ sum $ zipWith (*) xs $ map (3^) [0 :: Int ..]
+
+  in toTernary $ map g tlabels
+
+
+absoluteFlowStateGraph topo sfg = sfg {StateQty.states = Map.fromList $ 
+  map (\(idx,x) -> (absoluteStateIndex' topo $ FlowTopo.topology x,x)) $  
+           Map.toList $ StateQty.states sfg}
+
 
 
 indexConversionMap ::
