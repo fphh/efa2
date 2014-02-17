@@ -22,9 +22,6 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined))
 
-import qualified EFA.Graph as Graph
-
---import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Vector as Vec
 import EFA.Signal.Data (Data, Nil, (:>))
@@ -37,7 +34,6 @@ import Data.Tuple.HT (fst3, snd3, thd3)
 import qualified EFA.Report.Format as Format
 
 import qualified Data.Bimap as Bimap
-import Data.Bimap (Bimap)
 
 import Control.Monad ((>=>))
 
@@ -194,9 +190,13 @@ absoluteStateIndex' topo flowTopo =
 
   in toTernary $ map g tlabels
 
-
-absoluteFlowStateGraph topo sfg = sfg {StateQty.states = Map.fromList $ 
-  map (\(idx,x) -> (absoluteStateIndex' topo $ FlowTopo.topology x,x)) $  
+absoluteFlowStateGraph ::
+  Node.C node =>
+  Graph node Graph.DirEdge nodeLabel1 a1->
+  State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel ->
+  State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel
+absoluteFlowStateGraph topo sfg = sfg {StateQty.states = Map.fromList $
+  map (\(_,x) -> (absoluteStateIndex' topo $ FlowTopo.topology x,x)) $
            Map.toList $ StateQty.states sfg}
 
 

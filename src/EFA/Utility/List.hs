@@ -3,8 +3,6 @@
 
 module EFA.Utility.List where
 
-import EFA.Flow.Part.Index (State)
-import Data.Time.Clock (UTCTime)
 
 vhead :: String -> [a] -> a
 vhead _ (x:_) = x

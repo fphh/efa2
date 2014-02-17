@@ -121,13 +121,13 @@ newtype SignalIdx = SignalIdx Int deriving (Show, Eq, Ord)
 instance Enum SignalIdx where
    fromEnum = unSignalIdx
    toEnum = SignalIdx
-   
+
 unSignalIdx :: SignalIdx -> Int
 unSignalIdx (SignalIdx x) = x
 
 indexAdd :: SignalIdx -> Int -> SignalIdx
 indexAdd (SignalIdx x) y = SignalIdx $ x P.+ y
-            
+
 inc :: SignalIdx -> SignalIdx
 inc (SignalIdx idx) = SignalIdx (idx P.+ 1)
 
@@ -225,7 +225,7 @@ zipWith3 ::
    TC s typ4 (Data c d4)
 zipWith3 f (TC da1) (TC da2) (TC da3)=
    TC $ D.zipWith g da1 (D.zip da2 da3)
-   where g (x,(y,z)) = f (x,y,z) 
+   where g (x,(y,z)) = f (x,y,z)
 -}
 
 zipWith3 ::
@@ -279,7 +279,7 @@ tzipWithGeneric f xs ys = zipWithGeneric g xs ys
 -}
 
 tzipWith3 ::
-   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3, 
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3,
     D.Storage c (d3 -> d4), D.Storage c d4) =>
    (TC Sample t1 (Data Nil d1) ->
     TC Sample t2 (Data Nil d2) ->
@@ -605,7 +605,7 @@ fromList3 ::(SV.Storage c0 (c1 (c2 d)),
              SV.Storage c2 d,
              SV.FromList c0,
              SV.FromList c1,
-             SV.FromList c2) => 
+             SV.FromList c2) =>
    [[[d]]] -> TC s t (Data (c0 :> c1 :> c2 :> Nil) d)
 fromList3 x = TC $ D.fromList x
 
@@ -1191,7 +1191,7 @@ getColumn (TC (Data x)) idx = TC $ Data $
 getMatrix :: (Eq (v2 (v a)),
               SV.Storage v3 (v2 (v a)),
               SV.Lookup v3,
-              SV.Singleton v3) => 
+              SV.Singleton v3) =>
              TC s typ (Data (v3 :> v2 :> v :> Nil) a) -> SignalIdx -> TC s typ (Data (v2 :> v :> Nil) a)
 getMatrix (TC (Data x)) idx = TC $ Data $
                                   P.fst $
@@ -1467,35 +1467,35 @@ interp1LinValid :: (Product a,
                    TC Signal t2 (Data (v :> Nil) a) ->
                    TC Sample t1 (Data Nil a) ->
                    TC Sample t2 (Data Nil (Interp.Val a))
-interp1LinValid caller inMethod exMethod xSig ySig x@(TC (Data xVal)) = 
-  TC $ Data $ Interp.dim1 (caller++ ">interp1LinValid_new") inMethod exMethod 
+interp1LinValid caller inMethod exMethod xSig ySig x@(TC (Data xVal)) =
+  TC $ Data $ Interp.dim1 (caller++ ">interp1LinValid_new") inMethod exMethod
   (getX (indexAdd idx (-1)), getX idx) (getY (indexAdd idx (-1)), getY idx) xVal
   where
-    idx = interpIndex (caller++ ">interp1LinValid_new") xSig x  
+    idx = interpIndex (caller++ ">interp1LinValid_new") xSig x
     getX ix = fromSample $ getSample xSig $ ix
     getY ix = fromSample $ getSample ySig $ ix
 
-                     
+
 interpIndex:: (SV.Storage v a, SV.Len (v a), SV.Zipper v,
                   SV.Walker v,Ord a,
                   SV.Storage v Bool,
                   SV.Singleton v,
                   SV.Find v,(SV.Lookup v),
-                  Show (v a)) => 
+                  Show (v a)) =>
             String -> TC Signal t1 (Data (v :> Nil) a) -> TC Sample t1 (Data Nil a) -> SignalIdx
 interpIndex caller sig (TC (Data x)) =  if not $ isMonoton then  error $ "Error in interpIndex called by "
                             ++ caller ++ ": Signal not rising monotonically:" ++ show sig
   else if (len sig) P.< 2  then error $ "Error in interpIndex called by "
-                            ++ caller ++ ": Signal contains only one Sample:" ++ show sig                        
+                            ++ caller ++ ": Signal contains only one Sample:" ++ show sig
   else case findIndex (> x) sig of
   (Just (SignalIdx idx)) -> case idx==0 of
       True -> SignalIdx 1
-      False -> if idx >=2 then 
+      False -> if idx >=2 then
                   -- Special case, that we just hit a step => x1==x2==x
-                  if (getSample sig (SignalIdx $ idx-2) == getSample sig (SignalIdx $ idx-1)) && 
+                  if (getSample sig (SignalIdx $ idx-2) == getSample sig (SignalIdx $ idx-1)) &&
                      (getSample sig (SignalIdx $ idx-1) == (TC $ Data $ x))
                   then SignalIdx $ idx-1 else SignalIdx idx
-                else SignalIdx idx                                                                                                      
+                else SignalIdx idx
   Nothing -> SignalIdx $ (len sig) P.- 1
   where
     isMonoton = all (==True) $ deltaMap (\ xa xb -> xb >= xa) sig
@@ -1553,7 +1553,7 @@ interp1LinSig ::  (Show d1,
                    SV.Singleton v1,
                    SV.Lookup v1,
                    SV.Walker v1,
-                   Show (v1 d1), 
+                   Show (v1 d1),
                    Constant d1,
                    SV.Zipper v1,
                    SV.Storage v1 Bool,
@@ -1671,7 +1671,7 @@ interp2WingProfileWithSignal :: (SV.Zipper v3,
                                  SV.Lookup v1,
                                  SV.Lookup v2,
                                  SV.Find v1,
-                                 Product d, 
+                                 Product d,
                                  Constant d,
                                  SV.Zipper v1,
                                  SV.Walker v1,
@@ -1770,7 +1770,7 @@ interp3WingProfileValid caller inMethod exMethod xSig ySig zSig vSig x y z = TC 
      v1 =  fromSample $ interp2WingProfileValid (caller ++ ">interp2WingProfileValid_new-z1") inMethod exMethod ys1 zs1 vs1 y z
      v2 =  fromSample $ interp2WingProfileValid  (caller ++ ">interp2WingProfileValid_new-z2") inMethod exMethod ys2 zs2 vs2 y z
      v =  Interp.dim1 (caller ++ ">interp2WingProfileValid_new-z") inMethod exMethod (x1,x2) (Interp.unpack v1, Interp.unpack v2) (fromSample x)
-   
+
 
 interp3WingProfileValidWithSignal :: (SV.Len (v a),
                             Eq (v2 (v a)),
@@ -1791,7 +1791,7 @@ interp3WingProfileValidWithSignal :: (SV.Len (v a),
                        SV.Lookup v2 ,
                        SV.Singleton v,
                        SV.Lookup v,
-                       Product a, Constant a, Show (v2 (v a)), 
+                       Product a, Constant a, Show (v2 (v a)),
                        SV.Zipper v4,
                       SV.Walker v4,
                       SV.Storage v4 (Interp.Val a),

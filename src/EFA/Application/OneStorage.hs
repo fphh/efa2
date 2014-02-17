@@ -21,7 +21,6 @@ import EFA.Signal.Record(PowerRecord)
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector(Vector)
-import qualified Data.Vector.Unboxed as UV
 import Data.Bimap (Bimap)
 
 
@@ -43,7 +42,7 @@ getSocDrive soc =
        DischargeDrive x -> Arith.negate x
        ChargeDrive x -> x
        NoDrive -> Arith.zero
-       
+
 setSocDrive ::
   (Arith.Sum a, Arith.Constant a,Ord a) => a -> SocDrive a
 setSocDrive x =
@@ -51,7 +50,7 @@ setSocDrive x =
        Arith.Positive -> ChargeDrive x
        Arith.Zero -> NoDrive
        Arith.Negative -> DischargeDrive $ Arith.negate x
-       
+
 
 noforcing ::
   (Arith.Constant v) =>
@@ -62,9 +61,9 @@ noforcing _ _ = Arith.zero
 newtype StateForcing a = StateForcing a deriving Show
 data StateForcingStep a = StateForcingStep a | DontForceState deriving Show
 
-instance Functor StateForcingStep where 
+instance Functor StateForcingStep where
   fmap f (StateForcingStep x) = StateForcingStep $ f x
-  fmap f (DontForceState ) = DontForceState
+  fmap _ (DontForceState ) = DontForceState
 
 {-
 instance (Arith.Sum a) => Arith.Sum (StateForcing a) where
@@ -82,8 +81,8 @@ type IndexConversionMap =
   Bimap Idx.State Idx.AbsoluteState
 
 
-unpackStateForcing :: StateForcing a -> a 
-unpackStateForcing (StateForcing x) = x 
+unpackStateForcing :: StateForcing a -> a
+unpackStateForcing (StateForcing x) = x
 
 zeroStateForcing :: Arith.Constant a => StateQty.Graph node b (Result v) -> Map Idx.State (StateForcing a)
 zeroStateForcing sg = Map.map (\_ -> StateForcing Arith.zero) $ states sg
@@ -116,12 +115,12 @@ type OptimalEtaWithEnv node list v =
 data SystemParams node a = SystemParams {
   systemTopology :: Topology.Topology node,
   etaAssignMap :: EtaAssignMap node,
-  etaMap :: Map Name (a -> a),    
+  etaMap :: Map Name (a -> a),
   storagePositions:: [TopoIdx.Position node],
   initStorageState :: InitStorageState node a,
   initStorageSeq :: InitStorageSeq node a}
-                           
-  
+
+
 data OptimisationParams node list sweep vec a = OptimisationParams {
   stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
@@ -129,16 +128,16 @@ data OptimisationParams node list sweep vec a = OptimisationParams {
   points :: Map (list a) (ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),
   sweepLength :: Int,
   etaToOptimise :: Maybe (TopoIdx.Position node),
-  maxEtaIterations :: MaxEtaIterations ,  
+  maxEtaIterations :: MaxEtaIterations ,
   maxInnerLoopIterations:: MaxInnerLoopIterations ,
   maxBalanceIterations:: MaxBalanceIterations ,
   maxStateIterations:: MaxStateIterations ,
   initialBattForcing :: Map node (SocDrive a),
   initialBattForceStep :: Map node (SocDrive a),
-  etaThreshold :: EtaThreshold a,    
+  etaThreshold :: EtaThreshold a,
   balanceThreshold :: BalanceThreshold a,
   stateTimeThreshold :: StateTimeThreshold a,
-  stateForcingSeed :: StateForcingStep a,   
+  stateForcingSeed :: StateForcingStep a,
   balanceForcingSeed :: SocDrive a
   }
 
@@ -147,17 +146,17 @@ data SimulationParams node vec a = SimulationParams {
   varReqRoomPower2D :: Sig.PSignal2 Vector vec a,
   reqsRec :: PowerRecord node vec a}
 
- 
+
 newtype MaxEtaIterations  =  MaxEtaIterations Int
 newtype MaxBalanceIterations  = MaxBalanceIterations Int
 newtype MaxStateIterations  = MaxStateIterations Int
 newtype BalanceThreshold  a = BalanceThreshold a
 newtype StateTimeThreshold  a = StateTimeThreshold a
-newtype EtaThreshold  a = EtaThreshold a  
+newtype EtaThreshold  a = EtaThreshold a
 newtype MaxInnerLoopIterations  =  MaxInnerLoopIterations Int
 
 
-type Balance node a = Map node a  
-  
-type StateDurations a = Map Idx.AbsoluteState a  
+type Balance node a = Map node a
+
+type StateDurations a = Map Idx.AbsoluteState a
   

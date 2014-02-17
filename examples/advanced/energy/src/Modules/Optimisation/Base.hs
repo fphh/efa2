@@ -85,7 +85,7 @@ perStateSweep sysParams optParams stateFlowGraph  =
                     (One.etaAssignMap sysParams)
                     (One.etaMap sysParams)
                     state
-                    
+
 
 
 forcing ::
@@ -126,7 +126,7 @@ optimalObjectivePerState ::
    Sweep.SweepClass sweep UV.Vector  a,
    Sweep.SweepMap sweep UV.Vector  a a) =>
   One.OptimisationParams node list sweep UV.Vector a ->
-  Map node (One.SocDrive a)->  
+  Map node (One.SocDrive a)->
   Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
 optimalObjectivePerState params balanceForcing =
@@ -139,7 +139,7 @@ optimalObjectivePerState params balanceForcing =
 
 
 expectedValuePerState ::
-  (UV.Unbox a, 
+  (UV.Unbox a,
    Arith.Constant a,
    Sweep.SweepClass sweep UV.Vector a,
    Sweep.SweepClass sweep UV.Vector Bool) =>
@@ -150,17 +150,17 @@ expectedValuePerState =
 
 selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a) =>
-  One.OptimisationParams node list sweep vec a -> 
-  Map Idx.AbsoluteState (One.StateForcing a) -> 
-  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) -> 
-  One.IndexConversionMap -> 
+  One.OptimisationParams node list sweep vec a ->
+  Map Idx.AbsoluteState (One.StateForcing a) ->
+  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
+  One.IndexConversionMap ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
-selectOptimalState params stateForcing stateMap indexConversionMap =
+selectOptimalState _params stateForcing stateMap indexConversionMap =
   List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxBy ModUt.fst4))
   $ map (\(st, m) ->
       Map.map (fmap
         (\(objVal, eta, env) ->
-            (objVal Arith.~+ 
+            (objVal Arith.~+
              maybe (error "Base.selectOptimalState")
                    One.unpackStateForcing
                      (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
@@ -300,7 +300,7 @@ extractOptimalPowerMatricesPerState ::
   (Ord b, Ord node,
   Vec.Storage vec (vec (Maybe (Result a))),
   Vec.Storage vec (Maybe (Result a)),
-  Vec.FromList vec) => 
+  Vec.FromList vec) =>
   Map Idx.State (Map [b] (Maybe (a1, EnvResult node a))) ->
   [TopoIdx.Position node] ->
   Map (TopoIdx.Position node)

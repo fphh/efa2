@@ -30,10 +30,10 @@ import Data.Map (Map)
 type EnvResult node a = StateQty.Graph node (Result a) (Result a)
 
 
-type PerStateSweepVariable node sweep vec a = 
+type PerStateSweepVariable node sweep vec a =
   Map Idx.State (Map node (Maybe ((sweep::(* -> *) -> * -> *) vec a)))
 
-type OptimalSolutionPerState node a = 
+type OptimalSolutionPerState node a =
   Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a)))
                      --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 
@@ -59,7 +59,7 @@ data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
     storagePowerMap :: Map Idx.State (Map node (Maybe (sweep vec a))),
     envResult :: EnvResult node (sweep vec a) }
 
-data Interpolation node vec a = 
+data Interpolation node vec a =
   Interpolation {
     controlMatrices :: ControlMatrices node vec a,
     reqsAndDofsSignals :: Record.PowerRecord node vec a}
@@ -79,13 +79,13 @@ data OptimisationPerState node a = OptimisePerState {
     optimalSolutionPerState :: OptimalSolutionPerState node a,
     averageSolutionPerState :: AverageSolutionPerState node a}
 
-data OptimiseStateAndSimulate node (sweep :: (* -> *) -> * -> *) 
-     sweepVec a intVec b simVec c efaVec d = 
+data OptimiseStateAndSimulate node (sweep :: (* -> *) -> * -> *)
+     sweepVec a intVec b simVec c efaVec d =
   OptimiseStateAndSimulate {
     optimalSolution :: OptimalSolution node a,
     interpolation :: Interpolation node intVec a,
     simulation :: Simulation node simVec a,
-    analysis :: EnergyFlowAnalysis node efaVec d, 
+    analysis :: EnergyFlowAnalysis node efaVec d,
     stateFlowGraphSweep :: EnvResult node (sweep sweepVec a)}
 
 

@@ -58,7 +58,7 @@ import Data.Monoid ((<>), mempty)
 import Control.Monad (join)
 
 
-optionsScalar ::(Arith.Sum a, Verify.LocalVar mode (Data Nil a), 
+optionsScalar ::(Arith.Sum a, Verify.LocalVar mode (Data Nil a),
                  Arith.Constant a) =>
   StateAbs.Options mode rec (Data Nil a) (Data Nil a)
 optionsScalar =
@@ -82,8 +82,8 @@ options =
 toPowerMap ::
   (Ord node, Show node, Arith.Sum (sweep vec a)) =>
   StateQty.Graph node b (Result (sweep vec a)) ->
-  Type.PerStateSweepVariable node sweep vec a 
-toPowerMap graph = Map.mapWithKey f states  
+  Type.PerStateSweepVariable node sweep vec a
+toPowerMap graph = Map.mapWithKey f states
   where states = fmap Topology.topology $ State.states graph
         f state flowTopo = Map.mapWithKey (g state flowTopo) $ State.storages graph
 
@@ -94,12 +94,12 @@ toPowerMap graph = Map.mapWithKey f states
                    [x] -> x
                    _ -> error $ "toPowerMap: more or less than one adjacent edge to node"
                                 ++ show stoNode
-          where 
+          where
                 h (Graph.EDirEdge (Graph.DirEdge from to)) =
                   (if stoNode == from
                       then look
                       else fmap Arith.negate . look . ModUt.flipPower)
-                      (StateIdx.power state from to)          
+                      (StateIdx.power state from to)
                 h _ = error "toPowerMap: undir edge"
 
 
@@ -123,7 +123,7 @@ solve ::
   ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a ->
   Type.PerStateSweep node sweep vec a
 solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
-  let 
+  let
       ss = Sweep.unList (ReqsAndDofs.reqs pts)
            ++ Sweep.unList (ReqsAndDofs.dofs pts)
       res = StateAbs.solveOpts

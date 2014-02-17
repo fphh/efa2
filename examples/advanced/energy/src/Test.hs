@@ -86,7 +86,7 @@ iterateBalanceIO ::
 iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 
   let perStateSweep = Base.perStateSweep params stateFlowGraphOpt
-      Types.Optimisation quasi sim = 
+      Types.Optimisation quasi sim =
         NonIO.optimiseAndSimulate params reqsRec perStateSweep
 
   writeFile (test ++ "/perStateSweep.txt") (show $ Types.perStateSweep quasi)

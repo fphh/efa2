@@ -297,7 +297,8 @@ Executable example-energy
       time,
       text,
       directory,
-      base
+      base,
+      bimap
   Else
     Buildable: False
 

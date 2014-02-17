@@ -38,13 +38,13 @@ module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
-import qualified Modules.Plot as ModPlot
+--import qualified Modules.Plot as ModPlot
 import qualified Modules.Utility as ModUt
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.Loop as ModLoop
 
 import EFA.Application.Type (EnvResult)
-import qualified EFA.Application.Type as Type
+--import qualified EFA.Application.Type as Type
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
@@ -54,9 +54,9 @@ import EFA.Application.Sweep (Sweep)
 import qualified EFA.Application.Optimisation as AppOpt
 
 --import qualified EFA.Flow.Topology.Index as TopoIdx
-import qualified EFA.Flow.State.Quantity as StateQty
+--import qualified EFA.Flow.State.Quantity as StateQty
 
-import qualified EFA.Graph.Topology as Topology
+--import qualified EFA.Graph.Topology as Topology
 --import qualified EFA.Graph as Graph
 
 import qualified EFA.Signal.Signal as Sig
@@ -65,27 +65,27 @@ import qualified EFA.Signal.ConvertTable as CT
 
 import qualified EFA.IO.TableParser as Table
 
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+--import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Equation.Arithmetic as Arith
 
-import qualified EFA.Flow.Draw as Draw
+--import qualified EFA.Flow.Draw as Draw
 
-import EFA.Utility.Async (concurrentlyMany_)
-import EFA.Utility.List (vhead)
+--import EFA.Utility.Async (concurrentlyMany_)
+--import EFA.Utility.List (vhead)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
 import qualified Data.Empty as Empty
 --import qualified Data.List as List
-import Control.Monad(void)
+--import Control.Monad(void)
 
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
-import Text.Printf (printf)
+--import Text.Printf (printf)
 
 
 initEnv ::
@@ -169,19 +169,19 @@ main1 = do
   let
       ienv = AppOpt.storageEdgeXFactors optParams 4 4
                $ AppOpt.initialEnv optParams System.stateFlowGraph
+
       sysParams = One.SystemParams {
          One.systemTopology = System.topology,
          One.etaAssignMap = System.etaAssignMap,
          One.etaMap = etaMap,
-         One.storagePositions = ([TopoIdx.ppos System.Water System.Network]), 
+         One.storagePositions = ([TopoIdx.ppos System.Water System.Network]),
          One.initStorageState = ModSet.initStorageState,
          One.initStorageSeq = ModSet.initStorageSeq}
- 
+
       optParams :: One.OptimisationParams Node [] Sweep UV.Vector Double
       optParams = One.OptimisationParams {
           One.stateFlowGraphOpt = ienv,
---          One.indexConversionMap = ModUt.indexConversionMap System.topology ienv,
-          One.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs), 
+          One.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs),
           One.dofsPos = (ReqsAndDofs.dofsPos ModSet.dofs),
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
@@ -215,9 +215,7 @@ main1 = do
 
 
 
-  let ienv = AppOpt.storageEdgeXFactors optParams 4 4
-               $ AppOpt.initialEnv optParams System.stateFlowGraph
-
+  let
       ol = --ModLoop.uniqueInnerLoopX
            ModLoop.iterateEtaWhile sysParams optParams simParams
 

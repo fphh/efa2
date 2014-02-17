@@ -16,7 +16,7 @@ s1 = S.fromList [2,17,5,5,20]
 s2 = S.fromList [0,10,18,18,12]
 s3 = S.fromList [3,12,7,7,19]
 
-e1 :: S.FFSigL
+e1 :: S.FFSignal [] Double
 e1 = S.fromList [10,20,100,50,50]
 
 ks1 :: S.UTFSignal [] (Class Double)

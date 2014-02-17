@@ -22,7 +22,7 @@ import Test.QuickCheck.All (quickCheckAll)
 check :: TC Signal.Sample (Typ UT UT UT) (Data Nil (Interp.Val Double)) ->
          TC Signal.Sample (Typ UT UT UT) (Data Nil (Interp.Val Double))->
          Bool
-check (TC (Data x)) (TC (Data y)) = interCheck x y 
+check (TC (Data x)) (TC (Data y)) = interCheck x y
 
 checkSig :: UTSignal [] (Interp.Val Double) ->
          UTSignal [] (Interp.Val Double) ->
@@ -47,7 +47,7 @@ prop_interp1LinValid_Simple = all (==True) tests
 
     ySig :: UTSignal [] Double
     ySig = TC $ Data [1, 11]
-    
+
     tests = [(interp1LinValid "Signal Test" Interp.Linear ExtrapNone xSig ySig
               (TC $ Data 1)) `check` (TC $ Data $ Inter 1),
              (interp1LinValid "Signal Test" Interp.Linear ExtrapNone xSig ySig
@@ -101,7 +101,7 @@ prop_interp1LinValid_Vertical = foldl (&&) True tests -- all (==True) tests
 
     ySig :: UTSignal [] Double
     ySig = TC $ Data [1, 2, 3]
-    
+
     tests = [(interp1LinValid "Signal Test" Interp.Linear ExtrapLinear xSig ySig
               (TC $ Data 1)) `check` (TC $ Data $ Inter 1.5),
              (interp1LinValid "Signal Test" Interp.Linear ExtrapLinear xSig ySig
@@ -344,21 +344,21 @@ prop_interp3WingProfileValid = all (==True) tests
     zSig = Signal.fromList3 [[[5,6],[5,6]],[[5,6],[5,6]]]
     vSig = Signal.fromList3 [[[10,30],[12,32]],[[20,40],[22,42]]]
 
-    tests = [(interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig 
+    tests = [(interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig
              (Signal.toSample 1) (Signal.toSample 3) (Signal.toSample 5)) `check` (TC $ Data $ Inter 10),
-             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig 
+             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig
              (Signal.toSample 2) (Signal.toSample 3) (Signal.toSample 5)) `check` (TC $ Data $ Inter 20),
-             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig 
+             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig
              (Signal.toSample 1) (Signal.toSample 4) (Signal.toSample 5)) `check` (TC $ Data $ Inter 12),
-             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig 
+             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig
              (Signal.toSample 1) (Signal.toSample 3) (Signal.toSample 6)) `check` (TC $ Data $ Inter 30),
-             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig 
+             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig
              (Signal.toSample 1) (Signal.toSample 3) (Signal.toSample 5.5)) `check` (TC $ Data $ Inter 20),
-             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig 
+             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig
              (Signal.toSample 1) (Signal.toSample 3.5) (Signal.toSample 5)) `check` (TC $ Data $ Inter 11),
-             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig 
+             (interp3WingProfileValid "" Interp.Linear ExtrapLinear xSig ySig zSig vSig
              (Signal.toSample 1.5) (Signal.toSample 3) (Signal.toSample 5)) `check` (TC $ Data $ Inter 15),
-             (interp3WingProfileValid "" Interp.Linear ExtrapNone xSig ySig zSig vSig 
+             (interp3WingProfileValid "" Interp.Linear ExtrapNone xSig ySig zSig vSig
              (Signal.toSample 0) (Signal.toSample 3) (Signal.toSample 5)) `check` (TC $ Data $ Invalid)]
 
 prop_interp3WingProfileValidWithSignal :: Bool
@@ -376,7 +376,7 @@ prop_interp3WingProfileValidWithSignal = all (==True) tests
     zSig = Signal.fromList3 [[[5,6],[5,6]],[[5,6],[5,6]]]
     vSig = Signal.fromList3 [[[10,30],[12,32]],[[20,40],[22,42]]]
 
-    tests = [(Signal.interp3WingProfileValidWithSignal "" Interp.Linear ExtrapNone xSig ySig zSig vSig 
+    tests = [(Signal.interp3WingProfileValidWithSignal "" Interp.Linear ExtrapNone xSig ySig zSig vSig
              (Signal.fromList [1,2,1]) (Signal.fromList [3,3,4]) (Signal.fromList [5,5,5])) `checkSig` (Signal.fromList [Inter 10,Inter 20,Inter 12])]
 
 

@@ -97,12 +97,12 @@ optimalSolutionGeneric f =
 -}
 {-
 -- NEW PG
-findOptimalState ::  Map State.Idx StateForcing -> 
-                     Map State.Idx (Maybe (a, a, StateFlow.Graph node (Result a) (Result a))) 
-findOptimalState stateForcing stateMap = if Map.keys stateForcing == map.keys stateMap 
-                                         then optimalSolutionGeneric stateObjectives 
-                                         else error ("Error in findOptimalState - StateMap and StateForcings  
-                                                     have different State Keys: " ++ show stateForcing  ++ "    " 
+findOptimalState ::  Map State.Idx StateForcing ->
+                     Map State.Idx (Maybe (a, a, StateFlow.Graph node (Result a) (Result a)))
+findOptimalState stateForcing stateMap = if Map.keys stateForcing == map.keys stateMap
+                                         then optimalSolutionGeneric stateObjectives
+                                         else error ("Error in findOptimalState - StateMap and StateForcings
+                                                     have different State Keys: " ++ show stateForcing  ++ "    "
                                               ++ show stateMap)
   where stateObjectives = zipWith (~+) (Map.elem stateForcing) (fst & Map.elem stateMap)
 -}

@@ -66,7 +66,7 @@ etaSys2 sq =
                      Undetermined:_ -> err "Undetermined"
                      s0@(Determined t0):_ -> (s0, t0)
 
-       w = liftA2 (Arith.~*) 
+       w = liftA2 (Arith.~*)
              (Determined $ Sweep.replicate t (Arith.fromRational 20)) s
 
        nodes = fmap Graph.nodeLabels es
@@ -114,25 +114,25 @@ getBalance sfg = Map.mapWithKey f stos
   where stos = StateQty.storages sfg
         f node x = g $ StoreQty.lookupEnergy EFA.Flow.Storage.Index.Energy EFA.Flow.Part.Index.State node x -- (StateIdx.initSection node) x
           where
-           g (Just x) = x 
+           g (Just x) = x
            g Nothing = error ("getBalance: StorageEnergy not found: " ++ show node)
--}        
+-}
 
 -- TODO : an richtigen Platz verschieben, gehört hier eigentlich nicht hin
 
-balanceFromRecord :: (Ord node, 
+balanceFromRecord :: (Ord node,
                       SV.Walker v,
                       SV.Storage v a,
-                      Arith.Constant a, 
-                      SV.Zipper v, 
+                      Arith.Constant a,
+                      SV.Zipper v,
                       SV.Singleton v,
                       Show (v a), Node.C node) =>
-                       [TopoIdx.Position node] -> 
-                       Record.PowerRecord node v a -> 
+                       [TopoIdx.Position node] ->
+                       Record.PowerRecord node v a ->
                        Map.Map node a
-balanceFromRecord posList rec = Map.fromList $ 
-                                zip (map (\(TopoIdx.Position x _) -> x) posList) 
-                                $ map (Sig.fromScalar . Sig.sum . 
-                                       (Record.getSig (Record.partIntegrate rec))) 
-                                 posList 
+balanceFromRecord posList rec = Map.fromList $
+                                zip (map (\(TopoIdx.Position x _) -> x) posList)
+                                $ map (Sig.fromScalar . Sig.sum .
+                                       (Record.getSig (Record.partIntegrate rec)))
+                                 posList
 

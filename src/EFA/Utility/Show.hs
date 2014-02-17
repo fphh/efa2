@@ -2,7 +2,7 @@
 
 
 module EFA.Utility.Show where
- 
+
 import qualified EFA.Report.Format as Format
 
 import qualified EFA.Flow.Topology.Index as TopoIdx

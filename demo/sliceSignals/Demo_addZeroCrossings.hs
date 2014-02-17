@@ -11,7 +11,7 @@ import qualified EFA.Flow.Topology.Index as XIdx
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Chop (addZeroCrossings)
 import EFA.Signal.Record (Record(Record), PowerRecord)
-import EFA.Signal.Signal (TSigL, PSigL)
+import EFA.Signal.Signal (TSignal, PSignal)
 
 import qualified Data.Map as Map
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
@@ -22,10 +22,10 @@ node0 = Source
 node1 = Crossing
 node2 = Sink
 
-t :: TSigL
+t :: TSignal [] Double
 t = S.fromList [0,1,2]
 
-p1, p2, p3 :: PSigL
+p1, p2, p3 :: PSignal [] Double
 p1 = S.fromList [-1,1,1]
 p2 = S.fromList [-1,3,3]
 p3 = S.fromList [-1,6,-6]

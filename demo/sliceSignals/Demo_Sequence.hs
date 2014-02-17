@@ -12,7 +12,7 @@ import qualified EFA.Signal.Chop as Chop
 import qualified EFA.Signal.Sequence as Sequ
 
 import EFA.Signal.Record (PowerRecord, Record(Record))
-import EFA.Signal.Signal (PSigL, (.++))
+import EFA.Signal.Signal (PSignal, (.++))
 
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -20,10 +20,10 @@ import Data.Map (Map)
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 
-mkSig :: Int -> [Double] -> PSigL
+mkSig :: Int -> [Double] -> PSignal [] Double
 mkSig m = S.fromList . concat . replicate m
 
-mkSigEnd :: Int -> [Double] -> PSigL
+mkSigEnd :: Int -> [Double] -> PSignal [] Double
 mkSigEnd m s = mkSig m s  .++  S.fromList [head s]
 
 time :: [Double]
@@ -40,7 +40,7 @@ s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
 n :: Int
 n = 2
 
-pMap :: Map (XIdx.Position Int) PSigL
+pMap :: Map (XIdx.Position Int) (PSignal [] Double)
 pMap =
    Map.fromListWith (error "duplicate keys") $
       (XIdx.ppos 0 1, mkSigEnd n s01) :

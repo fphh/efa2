@@ -13,9 +13,9 @@ data Pos = HitLeft | Inside | HitRight | Outside | Undefined
 data Val a = Inter a | Extra a | Invalid deriving (Show, Eq)
 
 instance Functor Val where
-  fmap _ Invalid = Invalid 
-  fmap f (Extra x) = (Extra $ f x) 
-  fmap f (Inter x) = (Inter $ f x) 
+  fmap _ Invalid = Invalid
+  fmap f (Extra x) = (Extra $ f x)
+  fmap f (Inter x) = (Inter $ f x)
 
 instance (Arith.Sum a) => Arith.Sum (Val a) where
   x ~+ y = combine (~+) x y
@@ -117,7 +117,7 @@ dim1 caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
               ExtrapError -> error ("Error in interp1Core called by " ++ caller ++
                                       ": Method ExtrapError - Extrapolation not allowed" ++
                                       "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
-            _   -> Inter $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)               
+            _   -> Inter $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)
 
   GT ->  case getPos (x1,x2) x of
                 Undefined -> Invalid
@@ -138,15 +138,15 @@ dim1 caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
                                       "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
 
 getPos :: (Eq a, Ord a) => (a,a) -> a -> Pos
-getPos (x1,x2) x = case (x P.== x1, x P.> x1 , x P.< x2 , x P.== x2) of   
+getPos (x1,x2) x = case (x P.== x1, x P.> x1 , x P.< x2 , x P.== x2) of
   (True,_,_,False) -> HitLeft
   (False,_,_,True) -> HitRight
   (True,_,_,True) -> Inside -- aplies when step in signal => x1=x2=x
   (_,True,True,_) -> Inside
   (_,False,True,_) -> Outside
   (_,True,False,_) -> Outside
-  (_,_,_,_) -> Undefined -- error "Error in getPos - Impossible branch" 
-  
+  (_,_,_,_) -> Undefined -- error "Error in getPos - Impossible branch"
+
 combine :: (a -> a -> a) -> Val a -> Val a -> Val a
 combine _ Invalid _ = Invalid
 combine _ _ Invalid = Invalid

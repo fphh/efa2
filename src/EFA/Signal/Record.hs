@@ -457,7 +457,7 @@ norm rec = map S.norm rec
 -- | Add interpolated data points in an existing record
 newTimeBase ::
   (Product d, Ord d, V.Find v, Show d, Show (v d),
-   V.Lookup v, V.Walker v, V.Singleton v, V.Storage v d, 
+   V.Lookup v, V.Walker v, V.Singleton v, V.Storage v d,
    Constant d, V.Zipper v, V.Storage v Bool, V.Len (v d)) =>
   String ->
   Record Signal Signal (Typ A T Tt) t2 id v d d ->
@@ -609,7 +609,7 @@ instance
 
 --type Sig = (TSigL, PSamp2LL)
 type Sig v a = (TSignal [] a, PSample2 v [] a)
-  
+
 --type Samp1 = (TSamp, PSamp1L)
 type Samp1 a = (TSample a, PSample1 [] a)
 

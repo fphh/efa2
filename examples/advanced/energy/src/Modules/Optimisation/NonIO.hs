@@ -59,7 +59,7 @@ import qualified Data.Vector.Unboxed as UV
 import Data.Monoid (Monoid, mempty, (<>))
 
 
-interpolateOptimalSolution ::  
+interpolateOptimalSolution ::
   (Eq (vec2 b), Ord b, Show b, Show (vec2 b),
    Show node, SV.Zipper vec2, SV.Walker vec2,
    SV.Storage vec2 Bool, SV.Storage vec2 b,
@@ -70,49 +70,49 @@ interpolateOptimalSolution ::
   One.SystemParams node b->
   One.OptimisationParams node list sweep vec a->
   One.SimulationParams node vec2 b->
-  Map.Map[b](Maybe(b, b, Idx.State, Type.EnvResult node b))-> 
+  Map.Map[b](Maybe(b, b, Idx.State, Type.EnvResult node b))->
   Type.Interpolation node vec2 b
-interpolateOptimalSolution sysParams optParams simParams optimalSolution = 
+interpolateOptimalSolution sysParams optParams simParams optimalSolution =
   let (prest, plocal) =
         case map (Record.getSig demandSignals) (ReqsAndDofs.unReqs $ One.reqsPos optParams) of
              [r, l] -> (r, l)
              _ -> error "NonIO.simulation: number of signals"
-             
+
       demandSignals = One.reqsRec simParams
 
       dofsSignals =  Map.mapWithKey f optimalControlMatrices
         where f key mat =
                 Sig.tzipWith
                 (Sig.interp2WingProfile
-                 ("simulation-interpolate Signals" ++ show key) 
+                 ("simulation-interpolate Signals" ++ show key)
                  (One.varReqRoomPower1D simParams)
                  (One.varReqRoomPower2D simParams)
                  $ Sig.convert mat)
                 prest
                 plocal
-            
-      optimalControlMatrices = 
+
+      optimalControlMatrices =
         Map.map (Sig.map ModUt.nothing2Nan) $
           Base.signCorrectedOptimalPowerMatrices
             sysParams
             optimalSolution
             (One.dofsPos optParams)
-      
+
       demandAndControlSignals = Record.addSignals (Map.toList dofsSignals) demandSignals
-      
+
   in Type.Interpolation optimalControlMatrices demandAndControlSignals
 
 
 simulation ::
-  (Ord a, Show a, 
-   SV.Zipper vec, 
-   SV.Walker vec, 
+  (Ord a, Show a,
+   SV.Zipper vec,
+   SV.Walker vec,
    SV.Storage vec Bool,
-   SV.Storage vec a, 
-   SV.Singleton vec, 
+   SV.Storage vec a,
+   SV.Singleton vec,
    SV.Len (vec a),
-   SV.FromList vec, 
-   Node.C node, 
+   SV.FromList vec,
+   Node.C node,
    Arith.ZeroTestable a,
    Arith.Constant a) =>
   One.SystemParams node a ->
@@ -120,7 +120,7 @@ simulation ::
   Type.Simulation node vec a
 simulation sysParams givenSigs = Type.Simulation envSim rec
   where
-      envSim = 
+      envSim =
         AppSim.solve
           (One.systemTopology sysParams)
           (One.etaAssignMap sysParams)
@@ -131,32 +131,32 @@ simulation sysParams givenSigs = Type.Simulation envSim rec
               { Record.recordTime = Record.recordTime givenSigs }
 
 
-energyFlowAnalysis :: 
+energyFlowAnalysis ::
   (Ord a, Show node, SV.Convert [] vec,
    Eq (vec a), SV.Storage vec Bool,
    SV.Storage vec a, SV.Convert vec [],
    SV.Walker vec, SV.Singleton vec,
    SV.Zipper vec,
-   Show a, Node.C node, 
+   Show a, Node.C node,
    Arith.ZeroTestable a,
    Arith.Constant a) =>
   One.SystemParams node a ->
   Record.PowerRecord node vec a ->
   Type.EnergyFlowAnalysis node vec a
-energyFlowAnalysis sysParams powerRecord = 
+energyFlowAnalysis sysParams powerRecord =
       -- Liefert nur delta-Zeiten und keinen Zeitvektor
       -- Deshalb wird der urspruenglichen Zeitvektor behalten
-  let recZeroCross = 
+  let recZeroCross =
         Chop.addZeroCrossings $ Base.convertRecord powerRecord
 
- {-     sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord) $ 
+ {-     sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord) $
                             Chop.genSequ recZeroCross-}
 
       sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord r) $ Chop.genSequ recZeroCross
 
       (_, sequenceFlowsFilt) =
         Sequ.unzip $
-        Sequ.filter (Record.major (Sig.toScalar Arith.zero) 
+        Sequ.filter (Record.major (Sig.toScalar Arith.zero)
                                   (Sig.toScalar $ Arith.fromRational 0.2) . snd) $
         fmap (\x -> (x, Record.partIntegrate x)) sequencePowerRecord
 
@@ -171,7 +171,7 @@ energyFlowAnalysis sysParams powerRecord =
             (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
             mempty (One.unInitStorageSeq $ One.initStorageSeq sysParams))
 
-      stateFlowGraph = 
+      stateFlowGraph =
         StateEqAbs.solveOpts
           Optimisation.optionsScalar
            (StateQty.graphFromCumResult $
@@ -181,10 +181,10 @@ energyFlowAnalysis sysParams powerRecord =
           mempty
 
 {-
-      stateFlowGraphSweep = 
+      stateFlowGraphSweep =
         StateEqAbs.solveOpts
           Optimisation.options
-          (toSweep params $ 
+          (toSweep params $
            StateQty.graphFromCumResult $
            StateQty.fromSequenceFlowResult False $
            SeqQty.mapGraph id (fmap Arith.integrate) $
@@ -192,7 +192,7 @@ energyFlowAnalysis sysParams powerRecord =
           mempty
 -}
 
-  in Type.EnergyFlowAnalysis sequencePowerRecord sequenceFlowGraph stateFlowGraph 
+  in Type.EnergyFlowAnalysis sequencePowerRecord sequenceFlowGraph stateFlowGraph
 
 
 toSweep ::
@@ -218,8 +218,8 @@ optimiseAndSimulate :: (efaVec ~ simVec,intVec ~ simVec,a ~ d,intVec ~ [],
   SV.Len (simVec d),
   SV.FromList simVec,
   SV.Find simVec,
-  SV.Convert simVec simVec,  
-  SV.Convert simVec [], SV.Convert [] simVec ,                   
+  SV.Convert simVec simVec,
+  SV.Convert simVec [], SV.Convert [] simVec ,
   Ord (sweep UV.Vector a), Ord a, Show a, Show node,
    Monoid (sweep UV.Vector Bool), UV.Unbox a, Node.C node,
    Arith.ZeroTestable a, Arith.Product (sweep UV.Vector a),
@@ -246,10 +246,10 @@ optimiseAndSimulate sysParams optParams simParams balanceForcing stateForcing pe
       sim = simulation sysParams $ Type.reqsAndDofsSignals interpolation
       efa = energyFlowAnalysis sysParams $ Type.signals sim
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
-  
+
   in (Type.OptimisePerState perStateOptimum perStateAverage,
      Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep)
-     
+
 
 optimiseStateAndSimulate:: (d ~ a, intVec ~ [], simVec ~ [], b ~ a, efaVec ~ []) =>
   (Ord b, Show node, Show b, Node.C node,Sweep.SweepClass sweep vec a,
@@ -271,4 +271,4 @@ optimiseStateAndSimulate sysParams optParams simParams stateForcing perStateOpti
       efa = energyFlowAnalysis sysParams $ Type.signals sim
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
   in  Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep
-  
+

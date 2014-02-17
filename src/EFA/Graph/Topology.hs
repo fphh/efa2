@@ -15,7 +15,7 @@ module EFA.Graph.Topology (
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Graph as Graph
-import qualified EFA.Graph.Topology.Node as Node
+--import qualified EFA.Graph.Topology.Node as Node
 import EFA.Graph (Graph)
 
 import qualified Data.Map as Map; import Data.Map (Map)
