@@ -1,39 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 
-{-
-
-TODO
-
-* Generisches Forcing für Speicherkanten.
-
-* Maybes sollen mit defaultwert in plot geplottet werden.
-
-* powerrecord aus eingelesenen Signalen bauen.
-
-* interpolation in kombination mit nan prüfen
-
-* addZeroCrossings funktioniert mit Listen
-
-* Funktion um Section zu plotten.
-
-* simulationIO soll generisch für n reqs werden.
-
-* inaktive Kanten schon in extractOptimalPowerMatricesPerState erkennen
-  sollen 0 Leistung liefern
-
-* findZeroCrossing verstehen
-
-* fromSequenceFlow Wirkung von allStEdges ???
-
-* optimalSolutionGeneric nicht richtig, Email Henning 11.12.2013 12:03
-
-* wiki-Artikel wg forall verbessern
-
-* to2DMatrix, head entfernen
-
--}
-
 module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
@@ -186,10 +153,10 @@ main1 = do
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
           One.etaToOptimise = Nothing,
-          One.maxEtaIterations = One.MaxEtaIterations 1,
-          One.maxInnerLoopIterations = One.MaxInnerLoopIterations 2,
-          One.maxBalanceIterations = One.MaxBalanceIterations 20,
-          One.maxStateIterations = One.MaxStateIterations 16,
+          One.maxEtaIterations = One.MaxEtaIterations 3,
+          One.maxInnerLoopIterations = One.MaxInnerLoopIterations 3,
+          One.maxBalanceIterations = One.MaxBalanceIterations 50,
+          One.maxStateIterations = One.MaxStateIterations 50,
           One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.1,

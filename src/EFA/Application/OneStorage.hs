@@ -59,7 +59,7 @@ noforcing _ _ = Arith.zero
 
 
 newtype StateForcing a = StateForcing a deriving Show
-data StateForcingStep a = StateForcingStep a | DontForceState deriving Show
+data StateForcingStep a = StateForcingStep a | DontForceState deriving (Show,Eq)
 
 instance Functor StateForcingStep where
   fmap f (StateForcingStep x) = StateForcingStep $ f x
