@@ -141,23 +141,25 @@ energyFlowAnalysis ::
    Arith.ZeroTestable a,
    Arith.Constant a) =>
   One.SystemParams node a ->
+  One.SimulationParams node vec a ->
   Record.PowerRecord node vec a ->
   Type.EnergyFlowAnalysis node vec a
-energyFlowAnalysis sysParams powerRecord =
+energyFlowAnalysis sysParams simParams powerRecord =
       -- Liefert nur delta-Zeiten und keinen Zeitvektor
       -- Deshalb wird der urspruenglichen Zeitvektor behalten
   let recZeroCross =
         Chop.addZeroCrossings $ Base.convertRecord powerRecord
 
- {-     sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord) $
-                            Chop.genSequ recZeroCross-}
-
-      sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord r) $ Chop.genSequ recZeroCross
+      sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord r) 
+                            $ Chop.genSequ recZeroCross
+                            
+      thrT = One.sequFilterTime simParams
+      thrE = One.sequFilterEnergy simParams
 
       (_, sequenceFlowsFilt) =
         Sequ.unzip $
-        Sequ.filter (Record.major (Sig.toScalar Arith.zero)
-                                  (Sig.toScalar $ Arith.fromRational 0.2) . snd) $
+        Sequ.filter (Record.major (Sig.toScalar thrE)
+                                  (Sig.toScalar thrT) . snd) $
         fmap (\x -> (x, Record.partIntegrate x)) sequencePowerRecord
 
 
@@ -244,7 +246,7 @@ optimiseAndSimulate sysParams optParams simParams balanceForcing stateForcing pe
       optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
       interpolation = interpolateOptimalSolution sysParams optParams simParams optimalSolution
       sim = simulation sysParams $ Type.reqsAndDofsSignals interpolation
-      efa = energyFlowAnalysis sysParams $ Type.signals sim
+      efa = energyFlowAnalysis sysParams simParams $ Type.signals sim
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
 
   in (Type.OptimisePerState perStateOptimum perStateAverage,
@@ -268,7 +270,7 @@ optimiseStateAndSimulate sysParams optParams simParams stateForcing perStateOpti
   let optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
       interpolation = interpolateOptimalSolution sysParams optParams simParams optimalSolution
       sim = simulation sysParams  $ Type.reqsAndDofsSignals interpolation
-      efa = energyFlowAnalysis sysParams $ Type.signals sim
+      efa = energyFlowAnalysis sysParams simParams $ Type.signals sim
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
   in  Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep
 

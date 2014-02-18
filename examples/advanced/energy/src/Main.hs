@@ -161,7 +161,8 @@ main1 = do
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.1,
           One.balanceThreshold = One.BalanceThreshold 0.1,
-          One.stateTimeThreshold = One.StateTimeThreshold 0.6,
+          One.stateTimeUpperThreshold = One.StateTimeThreshold 3,
+          One.stateTimeLowerThreshold = One.StateTimeThreshold 1,
           One.stateForcingSeed = One.StateForcingStep 0.05,
           One.balanceForcingSeed = One.ChargeDrive 0.01}
 
@@ -169,7 +170,9 @@ main1 = do
       simParams = One.SimulationParams {
           One.varReqRoomPower1D = Sig.convert $ ModSet.varRestPower1D,
           One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
-          One.reqsRec = Base.convertRecord reqsRec}
+          One.reqsRec = Base.convertRecord reqsRec, 
+          One.sequFilterTime=0.2,
+          One.sequFilterEnergy=0 }
 
   print (map (ModUt.absoluteStateIndex $ One.systemTopology sysParams) System.flowStates)
 

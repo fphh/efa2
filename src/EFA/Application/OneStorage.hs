@@ -136,7 +136,8 @@ data OptimisationParams node list sweep vec a = OptimisationParams {
   initialBattForceStep :: Map node (SocDrive a),
   etaThreshold :: EtaThreshold a,
   balanceThreshold :: BalanceThreshold a,
-  stateTimeThreshold :: StateTimeThreshold a,
+  stateTimeUpperThreshold :: StateTimeThreshold a,
+  stateTimeLowerThreshold :: StateTimeThreshold a,  
   stateForcingSeed :: StateForcingStep a,
   balanceForcingSeed :: SocDrive a
   }
@@ -144,7 +145,9 @@ data OptimisationParams node list sweep vec a = OptimisationParams {
 data SimulationParams node vec a = SimulationParams {
   varReqRoomPower1D :: Sig.PSignal vec a,
   varReqRoomPower2D :: Sig.PSignal2 Vector vec a,
-  reqsRec :: PowerRecord node vec a}
+  reqsRec :: PowerRecord node vec a, 
+  sequFilterTime :: a,
+  sequFilterEnergy :: a}
 
 
 newtype MaxEtaIterations  =  MaxEtaIterations Int
