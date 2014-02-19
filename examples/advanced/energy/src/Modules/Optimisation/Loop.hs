@@ -21,6 +21,7 @@ import EFA.Application.Sweep (Sweep)
 
 --import qualified EFA.Graph as Graph
 --import EFA.Graph (Graph)
+import qualified EFA.Flow.Draw as Draw
 
 --import qualified EFA.Graph.Topology as Topology
 import qualified EFA.Graph.Topology.Node as Node
@@ -33,6 +34,7 @@ import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Flow.State.SystemEta as StateEta
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State as FlowState
+import qualified EFA.Report.FormatValue as FormatValue
 
 -- import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.Topology.Index as TopoIdx
@@ -43,7 +45,7 @@ import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data (Data(Data)) --, Nil, Apply)
 
 import EFA.Utility.List (vhead, vlast)
---import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility.Async (concurrentlyMany_)
 
 --import qualified Data.Monoid as Monoid
 import qualified Data.Map as Map
@@ -118,13 +120,12 @@ checkBalance optParams bal = all g $ Map.elems bal
 
 iterateBalanceUntil ::
   (Ord node,Arith.Sum a, Ord a, Arith.Constant a) =>
-  One.OptimisationParams node [] Sweep vec a ->
   [BalanceLoopItem node a (Type.OptimisationPerState node a) z] ->
   (Map.Map node (One.SocDrive a),Map.Map node (One.SocDrive a),
    Type.OptimalSolutionPerState node a)
-iterateBalanceUntil optParams balLoop =
+iterateBalanceUntil balLoop =
   (bForcing $ lastElem, bFStep lastElem, Type.optimalSolutionPerState $ fst $ bResult lastElem)
-  where lastElem = vlast "interateBalanceUntil"  balLoop --vhead "interateBalanceUntil" $ dropWhile f balLoop
+  where lastElem = vlast "interateBalanceUntil"  balLoop 
 
 balanceIteration::
   (efaVec~[], intVec ~ [], sweep ~ Sweep, a ~ d, simVec ~ [],
@@ -249,12 +250,11 @@ checkStateTimes optParams stateDurs stateSteps =
         (One.StateTimeThreshold lThr) = One.stateTimeLowerThreshold optParams        
 
 iterateStateUntil ::
-  One.OptimisationParams node list sweep vec a
-  -> [StateLoopItem node a z]
-  -> (Map.Map Idx.AbsoluteState (One.StateForcing a), 
+  [StateLoopItem node a z] ->
+  (Map.Map Idx.AbsoluteState (One.StateForcing a), 
       Map.Map Idx.AbsoluteState (One.StateForcingStep a),
       One.StateDurations a,One.Balance node a)
-iterateStateUntil optParams statLoop =
+iterateStateUntil statLoop =
   (sForcing $ lastElem , sFStep lastElem, stateDurations $ lastElem, sBalance $ lastElem)
   where lastElem = vlast "interateStateUntil" $ statLoop
     
@@ -279,18 +279,15 @@ stateIteration ::
    (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)]
 stateIteration sysParams optParams simParams optimalObjectivePerState stateForceIn staStepsIn indexConversionMap =
   go 0 stateForceIn initialSteps initialResults
-  where -- InitialSteps mask the state which should not be tuned, they are calculated on first balanced result
-        initialSteps = g staStepsIn 
-        g (Just st) = st               
-        g (Nothing) = Map.map (\x -> if x==0 then seed else One.DontForceState) initialTimes
+  where initialSteps = j staStepsIn 
+        j (Just st) = st               
+        j (Nothing) = Map.map (\x -> if x==0 then seed else One.DontForceState) initialTimes
         
         seed = One.stateForcingSeed optParams
         fsys sf = NonIO.optimiseStateAndSimulate sysParams optParams simParams sf optimalObjectivePerState indexConversionMap
         initialResults = fsys stateForceIn
         initialTimes = accessTimes initialResults
         One.MaxStateIterations maxCnt =  One.maxStateIterations optParams
-
-       -- (One.StateTimeThreshold thr) = One.stateTimeThreshold optParams
 
         accessTimes res =
           Map.map f $ getStateTimes stateForceIn $ Type.stateFlowGraph $ Type.analysis res
@@ -388,34 +385,24 @@ iterateInnerLoop ::
   (Map.Map node (One.SocDrive a),
   [InnerLoopItem node a (Type.OptimisationPerState node a)
      (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)])
-iterateInnerLoop sysParams optParams simParams perStateSweep balForceIn stateForceIn indexConversionMap = (balForceOut,innerLoop)
+iterateInnerLoop sysParams optParams simParams perStateSweep balForceIn stateForceIn indexConversionMap = (balForceOut,innerLp)
   where
-    innerLoop = go 0 balForceIn initialBalSteps stateForceIn initialStateSteps
-    balForceOut = ilBForcOut $ vlast "iterateInnerLoop" innerLoop 
+    innerLp = go 0 balForceIn initialBalSteps stateForceIn initialStateSteps
+    balForceOut = ilBForcOut $ vlast "iterateInnerLoop" innerLp 
     initialStateSteps = Nothing
     initialBalSteps = One.initialBattForceStep optParams
-    seed = One.stateForcingSeed optParams
     
-    initialResult = NonIO.optimiseAndSimulate sysParams optParams simParams balForceIn stateForceIn
-              perStateSweep indexConversionMap
-   
-    initialTimes = accessTimes initialResult
-    accessTimes res =
-          Map.map f $ getStateTimes stateForceIn $ Type.stateFlowGraph $ Type.analysis $ snd res
-           where f (Determined (Data x)) = x
-                 f Undetermined  = error "State Time undetermined"
-  
     go cnt balForce balSteps statForce statSteps =
-      InnerLoopItem cnt balForceOut bal statForceOut sta balLoop statLoop : 
+      InnerLoopItem cnt bForceOut bal statForceOut sta balLoop statLoop : 
          if checkBalance optParams bal && checkStateTimes optParams sta staStepsOut then []
-         else go (cnt+1) balForceOut balStepsOut statForceOut (Just staStepsOut)
+         else go (cnt+1) bForceOut balStepsOut statForceOut (Just staStepsOut)
       where
         
         balLoop = balanceIteration sysParams optParams simParams perStateSweep balForce balSteps statForce indexConversionMap
-        (balForceOut, balStepsOut, optimalObjectivePerState) = iterateBalanceUntil optParams balLoop
+        (bForceOut, balStepsOut, optimalObjectivePerState) = iterateBalanceUntil balLoop
         
         statLoop = stateIteration sysParams optParams simParams optimalObjectivePerState statForce statSteps indexConversionMap
-        (statForceOut,staStepsOut, sta,bal) = iterateStateUntil optParams statLoop
+        (statForceOut,staStepsOut, sta,bal) = iterateStateUntil statLoop
 
 
 iterateEtaWhile ::
@@ -427,23 +414,20 @@ iterateEtaWhile ::
   [EtaLoopItem Node Sweep UV.Vector a (Type.OptimisationPerState Node a)
    (Type.OptimiseStateAndSimulate Node Sweep UV.Vector a [] a [] c [] a)]
 iterateEtaWhile sysParams optParams simParams = go 0  (One.stateFlowGraphOpt optParams) initBalF
-   where -- (One.MaxEtaIterations maxCnt) = One.maxEtaIterations optParams
+   where 
          initBalF =  One.initialBattForcing optParams
-         sfgo = One.stateFlowGraphOpt optParams
-         -- graphStates = StateQty.states sfgo
-         --indexMap = Bimap.toMapR $ ModUt.indexConversionMap System.topology sfgo
          
          go cnt sfg bfIn = EtaLoopItem cnt sfg sfg1 res : go (cnt+1) sfg1 bfOut
            where
-            sweep = Base.perStateSweep sysParams optParams sfg
+            sweep = trace "sweep" $ Base.perStateSweep sysParams optParams sfg
             indexConversionMap = ModUt.indexConversionMap System.topology sfg
             statf = Map.map (const $ One.StateForcing Arith.zero) (Bimap.toMapR indexConversionMap)
-            (bfOut, res) = iterateInnerLoop sysParams optParams simParams sweep bfIn statf indexConversionMap
+            (bfOut, res) = trace "traceInnerLoop" $ iterateInnerLoop sysParams optParams simParams sweep bfIn statf indexConversionMap
             sfg1 = Type.stateFlowGraphSweep
                    $ sResult
-                   $ vhead "iterateEtaWhile 2"
+                   $ vlast "iterateEtaWhile 2"
                    $ stateLoop
-                   $ vhead "iterateEtaWhile 1" res
+                   $ vlast "iterateEtaWhile 1" res
 
 
 
@@ -538,6 +522,7 @@ showStateLoopItem _optParams (StateLoopItem sStp sForc _sFStp stateDur sBal _sRe
 
 printEtaLoop ::
   (UV.Unbox a, Arith.Constant a,
+   FormatValue.FormatValue a,
    Show node,
    Show (intVec Double),
    SV.Walker intVec,
@@ -556,15 +541,19 @@ printEtaLoop optParams ol =
   iterateLoops (optParams) printEtaLoopItem printInnerLoopItem printBalanceLoopItem printStateLoopItem ol
 
 printEtaLoopItem ::
-  (Arith.Product (sweep vec a),
+  (UV.Unbox a,
+   Node.C node,
+   FormatValue.FormatValue a,
+   Arith.Product (sweep vec a),
    Sweep.SweepClass sweep vec a) =>
   One.OptimisationParams node f sweep vec a ->
   EtaLoopItem node Sweep UV.Vector a z0 z -> IO ()
-printEtaLoopItem _params (EtaLoopItem _step _sfgIn _sfgOut _) = print "EtaLoop"
---  do
---    let -- dir = printf "outer-loop-%6.6d" olcnt
+printEtaLoopItem _params (EtaLoopItem _step _sfgIn _sfgOut res) = --print "EtaLoop"
+  do
+    let -- dir = printf "outer-loop-%6.6d" olcnt
         --stoPos = TopoIdx.Position System.Water System.Network
         --gasPos = TopoIdx.Position System.Gas System.LocalNetwork
+      
 
 --    putStrLn (printf "Loop %6.6d" olcnt)
 
@@ -575,10 +564,15 @@ printEtaLoopItem _params (EtaLoopItem _step _sfgIn _sfgOut _) = print "EtaLoop"
       --ModPlot.maxObjPerState ModPlot.gpXTerm opt ]
 
 
-{-
+
     concurrentlyMany_ [
-      ModPlot.simulationGraphs ModPlot.dotXTerm opt,
-      ModPlot.simulationSignals ModPlot.gpXTerm opt,
+      ModPlot.drawSweepStateFlowGraph "sfgIn" $ _sfgIn,
+      ModPlot.drawSweepStateFlowGraph "sfgOut" $ _sfgOut]
+--      Draw.xterm $ Draw.title "sfgIn" $ Draw.stateFlowGraph Draw.optionsDefault _sfgIn,
+--      Draw.xterm $ Draw.title "sfgOut" $ Draw.stateFlowGraph Draw.optionsDefault _sfgOut]
+      
+      --ModPlot.simulationGraphs ModPlot.dotXTerm opt]
+{-      ModPlot.simulationSignals ModPlot.gpXTerm opt,
       ModPlot.maxPos stoPos ModPlot.gpXTerm opt,
       ModPlot.maxPos gasPos ModPlot.gpXTerm opt,
       ModPlot.maxState ModPlot.gpXTerm opt,
@@ -629,8 +623,8 @@ printBalanceLoopItem _optParams (BalanceLoopItem bStp _bForcing _bFStep _bal res
 --    ModPlot.maxEta gTerm opt2
 --    ModPlot.optimalObjs (ModPlot.gpPNG dir bStep) opt
 --    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
-     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
-     ModPlot.givenSignals term opt2
+--     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
+--     ModPlot.givenSignals term opt2
 --    ModPlot.maxEtaPerState (ModPlot.gpPNG dir bStep) opt
    -- ModPlot.maxPosPerState (ModPlot.gpPNG dir bStep) stoPos opt
 
@@ -639,7 +633,7 @@ printBalanceLoopItem _optParams (BalanceLoopItem bStp _bForcing _bFStep _bal res
     -- das aktiviert das schreiben der zustandsflussgraphen
     -- pro parzelle (Achtung, ziemlich viel!!!)
     -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG dir bStep) opt
-     ModPlot.simulationSignals term opt2
+ --    ModPlot.simulationSignals term opt2
 
 --    ModPlot.maxState (ModPlot.gpPNG dir bStep) opt
     -- ModPlot.maxStateContour (ModPlot.gpPNG dir bStep) opt-}

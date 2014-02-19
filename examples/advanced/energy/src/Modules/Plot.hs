@@ -668,3 +668,14 @@ instance PNG (IO PNG.T) where
          png = gp PNG.cons
 
 -}
+
+drawSweepStateFlowGraph :: 
+  (Functor f, Node.C node, FormatValue.FormatValue (f b),
+  Sweep.SweepVector vec b, Sweep.SweepClass sweep vec b) =>
+  String ->
+  StateQty.Graph node (f (sweep vec b)) (f (sweep vec b)) ->
+  IO ()
+drawSweepStateFlowGraph title sfgSweep =   
+  Draw.xterm $ Draw.title title $ Draw.stateFlowGraph Draw.optionsDefault 
+  $ StateQty.mapGraph g g sfgSweep
+     where g = fmap (vhead "simulationGraphs" . Sweep.toList)

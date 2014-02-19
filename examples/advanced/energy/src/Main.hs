@@ -153,13 +153,13 @@ main1 = do
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
           One.etaToOptimise = Nothing,
-          One.maxEtaIterations = One.MaxEtaIterations 3,
+          One.maxEtaIterations = One.MaxEtaIterations 2,
           One.maxInnerLoopIterations = One.MaxInnerLoopIterations 3,
           One.maxBalanceIterations = One.MaxBalanceIterations 50,
           One.maxStateIterations = One.MaxStateIterations 50,
           One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
-          One.etaThreshold = One.EtaThreshold 0.1,
+          One.etaThreshold = One.EtaThreshold 0.2,
           One.balanceThreshold = One.BalanceThreshold 0.1,
           One.stateTimeUpperThreshold = One.StateTimeThreshold 3,
           One.stateTimeLowerThreshold = One.StateTimeThreshold 1,
@@ -210,7 +210,7 @@ main1 = do
 
   mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
 
-  -- sequence_ (ModLoop.printEtaLoop optParams ol)
+  sequence_ (ModLoop.printEtaLoop optParams ol)
 
 {-
   concurrentlyMany_ [
