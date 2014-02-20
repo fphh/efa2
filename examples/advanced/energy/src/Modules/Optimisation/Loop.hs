@@ -279,7 +279,7 @@ stateIteration ::
    (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)]
 stateIteration sysParams optParams simParams optimalObjectivePerState stateForceIn staStepsIn indexConversionMap =
   go 0 stateForceIn initialSteps initialResults
-  where initialSteps = j staStepsIn 
+  where initialSteps = (\x -> trace ("initialStateSteps: " ++ show x) x) $ j staStepsIn 
         j (Just st) = st               
         j (Nothing) = Map.map (\x -> if x==0 then seed else One.DontForceState) initialTimes
         
