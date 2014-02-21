@@ -151,6 +151,7 @@ balanceIteration::
 balanceIteration sysParams optParams simParams perStateSweep balForceIn balStepsIn statForceIn indexConversionMap =
   go 0 balForceIn balStepsIn resStart
   where
+--    trac  = (\ x -> trace ("balance" ++ show x) x)
     One.MaxBalanceIterations maxStepCnt = One.maxBalanceIterations optParams
     seed = One.balanceForcingSeed optParams
     resStart = fsys balForceIn
@@ -279,7 +280,9 @@ stateIteration ::
    (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)]
 stateIteration sysParams optParams simParams optimalObjectivePerState stateForceIn staStepsIn indexConversionMap =
   go 0 stateForceIn initialSteps initialResults
-  where initialSteps = (\x -> trace ("initialStateSteps: " ++ show x) x) $ j staStepsIn 
+  where --initialSteps = (\x -> trace ("initialStateSteps: " ++ show x) x) $ j staStepsIn
+        initialSteps = j staStepsIn
+     
         j (Just st) = st               
         j (Nothing) = Map.map (\x -> if x==0 then seed else One.DontForceState) initialTimes
         
@@ -301,7 +304,7 @@ stateIteration sysParams optParams simParams optimalObjectivePerState stateForce
         go cnt force step res  =
           StateLoopItem cnt force step times bal res :
                if checkStateTimes optParams times step || cnt >= maxCnt
-               then [] else go (cnt+1) force1 step1 res1
+               then [] else go ((\x -> trace ("cnt :" ++ show x) x) (cnt+1))  force1 step1 res1
           where
             force1 = Map.fromList $ zipWith g (Map.toList force) (Map.toList step)
 
@@ -391,10 +394,11 @@ iterateInnerLoop sysParams optParams simParams perStateSweep balForceIn stateFor
     balForceOut = ilBForcOut $ vlast "iterateInnerLoop" innerLp 
     initialStateSteps = Nothing
     initialBalSteps = One.initialBattForceStep optParams
+    One.MaxInnerLoopIterations maxCnt = One.maxInnerLoopIterations optParams
     
     go cnt balForce balSteps statForce statSteps =
       InnerLoopItem cnt bForceOut bal statForceOut sta balLoop statLoop : 
-         if checkBalance optParams bal && checkStateTimes optParams sta staStepsOut then []
+         if (checkBalance optParams bal && checkStateTimes optParams sta staStepsOut) || cnt > (maxCnt-1) then []
          else go (cnt+1) bForceOut balStepsOut statForceOut (Just staStepsOut)
       where
         
@@ -416,8 +420,10 @@ iterateEtaWhile ::
 iterateEtaWhile sysParams optParams simParams = go 0  (One.stateFlowGraphOpt optParams) initBalF
    where 
          initBalF =  One.initialBattForcing optParams
-         
-         go cnt sfg bfIn = EtaLoopItem cnt sfg sfg1 res : go (cnt+1) sfg1 bfOut
+         One.MaxEtaIterations maxCnt = One.maxEtaIterations optParams
+         go cnt sfg bfIn = EtaLoopItem cnt sfg sfg1 res : 
+                           if cnt > (maxCnt-1) then [] 
+                                 else go (cnt+1) sfg1 bfOut
            where
             sweep = trace "sweep" $ Base.perStateSweep sysParams optParams sfg
             indexConversionMap = ModUt.indexConversionMap System.topology sfg
