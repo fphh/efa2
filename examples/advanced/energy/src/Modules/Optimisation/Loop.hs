@@ -246,7 +246,7 @@ checkStateTimes :: (Num a, Ord a) => One.OptimisationParams node [] Sweep vec a 
                Bool
 checkStateTimes optParams stateDurs stateSteps = 
   all g $ zip (Map.elems stateDurs) (Map.elems stateSteps)
-  where g (time,step) = (time > lThr  && time < uThr) || step == One.DontForceState
+  where g (time,step) = (time > lThr)  && ( time < uThr || step == One.DontForceState )
         (One.StateTimeThreshold uThr) = One.stateTimeUpperThreshold optParams
         (One.StateTimeThreshold lThr) = One.stateTimeLowerThreshold optParams        
 

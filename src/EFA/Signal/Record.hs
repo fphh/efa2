@@ -744,3 +744,8 @@ sumFlowRecord :: (V.FromList v,
                   Product d) => DTimeFlowRecord node v d -> CumFlowRecord node v d
 sumFlowRecord (Record dtime map) = Record (S.sum dtime) (Map.map (S.sum) map)
 -}
+
+
+makeStepped ::  (V.Storage v d1, V.FromList v, V.Storage v d2) =>
+                Record s1 s2 t1 t2 id v d1 d2 -> Record s1 s2 t1 t2 id v d1 d2
+makeStepped (Record time pmap) = Record (S.duplicateR time) $ Map.map (S.duplicateL) pmap 

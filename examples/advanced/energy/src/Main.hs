@@ -5,7 +5,7 @@ module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
---import qualified Modules.Plot as ModPlot
+import qualified Modules.Plot as ModPlot
 import qualified Modules.Utility as ModUt
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.Loop as ModLoop
@@ -38,7 +38,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 
 --import qualified EFA.Flow.Draw as Draw
 
---import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility.Async (concurrentlyMany_)
 --import EFA.Utility.List (vhead)
 
 import qualified Data.Map as Map
@@ -46,6 +46,8 @@ import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
 import qualified Data.Empty as Empty
 --import qualified Data.List as List
 --import Control.Monad(void)
+
+import qualified EFA.Signal.Plot as Plot
 
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
@@ -109,15 +111,19 @@ main1 = do
 
       ctime = Sig.convert time
 
-      t = Sig.map (/2) (ctime Sig..++ Sig.offset (Sig.fromSample la) ctime)
+      t = ctime --Sig.map (/2) (ctime Sig..++ Sig.offset (Sig.fromSample la) ctime)
 
-      prest = Sig.convert $ prest1 Sig..++ prest2
-      plocal = Sig.convert $ plocal1 Sig..++ plocal2
+      prest = Sig.convert $ prest1 --Sig..++ prest2
+      plocal = Sig.convert $ plocal1 --Sig..++ plocal2
 
 -- ACHTUNG ACHTUNG wir haben local und rest verwechselt !!! 26.01.2014
       reqsRec :: Record.PowerRecord Node UV.Vector Double
       reqsRec =
         Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
+
+      reqsRecStep :: Record.PowerRecord Node UV.Vector Double
+      reqsRecStep = Record.makeStepped reqsRec
+
 
 {-
   concurrentlyMany_ [
@@ -127,11 +133,12 @@ main1 = do
       StateAnalysis.advanced System.topology ]
 -}
 
-{-
+
   concurrentlyMany_ [
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec]
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec, 
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep]
 --    ModPlot.requirements ModPlot.gpXTerm prest plocal ]
--}
+
 
   let
       ienv = AppOpt.storageEdgeXFactors optParams 4 4
@@ -160,9 +167,9 @@ main1 = do
           One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.2,
-          One.balanceThreshold = One.BalanceThreshold 0.2,
-          One.stateTimeUpperThreshold = One.StateTimeThreshold 3,
-          One.stateTimeLowerThreshold = One.StateTimeThreshold 1,
+          One.balanceThreshold = One.BalanceThreshold 0.4,
+          One.stateTimeUpperThreshold = One.StateTimeThreshold 5,
+          One.stateTimeLowerThreshold = One.StateTimeThreshold 0,
           One.stateForcingSeed = One.StateForcingStep 0.05,
           One.balanceForcingSeed = One.ChargeDrive 0.01}
 
@@ -170,7 +177,7 @@ main1 = do
       simParams = One.SimulationParams {
           One.varReqRoomPower1D = Sig.convert $ ModSet.varRestPower1D,
           One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
-          One.reqsRec = Base.convertRecord reqsRec, 
+          One.reqsRec = Base.convertRecord reqsRecStep, 
           One.sequFilterTime=0.2,
           One.sequFilterEnergy=0 }
 

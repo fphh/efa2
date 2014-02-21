@@ -2026,3 +2026,20 @@ mergeBy ::
 mergeBy p (TC x) (TC y) = TC $ D.fromList $ ListHT.mergeBy p xs ys
   where xs = D.toList x
         ys = D.toList y
+
+
+duplicateR :: (SV.Storage v d, SV.FromList v) => 
+              TC s typ (Data (v :> Nil) d) -> TC s typ (Data (v :> Nil) d)
+duplicateR s = fromList $ f $ toList s  
+  where f [] = [] 
+        f (x:[]) = [] 
+        f (x:xs) = [x,P.head xs] ++ f xs 
+        
+
+duplicateL :: (SV.Storage v d, SV.FromList v) =>  
+              TC s typ (Data (v :> Nil) d) -> TC s typ (Data (v :> Nil) d)
+duplicateL s = fromList $ f $ toList s  
+  where f [] = [] 
+        f (x:[]) = [] 
+        f (x:xs) = [x,x] ++ f xs
+
