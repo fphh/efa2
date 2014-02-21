@@ -130,6 +130,7 @@ iterateBalanceUntil balLoop =
 balanceIteration::
   (efaVec~[], intVec ~ [], sweep ~ Sweep, a ~ d, simVec ~ [],
    Ord d,
+   RealFloat d,
    Show d,
    Show node,
    UV.Unbox d,
@@ -370,7 +371,7 @@ changeStateForce optParams (y0,y1) (One.StateForcing x0,One.StateForcing x1) (id
 
 iterateInnerLoop ::
   (intVec~[], efaVec ~ [], simVec ~ [],a ~ d,sigVec ~ [],d ~ b,node~Node,
-   Ord d,
+   Ord d,RealFloat b,
    Show d,
    Show node,
    UV.Unbox d,
@@ -411,7 +412,7 @@ iterateInnerLoop sysParams optParams simParams perStateSweep balForceIn stateFor
 
 iterateEtaWhile ::
   (Num a, Ord a, Show a, UV.Unbox a, Arith.ZeroTestable a,
-   Arith.Constant a) =>
+   Arith.Constant a,RealFloat a) =>
   One.SystemParams Node a->
   One.OptimisationParams Node [] Sweep UV.Vector a->
   One.SimulationParams Node [] a->
@@ -627,7 +628,7 @@ printBalanceLoopItem _optParams (BalanceLoopItem bStp _bForcing _bFStep _bal res
          _stoPos = TopoIdx.Position System.Water System.Network
 --    ModPlot.maxEta xTerm opt2
 --    ModPlot.maxEta gTerm opt2
---    ModPlot.optimalObjs (ModPlot.gpPNG dir bStep) opt
+     ModPlot.optimalObjs _xTerm _opt
 --    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
 --     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
 --     ModPlot.givenSignals term opt2
@@ -647,9 +648,16 @@ printBalanceLoopItem _optParams (BalanceLoopItem bStp _bForcing _bFStep _bal res
 
 printStateLoopItem ::
   One.OptimisationParams node [] Sweep UV.Vector a ->
-  StateLoopItem node a z ->
+  StateLoopItem node a (Type.OptimiseStateAndSimulate
+                           node sweep sweepVec Double intVec Double simVec c efaVec d) ->
   IO()
-printStateLoopItem _optParams (StateLoopItem _sStep _sForcing _sFStep _stateDurations _sBalance _sResult) = print "stateLoop"
+printStateLoopItem _optParams (StateLoopItem _sStep _sForcing _sFStep _stateDurations _sBalance _sResult) = 
+  do 
+    ModPlot.maxState (ModPlot.gpXTerm) _sResult
+      
+  
+  
+    print "stateLoop"
 
 
 

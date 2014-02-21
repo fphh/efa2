@@ -209,6 +209,7 @@ toSweep params = StateQty.mapGraph f f
 
 optimiseAndSimulate :: (efaVec ~ simVec,intVec ~ simVec,a ~ d,intVec ~ [],
   Eq (simVec d),
+  RealFloat d,
   Show (simVec d),
   SV.Zipper simVec,
   SV.Walker simVec,

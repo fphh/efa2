@@ -168,7 +168,7 @@ main1 = do
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.2,
           One.balanceThreshold = One.BalanceThreshold 0.4,
-          One.stateTimeUpperThreshold = One.StateTimeThreshold 5,
+          One.stateTimeUpperThreshold = One.StateTimeThreshold 1,
           One.stateTimeLowerThreshold = One.StateTimeThreshold 0,
           One.stateForcingSeed = One.StateForcingStep 0.05,
           One.balanceForcingSeed = One.ChargeDrive 0.01}
@@ -215,7 +215,7 @@ main1 = do
 
 
 
-  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
+--  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
 
   sequence_ (ModLoop.printEtaLoop optParams ol)
 

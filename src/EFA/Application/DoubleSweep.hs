@@ -113,7 +113,7 @@ findOptimalState stateForcing stateMap = if Map.keys stateForcing == map.keys st
 -}
 
 findBestIndex ::
-  (Ord a, Arith.Constant a, UV.Unbox a,
+  (Ord a, Arith.Constant a, UV.Unbox a,RealFloat a,
    Sweep.SweepVector UV.Vector a,
    Sweep.SweepClass sweep UV.Vector a,
    Sweep.SweepVector UV.Vector Bool,
@@ -123,8 +123,8 @@ findBestIndex ::
   (sweep UV.Vector a) ->
   Maybe (Int, a, a)
 
-findBestIndex cond esys force =
-  if UV.null fv
+findBestIndex cond esys force = res
+{-  if UV.null fv
      then Nothing
      else Just (maxIdx, o, e)
   where
@@ -132,11 +132,42 @@ findBestIndex cond esys force =
         c1 = Sweep.fromSweep cond
         e1 = Sweep.fromSweep esys
         objf1 = Sweep.fromSweep force
-
+        
+        comparingWithNaN p x y = case (isNaN $ p x,isNaN $ p y) of 
+          (True,True) -> EQ
+          (False,True) -> LT     
+          (True,False) -> GT
+          (False,False) -> comparing p x y
 
         fv = UV.filter fst3 $ UV.zipWith3 (,,) c1 objf1 e1
-        maxIdx = UV.maxIndexBy (comparing snd3) fv
+        maxIdx = UV.maxIndexBy (comparingWithNaN snd3) fv
         (_, o, e) = fv UV.! maxIdx
+-}
+
+        -- alte Version erweitert um NaN - Fix:
+  where                              
+
+        c1 = Sweep.fromSweep cond
+        e1 = Sweep.fromSweep esys
+        objf1 = Sweep.fromSweep force
+
+
+        start = (0, 0, Arith.zero, Arith.zero)
+
+        -- altes Ergebnis:
+        res = case UV.foldl' f start (UV.zipWith3 (,,) c1 e1 objf1) of
+                   (x, _, ch, d) -> Just (x, ch, d)
+
+        f (bestIdx, cnt, fo, eo) (b, es2, f2) =
+          if b && g f2 fo
+             then (cnt, cnt+1, f2, es2)
+             else (bestIdx, cnt+1, fo, eo)
+                  
+        g x y =  case (isNaN $ x,isNaN $ y) of 
+          (True,True) -> True
+          (False,True) -> False     
+          (True,False) -> True         
+          (False,False) ->  x >= y
 
 {-
         -- alte Version:
@@ -160,7 +191,7 @@ findBestIndex cond esys force =
 
 
 optimalSolutionState2 ::
-  (Ord a, Node.C node, Arith.Constant a, UV.Unbox a,
+  (Ord a, Node.C node, Arith.Constant a, UV.Unbox a,RealFloat a,
    Arith.Product (sweep UV.Vector a),
    Sweep.SweepVector UV.Vector a,
    Sweep.SweepClass sweep UV.Vector a,

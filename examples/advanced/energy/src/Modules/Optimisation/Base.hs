@@ -115,7 +115,7 @@ forcing balanceForcing params state m = Determined $
 
 
 optimalObjectivePerState ::
-  (Ord a, Arith.Constant a, Arith.Sum a, UV.Unbox a,
+  (Ord a, Arith.Constant a, Arith.Sum a, UV.Unbox a,RealFloat a,
    Show node, Node.C node, Monoid (sweep UV.Vector  Bool),
    Ord (sweep UV.Vector  a),
    Arith.Product (sweep UV.Vector  a),
