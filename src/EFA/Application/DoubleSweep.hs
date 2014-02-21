@@ -43,6 +43,11 @@ import qualified Control.Monad.Trans.Writer as MW
 
 import Control.Applicative (liftA3)
 
+import Data.Tuple.HT (fst3, snd3)
+import Data.Ord (comparing)
+
+import Debug.Trace (trace)
+
 
 -- | Map a two dimensional load room (varX, varY) and find per load situation
 -- | the optimal solution in the 2d-solution room (two degrees of freevarOptX varOptY)
@@ -118,22 +123,40 @@ findBestIndex ::
   (sweep UV.Vector a) ->
   Maybe (Int, a, a)
 
-findBestIndex cond esys force = res
+findBestIndex cond esys force =
+  if UV.null fv
+     then Nothing
+     else Just (maxIdx, o, e)
   where
 
         c1 = Sweep.fromSweep cond
         e1 = Sweep.fromSweep esys
         objf1 = Sweep.fromSweep force
 
+
+        fv = UV.filter fst3 $ UV.zipWith3 (,,) c1 objf1 e1
+        maxIdx = UV.maxIndexBy (comparing snd3) fv
+        (_, o, e) = fv UV.! maxIdx
+
+{-
+        -- alte Version:
+
+        c1 = Sweep.fromSweep cond
+        e1 = Sweep.fromSweep esys
+        objf1 = Sweep.fromSweep force
+
+
         start = (0, 0, Arith.zero, Arith.zero)
 
+        -- altes Ergebnis:
         res = case UV.foldl' f start (UV.zipWith3 (,,) c1 e1 objf1) of
                    (x, _, ch, d) -> Just (x, ch, d)
 
         f (bestIdx, cnt, fo, eo) (b, es2, f2) =
-          if b && f2 > fo
+          if b && f2 >= fo
              then (cnt, cnt+1, f2, es2)
              else (bestIdx, cnt+1, fo, eo)
+-}
 
 
 optimalSolutionState2 ::
@@ -146,7 +169,7 @@ optimalSolutionState2 ::
    Sweep.SweepClass sweep UV.Vector Bool,
    Sweep.SweepMap sweep UV.Vector a Bool) =>
   ( Map Idx.State (Map node (Maybe (sweep UV.Vector a))) ->
-    Result (sweep UV.Vector a)) ->
+      Result (sweep UV.Vector a) ) ->
   Type.PerStateSweep node sweep UV.Vector a ->
   Maybe (a, a, StateFlow.Graph node (Result a) (Result a))
 
