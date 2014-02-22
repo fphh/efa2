@@ -72,6 +72,8 @@ import System.FilePath.Posix ((</>), (<.>))
 
 import Text.Printf (printf)
 
+import Debug.Trace(trace)
+
 frameOpts ::
   (Atom.C a, Fractional a, Tuple.C a) =>
 --  Opts.T (Graph3D.T a a a) -> Opts.T (Graph3D.T a a a)) ->
@@ -523,13 +525,13 @@ optimalPos pos@(TopoIdx.Position f t) terminal opt = do
   where g (Just (Determined x)) = x
         g _ = ModUt.nan
 
-findTile :: (Ord t) => [t] -> [t] -> t -> t -> [(t, t)]
+findTile :: (Ord t, Show t) => [t] -> [t] -> t -> t -> [(t, t)]
 findTile xs ys x y =
   let (xa, xb) = findInterval x xs
       (ya, yb) = findInterval y ys
 
       --findInterval :: (Ord a) => a -> [a] -> (a, a)
-      findInterval z zs = (vlast "findTile" as, vhead "findTile" bs)
+      findInterval z zs = trace (show as ++ show bs) $ (vlast "findTile" as, vhead "findTile" bs)
         where (as, bs) = span (<=z) zs
 
       sort [(x0, y0), (x1, y1), (x2, y2), (x3, y3)] =
@@ -539,15 +541,25 @@ findTile xs ys x y =
   in sort $ liftA2 (,) [xa, xb] [ya, yb]
 
 
+--reqsRec :: 
+reqsRec terminal (Record.Record _ pMap) = mapM_ f $ zip (init xs) (tail xs)
+   where xs = Map.elems pMap 
+         f (x,y) = requirements terminal x y
+         
+
+
 requirements ::
-  (Terminal.C term) =>
+  (Terminal.C term, Show (v Double),
+   Vector.Walker v,
+   Vector.Storage v Double,
+   Vector.FromList v) =>
   (FilePath -> IO term) ->
-  Sig.PSignal Vector Double ->
-  Sig.PSignal Vector Double ->
+  Sig.PSignal v Double ->
+  Sig.PSignal v Double ->
   IO ()
 requirements terminal prest plocal = do
-  let rs = Sig.toList prest
-      ls = Sig.toList plocal
+  let rs = Sig.toList $ trace (show prest) prest
+      ls = Sig.toList $ trace (show plocal) plocal
 
       ts :: [([Double], [Double])]
       ts = map unzip $ zipWith (findTile ModSet.rest ModSet.local) rs ls
@@ -579,7 +591,7 @@ requirements terminal prest plocal = do
     ( Opts.yLabel (showNode System.Rest) $
       Opts.xLabel (showNode System.LocalRest) $
       Plot.xyFrameAttr "Requirements" prest plocal)
-    ( (mconcat $ map f ts)
+    ( (mconcat $ map f []) --ts) --ts)
       <> Plot.xy sigStyle [prest] [AppPlot.label "" plocal])
 
 

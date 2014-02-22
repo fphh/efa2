@@ -40,11 +40,10 @@ water = [5,6]
 gas =   [7,8]
 -}
 
-local = [0.1, 0.15 .. 1.1]
-rest =  [2.0, 2.05 .. 3]
+local = [0.1, 0.15 .. 1.2]
+rest =  [2.0, 2.05 .. 3.2]
 water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]
-
 
 
 reqs :: ReqsAndDofs.Reqs (TopoIdx.Position System.Node, [Double])

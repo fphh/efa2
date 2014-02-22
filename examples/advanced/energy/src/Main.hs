@@ -56,6 +56,8 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 
 --import Text.Printf (printf)
 
+import qualified System.Random as Random 
+
 
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
@@ -71,6 +73,8 @@ main1 = do
   tabEta <- Table.read "../maps/eta.txt"
 
   tabPower <- Table.read "../maps/power.txt.bak"
+  
+  rndGen <- Random.getStdGen
 
   let etaMap =
          Map.mapKeys One.Name $
@@ -87,11 +91,12 @@ main1 = do
           ("rest" !: "local" !: Empty.Cons)
 
       -- transform = Sig.offset 0.1 . Sig.scale 2.9
-      transformRest1 = Sig.offset 2 . Sig.scale 0.9
+      transformRest1 = Sig.offset 2.2 . Sig.scale 0.6
+--      transformRest1 = Sig.offset 2 . Sig.scale 0.9
       transformRest2 = Sig.offset 2.2 . Sig.scale 0.6
 
-
-      transformLocal1 = Sig.offset 0.2 . Sig.scale 0.7
+      transformLocal1 = Sig.offset 0.4 . Sig.scale 0.5
+--      transformLocal1 = Sig.offset 0.2 . Sig.scale 0.7
       transformLocal2 = Sig.offset 0.4 . Sig.scale 0.5
 
       prest1, prest2, plocal1, plocal2 :: Sig.PSignal Vector Double
@@ -118,8 +123,7 @@ main1 = do
 
 -- ACHTUNG ACHTUNG wir haben local und rest verwechselt !!! 26.01.2014
       reqsRec :: Record.PowerRecord Node UV.Vector Double
-      reqsRec =
-        Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
+      reqsRec = Record.scatter rndGen 50 0.3 $ Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
 
       reqsRecStep :: Record.PowerRecord Node UV.Vector Double
       reqsRecStep = Record.makeStepped reqsRec
@@ -136,8 +140,8 @@ main1 = do
 
   concurrentlyMany_ [
     ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec, 
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep]
---    ModPlot.requirements ModPlot.gpXTerm prest plocal ]
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
+    ModPlot.reqsRec ModPlot.gpXTerm reqsRec]
 
 
   let
@@ -160,7 +164,7 @@ main1 = do
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
           One.etaToOptimise = Nothing,
-          One.maxEtaIterations = One.MaxEtaIterations 2,
+          One.maxEtaIterations = One.MaxEtaIterations 3,
           One.maxInnerLoopIterations = One.MaxInnerLoopIterations 5,
           One.maxBalanceIterations = One.MaxBalanceIterations 100,
           One.maxStateIterations = One.MaxStateIterations 100,
@@ -168,7 +172,7 @@ main1 = do
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.2,
           One.balanceThreshold = One.BalanceThreshold 0.4,
-          One.stateTimeUpperThreshold = One.StateTimeThreshold 1,
+          One.stateTimeUpperThreshold = One.StateTimeThreshold 0.1,
           One.stateTimeLowerThreshold = One.StateTimeThreshold 0,
           One.stateForcingSeed = One.StateForcingStep 0.05,
           One.balanceForcingSeed = One.ChargeDrive 0.01}
@@ -178,7 +182,7 @@ main1 = do
           One.varReqRoomPower1D = Sig.convert $ ModSet.varRestPower1D,
           One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
           One.reqsRec = Base.convertRecord reqsRecStep, 
-          One.sequFilterTime=0.2,
+          One.sequFilterTime=0.01,
           One.sequFilterEnergy=0 }
 
   print (map (ModUt.absoluteStateIndex $ One.systemTopology sysParams) System.flowStates)
@@ -215,7 +219,7 @@ main1 = do
 
 
 
---  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
+  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
 
   sequence_ (ModLoop.printEtaLoop optParams ol)
 

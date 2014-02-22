@@ -63,6 +63,7 @@ import Prelude
            String, (++),
            Int, Double, (-), show,(==),(>=),(>), (<=),not,(&&),(||),Bool(True,False),Maybe(Just,Nothing))
 import qualified Prelude as P
+import qualified System.Random as Random
 
 ----------------------------------------------------------
 -- | Signal & Company
@@ -2032,7 +2033,7 @@ duplicateR :: (SV.Storage v d, SV.FromList v) =>
               TC s typ (Data (v :> Nil) d) -> TC s typ (Data (v :> Nil) d)
 duplicateR s = fromList $ f $ toList s  
   where f [] = [] 
-        f (x:[]) = [] 
+        f (_:[]) = [] 
         f (x:xs) = [x,P.head xs] ++ f xs 
         
 
@@ -2040,6 +2041,47 @@ duplicateL :: (SV.Storage v d, SV.FromList v) =>
               TC s typ (Data (v :> Nil) d) -> TC s typ (Data (v :> Nil) d)
 duplicateL s = fromList $ f $ toList s  
   where f [] = [] 
-        f (x:[]) = [] 
+        f (_:[]) = [] 
         f (x:xs) = [x,x] ++ f xs
+{-
+scatter :: 
+  (Random.Random a, Product a, D.Storage c1 d1, D.Storage c d,
+   D.FromList c1, D.FromList c, Random.RandomGen g,
+   NestedList c1 d1 ~ [a], NestedList c d ~ [a]) =>
+  g -> Int -> a -> TC s1 t1 (Data c1 d1) -> TC s t (Data c d)
+scatter randomGenerator n scaleFactor s = fromList $ f $ toList s 
+  where f [] = [] 
+        f (_:[]) = [] 
+        f (x:xs) = genVals x ++ f xs
+        genVals x = P.zipWith (~+) (P.replicate n x) 
+                    (P.map (~* scaleFactor) (Random.randoms randomGenerator) )   
+-}
+        
 
+
+scatter :: 
+--  (Random.Random a, Product a, D.Storage c1 d1, D.Storage c d,
+--   D.FromList c1, D.FromList c, Random.RandomGen g,
+--   NestedList c1 d1 ~ [a], NestedList c d ~ [a]) =>
+  (SV.Storage v d, SV.FromList v, Sum d, Product d)=>
+  [d] -> Int -> d -> TC s t (Data (v :> Nil) d) -> TC s t (Data (v:> Nil) d)
+scatter randomList n scaleFactor s = fromList $ f $ toList s 
+  where f [] = [] 
+        f (_:[]) = [] 
+        f (x:xs) = genVals x ++ f xs
+        genVals x = P.zipWith (~+) (P.replicate n x) 
+                    (P.map (~* scaleFactor) randomList) --(Random.randoms randomGenerator) )   
+       
+
+densifyTime :: 
+  (SV.Storage v d, SV.FromList v,Sum d, Product d, Constant d)=>
+  P.Integer -> 
+  TC s1 t1 (Data (v :> Nil) d) -> 
+  TC s1 t1 (Data (v :> Nil) d)   
+densifyTime n s = fromList $ f $ toList s
+  where f [] = [] 
+        f (_:[]) = [] 
+        f (x:xs) = (P.map g  [0 .. (n P.- 1)]) ++ f xs
+          where g cnt = x ~+ (step ~* (Arith.fromInteger cnt))
+                step = ((P.head xs) ~- x)~/(Arith.fromInteger n)
+            

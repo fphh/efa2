@@ -77,6 +77,7 @@ import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Data.Ord.HT (inRange)
+import qualified System.Random as Random
 
 import qualified Prelude as P; import Prelude hiding (abs, map)
 
@@ -749,3 +750,20 @@ sumFlowRecord (Record dtime map) = Record (S.sum dtime) (Map.map (S.sum) map)
 makeStepped ::  (V.Storage v d1, V.FromList v, V.Storage v d2) =>
                 Record s1 s2 t1 t2 id v d1 d2 -> Record s1 s2 t1 t2 id v d1 d2
 makeStepped (Record time pmap) = Record (S.duplicateR time) $ Map.map (S.duplicateL) pmap 
+
+
+
+scatter :: 
+  (V.Storage v d1, V.FromList v, Constant d1, Ord id,
+   Random d2,
+   V.Storage v d2,
+   Product d2,
+   Random.RandomGen rnd) => 
+           rnd -> Int -> d2 -> Record s1 s2 t1 t2 id v d1 d2 -> Record s1 s2 t1 t2 id v d1 d2
+scatter randomGenerator number scale (Record time pMap)  = 
+  Record (S.densifyTime (P.toInteger number) time) 
+     (Map.fromList $ snd $ 
+      foldl (\ (rndList, xs) (k,x) -> (drop number rndList, xs ++ [(k,S.scatter rndList number scale x)])) 
+                                (randomList,[])  $ Map.toList pMap )
+  where 
+    randomList = Random.randoms randomGenerator 
