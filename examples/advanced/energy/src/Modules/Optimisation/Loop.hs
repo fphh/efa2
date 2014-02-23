@@ -144,7 +144,7 @@ balanceIteration::
   One.SystemParams node a ->
   One.OptimisationParams node [] Sweep UV.Vector a ->
   One.SimulationParams node simVec a ->
-  Map.Map Idx.State (Map.Map [a] (Type.PerStateSweep node Sweep UV.Vector a)) ->
+  Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node Sweep UV.Vector a)) ->
   Map.Map node (One.SocDrive a) ->
   Map.Map node (One.SocDrive a) ->
   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
@@ -386,7 +386,7 @@ iterateInnerLoop ::
   One.SystemParams node a ->
   One.OptimisationParams node [] Sweep UV.Vector a ->
   One.SimulationParams node sigVec a ->
-  Map.Map Idx.State (Map.Map [a] (Type.PerStateSweep node Sweep UV.Vector a)) ->
+  Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node Sweep UV.Vector a)) ->
   Map.Map node (One.SocDrive a) ->
   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
   One.IndexConversionMap ->

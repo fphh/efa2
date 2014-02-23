@@ -121,7 +121,7 @@ solve ::
   Map Name (a -> a) ->
   Idx.State ->
   ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a ->
-  Type.PerStateSweep node sweep vec a
+  Type.SweepPerReq node sweep vec a
 solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
   let
       ss = Sweep.unList (ReqsAndDofs.reqs pts)
@@ -148,7 +148,7 @@ solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
                                            Just e -> e
                                            Nothing -> error "Optimise.solve: position not found"
 
-  in Type.PerStateSweep
+  in Type.SweepPerReq
        eta
        (DoubleSweep.checkGreaterZero res)
        (toPowerMap res)

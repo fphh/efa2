@@ -518,12 +518,34 @@ sweepStackPerStateEta ::
   IO ()
 sweepStackPerStateEta terminal params =
   let len = One.sweepLength params
-  in plotSweeps terminal id "Per State Sweep"
+  in plotSweeps terminal id "Per State Sweep -- Eta"
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
      . Map.map (Map.map Type.etaSys) -- . Type.sweepData
-
+     
+{-
+sweepStackPerStateStoragePower ::
+  (Show (vec Double),a ~ Double,
+   Node.C node,
+   Arith.Product (sweep vec a),
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Terminal.C term) =>
+  (FilePath -> IO term) ->
+  node ->
+  One.OptimisationParams node f sweep vec a ->
+  Type.Sweep node sweep vec a ->
+  IO ()
+sweepStackPerStateStoragePower terminal node params =
+  let len = One.sweepLength params
+  in plotSweeps terminal id "Per State Sweep -- Power"
+     . Map.map (matrix2ListOfMatrices len
+                . Sig.map Sweep.toList
+                . sweepResultTo2DMatrix len)
+     . Map.map (Map.map . (Map.! node Type.storagePowerMap) )
+-}
+     
 plotOptimal ::
   (Terminal.C term, Ord b) =>
   term ->

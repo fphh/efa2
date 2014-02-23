@@ -237,7 +237,7 @@ optimiseAndSimulate :: (efaVec ~ simVec,intVec ~ simVec,a ~ d,intVec ~ [],
   -> Map.Map Idx.AbsoluteState (One.StateForcing a)
   -> Map.Map
   Idx.State
-  (Map.Map [a] (Type.PerStateSweep node sweep UV.Vector a))
+  (Map.Map [a] (Type.SweepPerReq node sweep UV.Vector a))
   -> One.IndexConversionMap
   -> (Type.OptimisationPerState node a,
       Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)
@@ -250,7 +250,7 @@ optimiseAndSimulate sysParams optParams simParams balanceForcing stateForcing pe
       efa = energyFlowAnalysis sysParams simParams $ Type.signals sim
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
 
-  in (Type.OptimisePerState perStateOptimum perStateAverage,
+  in (Type.OptimisationPerState perStateOptimum perStateAverage,
      Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep)
 
 

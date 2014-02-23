@@ -36,10 +36,8 @@ type PerStateSweepVariable node sweep vec a =
 
 type OptimalSolutionPerState node a =
   Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a)))
-                     --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 
 type AverageSolutionPerState node a = Map Idx.State (Map [a] (Maybe a))
-  --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 
 type OptimalSolution node a = Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 
@@ -48,8 +46,8 @@ type ControlMatrices node vec a = Map (TopoIdx.Position node) (Sig.PSignal2 Vect
 type EqSystem node a =
   forall s. StateAbs.EquationSystemIgnore node s a a
 
-
-type Sweep node sweep vec a = Map Idx.State (Map [a] (PerStateSweep node sweep vec a))
+-- | Complete Sweep over all States and complete Requirement Room
+type Sweep node sweep vec a = Map Idx.State (Map [a] (SweepPerReq node sweep vec a))
 
 {-
 data Sweep node sweep vec a = Sweep {
@@ -57,8 +55,9 @@ data Sweep node sweep vec a = Sweep {
     sweepStoragePower :: Map Idx.State (Map node (Maybe (sweep vec a)))}
 -}
 
-data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
-  PerStateSweep {
+-- | Sweep over one Position in Requirement Room
+data SweepPerReq node (sweep :: (* -> *) -> * -> *) vec a =
+   SweepPerReq {
     etaSys :: Result (sweep vec a),
     condVec :: Result (sweep vec Bool),
     storagePowerMap :: Map Idx.State (Map node (Maybe (sweep vec a))),
@@ -80,7 +79,7 @@ data EnergyFlowAnalysis node vec a = EnergyFlowAnalysis {
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data (vec :> Nil) a)),
     stateFlowGraph :: EnvResult node (Data Nil a)}
 
-data OptimisationPerState node a = OptimisePerState {
+data OptimisationPerState node a = OptimisationPerState {
     optimalSolutionPerState :: OptimalSolutionPerState node a,
     averageSolutionPerState :: AverageSolutionPerState node a}
 

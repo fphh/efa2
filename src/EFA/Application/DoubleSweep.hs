@@ -123,14 +123,14 @@ findBestIndex ::
   (sweep UV.Vector a) ->
   Maybe (Int, a, a)
 
-findBestIndex cond esys force = 
+findBestIndex cond esys objVal = 
   if UV.null fv
      then Nothing
      else Just (idx, o, e)
   where
         c1 = Sweep.fromSweep cond
         e1 = Sweep.fromSweep esys
-        objf1 = Sweep.fromSweep force
+        objf1 = Sweep.fromSweep objVal
         
 {-        comparingWithNaN p x y = case (isNaN $ p x,isNaN $ p y) of 
           (True,True) -> EQ
@@ -200,10 +200,10 @@ optimalSolutionState2 ::
    Sweep.SweepMap sweep UV.Vector a Bool) =>
   ( Map Idx.State (Map node (Maybe (sweep UV.Vector a))) ->
       Result (sweep UV.Vector a) ) ->
-  Type.PerStateSweep node sweep UV.Vector a ->
+  Type.SweepPerReq node sweep UV.Vector a ->
   Maybe (a, a, StateFlow.Graph node (Result a) (Result a))
 
-optimalSolutionState2 forcing (Type.PerStateSweep esys condVec powerMap env) =
+optimalSolutionState2 forcing (Type.SweepPerReq esys condVec powerMap env) =
   let force = forcing powerMap
       bestIdx = liftA3 findBestIndex condVec esys (liftA2 (Arith.~+) force esys)
   in case bestIdx of
@@ -219,8 +219,8 @@ expectedValue ::
   (Arith.Constant a, Arith.Sum a, UV.Unbox a,
    Sweep.SweepClass sweep UV.Vector Bool,
    Sweep.SweepClass sweep UV.Vector a) =>
-  Type.PerStateSweep node sweep UV.Vector a -> Maybe a
-expectedValue (Type.PerStateSweep (Determined esys) (Determined condVec) _ _) =
+  Type.SweepPerReq node sweep UV.Vector a -> Maybe a
+expectedValue (Type.SweepPerReq (Determined esys) (Determined condVec) _ _) =
   Just (s Arith.~/ n)
   where c = Sweep.fromSweep condVec
         e = Sweep.fromSweep esys

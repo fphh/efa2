@@ -70,7 +70,7 @@ perStateSweep ::
   One.SystemParams node a ->
   One.OptimisationParams node list sweep vec a ->
   StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
-  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep vec a))
+  Map Idx.State (Map (list a) (Type.SweepPerReq node sweep vec a))
 perStateSweep sysParams optParams stateFlowGraph  =
   Map.mapWithKey f states
   where states = StateQty.states stateFlowGraph
@@ -129,7 +129,7 @@ optimalObjectivePerState ::
    Sweep.SweepMap sweep UV.Vector  a a) =>
   One.OptimisationParams node list sweep UV.Vector a ->
   Map node (One.SocDrive a)->
-  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
+  Map Idx.State (Map (list a) (Type.SweepPerReq node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
 optimalObjectivePerState params balanceForcing =
   Map.mapWithKey $
@@ -145,7 +145,7 @@ expectedValuePerState ::
    Arith.Constant a,
    Sweep.SweepClass sweep UV.Vector a,
    Sweep.SweepClass sweep UV.Vector Bool) =>
-  Map Idx.State (Map (list a) (Type.PerStateSweep node sweep UV.Vector a)) ->
+  Map Idx.State (Map (list a) (Type.SweepPerReq node sweep UV.Vector a)) ->
   Map Idx.State (Map (list a) (Maybe a))
 expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
