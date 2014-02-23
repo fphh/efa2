@@ -198,7 +198,7 @@ optimalSolutionState2 ::
    Sweep.SweepVector UV.Vector Bool,
    Sweep.SweepClass sweep UV.Vector Bool,
    Sweep.SweepMap sweep UV.Vector a Bool) =>
-  ( Map Idx.State (Map node (Maybe (sweep UV.Vector a))) ->
+  (Type.StoragePowerMap node sweep UV.Vector a  ->
       Result (sweep UV.Vector a) ) ->
   Type.SweepPerReq node sweep UV.Vector a ->
   Maybe (a, a, StateFlow.Graph node (Result a) (Result a))
@@ -212,7 +212,6 @@ optimalSolutionState2 forcing (Type.SweepPerReq esys condVec powerMap env) =
                 env2 = StateFlow.mapGraph choose choose env
             in Just (x, y, env2)
           _ -> Nothing
-
 
 
 expectedValue ::

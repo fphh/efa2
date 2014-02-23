@@ -30,8 +30,8 @@ import Data.Map (Map)
 type EnvResult node a = StateQty.Graph node (Result a) (Result a)
 
 
-type PerStateSweepVariable node sweep vec a =
-  Map Idx.State (Map node (Maybe ((sweep::(* -> *) -> * -> *) vec a)))
+-- type PerStateSweepVariable node sweep vec a =
+--  Map Idx.State (Map node (Maybe ((sweep::(* -> *) -> * -> *) vec a)))
 
 
 type OptimalSolutionPerState node a =
@@ -55,12 +55,14 @@ data Sweep node sweep vec a = Sweep {
     sweepStoragePower :: Map Idx.State (Map node (Maybe (sweep vec a)))}
 -}
 
+type StoragePowerMap node (sweep :: (* -> *) -> * -> *) vec a = Map node (Maybe (sweep vec a))
+
 -- | Sweep over one Position in Requirement Room
 data SweepPerReq node (sweep :: (* -> *) -> * -> *) vec a =
    SweepPerReq {
     etaSys :: Result (sweep vec a),
     condVec :: Result (sweep vec Bool),
-    storagePowerMap :: Map Idx.State (Map node (Maybe (sweep vec a))),
+    storagePowerMap :: StoragePowerMap node sweep vec a, --Map node (Maybe (sweep vec a)),
     envResult :: EnvResult node (sweep vec a) }
 
 data Interpolation node vec a =

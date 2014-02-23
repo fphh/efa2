@@ -53,6 +53,7 @@ import qualified Data.Foldable as Fold
 import qualified Data.Vector.Unboxed as UV(Unbox)
 import Data.Monoid (Monoid)
 import qualified Data.Set as Set
+import qualified Data.Maybe as Maybe
 import Data.Monoid ((<>), mempty)
 
 import Control.Monad (join)
@@ -82,10 +83,13 @@ options =
 toPowerMap ::
   (Ord node, Show node, Arith.Sum (sweep vec a)) =>
   StateQty.Graph node b (Result (sweep vec a)) ->
-  Type.PerStateSweepVariable node sweep vec a
-toPowerMap graph = Map.mapWithKey f states
-  where states = fmap Topology.topology $ State.states graph
-        f state flowTopo = Map.mapWithKey (g state flowTopo) $ State.storages graph
+  Idx.State ->
+  Type.StoragePowerMap node sweep vec a
+toPowerMap graph state = Map.mapWithKey (g state flowTopo) $ State.storages graph --Map.mapWithKey f states
+  where flowTopo = Maybe.fromMaybe (error $ "toPowerMap State" ++ show state ++  "not in Graph") 
+                   (Map.lookup state $ fmap Topology.topology $ State.states graph)
+    -- states = fmap Topology.topology $ State.states graph
+        -- f state flowTopo = Map.mapWithKey (g state flowTopo) $ State.storages graph
 
         look p = join $ fmap toMaybe $ StateQty.lookup p graph
 
@@ -151,7 +155,7 @@ solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
   in Type.SweepPerReq
        eta
        (DoubleSweep.checkGreaterZero res)
-       (toPowerMap res)
+       (toPowerMap res state)
        res
 
 commonGiven ::

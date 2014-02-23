@@ -99,14 +99,10 @@ forcing ::
   Map node (One.SocDrive a)->
   One.OptimisationParams node list sweep vec a ->
   Idx.State ->
-  Map Idx.State (Map node (Maybe (sweep vec a))) ->
+  Type.StoragePowerMap node sweep vec a ->
   Result (sweep vec a)
-forcing balanceForcing params state m = Determined $
-  case Map.lookup state m of
-    Nothing ->
-      error $ "forcing failed, because state not found: " ++ show state
-    Just powerMap ->
-        Map.foldWithKey f zero balanceForcing
+forcing balanceForcing params state powerMap = Determined $
+  Map.foldWithKey f zero balanceForcing
       where
         zero = Sweep.fromRational (One.sweepLength params) Arith.zero
 

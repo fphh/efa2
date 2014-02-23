@@ -552,7 +552,7 @@ printEtaLoop optParams ol =
   iterateLoops (optParams) printEtaLoopItem printInnerLoopItem printBalanceLoopItem printStateLoopItem ol
 
 printEtaLoopItem ::
-  (UV.Unbox a,sweep~Sweep,vec~UV.Vector,a~Double,
+  (UV.Unbox a,sweep~Sweep,vec~UV.Vector,a~Double,node~Node,
    Node.C node,
    FormatValue.FormatValue a,
    Arith.Product (sweep vec a),
@@ -567,6 +567,7 @@ printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sweep _sfgOut res) = --prin
         term = ModPlot.gpXTerm
 
     ModPlot.sweepStackPerStateEta term params _sweep
+    ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
 --    putStrLn (printf "Loop %6.6d" olcnt)
 
 --    concurrentlyMany_ [

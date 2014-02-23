@@ -524,27 +524,31 @@ sweepStackPerStateEta terminal params =
                 . sweepResultTo2DMatrix len)
      . Map.map (Map.map Type.etaSys) -- . Type.sweepData
      
-{-
+
 sweepStackPerStateStoragePower ::
-  (Show (vec Double),a ~ Double,
+  (Show (vec Double),a ~ Double,Show node,
    Node.C node,
    Arith.Product (sweep vec a),
    Sweep.SweepVector vec a,
    Sweep.SweepClass sweep vec a,
    Terminal.C term) =>
   (FilePath -> IO term) ->
-  node ->
   One.OptimisationParams node f sweep vec a ->
+  node ->  
   Type.Sweep node sweep vec a ->
   IO ()
-sweepStackPerStateStoragePower terminal node params =
+sweepStackPerStateStoragePower terminal params node =
   let len = One.sweepLength params
+      f m = Map.lookup node m
+      g (Just (Just x)) = Determined x
+      g _ = error ("Error in sweepStackPerStateStoragePower - no StoragePower found for node: " ++ show node)
+      
   in plotSweeps terminal id "Per State Sweep -- Power"
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
-     . Map.map (Map.map . (Map.! node Type.storagePowerMap) )
--}
+     . Map.map (Map.map (g . f . Type.storagePowerMap))
+
      
 plotOptimal ::
   (Terminal.C term, Ord b) =>
