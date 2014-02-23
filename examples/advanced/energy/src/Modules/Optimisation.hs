@@ -85,13 +85,11 @@ toPowerMap ::
   StateQty.Graph node b (Result (sweep vec a)) ->
   Idx.State ->
   Type.StoragePowerMap node sweep vec a
-toPowerMap graph state = Map.mapWithKey (g state flowTopo) $ State.storages graph --Map.mapWithKey f states
+toPowerMap graph state = Map.mapWithKey (g state flowTopo) $ State.storages graph
   where flowTopo = Maybe.fromMaybe (error $ "toPowerMap State" ++ show state ++  "not in Graph") 
                    (Map.lookup state $ fmap Topology.topology $ State.states graph)
-    -- states = fmap Topology.topology $ State.states graph
-        -- f state flowTopo = Map.mapWithKey (g state flowTopo) $ State.storages graph
 
-        look p = join $ fmap toMaybe $ StateQty.lookup p graph
+        look p = StateQty.lookup p graph -- join $ fmap toMaybe $ StateQty.lookup p graph
 
         g state flowTopo stoNode _ =
           h $ case Set.toAscList $ Graph.adjacentEdges flowTopo stoNode of
@@ -102,7 +100,7 @@ toPowerMap graph state = Map.mapWithKey (g state flowTopo) $ State.storages grap
                 h (Graph.EDirEdge (Graph.DirEdge from to)) =
                   (if stoNode == from
                       then look
-                      else fmap Arith.negate . look . ModUt.flipPower)
+                      else (fmap $ fmap Arith.negate) . look . ModUt.flipPower)
                       (StateIdx.power state from to)
                 h _ = error "toPowerMap: undir edge"
 

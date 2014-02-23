@@ -261,10 +261,7 @@ optimiseStateAndSimulate:: (d ~ a, intVec ~ [], simVec ~ [], b ~ a, efaVec ~ [],
   -> One.OptimisationParams node list sweep vec a
   -> One.SimulationParams node [] b
   -> Map.Map Idx.AbsoluteState (One.StateForcing b)
-  -> Map.Map
-  Idx.State
-  (Map.Map
-   [b] (Maybe (b, b, Type.EnvResult node b)))
+  -> Type.OptimalSolutionPerState node a
   -> One.IndexConversionMap
   -> Type.OptimiseStateAndSimulate node sweep vec a intVec b simVec c efaVec d
 optimiseStateAndSimulate sysParams optParams simParams stateForcing perStateOptimum indexConversionMap =

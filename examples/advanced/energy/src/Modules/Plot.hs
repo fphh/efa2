@@ -174,12 +174,12 @@ plotGraphMaps ::
   (FormatValue.FormatValue a, Show a, Filename [a], Node.C node) =>
   (String -> DotGraph Text -> IO ()) ->
   String ->
-  Map [a] (Maybe (a, a, Type.EnvResult node a)) ->
+  Map [a] (Maybe (a, a, Int, Type.EnvResult node a)) ->
   IO ()
 plotGraphMaps terminal title =
   sequence_ . Map.elems . Map.mapWithKey
     (\reqs -> maybe (return ())
-        (\(objVal, eta, graph) -> do
+        (\(objVal, eta, _, graph) -> do
               let str = filename title </> filename reqs
               terminal str
                    $ Draw.bgcolour Lavender
@@ -193,7 +193,7 @@ plotGraphMaps terminal title =
 plotGraphMapOfMaps ::
   (FormatValue.FormatValue a, Show a, Filename [a], Node.C node) =>
   (String -> DotGraph Text -> IO ()) ->
-  Map Idx.State (Map [a] (Maybe (a, a, Type.EnvResult node a))) ->
+  Type.OptimalSolutionPerState node a -> --Map Idx.State (Map [a] (Maybe (a, a, Type.EnvResult node a))) ->
   IO ()
 plotGraphMapOfMaps terminal =
   sequence_ . Map.elems . Map.mapWithKey (plotGraphMaps terminal . show)
@@ -434,7 +434,7 @@ maxPerState ::
   (Terminal.C term,a ~ Double) =>
   (FilePath -> IO term) ->
   String ->
-  (Map Idx.State (Map [Double] (Maybe (Double, Double, Type.EnvResult node Double))) ->
+  (Type.OptimalSolutionPerState node a ->
    Map Idx.State (Map [Double] Double)) ->
   Type.OptimisationPerState node a ->
   IO ()
@@ -453,7 +453,10 @@ maxObjPerState terminal =
   maxPerState terminal "Maximal Objective Per State" ModUt.getMaxObj
 
 maxEtaPerState terminal =
-  maxPerState terminal "Maximal Eta Per State" ModUt.getMaxEta
+  maxPerState terminal "Chosen Eta Per State" ModUt.getMaxEta
+  
+maxIndexPerState terminal =
+  maxPerState terminal "Chosen Index Per State" ModUt.getMaxIndex
 
 expectedEtaPerState ::
   (Terminal.C term, a ~ Double) =>
@@ -540,7 +543,7 @@ sweepStackPerStateStoragePower ::
 sweepStackPerStateStoragePower terminal params node =
   let len = One.sweepLength params
       f m = Map.lookup node m
-      g (Just (Just x)) = Determined x
+      g (Just (Just x)) = x
       g _ = error ("Error in sweepStackPerStateStoragePower - no StoragePower found for node: " ++ show node)
       
   in plotSweeps terminal id "Per State Sweep -- Power"
@@ -548,6 +551,30 @@ sweepStackPerStateStoragePower terminal params node =
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
      . Map.map (Map.map (g . f . Type.storagePowerMap))
+{-
+sweepStackPerStateOpt ::
+  (Show (vec Double),a ~ Double,
+   Node.C node,
+   Arith.Product (sweep vec a),
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Terminal.C term) =>
+  (FilePath -> IO term) ->
+  One.OptimisationParams node f sweep vec a ->
+  (Idx.State -> Type.StoragePowerMap node sweep UV.Vector a  -> 
+      Result (sweep UV.Vector a)) ->
+  Type.Sweep node sweep vec a ->
+  IO ()
+sweepStackPerStateOpt terminal params forcing =
+  let len = One.sweepLength params
+      f st res = (Type.etaSys res) Arith.~+  forcing st (Type.storagePowerMap res)
+              
+  in plotSweeps terminal id "Per State Sweep -- Opt"
+     . Map.mapWithKey (\state m -> (matrix2ListOfMatrices len
+                $ Sig.map Sweep.toList
+                $ sweepResultTo2DMatrix len 
+     $ Map.map (Map.map f state) m))
+-}
 
 sweepStackPerStateCondition ::
   (Show (vec Double),a ~ Double,Show node,sweep ~ Sweep.Sweep,vec ~ UV.Vector,
@@ -577,7 +604,7 @@ sweepStackPerStateCondition terminal params =
 plotOptimal ::
   (Terminal.C term, Ord b) =>
   term ->
-  (Idx.State -> (b, b, Type.EnvResult node b) -> Double) ->
+  (Idx.State -> (b, b, Int,Type.EnvResult node b) -> Double) ->
   String -> Type.OptimisationPerState node b -> IO ()
 plotOptimal terminal f title =
   AppPlot.surfaceWithOpts title
@@ -597,11 +624,11 @@ optimalObjs, optimalEtas ::
   IO ()
 optimalObjs terminal opt = do
   t <- terminal "optimalObjs"
-  plotOptimal t (const fst3) "Maximal Objective Function Surfaces" opt
+  plotOptimal t (const ModUt.fst4) "Maximal Objective Function Surfaces" opt
 
 optimalEtas terminal opt = do
   t <- terminal "optimalEtas"
-  plotOptimal t (const snd3) "Maximal Eta Surfaces" opt
+  plotOptimal t (const ModUt.snd4) "Maximal Eta Surfaces" opt
 
 optimalPos ::
   (Node.C node, Filename node, Terminal.C term, a ~ Double) =>
@@ -612,7 +639,7 @@ optimalPos ::
 optimalPos pos@(TopoIdx.Position f t) terminal opt = do
   term <- terminal $ filename ("optimalPos", pos)
   let str = "Optimal " ++ showEdge pos
-  plotOptimal term (\st -> (g . StateQty.lookup (StateIdx.power st f t) . thd3)) str opt
+  plotOptimal term (\st -> (g . StateQty.lookup (StateIdx.power st f t) . ModUt.frth4)) str opt
   where g (Just (Determined x)) = x
         g _ = ModUt.nan
 

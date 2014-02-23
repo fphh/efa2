@@ -43,7 +43,7 @@ import qualified EFA.Signal.Vector as Vec
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Result (Result(Determined))
+import EFA.Equation.Result (Result(Determined,Undetermined))
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.List as List
@@ -101,15 +101,20 @@ forcing ::
   Idx.State ->
   Type.StoragePowerMap node sweep vec a ->
   Result (sweep vec a)
-forcing balanceForcing params state powerMap = Determined $
+forcing balanceForcing params state powerMap = -- Determined $
   Map.foldWithKey f zero balanceForcing
       where
-        zero = Sweep.fromRational (One.sweepLength params) Arith.zero
-
-        f stoNode forcingFactor acc = acc Arith.~+
-          maybe (error $ "forcing failed, because node not found: " ++ show stoNode)
-                (Sweep.map (One.getSocDrive forcingFactor Arith.~*))
-                (join $ Map.lookup stoNode powerMap)
+        zero = Determined $ Sweep.fromRational (One.sweepLength params) Arith.zero
+        f stoNode forcingFactor acc = g acc force -- (acc Arith.~+)
+                 
+          where
+            g (Determined acc) (Determined fo) = Determined $ acc Arith.~+ fo
+            g _ _ = Undetermined
+              
+            force = fmap (Sweep.map (One.getSocDrive forcingFactor Arith.~*)) stoPower
+            stoPower = maybe (error $ "forcing failed, because node not found: " 
+                  ++ show stoNode)  id $ join $  
+                      Map.lookup stoNode powerMap
 
 
 optimalObjectivePerState ::
@@ -125,8 +130,8 @@ optimalObjectivePerState ::
    Sweep.SweepMap sweep UV.Vector  a a) =>
   One.OptimisationParams node list sweep UV.Vector a ->
   Map node (One.SocDrive a)->
-  Map Idx.State (Map (list a) (Type.SweepPerReq node sweep UV.Vector a)) ->
-  Map Idx.State (Map (list a) (Maybe (a, a, EnvResult node a)))
+  Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
+  Type.OptimalSolutionPerState node a 
 optimalObjectivePerState params balanceForcing =
   Map.mapWithKey $
     Map.map
@@ -171,14 +176,15 @@ selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a,RealFloat a) =>
   One.OptimisationParams node list sweep vec a ->
   Map Idx.AbsoluteState (One.StateForcing a) ->
-  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
+--  Map Idx.State (Map [a] (Maybe (a, a, Int, EnvResult node a))) ->
+  Type.OptimalSolutionPerState node a ->
   One.IndexConversionMap ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 selectOptimalState _params stateForcing stateMap indexConversionMap =
   List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxByWithNaN ModUt.fst4))
   $ map (\(st, m) ->
       Map.map (fmap
-        (\(objVal, eta, env) ->
+        (\(objVal, eta, _ ,env) ->
             (objVal Arith.~+
              maybe (error "Base.selectOptimalState")
                    One.unpackStateForcing

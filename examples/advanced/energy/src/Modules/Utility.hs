@@ -87,16 +87,21 @@ resolveInvalidPts dflt f m = Map.map (Map.map (maybe dflt f)) m
 
 getMaxObj, getMaxEta ::
   (Arith.Constant a) =>
-  Map k0 (Map k1 (Maybe (a, a, b))) -> Map k0 (Map k1 a)
-getMaxObj = resolveInvalidPts nan fst3
-getMaxEta = resolveInvalidPts nan snd3
+--  Map k0 (Map k1 (Maybe (a, a, Int,b))) -> Map k0 (Map k1 a)
+  Type.OptimalSolutionPerState node a -> Map Idx.State (Map [a] a)
+getMaxObj = resolveInvalidPts nan fst4
+getMaxEta = resolveInvalidPts nan snd4
 
+getMaxIndex ::  (Arith.Constant a, Num a) =>
+                Type.OptimalSolutionPerState node a -> Map Idx.State (Map [a] a)
+getMaxIndex = resolveInvalidPts nan (fromIntegral . thd4)
 
 getMaxPos ::
   (Arith.Constant a, StateQty.Lookup (Idx.InPart part qty), Ord node) =>
   Idx.InPart part qty node ->
-  Map k0 (Map k1 (Maybe (a, a, Type.EnvResult node a))) -> Map k0 (Map k1 a)
-getMaxPos pos = resolveInvalidPts nan (f . StateQty.lookup pos . thd3)
+  Type.OptimalSolutionPerState node a --Map k0 (Map k1 (Maybe (a, a, Int, Type.EnvResult node a))) 
+  -> Map Idx.State (Map [a] a)
+getMaxPos pos = resolveInvalidPts nan (f . StateQty.lookup pos . frth4)
   where f (Just (Determined x)) = x
         f _ = nan
 

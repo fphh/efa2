@@ -187,8 +187,16 @@ findBestIndex cond esys objVal =
              then (cnt, cnt+1, f2, es2)
              else (bestIdx, cnt+1, fo, eo)
 -}
-
-
+{-
+objectiveValue ::
+  (Type.StoragePowerMap node sweep UV.Vector a  ->
+      Result (sweep UV.Vector a) ) ->
+  Type.SweepPerReq node sweep UV.Vector a ->
+  Type.SweepPerReq node sweep UV.Vector a
+objectiveValue forcing (Type.SweepPerReq esys condVec powerMap env) = liftA2 (Arith.~+) force esys
+  where force = forcing powerMap
+-}
+          
 optimalSolutionState2 ::
   (Ord a, Node.C node, Arith.Constant a, UV.Unbox a,RealFloat a,
    Arith.Product (sweep UV.Vector a),
@@ -201,7 +209,7 @@ optimalSolutionState2 ::
   (Type.StoragePowerMap node sweep UV.Vector a  ->
       Result (sweep UV.Vector a) ) ->
   Type.SweepPerReq node sweep UV.Vector a ->
-  Maybe (a, a, StateFlow.Graph node (Result a) (Result a))
+  Maybe (a, a, Int,StateFlow.Graph node (Result a) (Result a))
 
 optimalSolutionState2 forcing (Type.SweepPerReq esys condVec powerMap env) =
   let force = forcing powerMap
@@ -210,7 +218,7 @@ optimalSolutionState2 forcing (Type.SweepPerReq esys condVec powerMap env) =
           Determined (Just (n, x, y)) ->
             let choose = fmap (Sweep.!!! n)
                 env2 = StateFlow.mapGraph choose choose env
-            in Just (x, y, env2)
+            in Just (x, y, n, env2)
           _ -> Nothing
 
 

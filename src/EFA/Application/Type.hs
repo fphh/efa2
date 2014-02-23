@@ -33,12 +33,17 @@ type EnvResult node a = StateQty.Graph node (Result a) (Result a)
 -- type PerStateSweepVariable node sweep vec a =
 --  Map Idx.State (Map node (Maybe ((sweep::(* -> *) -> * -> *) vec a)))
 
-
+-- | Data Type to store the optimal solution per state
 type OptimalSolutionPerState node a =
-  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a)))
+  Map Idx.State (Map [a] (Maybe (a, a, Int, EnvResult node a)))
+  
+-- | Data Type to store the stack of the optimal abjective Function per state
+type OptStackPerState a =  Map Idx.State (Map [a] (Maybe a))
 
+-- | Data Type to store the average solution per state
 type AverageSolutionPerState node a = Map Idx.State (Map [a] (Maybe a))
 
+-- | Data Type to store the optimal solution of all states
 type OptimalSolution node a = Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 
 type ControlMatrices node vec a = Map (TopoIdx.Position node) (Sig.PSignal2 Vector vec a)
@@ -55,7 +60,7 @@ data Sweep node sweep vec a = Sweep {
     sweepStoragePower :: Map Idx.State (Map node (Maybe (sweep vec a)))}
 -}
 
-type StoragePowerMap node (sweep :: (* -> *) -> * -> *) vec a = Map node (Maybe (sweep vec a))
+type StoragePowerMap node (sweep :: (* -> *) -> * -> *) vec a = Map node (Maybe (Result (sweep vec a)))
 
 -- | Sweep over one Position in Requirement Room
 data SweepPerReq node (sweep :: (* -> *) -> * -> *) vec a =
@@ -82,6 +87,7 @@ data EnergyFlowAnalysis node vec a = EnergyFlowAnalysis {
     stateFlowGraph :: EnvResult node (Data Nil a)}
 
 data OptimisationPerState node a = OptimisationPerState {
+--    optimalSolutionStackPerState :: OptStackPerState a,
     optimalSolutionPerState :: OptimalSolutionPerState node a,
     averageSolutionPerState :: AverageSolutionPerState node a}
 

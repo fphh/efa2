@@ -276,7 +276,8 @@ stateIteration ::
   One.SystemParams node a ->
   One.OptimisationParams node [] Sweep UV.Vector a ->
   One.SimulationParams node sigVec a ->
-  Map.Map Idx.State (Map.Map [a] (Maybe (a, a, EnvResult node a))) ->
+--  Map.Map Idx.State (Map.Map [a] (Maybe (a, a, EnvResult node a))) ->
+  Type.OptimalSolutionPerState node a ->
   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
   Maybe (Map.Map Idx.AbsoluteState (One.StateForcingStep a)) ->
   One.IndexConversionMap ->
@@ -566,8 +567,8 @@ printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sweep _sfgOut res) = --prin
   --    gasPos = TopoIdx.Position System.Gas System.LocalNetwork
         term = ModPlot.gpXTerm
 
---    ModPlot.sweepStackPerStateEta term params _sweep
---    ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
+    ModPlot.sweepStackPerStateEta term params _sweep
+    ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
     ModPlot.sweepStackPerStateCondition term params  _sweep
 --    putStrLn (printf "Loop %6.6d" olcnt)
 
@@ -638,20 +639,21 @@ printBalanceLoopItem optParams b@(BalanceLoopItem bStp _bForcing _bFStep _bal re
          _dir = printf "outer-loop-%6.6d" bStp
          _stoPos = TopoIdx.Position System.Water System.Network
      putStrLn $ showBalanceLoopItem optParams b   
+     ModPlot.maxIndexPerState term _opt
 --     ModPlot.maxEta _xTerm opt2
-     ModPlot.maxEta term opt2
-     ModPlot.optimalObjs term _opt
+--     ModPlot.maxEta term opt2
+--     ModPlot.optimalObjs term _opt
      ModPlot.stateRange2 term _opt
 
      putStrLn $ show $ Type.signals $ Type.simulation $ opt2
-     ModPlot.simulationSignals term opt2
+--     ModPlot.simulationSignals term opt2
 --    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
 --     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
 --     ModPlot.givenSignals term opt2
 --    ModPlot.maxEtaPerState (ModPlot.gpPNG dir bStep) opt
    -- ModPlot.maxPosPerState (ModPlot.gpPNG dir bStep) stoPos opt
 
-     ModPlot.maxPos _stoPos term opt2
+--     ModPlot.maxPos _stoPos term opt2
 
     -- das aktiviert das schreiben der zustandsflussgraphen
     -- pro parzelle (Achtung, ziemlich viel!!!)
