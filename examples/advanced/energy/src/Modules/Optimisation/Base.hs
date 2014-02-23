@@ -57,7 +57,6 @@ import Control.Applicative (liftA2)
 
 
 
--- PG ?? - Wo wird hier die Leistung des Speichers rausgezogen und Vorzeichenkorrigiert ? 
 perStateSweep ::
   (Node.C node, Show node,
    Ord a, Show a, UV.Unbox a, Arith.ZeroTestable (sweep vec a),
@@ -90,7 +89,7 @@ perStateSweep sysParams optParams stateFlowGraph  =
 
 
 
-forcing ::
+balForcing ::
   (Ord node, Show node,
    Sweep.SweepClass sweep vec a,
    Arith.Sum (sweep vec a),
@@ -98,23 +97,39 @@ forcing ::
    Arith.Constant a) =>
   Map node (One.SocDrive a)->
   One.OptimisationParams node list sweep vec a ->
-  Idx.State ->
   Type.StoragePowerMap node sweep vec a ->
   Result (sweep vec a)
-forcing balanceForcing params state powerMap = -- Determined $
+balForcing balanceForcing params powerMap = 
   Map.foldWithKey f zero balanceForcing
       where
         zero = Determined $ Sweep.fromRational (One.sweepLength params) Arith.zero
-        f stoNode forcingFactor acc = g acc force -- (acc Arith.~+)
-                 
+        f stoNode forcingFactor acc = g acc force
           where
-            g (Determined acc) (Determined fo) = Determined $ acc Arith.~+ fo
+            g (Determined ac) (Determined fo) = Determined $ ac Arith.~+ fo
             g _ _ = Undetermined
               
             force = fmap (Sweep.map (One.getSocDrive forcingFactor Arith.~*)) stoPower
             stoPower = maybe (error $ "forcing failed, because node not found: " 
                   ++ show stoNode)  id $ join $  
                       Map.lookup stoNode powerMap
+
+
+optStackPerState :: 
+  (UV.Unbox a,
+   Arith.Sum a,
+   Sweep.SweepClass sweep UV.Vector a, 
+   Ord node,
+   Show node,
+   Arith.Sum (sweep UV.Vector a),
+   Arith.Constant a,
+   Sweep.SweepClass sweep UV.Vector (a, a)) =>
+  One.OptimisationParams node list sweep UV.Vector a ->
+  Map node (One.SocDrive a)->
+  Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
+  Type.OptStackPerState sweep UV.Vector a
+optStackPerState params balanceForcing  = 
+  Map.map $ Map.map
+    (DoubleSweep.objectiveValue (balForcing balanceForcing params)) 
 
 
 optimalObjectivePerState ::
@@ -133,12 +148,10 @@ optimalObjectivePerState ::
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
   Type.OptimalSolutionPerState node a 
 optimalObjectivePerState params balanceForcing =
-  Map.mapWithKey $
+  Map.map $
     Map.map
-    . DoubleSweep.optimalSolutionState2
-    . forcing balanceForcing params
-
-
+    (DoubleSweep.optimalSolutionState2
+     (balForcing balanceForcing params))
 
 
 expectedValuePerState ::
@@ -151,32 +164,10 @@ expectedValuePerState ::
 expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
 
-{-
-selectOptimalState ::
-  (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a) =>
-  One.OptimisationParams node list sweep vec a ->
-  Map Idx.AbsoluteState (One.StateForcing a) ->
-  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
-  One.IndexConversionMap ->
-  Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
-selectOptimalState _params stateForcing stateMap indexConversionMap =
-  List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxBy ModUt.fst4))
-  $ map (\(st, m) ->
-      Map.map (fmap
-        (\(objVal, eta, env) ->
-            (objVal Arith.~+
-             maybe (error "Base.selectOptimalState")
-                   One.unpackStateForcing
-                     (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
-                         eta, st, env))) m)
-  $ Map.toList stateMap
--}
-
 selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a,RealFloat a) =>
   One.OptimisationParams node list sweep vec a ->
   Map Idx.AbsoluteState (One.StateForcing a) ->
---  Map Idx.State (Map [a] (Maybe (a, a, Int, EnvResult node a))) ->
   Type.OptimalSolutionPerState node a ->
   One.IndexConversionMap ->
   Map [a] (Maybe (a, a, Idx.State, EnvResult node a))

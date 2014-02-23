@@ -3,7 +3,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 module Modules.Optimisation.Loop where
-import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+--import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 
 import qualified Modules.System as System
@@ -22,13 +22,13 @@ import EFA.Application.Sweep (Sweep)
 
 --import qualified EFA.Graph as Graph
 --import EFA.Graph (Graph)
-import qualified EFA.Flow.Draw as Draw
+--import qualified EFA.Flow.Draw as Draw
 
 --import qualified EFA.Graph.Topology as Topology
 import qualified EFA.Graph.Topology.Node as Node
 import EFA.Equation.Arithmetic (Sign(Zero, Positive, Negative), (~*), (~+), (~/))
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified Graphics.Gnuplot.Terminal as Terminal
+--import qualified Graphics.Gnuplot.Terminal as Terminal
 
 --import EFA.Equation.Result (Result(Determined))
 
@@ -46,7 +46,7 @@ import qualified EFA.Flow.Part.Index as Idx
 import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data (Data(Data)) --, Nil, Apply)
 
-import EFA.Utility.List (vhead, vlast)
+import EFA.Utility.List (vlast) 
 import EFA.Utility.Async (concurrentlyMany_)
 
 --import qualified Data.Monoid as Monoid
@@ -351,7 +351,7 @@ changeStateForce optParams (y0,y1) (One.StateForcing x0,One.StateForcing x1) (id
      seed = One.stateForcingSeed optParams
      One.StateTimeThreshold uthr = One.stateTimeUpperThreshold optParams 
      One.StateTimeThreshold lthr = One.stateTimeLowerThreshold optParams      
-     g str = id --trace str
+     g _str = id --trace str
      st1 =
        let
          _3 = Arith.fromInteger 3
@@ -427,14 +427,14 @@ iterateEtaWhile sysParams optParams simParams = go 0  (One.stateFlowGraphOpt opt
    where 
          initBalF =  One.initialBattForcing optParams
          One.MaxEtaIterations maxCnt = One.maxEtaIterations optParams
-         go cnt sfg bfIn = EtaLoopItem cnt sfg sweep sfg1 res : 
+         go cnt sfg bfIn = EtaLoopItem cnt sfg swp sfg1 res : 
                            if cnt > (maxCnt-1) then [] 
                                  else go (cnt+1) sfg1 bfOut
            where
-            sweep = trace "sweep" $ Base.perStateSweep sysParams optParams sfg
+            swp = trace "sweep" $ Base.perStateSweep sysParams optParams sfg
             indexConversionMap = ModUt.indexConversionMap System.topology sfg
             statf = Map.map (const $ One.StateForcing Arith.zero) (Bimap.toMapR indexConversionMap)
-            (bfOut, res) = trace "traceInnerLoop" $ iterateInnerLoop sysParams optParams simParams sweep bfIn statf indexConversionMap
+            (bfOut, res) = trace "traceInnerLoop" $ iterateInnerLoop sysParams optParams simParams swp bfIn statf indexConversionMap
             sfg1 = Type.stateFlowGraphSweep
                    $ sResult
                    $ vlast "iterateEtaWhile 2"
@@ -566,10 +566,12 @@ printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sweep _sfgOut res) = --prin
     --  stoPos = TopoIdx.Position System.Water System.Network
   --    gasPos = TopoIdx.Position System.Gas System.LocalNetwork
         term = ModPlot.gpXTerm
+        balanceForcing =ilBForcOut $ vlast "printEtaLoopItem" res
 
     ModPlot.sweepStackPerStateEta term params _sweep
     ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
     ModPlot.sweepStackPerStateCondition term params  _sweep
+    ModPlot.sweepStackPerStateOpt term params balanceForcing _sweep
 --    putStrLn (printf "Loop %6.6d" olcnt)
 
 --    concurrentlyMany_ [

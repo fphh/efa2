@@ -63,7 +63,7 @@ import Prelude
            String, (++),
            Int, Double, (-), show,(==),(>=),(>), (<=),not,(&&),(||),Bool(True,False),Maybe(Just,Nothing))
 import qualified Prelude as P
-import qualified System.Random as Random
+--import qualified System.Random as Random
 
 ----------------------------------------------------------
 -- | Signal & Company

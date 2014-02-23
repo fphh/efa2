@@ -9,6 +9,7 @@ import Modules.Setting (varRestPower, varLocalPower)
 import qualified Modules.Utility as ModUt
 import qualified Modules.Setting as ModSet
 import qualified Modules.System as System
+import qualified Modules.Optimisation.Base as Base
 
 import qualified EFA.Application.Plot as AppPlot
 import qualified EFA.Application.Sweep as Sweep
@@ -32,6 +33,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import EFA.Equation.Result (Result(Determined))
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Report.FormatValue as FormatValue
+
 
 import EFA.Signal.Plot (label)
 
@@ -62,7 +64,7 @@ import Data.GraphViz.Types.Canonical (DotGraph)
 import Data.Text.Lazy (Text)
 import qualified Data.Vector.Unboxed as UV
 import Data.Vector (Vector)
-import Data.Tuple.HT (fst3, snd3, thd3)
+--import Data.Tuple.HT (fst3, snd3, thd3)
 
 import Data.Monoid ((<>), mconcat)
 import Control.Applicative (liftA2)
@@ -366,27 +368,13 @@ bestStateCurve ::
 bestStateCurve =
   withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . ModUt.thd4)
   
-{-  
-plotOptimal ::
-  (Terminal.C term, Ord b) =>
-  term ->
-  (Idx.State -> (b, b, Type.EnvResult node b) -> Double) ->
-  String -> Type.OptimisationPerState node b -> IO ()
-plotOptimal terminal f title =
-  AppPlot.surfaceWithOpts title
-            terminal
-            id
-            (Graph3D.typ "lines")
-            frameOpts varRestPower varLocalPower
-  . Map.elems
-  . Map.mapWithKey (\state -> label (show state) . to2DMatrix . fmap (m2n . fmap (f state)))
-  . Type.optimalSolutionPerState
-
--}
---stateRange2 :: (Ord a, Terminal.C term, a~Double) => term -> Type.OptimisationPerState node a -> IO ()
+stateRange2 ::  
+  (Ord b, Terminal.C term) =>
+  ([Char] -> IO term) -> Type.OptimisationPerState node b -> IO ()
 stateRange2 term opt = do
   t <- term "StateRanges"
-  plotOptimal t (\(Idx.State st) _ ->  fromIntegral st) "Test" opt -- (fromIntegral st) Arith.~+ Arith.zero Arith.~* o) "StateRanges"
+  plotOptimal t (\(Idx.State st) _ ->  fromIntegral st) "stateRange2" opt -- (fromIntegral st) Arith.~+ Arith.zero Arith.~* o) "StateRanges"
+
 
 stateRange ::
   (Terminal.C term, Ord b) =>
@@ -444,7 +432,7 @@ maxPerState terminal title func =
   . func
   . Type.optimalSolutionPerState
 
-maxObjPerState, maxEtaPerState ::
+maxObjPerState, maxEtaPerState,maxIndexPerState ::
   (Terminal.C term, a ~ Double) =>
   (FilePath -> IO term) ->
    Type.OptimisationPerState node a ->
@@ -551,9 +539,9 @@ sweepStackPerStateStoragePower terminal params node =
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
      . Map.map (Map.map (g . f . Type.storagePowerMap))
-{-
+
 sweepStackPerStateOpt ::
-  (Show (vec Double),a ~ Double,
+  (Show (vec Double),a ~ Double,vec ~ UV.Vector,Show node,Sweep.SweepClass sweep UV.Vector (Double, Double),
    Node.C node,
    Arith.Product (sweep vec a),
    Sweep.SweepVector vec a,
@@ -561,20 +549,17 @@ sweepStackPerStateOpt ::
    Terminal.C term) =>
   (FilePath -> IO term) ->
   One.OptimisationParams node f sweep vec a ->
-  (Idx.State -> Type.StoragePowerMap node sweep UV.Vector a  -> 
-      Result (sweep UV.Vector a)) ->
+  Map node (One.SocDrive a) ->
   Type.Sweep node sweep vec a ->
   IO ()
-sweepStackPerStateOpt terminal params forcing =
+sweepStackPerStateOpt terminal params balanceForcing =
   let len = One.sweepLength params
-      f st res = (Type.etaSys res) Arith.~+  forcing st (Type.storagePowerMap res)
               
   in plotSweeps terminal id "Per State Sweep -- Opt"
-     . Map.mapWithKey (\state m -> (matrix2ListOfMatrices len
+     . Map.map (\ m -> (matrix2ListOfMatrices len
                 $ Sig.map Sweep.toList
-                $ sweepResultTo2DMatrix len 
-     $ Map.map (Map.map f state) m))
--}
+                $ sweepResultTo2DMatrix len m))
+     . (Base.optStackPerState params balanceForcing)
 
 sweepStackPerStateCondition ::
   (Show (vec Double),a ~ Double,Show node,sweep ~ Sweep.Sweep,vec ~ UV.Vector,
@@ -592,7 +577,7 @@ sweepStackPerStateCondition terminal params =
       f (Determined (Sweep.Sweep vec)) = Determined $ Sweep.Sweep $ UV.imap g vec 
       f _ = error "Error in sweepStackPerStateCondition - undetermined Condition"
       g idx True = fromIntegral idx 
-      g idx False = 0/0
+      g _ False = 0/0
       
   in plotSweeps terminal id "Per State Sweep -- Power"
      . Map.map (matrix2ListOfMatrices len
@@ -659,13 +644,18 @@ findTile xs ys x y =
   in sort $ liftA2 (,) [xa, xb] [ya, yb]
 
 
---reqsRec :: 
+reqsRec :: 
+  (Show (v Double), Vector.Walker v, Vector.Storage v Double,
+   Vector.FromList v, Terminal.C term) =>
+  (FilePath -> IO term) -> 
+  Record.PowerRecord node v Double -> 
+  IO () 
 reqsRec terminal (Record.Record _ pMap) = mapM_ f $ zip (init xs) (tail xs)
    where xs = Map.elems pMap 
          f (x,y) = requirements terminal x y
          
 
-
+-- | TODO Kacheln anzeigen deaktiviert: @HT -- sorry hat mit veraenderten Reqs kein Kacheln mehr gefunden
 requirements ::
   (Terminal.C term, Show (v Double),
    Vector.Walker v,

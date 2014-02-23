@@ -43,10 +43,10 @@ import qualified Control.Monad.Trans.Writer as MW
 
 import Control.Applicative (liftA3)
 
-import Data.Tuple.HT (snd3)
+--import Data.Tuple.HT (snd3)
 import Data.Ord (comparing)
 
-import Debug.Trace (trace)
+--import Debug.Trace (trace)
 
 
 -- | Map a two dimensional load room (varX, varY) and find per load situation
@@ -71,47 +71,6 @@ combineOptimalMaps state charge discharge =
      (\s (c, d) -> case s of Sig.ArgMax0 -> c; Sig.ArgMax1 -> d) state $
   Sig.zip charge discharge
 
-{-
-optimalSolution2D ::
-  (Node.C node, Eq a, Ord v, Arith.Constant v) =>
-  SeqEta.Condition node a v ->
-  SeqEta.Forcing node a v ->
-  Sig.UTSignal2 V.Vector V.Vector (SeqFlow.Graph node a (Result v)) ->
-  Maybe ((v, v), SeqFlow.Graph node a (Result v))
-optimalSolution2D cond forcing =
-  optimalSolutionGeneric (SeqEta.objectiveFunction cond forcing) .
-  concat . Sig.toList
--}
-{-
-optimalSolutionState ::
-  (Node.C node, Ord v, Arith.Constant v) =>
-  StateEta.Condition node a v ->
-  StateEta.Forcing node a v ->
-  [StateFlow.Graph node a (Result v)] ->
-  Maybe ((v, v), StateFlow.Graph node a (Result v))
-optimalSolutionState cond forcing =
-  optimalSolutionGeneric (StateEta.objectiveFunction cond forcing)
-
-
-optimalSolutionGeneric ::
-  Ord a =>
-  (b -> Maybe a) -> [b] -> Maybe (a, b)
-optimalSolutionGeneric f =
-  fmap (NonEmpty.maximumBy (comparing fst)) . NonEmpty.fetch .
-  mapMaybe (\x -> fmap (flip (,) x) $ f x)
--}
-{-
--- NEW PG
-findOptimalState ::  Map State.Idx StateForcing ->
-                     Map State.Idx (Maybe (a, a, StateFlow.Graph node (Result a) (Result a)))
-findOptimalState stateForcing stateMap = if Map.keys stateForcing == map.keys stateMap
-                                         then optimalSolutionGeneric stateObjectives
-                                         else error ("Error in findOptimalState - StateMap and StateForcings
-                                                     have different State Keys: " ++ show stateForcing  ++ "    "
-                                              ++ show stateMap)
-  where stateObjectives = zipWith (~+) (Map.elem stateForcing) (fst & Map.elem stateMap)
--}
-
 findBestIndex ::
   (Ord a, Arith.Constant a, UV.Unbox a,RealFloat a,
    Sweep.SweepVector UV.Vector a,
@@ -128,75 +87,26 @@ findBestIndex cond esys objVal =
      then Nothing
      else Just (idx, o, e)
   where
-        c1 = Sweep.fromSweep cond
-        e1 = Sweep.fromSweep esys
-        objf1 = Sweep.fromSweep objVal
+        cs = Sweep.fromSweep cond
+        es = Sweep.fromSweep esys
+        os = Sweep.fromSweep objVal
         
-{-        comparingWithNaN p x y = case (isNaN $ p x,isNaN $ p y) of 
-          (True,True) -> EQ
-          (False,True) -> GT     
-          (True,False) -> LT
-          (False,False) -> comparing p x y-}
-
-        fv = UV.filter (\(_,c,o,_) -> c && (not $ isNaN o)) $ UV.zipWith4 (,,,) (UV.fromList [0.. ((UV.length c1)-1)]) c1 objf1 e1
-        maxIdx = UV.maxIndexBy (comparing (\ (_,_,o,_) -> o)) fv
+        fv = UV.filter (\(_,c1,o1,_) -> c1 && (not $ isNaN o1)) $ UV.zipWith4 (,,,) (UV.fromList [0.. ((UV.length cs)-1)]) cs os es
+        maxIdx = UV.maxIndexBy (comparing (\ (_,_,o2,_) -> o2)) fv
         (idx,_, o, e) = fv UV.! maxIdx
-{-
 
-        -- alte Version erweitert um NaN - Fix:
-  where                              
-
-        c1 = Sweep.fromSweep cond
-        e1 = Sweep.fromSweep esys
-        objf1 = Sweep.fromSweep force
-
-
-        start = (0, 0, Arith.zero, Arith.zero)
-
-        -- altes Ergebnis:
-        res = case UV.foldl' f start (UV.zipWith3 (,,) c1 e1 objf1) of
-                   (x, _, ch, d) -> Just (x, ch, d)
-
-        f (bestIdx, cnt, fo, eo) (b, es2, f2) =
-          if b && g f2 fo
-             then (cnt, cnt+1, f2, es2)
-             else (bestIdx, cnt+1, fo, eo)
-                  
-        g x y =  case (isNaN $ x,isNaN $ y) of 
-          (True,True) -> True
-          (False,True) -> False     
-          (True,False) -> True         
-          (False,False) ->  x >= y
--}
-{-
-        -- alte Version:
-
-        c1 = Sweep.fromSweep cond
-        e1 = Sweep.fromSweep esys
-        objf1 = Sweep.fromSweep force
-
-
-        start = (0, 0, Arith.zero, Arith.zero)
-
-        -- altes Ergebnis:
-        res = case UV.foldl' f start (UV.zipWith3 (,,) c1 e1 objf1) of
-                   (x, _, ch, d) -> Just (x, ch, d)
-
-        f (bestIdx, cnt, fo, eo) (b, es2, f2) =
-          if b && f2 >= fo
-             then (cnt, cnt+1, f2, es2)
-             else (bestIdx, cnt+1, fo, eo)
--}
-{-
-objectiveValue ::
+objectiveValue :: (Sweep.SweepClass sweep UV.Vector a, 
+                   UV.Unbox a, 
+                   Arith.Sum a) =>
   (Type.StoragePowerMap node sweep UV.Vector a  ->
       Result (sweep UV.Vector a) ) ->
   Type.SweepPerReq node sweep UV.Vector a ->
-  Type.SweepPerReq node sweep UV.Vector a
-objectiveValue forcing (Type.SweepPerReq esys condVec powerMap env) = liftA2 (Arith.~+) force esys
+  Result (sweep UV.Vector a)
+objectiveValue forcing (Type.SweepPerReq esys _ powerMap _) = 
+  liftA2 (\x y -> Sweep.toSweep $ UV.zipWith (Arith.~+) (Sweep.fromSweep x) (Sweep.fromSweep y)) force esys
   where force = forcing powerMap
--}
-          
+
+
 optimalSolutionState2 ::
   (Ord a, Node.C node, Arith.Constant a, UV.Unbox a,RealFloat a,
    Arith.Product (sweep UV.Vector a),

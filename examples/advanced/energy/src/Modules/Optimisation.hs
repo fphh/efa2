@@ -41,7 +41,7 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Verify as Verify
-import EFA.Equation.Result (Result, toMaybe)
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.Vector as Vec
 import EFA.Signal.Data (Data(Data), Nil, (:>))
@@ -56,7 +56,7 @@ import qualified Data.Set as Set
 import qualified Data.Maybe as Maybe
 import Data.Monoid ((<>), mempty)
 
-import Control.Monad (join)
+--import Control.Monad (join)
 
 
 optionsScalar ::(Arith.Sum a, Verify.LocalVar mode (Data Nil a),
@@ -85,13 +85,13 @@ toPowerMap ::
   StateQty.Graph node b (Result (sweep vec a)) ->
   Idx.State ->
   Type.StoragePowerMap node sweep vec a
-toPowerMap graph state = Map.mapWithKey (g state flowTopo) $ State.storages graph
+toPowerMap graph state = Map.mapWithKey g  $ State.storages graph
   where flowTopo = Maybe.fromMaybe (error $ "toPowerMap State" ++ show state ++  "not in Graph") 
                    (Map.lookup state $ fmap Topology.topology $ State.states graph)
 
         look p = StateQty.lookup p graph -- join $ fmap toMaybe $ StateQty.lookup p graph
 
-        g state flowTopo stoNode _ =
+        g stoNode _ =
           h $ case Set.toAscList $ Graph.adjacentEdges flowTopo stoNode of
                    [x] -> x
                    _ -> error $ "toPowerMap: more or less than one adjacent edge to node"

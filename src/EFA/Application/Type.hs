@@ -38,7 +38,7 @@ type OptimalSolutionPerState node a =
   Map Idx.State (Map [a] (Maybe (a, a, Int, EnvResult node a)))
   
 -- | Data Type to store the stack of the optimal abjective Function per state
-type OptStackPerState a =  Map Idx.State (Map [a] (Maybe a))
+type OptStackPerState (sweep :: (* -> *) -> * -> *) vec a =  Map Idx.State (Map [a] (Result (sweep vec a)))
 
 -- | Data Type to store the average solution per state
 type AverageSolutionPerState node a = Map Idx.State (Map [a] (Maybe a))

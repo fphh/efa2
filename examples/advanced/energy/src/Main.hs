@@ -47,7 +47,7 @@ import qualified Data.Empty as Empty
 --import qualified Data.List as List
 --import Control.Monad(void)
 
-import qualified EFA.Signal.Plot as Plot
+--import qualified EFA.Signal.Plot as Plot
 
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
@@ -90,40 +90,26 @@ main1 = do
         CT.getPowerSignalsWithSameTime tabPower
           ("rest" !: "local" !: Empty.Cons)
 
-      -- transform = Sig.offset 0.1 . Sig.scale 2.9
       transformRest1 = Sig.offset 2.2 . Sig.scale 0.6
---      transformRest1 = Sig.offset 2 . Sig.scale 0.9
-      transformRest2 = Sig.offset 2.2 . Sig.scale 0.6
-
       transformLocal1 = Sig.offset 0.4 . Sig.scale 0.5
---      transformLocal1 = Sig.offset 0.2 . Sig.scale 0.7
-      transformLocal2 = Sig.offset 0.4 . Sig.scale 0.5
 
-      prest1, prest2, plocal1, plocal2 :: Sig.PSignal Vector Double
+      prest1, plocal1 :: Sig.PSignal Vector Double
       prest1 = Sig.convert $ transformRest1 r
-      prest2 = Sig.convert $ transformRest2 r
 
       plocal1 = Sig.convert $ transformLocal1 l
-      plocal2 = Sig.convert $ transformLocal2 l
 
 -- ACHTUNG ACHTUNG hieran muessen wir uns orientieren !!! 26.01.2014
 
       reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos ModSet.reqs
 
-      la = case Sig.viewR time of
-                Just (_, x) -> x
-                _ -> error "Sig.viewR time"
-
       ctime = Sig.convert time
-
-      t = ctime --Sig.map (/2) (ctime Sig..++ Sig.offset (Sig.fromSample la) ctime)
 
       prest = Sig.convert $ prest1 --Sig..++ prest2
       plocal = Sig.convert $ plocal1 --Sig..++ plocal2
 
 -- ACHTUNG ACHTUNG wir haben local und rest verwechselt !!! 26.01.2014
       reqsRec :: Record.PowerRecord Node UV.Vector Double
-      reqsRec = Record.scatter rndGen 50 0.3 $ Record.Record t (Map.fromList (zip reqsPos [prest, plocal]))
+      reqsRec = Record.scatter rndGen 50 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [prest, plocal]))
 
       reqsRecStep :: Record.PowerRecord Node UV.Vector Double
       reqsRecStep = Record.makeStepped reqsRec
