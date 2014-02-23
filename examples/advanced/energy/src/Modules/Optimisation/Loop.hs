@@ -3,6 +3,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 module Modules.Optimisation.Loop where
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 
 import qualified Modules.System as System
@@ -27,6 +28,7 @@ import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Graph.Topology.Node as Node
 import EFA.Equation.Arithmetic (Sign(Zero, Positive, Negative), (~*), (~+), (~/))
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified Graphics.Gnuplot.Terminal as Terminal
 
 --import EFA.Equation.Result (Result(Determined))
 
@@ -88,6 +90,7 @@ data InnerLoopItem node a z0 z = InnerLoopItem
 data EtaLoopItem node sweep vec a z0 z = EtaLoopItem {
   elStep :: Int,
   stateFlowIn :: (EnvResult node ((sweep:: (* -> *) -> * -> *) vec a)),
+  sweep :: Type.Sweep node sweep vec a,
   stateFlowOut :: (EnvResult node ((sweep:: (* -> *) -> * -> *) vec a)),
   innerLoop :: [InnerLoopItem node a z0 z]}
 
@@ -261,7 +264,7 @@ iterateStateUntil statLoop =
   where lastElem = vlast "interateStateUntil" $ statLoop
     
 stateIteration ::
-  (sigVec ~[],d ~ b,efaVec ~ [],simVec ~ [], intVec ~ [], (a ~ b),UV.Unbox b,node~Node,
+  (sigVec ~[],d ~ b,efaVec ~ [],simVec ~ [], intVec ~ [], (a ~ b),UV.Unbox b,node~Node,RealFloat b,
    Eq a, Num a,
    Arith.Sum a,
    Ord a,
@@ -423,7 +426,7 @@ iterateEtaWhile sysParams optParams simParams = go 0  (One.stateFlowGraphOpt opt
    where 
          initBalF =  One.initialBattForcing optParams
          One.MaxEtaIterations maxCnt = One.maxEtaIterations optParams
-         go cnt sfg bfIn = EtaLoopItem cnt sfg sfg1 res : 
+         go cnt sfg bfIn = EtaLoopItem cnt sfg sweep sfg1 res : 
                            if cnt > (maxCnt-1) then [] 
                                  else go (cnt+1) sfg1 bfOut
            where
@@ -502,7 +505,7 @@ iterateLoops optParams elf ilf blf slf etaLoop =
 showEtaLoopItem::
   One.OptimisationParams node [] Sweep UV.Vector a ->
   EtaLoopItem node Sweep UV.Vector a z0 z -> String
-showEtaLoopItem _optParams (EtaLoopItem step _sfgIn _sfgOut _) =
+showEtaLoopItem _optParams (EtaLoopItem step _sfgIn _sweep _sfgOut _) =
       "EL: " ++ printf "%8d" step
 
 showInnerLoopItem::
@@ -529,8 +532,8 @@ showStateLoopItem _optParams (StateLoopItem sStp sForc _sFStp stateDur sBal _sRe
   ++ " | Balance: " ++ printfBalanceMap sBal
 
 printEtaLoop ::
-  (UV.Unbox a, Arith.Constant a,Show a, PrintfArg a,
-   FormatValue.FormatValue a,
+  (UV.Unbox a, Arith.Constant a,Show a, PrintfArg a,node~Node,a~Double,
+   FormatValue.FormatValue a,Show (simVec Double),
    Show node,
    Show (intVec Double),
    SV.Walker intVec,
@@ -549,20 +552,21 @@ printEtaLoop optParams ol =
   iterateLoops (optParams) printEtaLoopItem printInnerLoopItem printBalanceLoopItem printStateLoopItem ol
 
 printEtaLoopItem ::
-  (UV.Unbox a,sweep~Sweep,vec~UV.Vector,
+  (UV.Unbox a,sweep~Sweep,vec~UV.Vector,a~Double,
    Node.C node,
    FormatValue.FormatValue a,
    Arith.Product (sweep vec a),
    Sweep.SweepClass sweep vec a) =>
   One.OptimisationParams node [] sweep vec a ->
   EtaLoopItem node Sweep UV.Vector a z0 z -> IO ()
-printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sfgOut res) = --print "EtaLoop"
+printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sweep _sfgOut res) = --print "EtaLoop"
   do
     let -- dir = printf "outer-loop-%6.6d" olcnt
-        --stoPos = TopoIdx.Position System.Water System.Network
-        --gasPos = TopoIdx.Position System.Gas System.LocalNetwork
-      
+    --  stoPos = TopoIdx.Position System.Water System.Network
+  --    gasPos = TopoIdx.Position System.Gas System.LocalNetwork
+        term = ModPlot.gpXTerm
 
+    ModPlot.sweepStackPerStateEta term params _sweep
 --    putStrLn (printf "Loop %6.6d" olcnt)
 
 --    concurrentlyMany_ [
@@ -580,12 +584,12 @@ printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sfgOut res) = --print "EtaL
 --      Draw.xterm $ Draw.title "sfgOut" $ Draw.stateFlowGraph Draw.optionsDefault _sfgOut]
       
       --ModPlot.simulationGraphs ModPlot.dotXTerm opt]
-{-      ModPlot.simulationSignals ModPlot.gpXTerm opt,
-      ModPlot.maxPos stoPos ModPlot.gpXTerm opt,
-      ModPlot.maxPos gasPos ModPlot.gpXTerm opt,
-      ModPlot.maxState ModPlot.gpXTerm opt,
-      ModPlot.maxObj ModPlot.gpXTerm opt ]
--}
+ {-     ModPlot.simulationSignals term opt,
+      ModPlot.maxPos stoPos term opt,
+      ModPlot.maxPos gasPos term opt,
+      ModPlot.maxState term opt,
+      ModPlot.maxObj term opt -}
+
 
 {-
     ModPlot.maxPos stoPos (ModPlot.gpPNG dir 0) opt
@@ -603,12 +607,13 @@ printInnerLoopItem::
 printInnerLoopItem _optParams (InnerLoopItem _ilStp _ilBForcO _ilBal _ilSForcO
    _ilSDur _balLoop _ ) = print "InnerLoop"
 
+
 printBalanceLoopItem::
   (z ~ Type.OptimiseStateAndSimulate
-   node sweep sweepVec Double intVec Double simVec c efaVec d,
+   node sweep sweepVec Double intVec Double simVec c efaVec d, node ~ Node,
    Show (intVec Double),
    Show node,
-   SV.Walker intVec,
+   SV.Walker intVec,Show (simVec Double),
    SV.Storage intVec Double,
    SV.FromList intVec,
    SV.Walker simVec,
@@ -631,16 +636,20 @@ printBalanceLoopItem optParams b@(BalanceLoopItem bStp _bForcing _bFStep _bal re
          _dir = printf "outer-loop-%6.6d" bStp
          _stoPos = TopoIdx.Position System.Water System.Network
      putStrLn $ showBalanceLoopItem optParams b   
---    ModPlot.maxEta xTerm opt2
---    ModPlot.maxEta gTerm opt2
---     ModPlot.optimalObjs _xTerm _opt
+--     ModPlot.maxEta _xTerm opt2
+     ModPlot.maxEta term opt2
+     ModPlot.optimalObjs term _opt
+     ModPlot.stateRange2 term _opt
+
+     putStrLn $ show $ Type.signals $ Type.simulation $ opt2
+     ModPlot.simulationSignals term opt2
 --    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
 --     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
 --     ModPlot.givenSignals term opt2
 --    ModPlot.maxEtaPerState (ModPlot.gpPNG dir bStep) opt
    -- ModPlot.maxPosPerState (ModPlot.gpPNG dir bStep) stoPos opt
 
---    ModPlot.maxPos stoPos (ModPlot.gpPNG dir bStep) opt
+     ModPlot.maxPos _stoPos term opt2
 
     -- das aktiviert das schreiben der zustandsflussgraphen
     -- pro parzelle (Achtung, ziemlich viel!!!)

@@ -56,6 +56,8 @@ import Control.Monad (join)
 import Control.Applicative (liftA2)
 
 
+
+-- PG ?? - Wo wird hier die Leistung des Speichers rausgezogen und Vorzeichenkorrigiert ? 
 perStateSweep ::
   (Node.C node, Show node,
    Ord a, Show a, UV.Unbox a, Arith.ZeroTestable (sweep vec a),
@@ -148,6 +150,7 @@ expectedValuePerState ::
 expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
 
+{-
 selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a) =>
   One.OptimisationParams node list sweep vec a ->
@@ -166,7 +169,27 @@ selectOptimalState _params stateForcing stateMap indexConversionMap =
                      (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
                          eta, st, env))) m)
   $ Map.toList stateMap
+-}
 
+selectOptimalState ::
+  (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a,RealFloat a) =>
+  One.OptimisationParams node list sweep vec a ->
+  Map Idx.AbsoluteState (One.StateForcing a) ->
+  Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a))) ->
+  One.IndexConversionMap ->
+  Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
+selectOptimalState _params stateForcing stateMap indexConversionMap =
+  List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxByWithNaN ModUt.fst4))
+  $ map (\(st, m) ->
+      Map.map (fmap
+        (\(objVal, eta, env) ->
+            (objVal Arith.~+
+             maybe (error "Base.selectOptimalState")
+                   One.unpackStateForcing
+                     (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
+                         eta, st, env))) m)
+  $ Map.toList stateMap
+  
 envToPowerRecord ::
   (Ord node) =>
   TopoQty.Section node (Result (Data (v :> Nil) a)) ->

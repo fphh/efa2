@@ -41,6 +41,14 @@ maxBy :: (Ord b) => (a -> b) -> a -> a -> a
 maxBy f x y = if f y > f x then y else x
 
 
+maxByWithNaN :: (Ord b,RealFloat b) => (a -> b) -> a -> a -> a
+maxByWithNaN f x y = case (isNaN $ f x, isNaN $ f y) of
+ (True, True) -> x
+ (True,False) -> y
+ (False,True) -> x
+ (False,False) ->  if f y > f x then y else x
+
+
 unzipMap :: Map k (a, b) -> (Map k a, Map k b)
 unzipMap m = (Map.map fst m, Map.map snd m)
 

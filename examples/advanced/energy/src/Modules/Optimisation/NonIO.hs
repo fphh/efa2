@@ -254,7 +254,7 @@ optimiseAndSimulate sysParams optParams simParams balanceForcing stateForcing pe
      Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep)
 
 
-optimiseStateAndSimulate:: (d ~ a, intVec ~ [], simVec ~ [], b ~ a, efaVec ~ []) =>
+optimiseStateAndSimulate:: (d ~ a, intVec ~ [], simVec ~ [], b ~ a, efaVec ~ [],RealFloat a) =>
   (Ord b, Show node, Show b, Node.C node,Sweep.SweepClass sweep vec a,
    Arith.ZeroTestable b, Arith.Constant b) =>
   One.SystemParams node b

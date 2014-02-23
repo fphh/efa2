@@ -33,6 +33,7 @@ type EnvResult node a = StateQty.Graph node (Result a) (Result a)
 type PerStateSweepVariable node sweep vec a =
   Map Idx.State (Map node (Maybe ((sweep::(* -> *) -> * -> *) vec a)))
 
+
 type OptimalSolutionPerState node a =
   Map Idx.State (Map [a] (Maybe (a, a, EnvResult node a)))
                      --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
@@ -48,9 +49,13 @@ type EqSystem node a =
   forall s. StateAbs.EquationSystemIgnore node s a a
 
 
+type Sweep node sweep vec a = Map Idx.State (Map [a] (PerStateSweep node sweep vec a))
+
+{-
 data Sweep node sweep vec a = Sweep {
     sweepData :: Map Idx.State (Map [a] (PerStateSweep node sweep vec a)),
     sweepStoragePower :: Map Idx.State (Map node (Maybe (sweep vec a)))}
+-}
 
 data PerStateSweep node (sweep :: (* -> *) -> * -> *) vec a =
   PerStateSweep {

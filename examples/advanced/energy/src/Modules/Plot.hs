@@ -365,6 +365,48 @@ bestStateCurve ::
   Sig.PSignal2 Vector Vector a
 bestStateCurve =
   withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . ModUt.thd4)
+  
+{-  
+plotOptimal ::
+  (Terminal.C term, Ord b) =>
+  term ->
+  (Idx.State -> (b, b, Type.EnvResult node b) -> Double) ->
+  String -> Type.OptimisationPerState node b -> IO ()
+plotOptimal terminal f title =
+  AppPlot.surfaceWithOpts title
+            terminal
+            id
+            (Graph3D.typ "lines")
+            frameOpts varRestPower varLocalPower
+  . Map.elems
+  . Map.mapWithKey (\state -> label (show state) . to2DMatrix . fmap (m2n . fmap (f state)))
+  . Type.optimalSolutionPerState
+
+-}
+--stateRange2 :: (Ord a, Terminal.C term, a~Double) => term -> Type.OptimisationPerState node a -> IO ()
+stateRange2 term opt = do
+  t <- term "StateRanges"
+  plotOptimal t (\(Idx.State st) _ ->  fromIntegral st) "Test" opt -- (fromIntegral st) Arith.~+ Arith.zero Arith.~* o) "StateRanges"
+
+stateRange ::
+  (Terminal.C term, Ord b) =>
+  term ->
+  Type.OptimisationPerState node b 
+  -> IO ()
+stateRange terminal =
+  AppPlot.surfaceWithOpts "StateRanges"
+            terminal
+            id
+            (Graph3D.typ "lines")
+            frameOpts varRestPower varLocalPower
+  . Map.elems
+  . Map.mapWithKey (\state@(Idx.State st)  -> label (show state) . to2DMatrix . fmap (m2n . fmap (f st)))
+  . Type.optimalSolutionPerState 
+  where f st _ =  fromIntegral st
+        
+        
+        
+        
 
 maxState ::
   (Terminal.C term, a ~ b, b ~ Double) =>
@@ -463,8 +505,7 @@ sweepResultTo2DMatrix len = Sig.map f . to2DMatrix
   where f (Determined x) = x
         f _ = Sweep.fromRational len ModUt.nan
 
-
-perStateSweep ::
+sweepStackPerStateEta ::
   (Show (vec Double),a ~ Double,
    Node.C node,
    Arith.Product (sweep vec a),
@@ -475,13 +516,13 @@ perStateSweep ::
   One.OptimisationParams node f sweep vec a ->
   Type.Sweep node sweep vec a ->
   IO ()
-perStateSweep terminal params =
+sweepStackPerStateEta terminal params =
   let len = One.sweepLength params
   in plotSweeps terminal id "Per State Sweep"
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
-     . Map.map (Map.map Type.etaSys). Type.sweepData
+     . Map.map (Map.map Type.etaSys) -- . Type.sweepData
 
 plotOptimal ::
   (Terminal.C term, Ord b) =>

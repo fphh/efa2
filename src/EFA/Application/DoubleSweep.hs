@@ -43,7 +43,7 @@ import qualified Control.Monad.Trans.Writer as MW
 
 import Control.Applicative (liftA3)
 
-import Data.Tuple.HT (fst3, snd3)
+import Data.Tuple.HT (snd3)
 import Data.Ord (comparing)
 
 import Debug.Trace (trace)
@@ -123,26 +123,25 @@ findBestIndex ::
   (sweep UV.Vector a) ->
   Maybe (Int, a, a)
 
-findBestIndex cond esys force = res
-{-  if UV.null fv
+findBestIndex cond esys force = 
+  if UV.null fv
      then Nothing
-     else Just (maxIdx, o, e)
+     else Just (idx, o, e)
   where
-
         c1 = Sweep.fromSweep cond
         e1 = Sweep.fromSweep esys
         objf1 = Sweep.fromSweep force
         
-        comparingWithNaN p x y = case (isNaN $ p x,isNaN $ p y) of 
+{-        comparingWithNaN p x y = case (isNaN $ p x,isNaN $ p y) of 
           (True,True) -> EQ
-          (False,True) -> LT     
-          (True,False) -> GT
-          (False,False) -> comparing p x y
+          (False,True) -> GT     
+          (True,False) -> LT
+          (False,False) -> comparing p x y-}
 
-        fv = UV.filter fst3 $ UV.zipWith3 (,,) c1 objf1 e1
-        maxIdx = UV.maxIndexBy (comparingWithNaN snd3) fv
-        (_, o, e) = fv UV.! maxIdx
--}
+        fv = UV.filter (\(_,c,o,_) -> c && (not $ isNaN o)) $ UV.zipWith4 (,,,) (UV.fromList [0.. ((UV.length c1)-1)]) c1 objf1 e1
+        maxIdx = UV.maxIndexBy (comparing (\ (_,_,o,_) -> o)) fv
+        (idx,_, o, e) = fv UV.! maxIdx
+{-
 
         -- alte Version erweitert um NaN - Fix:
   where                              
@@ -168,7 +167,7 @@ findBestIndex cond esys force = res
           (False,True) -> False     
           (True,False) -> True         
           (False,False) ->  x >= y
-
+-}
 {-
         -- alte Version:
 
