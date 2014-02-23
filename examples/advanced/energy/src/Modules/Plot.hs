@@ -522,7 +522,7 @@ sweepStackPerStateEta terminal params =
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
-     . Map.map (Map.map Type.etaSys) -- . Type.sweepData
+     . Map.map (Map.map Type.etaSys)
      
 
 sweepStackPerStateStoragePower ::
@@ -549,6 +549,30 @@ sweepStackPerStateStoragePower terminal params node =
                 . sweepResultTo2DMatrix len)
      . Map.map (Map.map (g . f . Type.storagePowerMap))
 
+sweepStackPerStateCondition ::
+  (Show (vec Double),a ~ Double,Show node,sweep ~ Sweep.Sweep,vec ~ UV.Vector,
+   Node.C node,
+   Arith.Product (sweep vec a),
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Terminal.C term) =>
+  (FilePath -> IO term) ->
+  One.OptimisationParams node f sweep vec a ->
+  Type.Sweep node sweep vec a ->
+  IO ()
+sweepStackPerStateCondition terminal params =
+  let len = One.sweepLength params
+      f (Determined (Sweep.Sweep vec)) = Determined $ Sweep.Sweep $ UV.imap g vec 
+      f _ = error "Error in sweepStackPerStateCondition - undetermined Condition"
+      g idx True = fromIntegral idx 
+      g idx False = 0/0
+      
+  in plotSweeps terminal id "Per State Sweep -- Power"
+     . Map.map (matrix2ListOfMatrices len
+                . Sig.map Sweep.toList
+                . sweepResultTo2DMatrix len)
+     . Map.map (Map.map (f . Type.condVec))     
+     
      
 plotOptimal ::
   (Terminal.C term, Ord b) =>

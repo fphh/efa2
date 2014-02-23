@@ -566,8 +566,9 @@ printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sweep _sfgOut res) = --prin
   --    gasPos = TopoIdx.Position System.Gas System.LocalNetwork
         term = ModPlot.gpXTerm
 
-    ModPlot.sweepStackPerStateEta term params _sweep
-    ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
+--    ModPlot.sweepStackPerStateEta term params _sweep
+--    ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
+    ModPlot.sweepStackPerStateCondition term params  _sweep
 --    putStrLn (printf "Loop %6.6d" olcnt)
 
 --    concurrentlyMany_ [
