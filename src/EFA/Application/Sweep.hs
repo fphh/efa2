@@ -152,4 +152,3 @@ instance (FormatValue.FormatValue a, UV.Unbox a) =>
   formatValue = FormatValue.formatValue . toList
 
 
-
