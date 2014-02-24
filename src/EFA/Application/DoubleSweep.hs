@@ -44,7 +44,6 @@ import qualified Control.Monad.Trans.Writer as MW
 import Control.Applicative (liftA3)
 
 --import Data.Tuple.HT (snd3)
-import Data.Ord (comparing)
 
 --import Debug.Trace (trace)
 
@@ -71,6 +70,8 @@ combineOptimalMaps state charge discharge =
      (\s (c, d) -> case s of Sig.ArgMax0 -> c; Sig.ArgMax1 -> d) state $
   Sig.zip charge discharge
 
+
+
 findBestIndex ::
   (Ord a, Arith.Constant a, UV.Unbox a,RealFloat a,
    Sweep.SweepVector UV.Vector a,
@@ -81,19 +82,22 @@ findBestIndex ::
   (sweep UV.Vector a) ->
   (sweep UV.Vector a) ->
   Maybe (Int, a, a)
-
-findBestIndex cond esys objVal = 
-  if UV.null fv
-     then Nothing
-     else Just (idx, o, e)
+findBestIndex cond objVal esys =
+  case UV.ifoldl' f start (UV.zip cs os) of
+       (Just idx, o) -> Just (idx, o, es UV.! idx)
+       _ -> Nothing
   where
         cs = Sweep.fromSweep cond
         es = Sweep.fromSweep esys
         os = Sweep.fromSweep objVal
-        
-        fv = UV.filter (\(_,c1,o1,_) -> c1 && (not $ isNaN o1)) $ UV.zipWith4 (,,,) (UV.fromList [0.. ((UV.length cs)-1)]) cs os es
-        maxIdx = UV.maxIndexBy (comparing (\ (_,_,o2,_) -> o2)) fv
-        (idx,_, o, e) = fv UV.! maxIdx
+
+        start = (Nothing, Arith.zero)
+
+        f acc@(idx, o) i (c, onew) =
+          if c && not (isNaN onew) && maybe True (const (onew > o)) idx
+             then (Just i, onew)
+             else acc
+
 
 objectiveValue :: (Sweep.SweepClass sweep UV.Vector a, 
                    UV.Unbox a, 
@@ -123,7 +127,7 @@ optimalSolutionState2 ::
 
 optimalSolutionState2 forcing (Type.SweepPerReq esys condVec powerMap env) =
   let force = forcing powerMap
-      bestIdx = liftA3 findBestIndex condVec esys (liftA2 (Arith.~+) force esys)
+      bestIdx = liftA3 findBestIndex condVec (liftA2 (Arith.~+) force esys) esys
   in case bestIdx of
           Determined (Just (n, x, y)) ->
             let choose = fmap (Sweep.!!! n)

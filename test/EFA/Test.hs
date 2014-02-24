@@ -11,6 +11,7 @@ import qualified EFA.Test.Mix as Mix
 import qualified EFA.Test.Cumulated as Cumulated
 import qualified EFA.Test.EquationSystem as EqSys
 import qualified EFA.Test.Tree as Tree
+import qualified EFA.Test.FindBestIndex as FindBestIndex
 
 
 import Control.Functor.HT (void)
@@ -24,6 +25,7 @@ main = do
    void $ Util.runTests
    void $ Seq.runTests
    void $ Sig.runTests
+   void $ FindBestIndex.runTests
    EqSys.runTests
    Cumulated.runTests
    Mix.runTests
