@@ -42,8 +42,8 @@ data Node =
 instance Node.C Node where
    display Network = Format.literal "High Voltage"
    display LocalNetwork = Format.literal "Low Voltage"
-   display Rest = Format.literal "Residual I"
-   display LocalRest = Format.literal "Residual II"
+   display Rest = Format.literal "Residual HV"
+   display LocalRest = Format.literal "Residual LV"
    display x = Node.displayDefault x
 
    subscript = Node.subscriptDefault
@@ -79,11 +79,11 @@ edgeList :: AppUt.LabeledEdgeList Node
 edgeList = [(Coal, Network, "Coal\\lPlant", "Coal","ElCoal"),
                (Water, Network, "Water\\lPlant","Water","ElWater"),
 
-               (Network, Rest,"100%","toRest","toRest"),
+               (Network, Rest,"100%","toResidualHV","toResidualHV"),
 
                (Network, LocalNetwork, "Trans-\\lformer", "HighVoltage", "LowVoltage"),
                (Gas, LocalNetwork,"Gas\\lPlant","Gas","ElGas"),
-               (LocalNetwork, LocalRest, "100%", "toLocalRest", "toLocalRest")]
+               (LocalNetwork, LocalRest, "100%", "toResidualLV", "toResidualLV")]
 
 
 edgeList2 :: AppUt.LabeledEdgeList Node

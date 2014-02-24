@@ -571,10 +571,13 @@ printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sweep _sfgOut res) = --prin
 --    ModPlot.sweepStackPerStateEta term params _sweep
 --    ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
 --    ModPlot.sweepStackPerStateOpt term params balanceForcing _sweep    
-    ModPlot.sweepStackPerStateCondition term params  _sweep
+        
+{-    ModPlot.sweepStackPerStateCondition term params  _sweep
     concurrentlyMany_ [
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 3) [0.1,0.1] _sweep,
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 1) [0.1,0.1] _sweep]
+      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 0 _sweep,
+      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 1 _sweep,
+      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 2 _sweep,
+      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 3 _sweep] -}
     
 --    putStrLn (printf "Loop %6.6d" olcnt)
 
@@ -587,8 +590,8 @@ printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sweep _sfgOut res) = --prin
     putStrLn $ showEtaLoopItem params e
 
     concurrentlyMany_ [
-      ModPlot.drawSweepStateFlowGraph "sfgIn" $ _sfgIn,
-      ModPlot.drawSweepStateFlowGraph "sfgOut" $ _sfgOut]
+      ModPlot.drawSweepStateFlowGraph "sfgIn" 0 $ _sfgIn,
+      ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ _sfgOut]
 --      Draw.xterm $ Draw.title "sfgIn" $ Draw.stateFlowGraph Draw.optionsDefault _sfgIn,
 --      Draw.xterm $ Draw.title "sfgOut" $ Draw.stateFlowGraph Draw.optionsDefault _sfgOut]
       
@@ -645,17 +648,16 @@ printBalanceLoopItem optParams b@(BalanceLoopItem bStp _bForcing _bFStep _bal re
          _dir = printf "outer-loop-%6.6d" bStp
          _stoPos = TopoIdx.Position System.Water System.Network
      putStrLn $ showBalanceLoopItem optParams b   
-     ModPlot.maxIndexPerState term _opt
-     ModPlot.maxEta _xTerm opt2
---     ModPlot.maxEta term opt2
---     ModPlot.optimalObjs term _opt
-     ModPlot.stateRange2 term _opt
+{-     ModPlot.maxIndexPerState term _opt
+     ModPlot.maxEta _xTerm opt2 -}
+     ModPlot.optimalObjs term _opt
+--     ModPlot.stateRange2 term _opt
 
-     putStrLn $ show $ Type.signals $ Type.simulation $ opt2
+--     putStrLn $ show $ Type.signals $ Type.simulation $ opt2
 --     ModPlot.simulationSignals term opt2
 --    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
 --     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
---     ModPlot.givenSignals term opt2
+     ModPlot.givenSignals term opt2
 --    ModPlot.maxEtaPerState (ModPlot.gpPNG dir bStep) opt
    -- ModPlot.maxPosPerState (ModPlot.gpPNG dir bStep) stoPos opt
 

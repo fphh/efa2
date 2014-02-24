@@ -666,7 +666,7 @@ requirements ::
   Sig.PSignal v Double ->
   Sig.PSignal v Double ->
   IO ()
-requirements terminal prest plocal = do
+requirements terminal plocal prest = do
   let rs = Sig.toList $ trace (show prest) prest
       ls = Sig.toList $ trace (show plocal) plocal
 
@@ -790,30 +790,31 @@ instance PNG (IO PNG.T) where
 
 -}
 
--- TODO: -- only shows first Result of sweep stack
+-- TODO: linearer sweepIndex der richtige Weg ?
 drawSweepStateFlowGraph :: 
   (Node.C node, FormatValue.FormatValue b,
   Sweep.SweepVector vec b, Sweep.SweepClass sweep vec b) =>
   String ->
+  Int ->
   StateQty.Graph node (Result (sweep vec b)) (Result (sweep vec b)) ->
   IO ()
-drawSweepStateFlowGraph title sfgSweep =   
+drawSweepStateFlowGraph title sweepIndex sfgSweep =   
   Draw.xterm $ Draw.title title $ Draw.stateFlowGraph Draw.optionsDefault 
   $ StateQty.mapGraph g g sfgSweep
-     where g = fmap (vhead "simulationGraphs" . Sweep.toList)
+     where g = fmap (vhead "simulationGraphs" . drop sweepIndex . Sweep.toList)
 
--- TODO: -- only shows first Result of sweep stack
 drawSweepStackStateFlowGraph ::
   (Ord [a], Node.C node,Show a,FormatValue.FormatValue b,
    Sweep.SweepVector vec b,
    Sweep.SweepClass sweep vec b) =>
   Idx.State ->
   [a] -> 
+  Int ->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep vec b)) -> 
   IO ()
-drawSweepStackStateFlowGraph state reqsPos sweep = 
+drawSweepStackStateFlowGraph state reqsPos sweepIndex sweep = 
   drawSweepStateFlowGraph ("StateFlowGraph from SweepStack - State : " ++ show state ++
-                           " - Requirement Position :" ++ show reqsPos ++ "- SearchIndex: 0" ) sfgSweep
+                           " - Requirement Position :" ++ show reqsPos ++ "- Sweep Index: " ++ show sweepIndex) sweepIndex sfgSweep
   where sfgSweep =  Type.envResult $ 
                     Maybe.maybe (error $ "drawSweepStackStateFlowGraph - Position not found: "++ show reqsPos) 
                     id $ Map.lookup reqsPos $ 
