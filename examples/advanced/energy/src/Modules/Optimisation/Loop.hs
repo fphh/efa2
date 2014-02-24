@@ -568,10 +568,14 @@ printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sweep _sfgOut res) = --prin
         term = ModPlot.gpXTerm
         balanceForcing =ilBForcOut $ vlast "printEtaLoopItem" res
 
-    ModPlot.sweepStackPerStateEta term params _sweep
-    ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
+--    ModPlot.sweepStackPerStateEta term params _sweep
+--    ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
+--    ModPlot.sweepStackPerStateOpt term params balanceForcing _sweep    
     ModPlot.sweepStackPerStateCondition term params  _sweep
-    ModPlot.sweepStackPerStateOpt term params balanceForcing _sweep
+    concurrentlyMany_ [
+      ModPlot.drawSweepStackStateFlowGraph (Idx.State 3) [0.1,0.1] _sweep,
+      ModPlot.drawSweepStackStateFlowGraph (Idx.State 1) [0.1,0.1] _sweep]
+    
 --    putStrLn (printf "Loop %6.6d" olcnt)
 
 --    concurrentlyMany_ [
@@ -642,7 +646,7 @@ printBalanceLoopItem optParams b@(BalanceLoopItem bStp _bForcing _bFStep _bal re
          _stoPos = TopoIdx.Position System.Water System.Network
      putStrLn $ showBalanceLoopItem optParams b   
      ModPlot.maxIndexPerState term _opt
---     ModPlot.maxEta _xTerm opt2
+     ModPlot.maxEta _xTerm opt2
 --     ModPlot.maxEta term opt2
 --     ModPlot.optimalObjs term _opt
      ModPlot.stateRange2 term _opt
@@ -662,7 +666,7 @@ printBalanceLoopItem optParams b@(BalanceLoopItem bStp _bForcing _bFStep _bal re
     -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG dir bStep) opt
  --    ModPlot.simulationSignals term opt2
 
---    ModPlot.maxState (ModPlot.gpPNG dir bStep) opt
+     ModPlot.maxState term opt2
     -- ModPlot.maxStateContour (ModPlot.gpPNG dir bStep) opt-}
      
 

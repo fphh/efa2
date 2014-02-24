@@ -157,8 +157,8 @@ fold ::
 fold = MW.execWriter . StateFlow.traverseGraph MW.tell MW.tell
 
 
-checkGreaterZero ::
-  (Arith.Constant a, Ord a,
+checkGreaterZeroNotNaN ::
+  (Arith.Constant a, Ord a,RealFloat a,
    Ord node,
    Monoid (sweep vec Bool), Node.C node,
    Sweep.SweepClass sweep vec a,
@@ -166,13 +166,13 @@ checkGreaterZero ::
    Sweep.SweepMap sweep vec a Bool) =>
   StateFlow.Graph node b (Result (sweep vec a)) ->
   Result (sweep vec Bool)
-checkGreaterZero = fold . StateFlow.mapGraphWithVar
+checkGreaterZeroNotNaN = fold . StateFlow.mapGraphWithVar
   (\_ _ -> Undetermined)
   (\(Idx.InPart _ var) v ->
      case var of
           TopoVar.Power _ ->
             case v of
-                 (Determined w) -> Determined $ Sweep.map (> Arith.zero) w
+                 (Determined w) -> Determined $ Sweep.map (\ x -> x > Arith.zero && not (isNaN x)) w
                  _ -> Undetermined
           _ -> Undetermined)
 

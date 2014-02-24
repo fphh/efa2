@@ -58,7 +58,7 @@ import Control.Applicative (liftA2)
 
 
 perStateSweep ::
-  (Node.C node, Show node,
+  (Node.C node, Show node,RealFloat a,
    Ord a, Show a, UV.Unbox a, Arith.ZeroTestable (sweep vec a),
    Arith.Product (sweep vec a), Arith.Constant a,
    Sweep.SweepVector vec a, Sweep.SweepMap sweep vec a a,
