@@ -753,17 +753,31 @@ makeStepped (Record time pmap) = Record (S.duplicateR time) $ Map.map (S.duplica
 
 
 
-scatter :: 
+scatterRnd :: 
   (V.Storage v d1, V.FromList v, Constant d1, Ord id,
    Random d2,
    V.Storage v d2,
    Product d2,
    Random.RandomGen rnd) => 
            rnd -> Int -> d2 -> Record s1 s2 t1 t2 id v d1 d2 -> Record s1 s2 t1 t2 id v d1 d2
-scatter randomGenerator number scale (Record time pMap)  = 
+scatterRnd randomGenerator number scale (Record time pMap)  = 
   Record (S.densifyTime (P.toInteger number) time) 
      (Map.fromList $ snd $ 
       foldl (\ (rndList, xs) (k,x) -> (drop number rndList, xs ++ [(k,S.scatter rndList number scale x)])) 
                                 (randomList,[])  $ Map.toList pMap )
   where 
     randomList = Random.randoms randomGenerator 
+{-
+scatterSin :: 
+  (V.Storage v d1, V.FromList v, Constant d1, Ord id,
+   Random d2,
+   V.Storage v d2,
+   Product d2) => 
+           Int -> d2 -> d2 -> Record s1 s2 t1 t2 id v d1 d2 -> Record s1 s2 t1 t2 id v d1 d2
+scatterSin number scale freq (Record time pMap)  = 
+  Record (S.densifyTime (P.toInteger number) time) 
+     (Map.map (\x -> S.scatter sinList number scale x) pMap)
+  where 
+    sinList = map sin $ S.toList (S.scale time freq)
+    time = S.densifyTime (P.toInteger number) time                          
+-}

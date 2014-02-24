@@ -118,7 +118,7 @@ checkBalance :: (Ord a, Arith.Sum a) =>
                 One.OptimisationParams node list sweep vec a ->
                 One.Balance node a ->  Bool
 checkBalance optParams bal = all g $ Map.elems bal
-  where g x = (Arith.abs x) < eps
+  where g x = (Arith.abs x) <= eps
         One.BalanceThreshold eps =  One.balanceThreshold optParams
 
 iterateBalanceUntil ::
@@ -155,7 +155,6 @@ balanceIteration::
 balanceIteration sysParams optParams simParams perStateSweep balForceIn balStepsIn statForceIn indexConversionMap =
   go 0 balForceIn balStepsIn resStart
   where
---    trac  = (\ x -> trace ("balance" ++ show x) x)
     One.MaxBalanceIterations maxStepCnt = One.maxBalanceIterations optParams
     seed = One.balanceForcingSeed optParams
     resStart = fsys balForceIn
@@ -250,7 +249,7 @@ checkStateTimes :: (Num a, Ord a) => One.OptimisationParams node [] Sweep vec a 
                Bool
 checkStateTimes optParams stateDurs stateSteps = 
   all g $ zip (Map.elems stateDurs) (Map.elems stateSteps)
-  where g (time,step) = (time > lThr)  && ( time < uThr || step == One.DontForceState )
+  where g (time,step) = (time > lThr)  && ( time <= uThr || step == One.DontForceState )
         (One.StateTimeThreshold uThr) = One.stateTimeUpperThreshold optParams
         (One.StateTimeThreshold lThr) = One.stateTimeLowerThreshold optParams        
 
@@ -276,7 +275,6 @@ stateIteration ::
   One.SystemParams node a ->
   One.OptimisationParams node [] Sweep UV.Vector a ->
   One.SimulationParams node sigVec a ->
---  Map.Map Idx.State (Map.Map [a] (Maybe (a, a, EnvResult node a))) ->
   Type.OptimalSolutionPerState node a ->
   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
   Maybe (Map.Map Idx.AbsoluteState (One.StateForcingStep a)) ->
@@ -285,8 +283,7 @@ stateIteration ::
    (Type.OptimiseStateAndSimulate node Sweep UV.Vector a intVec b simVec c efaVec d)]
 stateIteration sysParams optParams simParams optimalObjectivePerState stateForceIn staStepsIn indexConversionMap =
   go 0 stateForceIn initialSteps initialResults
-  where --initialSteps = (\x -> trace ("initialStateSteps: " ++ show x) x) $ j staStepsIn
-        initialSteps = j staStepsIn
+  where initialSteps = j staStepsIn
      
         j (Just st) = st               
         j (Nothing) = Map.map (\x -> if x==0 then seed else One.DontForceState) initialTimes
@@ -310,7 +307,7 @@ stateIteration sysParams optParams simParams optimalObjectivePerState stateForce
           StateLoopItem cnt force step times bal res :
                if checkStateTimes optParams times step || cnt >= maxCnt
                then [] else  go (cnt+1) force1 step1 res1
-                 -- go ((\x -> trace ("cnt :" ++ show x) x) (cnt+1))  force1 step1 res1
+                
           where
             force1 = Map.fromList $ zipWith g (Map.toList force) (Map.toList step)
 
@@ -650,14 +647,14 @@ printBalanceLoopItem optParams b@(BalanceLoopItem bStp _bForcing _bFStep _bal re
      putStrLn $ showBalanceLoopItem optParams b   
 {-     ModPlot.maxIndexPerState term _opt
      ModPlot.maxEta _xTerm opt2 -}
-     ModPlot.optimalObjs term _opt
+     --ModPlot.optimalObjs term _opt
 --     ModPlot.stateRange2 term _opt
 
 --     putStrLn $ show $ Type.signals $ Type.simulation $ opt2
 --     ModPlot.simulationSignals term opt2
 --    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
 --     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
-     ModPlot.givenSignals term opt2
+--     ModPlot.givenSignals term opt2
 --    ModPlot.maxEtaPerState (ModPlot.gpPNG dir bStep) opt
    -- ModPlot.maxPosPerState (ModPlot.gpPNG dir bStep) stoPos opt
 
@@ -668,7 +665,7 @@ printBalanceLoopItem optParams b@(BalanceLoopItem bStp _bForcing _bFStep _bal re
     -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG dir bStep) opt
  --    ModPlot.simulationSignals term opt2
 
-     ModPlot.maxState term opt2
+--     ModPlot.maxState term opt2
     -- ModPlot.maxStateContour (ModPlot.gpPNG dir bStep) opt-}
      
 

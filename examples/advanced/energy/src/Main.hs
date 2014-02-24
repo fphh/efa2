@@ -98,8 +98,9 @@ main1 = do
       pRest = Sig.offset 0.3 . Sig.scale 0.9 $ Sig.convert $  rest
 
       reqsRec :: Record.PowerRecord Node UV.Vector Double
-      reqsRec = Record.scatter rndGen 50 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
-
+--      reqsRec = Record.scatterRnd rndGen 10 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
+      reqsRec = Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
+      
       reqsRecStep :: Record.PowerRecord Node UV.Vector Double
       reqsRecStep = Record.makeStepped reqsRec
 
@@ -135,15 +136,15 @@ main1 = do
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
           One.etaToOptimise = Nothing,
-          One.maxEtaIterations = One.MaxEtaIterations 1,
-          One.maxInnerLoopIterations = One.MaxInnerLoopIterations 1,
-          One.maxBalanceIterations = One.MaxBalanceIterations 5,
-          One.maxStateIterations = One.MaxStateIterations 1,
+          One.maxEtaIterations = One.MaxEtaIterations 2,
+          One.maxInnerLoopIterations = One.MaxInnerLoopIterations 3,
+          One.maxBalanceIterations = One.MaxBalanceIterations 20,
+          One.maxStateIterations = One.MaxStateIterations 100,
           One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 0)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.2,
-          One.balanceThreshold = One.BalanceThreshold 0.4,
-          One.stateTimeUpperThreshold = One.StateTimeThreshold 0.1,
+          One.balanceThreshold = One.BalanceThreshold 0.2,
+          One.stateTimeUpperThreshold = One.StateTimeThreshold 3,
           One.stateTimeLowerThreshold = One.StateTimeThreshold 0,
           One.stateForcingSeed = One.StateForcingStep 0.05,
           One.balanceForcingSeed = One.ChargeDrive 0.01}
@@ -192,11 +193,11 @@ main1 = do
 
 --  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
   concurrentlyMany_ [
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec, 
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
-    ModPlot.reqsRec ModPlot.gpXTerm reqsRec, 
---    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol), 
-    sequence_ (ModLoop.printEtaLoop optParams ol)]
+--    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec, 
+--    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
+--    ModPlot.reqsRec ModPlot.gpXTerm reqsRec, 
+    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)] 
+--    sequence_ (ModLoop.printEtaLoop optParams ol)]
 
   
 

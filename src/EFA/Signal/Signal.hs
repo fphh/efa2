@@ -2043,26 +2043,8 @@ duplicateL s = fromList $ f $ toList s
   where f [] = [] 
         f (_:[]) = [] 
         f (x:xs) = [x,x] ++ f xs
-{-
-scatter :: 
-  (Random.Random a, Product a, D.Storage c1 d1, D.Storage c d,
-   D.FromList c1, D.FromList c, Random.RandomGen g,
-   NestedList c1 d1 ~ [a], NestedList c d ~ [a]) =>
-  g -> Int -> a -> TC s1 t1 (Data c1 d1) -> TC s t (Data c d)
-scatter randomGenerator n scaleFactor s = fromList $ f $ toList s 
-  where f [] = [] 
-        f (_:[]) = [] 
-        f (x:xs) = genVals x ++ f xs
-        genVals x = P.zipWith (~+) (P.replicate n x) 
-                    (P.map (~* scaleFactor) (Random.randoms randomGenerator) )   
--}
-        
-
 
 scatter :: 
---  (Random.Random a, Product a, D.Storage c1 d1, D.Storage c d,
---   D.FromList c1, D.FromList c, Random.RandomGen g,
---   NestedList c1 d1 ~ [a], NestedList c d ~ [a]) =>
   (SV.Storage v d, SV.FromList v, Sum d, Product d)=>
   [d] -> Int -> d -> TC s t (Data (v :> Nil) d) -> TC s t (Data (v:> Nil) d)
 scatter randomList n scaleFactor s = fromList $ f $ toList s 
@@ -2070,9 +2052,8 @@ scatter randomList n scaleFactor s = fromList $ f $ toList s
         f (_:[]) = [] 
         f (x:xs) = genVals x ++ f xs
         genVals x = P.zipWith (~+) (P.replicate n x) 
-                    (P.map (~* scaleFactor) randomList) --(Random.randoms randomGenerator) )   
+                    (P.map (~* scaleFactor) randomList)
        
-
 densifyTime :: 
   (SV.Storage v d, SV.FromList v,Sum d, Product d, Constant d)=>
   P.Integer -> 
