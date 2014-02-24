@@ -131,7 +131,7 @@ main1 = do
 
 
   let
-      ienv = AppOpt.storageEdgeXFactors optParams 4 4
+      ienv = AppOpt.storageEdgeXFactors optParams 3 3
                $ AppOpt.initialEnv optParams System.stateFlowGraph
 
       sysParams = One.SystemParams {

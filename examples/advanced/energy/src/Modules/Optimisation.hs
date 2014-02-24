@@ -107,7 +107,7 @@ toPowerMap graph state = Map.mapWithKey g  $ State.storages graph
 
 
 solve ::
-  (Node.C node, Ord node, Show node,
+  (Node.C node, Ord node, Show node,RealFloat a,
    Show a, Ord a, UV.Unbox a, Arith.Constant a,
    Sweep.SweepMap sweep vec a a, Arith.Sum (sweep vec a),
    Sweep.SweepVector vec a, Sweep.SweepClass sweep vec a,
@@ -152,7 +152,7 @@ solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
 
   in Type.SweepPerReq
        eta
-       (DoubleSweep.checkGreaterZero res)
+       (DoubleSweep.checkGreaterZeroNotNaN res)
        (toPowerMap res state)
        res
 

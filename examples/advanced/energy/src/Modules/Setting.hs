@@ -123,7 +123,7 @@ varLocalPower = Sig.fromList2 varLocalPower'
 
 initStorageState :: (Arith.Constant a) => One.InitStorageState System.Node a
 initStorageState =
-  One.InitStorageState $ Map.fromList [(System.Water, Arith.fromRational $ 0.7*3600*1000)]
+  One.InitStorageState $ Map.fromList [(System.Water, Arith.fromRational $ 1000)] --0.7*3600*1000)]
 
 
 initStorageSeq :: (Arith.Constant a) => One.InitStorageSeq System.Node a
