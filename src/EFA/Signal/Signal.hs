@@ -2044,12 +2044,13 @@ duplicateL s = fromList $ f $ toList s
         f (_:[]) = [] 
         f (x:xs) = [x,x] ++ f xs
 
+
 scatter :: 
   (SV.Storage v d, SV.FromList v, Sum d, Product d)=>
   [d] -> Int -> d -> TC s t (Data (v :> Nil) d) -> TC s t (Data (v:> Nil) d)
 scatter randomList n scaleFactor s = fromList $ f $ toList s 
   where f [] = [] 
-        f (_:[]) = [] 
+        f (x:[]) = [x] 
         f (x:xs) = genVals x ++ f xs
         genVals x = P.zipWith (~+) (P.replicate n x) 
                     (P.map (~* scaleFactor) randomList)
@@ -2061,7 +2062,7 @@ densifyTime ::
   TC s1 t1 (Data (v :> Nil) d)   
 densifyTime n s = fromList $ f $ toList s
   where f [] = [] 
-        f (_:[]) = [] 
+        f (x:[]) = [x] 
         f (x:xs) = (P.map g  [0 .. (n P.- 1)]) ++ f xs
           where g cnt = x ~+ (step ~* (Arith.fromInteger cnt))
                 step = ((P.head xs) ~- x)~/(Arith.fromInteger n)

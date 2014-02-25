@@ -108,10 +108,10 @@ flowStates =
    map (identifyFlowState topology) $
       [ [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network],
         [dirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
-        [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
-        [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network] ]
---        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Network Water],
---        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Water Network] ]
+--        [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Network Water],
+--        [undirEdge Gas LocalNetwork, dirEdge Network LocalNetwork, dirEdge Water Network] ]
+        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Network Water],
+        [dirEdge Gas LocalNetwork, dirEdge LocalNetwork Network, dirEdge Water Network] ]
 
 
 stateFlowGraph :: StateQty.Graph Node (Result a) (Result v)

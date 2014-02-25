@@ -87,7 +87,6 @@ data EnergyFlowAnalysis node vec a = EnergyFlowAnalysis {
     stateFlowGraph :: EnvResult node (Data Nil a)}
 
 data OptimisationPerState node a = OptimisationPerState {
---    optimalSolutionStackPerState :: OptStackPerState a,
     optimalSolutionPerState :: OptimalSolutionPerState node a,
     averageSolutionPerState :: AverageSolutionPerState node a}
 

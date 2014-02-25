@@ -170,7 +170,7 @@ selectOptimalState ::
   Map Idx.AbsoluteState (One.StateForcing a) ->
   Type.OptimalSolutionPerState node a ->
   One.IndexConversionMap ->
-  Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
+  Type.OptimalSolution node a --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 selectOptimalState _params stateForcing stateMap indexConversionMap =
   List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxByWithNaN ModUt.fst4))
   $ map (\(st, m) ->

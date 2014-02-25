@@ -98,8 +98,8 @@ main1 = do
       pRest = Sig.offset 0.3 . Sig.scale 0.9 $ Sig.convert $  rest
 
       reqsRec :: Record.PowerRecord Node UV.Vector Double
---      reqsRec = Record.scatterRnd rndGen 10 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
-      reqsRec = Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
+      reqsRec = Record.scatterRnd rndGen 10 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
+--      reqsRec = Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
       
       reqsRecStep :: Record.PowerRecord Node UV.Vector Double
       reqsRecStep = Record.makeStepped reqsRec
@@ -193,11 +193,11 @@ main1 = do
 
 --  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
   concurrentlyMany_ [
---    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec, 
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec, 
 --    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
 --    ModPlot.reqsRec ModPlot.gpXTerm reqsRec, 
-    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)] 
---    sequence_ (ModLoop.printEtaLoop optParams ol)]
+--    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)] 
+    sequence_ (ModLoop.printEtaLoop optParams ol)]
 
   
 
