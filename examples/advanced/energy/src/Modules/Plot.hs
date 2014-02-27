@@ -22,6 +22,9 @@ import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vector
 
 import qualified EFA.Flow.SequenceState.Index as Idx
+
+import qualified EFA.Flow.Sequence.Algorithm as SeqAlgo
+
 import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.State.Quantity as StateQty
@@ -708,6 +711,9 @@ simulationGraphs ::
   (FormatValue.FormatValue b, UV.Unbox b,
    Vector.Storage efaVec d,
    Vector.FromList efaVec,
+   Vector.Walker efaVec,
+   Arith.ZeroTestable d,
+   Arith.Constant d,
    FormatValue.FormatValue d,
    Node.C node,
    Sweep.SweepClass sweep vec b,
@@ -723,6 +729,11 @@ simulationGraphs terminal (Type.OptimiseStateAndSimulate _ _ _ efa _) = do
     $ Draw.title "Sequence Flow Graph from Simulation"
     $ Draw.seqFlowGraph Draw.optionsDefault (Type.sequenceFlowGraph efa)
 
+  terminal "simulationGraphsSequenceAccumulated"
+    $ Draw.bgcolour DarkSeaGreen2
+    $ Draw.title "Accumulated Sequence Flow Graph from Simulation"
+    $ Draw.seqFlowGraph Draw.optionsDefault
+    $ SeqAlgo.accumulate (Type.sequenceFlowGraph efa)
 
   terminal "simulationGraphsState"
     $ Draw.bgcolour Lavender
