@@ -147,6 +147,7 @@ Library
     EFA.Flow.Sequence.Absolute
     EFA.Flow.Sequence.SystemEta
     EFA.Flow.Sequence.Symbolic
+    EFA.Flow.Sequence.Algorithm
     EFA.Flow.State
     EFA.Flow.State.Index
     EFA.Flow.State.Variable
