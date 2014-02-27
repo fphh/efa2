@@ -417,3 +417,4 @@ fold ::
    (Node.C node, Monoid w) =>
    Graph node w w -> w
 fold = MW.execWriter . traverseGraph MW.tell MW.tell
+
