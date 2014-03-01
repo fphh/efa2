@@ -56,7 +56,7 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 
 --import Text.Printf (printf)
 
-import qualified System.Random as Random 
+import qualified System.Random as Random
 
 
 initEnv ::
@@ -73,7 +73,7 @@ main1 = do
   tabEta <- Table.read "../maps/eta.txt"
 
   tabPower <- Table.read "../maps/power.txt.bak"
-  
+
   rndGen <- Random.getStdGen
 
   let etaMap =
@@ -94,13 +94,13 @@ main1 = do
 
       ctime = Sig.convert time
 
-      pLocal = Sig.offset 1.5 . Sig.scale 1 $ Sig.convert $ local
-      pRest = Sig.offset 0.3 . Sig.scale 0.9 $ Sig.convert $  rest
+      pLocal = Sig.offset 1 . Sig.scale 4.5 $ Sig.convert $ local
+      pRest = Sig.offset 0.2 . Sig.scale 1.3 $ Sig.convert $  rest
 
       reqsRec :: Record.PowerRecord Node UV.Vector Double
-      reqsRec = Record.scatterRnd rndGen 10 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
---      reqsRec = Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
-      
+--      reqsRec = Record.scatterRnd rndGen 10 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
+      reqsRec = Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
+
       reqsRecStep :: Record.PowerRecord Node UV.Vector Double
       reqsRecStep = Record.makeStepped reqsRec
 
@@ -153,7 +153,7 @@ main1 = do
       simParams = One.SimulationParams {
           One.varReqRoomPower1D = Sig.convert $ ModSet.varRestPower1D,
           One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
-          One.reqsRec = Base.convertRecord reqsRecStep, 
+          One.reqsRec = Base.convertRecord reqsRecStep,
           One.sequFilterTime=0.01,
           One.sequFilterEnergy=0 }
 
@@ -190,16 +190,16 @@ main1 = do
 -}
 
 
-
 --  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
   concurrentlyMany_ [
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec, 
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
 --    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
---    ModPlot.reqsRec ModPlot.gpXTerm reqsRec, 
---    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)] 
-    sequence_ (ModLoop.printEtaLoop optParams ol)]
+--    ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
+    --ModLoop.checkRangeIO sysParams optParams simParams]
+     mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
+--    sequence_ (ModLoop.printEtaLoop optParams ol)]
 
-  
+
 
 {-
   concurrentlyMany_ [

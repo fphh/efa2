@@ -86,7 +86,7 @@ toPowerMap ::
   Idx.State ->
   Type.StoragePowerMap node sweep vec a
 toPowerMap graph state = Map.mapWithKey g  $ State.storages graph
-  where flowTopo = Maybe.fromMaybe (error $ "toPowerMap State" ++ show state ++  "not in Graph") 
+  where flowTopo = Maybe.fromMaybe (error $ "toPowerMap State" ++ show state ++  "not in Graph")
                    (Map.lookup state $ fmap Topology.topology $ State.states graph)
 
         look p = StateQty.lookup p graph -- join $ fmap toMaybe $ StateQty.lookup p graph

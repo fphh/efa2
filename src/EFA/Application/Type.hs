@@ -36,15 +36,16 @@ type EnvResult node a = StateQty.Graph node (Result a) (Result a)
 -- | Data Type to store the optimal solution per state
 type OptimalSolutionPerState node a =
   Map Idx.State (Map [a] (Maybe (a, a, Int, EnvResult node a)))
-  
+
+-- | Data Type to store the optimal solution of all states
+type OptimalSolution node a = Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
+
 -- | Data Type to store the stack of the optimal abjective Function per state
 type OptStackPerState (sweep :: (* -> *) -> * -> *) vec a =  Map Idx.State (Map [a] (Result (sweep vec a)))
 
 -- | Data Type to store the average solution per state
 type AverageSolutionPerState node a = Map Idx.State (Map [a] (Maybe a))
 
--- | Data Type to store the optimal solution of all states
-type OptimalSolution node a = Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 
 type ControlMatrices node vec a = Map (TopoIdx.Position node) (Sig.PSignal2 Vector vec a)
 

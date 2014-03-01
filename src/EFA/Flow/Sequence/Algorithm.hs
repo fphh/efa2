@@ -28,9 +28,9 @@ accumulate ::
   SeqQty.Graph node (Result (Arith.Scalar (Arith.Scalar a))) (Result (Arith.Scalar a))
 accumulate sfg =
   SeqAbs.solve (SeqQty.mapGraphWithVar (const id) integr sfg) mempty
-  where integr (Idx.InPart _ var) v = 
+  where integr (Idx.InPart _ var) v =
           fmap Arith.integrate $
-            case var of 
+            case var of
                  TopoVar.Energy _ -> v
                  TopoVar.DTime _ -> v
                  _ -> Undetermined

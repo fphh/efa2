@@ -99,7 +99,7 @@ balForcing ::
   One.OptimisationParams node list sweep vec a ->
   Type.StoragePowerMap node sweep vec a ->
   Result (sweep vec a)
-balForcing balanceForcing params powerMap = 
+balForcing balanceForcing params powerMap =
   Map.foldWithKey f zero balanceForcing
       where
         zero = Determined $ Sweep.fromRational (One.sweepLength params) Arith.zero
@@ -107,17 +107,17 @@ balForcing balanceForcing params powerMap =
           where
             g (Determined ac) (Determined fo) = Determined $ ac Arith.~+ fo
             g _ _ = Undetermined
-              
+
             force = fmap (Sweep.map (One.getSocDrive forcingFactor Arith.~*)) stoPower
-            stoPower = maybe (error $ "forcing failed, because node not found: " 
-                  ++ show stoNode)  id $ join $  
+            stoPower = maybe (error $ "forcing failed, because node not found: "
+                  ++ show stoNode)  id $ join $
                       Map.lookup stoNode powerMap
 
 
-optStackPerState :: 
+optStackPerState ::
   (UV.Unbox a,
    Arith.Sum a,
-   Sweep.SweepClass sweep UV.Vector a, 
+   Sweep.SweepClass sweep UV.Vector a,
    Ord node,
    Show node,
    Arith.Sum (sweep UV.Vector a),
@@ -127,9 +127,9 @@ optStackPerState ::
   Map node (One.SocDrive a)->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
   Type.OptStackPerState sweep UV.Vector a
-optStackPerState params balanceForcing  = 
+optStackPerState params balanceForcing  =
   Map.map $ Map.map
-    (DoubleSweep.objectiveValue (balForcing balanceForcing params)) 
+    (DoubleSweep.objectiveValue (balForcing balanceForcing params))
 
 
 optimalObjectivePerState ::
@@ -146,7 +146,7 @@ optimalObjectivePerState ::
   One.OptimisationParams node list sweep UV.Vector a ->
   Map node (One.SocDrive a)->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
-  Type.OptimalSolutionPerState node a 
+  Type.OptimalSolutionPerState node a
 optimalObjectivePerState params balanceForcing =
   Map.map $
     Map.map
@@ -172,17 +172,22 @@ selectOptimalState ::
   One.IndexConversionMap ->
   Type.OptimalSolution node a --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 selectOptimalState _params stateForcing stateMap indexConversionMap =
-  List.foldl1' (Map.unionWith (liftA2 $ ModUt.maxByWithNaN ModUt.fst4))
-  $ map (\(st, m) ->
-      Map.map (fmap
-        (\(objVal, eta, _ ,env) ->
-            (objVal Arith.~+
-             maybe (error "Base.selectOptimalState")
-                   One.unpackStateForcing
-                     (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
+  let
+      g f Nothing y = y
+      g f x Nothing = x
+      g f (Just x) (Just y) = Just (f x y)
+
+  in List.foldl1' (Map.unionWith (g $ ModUt.maxByWithNaN ModUt.fst4))
+     $ map (\(st, m) ->
+             Map.map (fmap
+                      (\(objVal, eta, _ ,env) ->
+                        (objVal Arith.~+
+                         maybe (error "Base.selectOptimalState")
+                         One.unpackStateForcing
+                         (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
                          eta, st, env))) m)
-  $ Map.toList stateMap
-  
+     $ Map.toList stateMap
+
 envToPowerRecord ::
   (Ord node) =>
   TopoQty.Section node (Result (Data (v :> Nil) a)) ->

@@ -150,9 +150,9 @@ energyFlowAnalysis sysParams simParams powerRecord =
   let recZeroCross =
         Chop.addZeroCrossings $ Base.convertRecord powerRecord
 
-      sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord r) 
+      sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord r)
                             $ Chop.genSequ recZeroCross
-                            
+
       thrT = One.sequFilterTime simParams
       thrE = One.sequFilterEnergy simParams
 

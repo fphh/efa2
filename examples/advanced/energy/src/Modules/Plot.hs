@@ -199,7 +199,7 @@ plotGraphMaps terminal title =
 plotGraphMapOfMaps ::
   (FormatValue.FormatValue a, Show a, Filename [a], Node.C node) =>
   (String -> DotGraph Text -> IO ()) ->
-  Type.OptimalSolutionPerState node a -> 
+  Type.OptimalSolutionPerState node a ->
   IO ()
 plotGraphMapOfMaps terminal =
   sequence_ . Map.elems . Map.mapWithKey (plotGraphMaps terminal . show)
@@ -371,19 +371,19 @@ bestStateCurve ::
   Sig.PSignal2 Vector Vector a
 bestStateCurve =
   withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . ModUt.thd4)
-  
-stateRange2 ::  
+
+stateRange2 ::
   (Ord b, Terminal.C term) =>
   ([Char] -> IO term) -> Type.OptimisationPerState node b -> IO ()
 stateRange2 term opt = do
   t <- term "StateRanges"
-  plotOptimal t (\(Idx.State st) _ ->  fromIntegral st) "stateRange2" opt 
+  plotOptimal t (\(Idx.State st) _ ->  fromIntegral st) "stateRange2" opt
 
 
 stateRange ::
   (Terminal.C term, Ord b) =>
   term ->
-  Type.OptimisationPerState node b 
+  Type.OptimisationPerState node b
   -> IO ()
 stateRange terminal =
   AppPlot.surfaceWithOpts "StateRanges"
@@ -393,12 +393,12 @@ stateRange terminal =
             frameOpts varRestPower varLocalPower
   . Map.elems
   . Map.mapWithKey (\state@(Idx.State st)  -> label (show state) . to2DMatrix . fmap (m2n . fmap (f st)))
-  . Type.optimalSolutionPerState 
+  . Type.optimalSolutionPerState
   where f st _ =  fromIntegral st
-        
-        
-        
-        
+
+
+
+
 
 maxState ::
   (Terminal.C term, a ~ b, b ~ Double) =>
@@ -446,7 +446,7 @@ maxObjPerState terminal =
 
 maxEtaPerState terminal =
   maxPerState terminal "Chosen Eta Per State" ModUt.getMaxEta
-  
+
 maxIndexPerState terminal =
   maxPerState terminal "Chosen Index Per State" ModUt.getMaxIndex
 
@@ -518,7 +518,7 @@ sweepStackPerStateEta terminal params =
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
      . Map.map (Map.map Type.etaSys)
-     
+
 
 sweepStackPerStateStoragePower ::
   (Show (vec Double),a ~ Double,Show node,
@@ -529,7 +529,7 @@ sweepStackPerStateStoragePower ::
    Terminal.C term) =>
   (FilePath -> IO term) ->
   One.OptimisationParams node f sweep vec a ->
-  node ->  
+  node ->
   Type.Sweep node sweep vec a ->
   IO ()
 sweepStackPerStateStoragePower terminal params node =
@@ -537,7 +537,7 @@ sweepStackPerStateStoragePower terminal params node =
       f m = Map.lookup node m
       g (Just (Just x)) = x
       g _ = error ("Error in sweepStackPerStateStoragePower - no StoragePower found for node: " ++ show node)
-      
+
   in plotSweeps terminal id "Per State Sweep -- StoragePower"
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
@@ -558,7 +558,7 @@ sweepStackPerStateOpt ::
   IO ()
 sweepStackPerStateOpt terminal params balanceForcing =
   let len = One.sweepLength params
-              
+
   in plotSweeps terminal id "Per State Sweep -- Opt"
      . Map.map (\ m -> (matrix2ListOfMatrices len
                 $ Sig.map Sweep.toList
@@ -578,18 +578,18 @@ sweepStackPerStateCondition ::
   IO ()
 sweepStackPerStateCondition terminal params =
   let len = One.sweepLength params
-      f (Determined (Sweep.Sweep vec)) = Determined $ Sweep.Sweep $ UV.imap g vec 
+      f (Determined (Sweep.Sweep vec)) = Determined $ Sweep.Sweep $ UV.imap g vec
       f _ = error "Error in sweepStackPerStateCondition - undetermined Condition"
-      g idx True = fromIntegral idx 
+      g idx True = fromIntegral idx
       g _ False = 0/0
-      
+
   in plotSweeps terminal id "Per State Sweep -- Validity"
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
                 . sweepResultTo2DMatrix len)
-     . Map.map (Map.map (f . Type.condVec))     
-     
-     
+     . Map.map (Map.map (f . Type.condVec))
+
+
 plotOptimal ::
   (Terminal.C term, Ord b) =>
   term ->
@@ -648,16 +648,16 @@ findTile xs ys x y =
   in sort $ liftA2 (,) [xa, xb] [ya, yb]
 
 
-reqsRec :: 
+reqsRec ::
   (Show (v Double), Vector.Walker v, Vector.Storage v Double,
    Vector.FromList v, Terminal.C term) =>
-  (FilePath -> IO term) -> 
-  Record.PowerRecord node v Double -> 
-  IO () 
+  (FilePath -> IO term) ->
+  Record.PowerRecord node v Double ->
+  IO ()
 reqsRec terminal (Record.Record _ pMap) = mapM_ f $ zip (init xs) (tail xs)
-   where xs = Map.elems pMap 
+   where xs = Map.elems pMap
          f (x,y) = requirements terminal x y
-         
+
 
 -- | TODO Kacheln anzeigen deaktiviert: @HT -- sorry hat mit veraenderten Reqs kein Kacheln mehr gefunden
 requirements ::
@@ -802,15 +802,15 @@ instance PNG (IO PNG.T) where
 -}
 
 -- TODO: linearer sweepIndex der richtige Weg ?
-drawSweepStateFlowGraph :: 
+drawSweepStateFlowGraph ::
   (Node.C node, FormatValue.FormatValue b,
   Sweep.SweepVector vec b, Sweep.SweepClass sweep vec b) =>
   String ->
   Int ->
   StateQty.Graph node (Result (sweep vec b)) (Result (sweep vec b)) ->
   IO ()
-drawSweepStateFlowGraph title sweepIndex sfgSweep =   
-  Draw.xterm $ Draw.title title $ Draw.stateFlowGraph Draw.optionsDefault 
+drawSweepStateFlowGraph title sweepIndex sfgSweep =
+  Draw.xterm $ Draw.title title $ Draw.stateFlowGraph Draw.optionsDefault
   $ StateQty.mapGraph g g sfgSweep
      where g = fmap (vhead "simulationGraphs" . drop sweepIndex . Sweep.toList)
 
@@ -819,16 +819,16 @@ drawSweepStackStateFlowGraph ::
    Sweep.SweepVector vec b,
    Sweep.SweepClass sweep vec b) =>
   Idx.State ->
-  [a] -> 
+  [a] ->
   Int ->
-  Map Idx.State (Map [a] (Type.SweepPerReq node sweep vec b)) -> 
+  Map Idx.State (Map [a] (Type.SweepPerReq node sweep vec b)) ->
   IO ()
-drawSweepStackStateFlowGraph state reqsPos sweepIndex sweep = 
+drawSweepStackStateFlowGraph state reqsPos sweepIndex sweep =
   drawSweepStateFlowGraph ("StateFlowGraph from SweepStack - State : " ++ show state ++
                            " - Requirement Position :" ++ show reqsPos ++ "- Sweep Index: " ++ show sweepIndex) sweepIndex sfgSweep
-  where sfgSweep =  Type.envResult $ 
-                    Maybe.maybe (error $ "drawSweepStackStateFlowGraph - Position not found: "++ show reqsPos) 
-                    id $ Map.lookup reqsPos $ 
+  where sfgSweep =  Type.envResult $
+                    Maybe.maybe (error $ "drawSweepStackStateFlowGraph - Position not found: "++ show reqsPos)
+                    id $ Map.lookup reqsPos $
                     maybe (error $ "drawSweepStackStateFlowGraph - State not found: " ++ show state)
                     id $ Map.lookup state sweep
  

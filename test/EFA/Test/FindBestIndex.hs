@@ -84,7 +84,7 @@ orGen g1 g2 = do
 
 arbitraryOrNan ::
   (Arith.Constant a, Arith.Product a, QC.Arbitrary a) => QC.Gen a
-arbitraryOrNan = 
+arbitraryOrNan =
   let nan = Arith.zero Arith.~/ Arith.zero
   in QC.arbitrary `orGen` return nan
 
@@ -220,7 +220,7 @@ findBestIndex_reference cond objVal esys =
 
 
         idxList = UV.fromList [ 0.. UV.length cs - 1 ]
-        
+
         fv = UV.filter (\(_, c1, o1, _) -> c1 && (not $ isNaN o1))
              $ UV.zipWith4 (,,,) idxList cs os es
 

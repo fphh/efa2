@@ -112,7 +112,6 @@ surfaceWithOpts ti terminal opts surfstyle fopts x y z =
     (fopts $ Plot.xyFrameAttr ti x y)
     (fmap surfstyle $ Plot.surface opts x y z)
 
-
 surface ::
   (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
   String -> term ->

@@ -99,14 +99,14 @@ findBestIndex cond objVal esys =
              else acc
 
 
-objectiveValue :: (Sweep.SweepClass sweep UV.Vector a, 
-                   UV.Unbox a, 
+objectiveValue :: (Sweep.SweepClass sweep UV.Vector a,
+                   UV.Unbox a,
                    Arith.Sum a) =>
   (Type.StoragePowerMap node sweep UV.Vector a  ->
       Result (sweep UV.Vector a) ) ->
   Type.SweepPerReq node sweep UV.Vector a ->
   Result (sweep UV.Vector a)
-objectiveValue forcing (Type.SweepPerReq esys _ powerMap _) = 
+objectiveValue forcing (Type.SweepPerReq esys _ powerMap _) =
   liftA2 (\x y -> Sweep.toSweep $ UV.zipWith (Arith.~+) (Sweep.fromSweep x) (Sweep.fromSweep y)) force esys
   where force = forcing powerMap
 
