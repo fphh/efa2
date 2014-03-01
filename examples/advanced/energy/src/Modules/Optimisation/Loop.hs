@@ -562,8 +562,8 @@ printEtaLoopItem params e@(EtaLoopItem _step _sfgIn _sweep _sfgOut res) = --prin
     let -- dir = printf "outer-loop-%6.6d" olcnt
     --  stoPos = TopoIdx.Position System.Water System.Network
   --    gasPos = TopoIdx.Position System.Gas System.LocalNetwork
-        term = ModPlot.gpXTerm
-        balanceForcing =ilBForcOut $ vlast "printEtaLoopItem" res
+        _term = ModPlot.gpXTerm
+        _balanceForcing =ilBForcOut $ vlast "printEtaLoopItem" res
 
 --    ModPlot.sweepStackPerStateEta term params _sweep
 --    ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep
@@ -683,24 +683,27 @@ printStateLoopItem optParams s@(StateLoopItem _sStep _sForcing _sFStep _stateDur
     putStrLn $ showStateLoopItem optParams s
 --    ModPlot.maxState (ModPlot.gpXTerm) _sResult
 
-
---checkRangeIO::
+checkRangeIO :: 
+  One.SystemParams Node Double -> 
+  One.OptimisationParams Node [] Sweep UV.Vector Double ->
+  One.SimulationParams Node [] Double ->
+  IO ()
 checkRangeIO sysParams optParams simParams = do
   let sfg = One.stateFlowGraphOpt optParams
       indexConversionMap = ModUt.indexConversionMap System.topology sfg
-      sweep = Base.perStateSweep sysParams optParams sfg
+      swp = Base.perStateSweep sysParams optParams sfg
       initBalF =  One.initialBattForcing optParams
       initialBalSteps = One.initialBattForceStep optParams
       statForce = Map.map (const $ One.StateForcing Arith.zero) (Bimap.toMapR indexConversionMap)
-      b@(BalanceLoopItem bStp _bForcing _bFStep _bal (opt,opt2)) = vhead "checkRangeIO" $
-        balanceIteration sysParams optParams simParams sweep initBalF initialBalSteps
+      b@(BalanceLoopItem _bStp _bForcing _bFStep _bal (opt,opt2)) = vhead "checkRangeIO" $
+        balanceIteration sysParams optParams simParams swp initBalF initialBalSteps
         statForce indexConversionMap
       term = ModPlot.gpXTerm
 
   concurrentlyMany_ [
     putStrLn $ showBalanceLoopItem optParams b,
     ModPlot.reqsRec term $ One.reqsRec simParams,
-    ModPlot.sweepStackPerStateCondition term optParams sweep,
+    ModPlot.sweepStackPerStateCondition term optParams swp,
     ModPlot.stateRange2 term opt,
     ModPlot.maxState term opt2]
 

@@ -173,8 +173,8 @@ selectOptimalState ::
   Type.OptimalSolution node a --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
 selectOptimalState _params stateForcing stateMap indexConversionMap =
   let
-      g f Nothing y = y
-      g f x Nothing = x
+      g _ Nothing y = y
+      g _ x Nothing = x
       g f (Just x) (Just y) = Just (f x y)
 
   in List.foldl1' (Map.unionWith (g $ ModUt.maxByWithNaN ModUt.fst4))
