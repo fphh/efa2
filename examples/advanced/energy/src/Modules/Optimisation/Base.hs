@@ -170,7 +170,7 @@ selectOptimalState ::
   Map Idx.AbsoluteState (One.StateForcing a) ->
   Type.OptimalSolutionPerState node a ->
   One.IndexConversionMap ->
-  Type.OptimalSolution node a --Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
+  Type.OptimalSolution node a 
 selectOptimalState _params stateForcing stateMap indexConversionMap =
   let
       g _ Nothing y = y
@@ -187,6 +187,40 @@ selectOptimalState _params stateForcing stateMap indexConversionMap =
                          (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
                          eta, st, env))) m)
      $ Map.toList stateMap
+
+{-
+genRequirementDistribution ::
+  (Ord a,
+   Vec.Unique vec (Sig.Class a),
+   Vec.Storage vec ([Sig.Class a], [Sig.SignalIdx]),
+   Vec.Storage vec Sig.SignalIdx,
+   Vec.Storage vec Int,
+   Vec.Storage vec (Sig.Class a),
+   Vec.FromList vec,
+   Vec.Find vec,
+   Vec.Filter vec, 
+   Vec.Zipper vec,
+   Vec.Walker vec,
+   Vec.Storage vec a,
+   Vec.Singleton vec,
+   Arith.Constant a, 
+   Show a,
+   Vec.Storage vec Bool,
+   Vec.Lookup vec,
+   Vec.Len (Sig.UTSignal vec a))=> 
+  One.SimulationParams node vec a -> 
+  Sig.UTDistr vec ([Sig.Class a], [Sig.SignalIdx])-}
+genRequirementDistribution (Record.Record _ m) functList = 
+  Sig.genDistributionND $ zip functList $ map Sig.untype $ Map.elems $ m 
+  where
+  --  (Record.Record _ m) = Record.partIntegrate $ One.reqsRec params
+  --  sigList = map Sig.untype $ Map.elems $ m 
+  --  functList = map (Sig.classifyWithMidVector) $ map Sig.untype $ requList  
+  --  requList = One.requirementGrid params                 
+              
+ 
+
+
 
 envToPowerRecord ::
   (Ord node) =>

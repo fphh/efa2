@@ -119,6 +119,13 @@ main1 = do
   let
       ienv = AppOpt.storageEdgeXFactors optParams 3 3
                $ AppOpt.initialEnv optParams System.stateFlowGraph
+               
+               
+      requDistrubution = Base.genRequirementDistribution 
+                         (Record.partIntegrate $ Base.convertRecord reqsRecStep)
+                         (map (Sig.classifyWithMidVector) $ map Sig.untype $ 
+                          [ ModSet.varRestPower1D, ModSet.varLocalPower1D])
+               
 
       sysParams = One.SystemParams {
          One.systemTopology = System.topology,
@@ -154,6 +161,8 @@ main1 = do
           One.varReqRoomPower1D = Sig.convert $ ModSet.varRestPower1D,
           One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
           One.reqsRec = Base.convertRecord reqsRecStep,
+          One.requirementGrid = [Sig.convert $ ModSet.varRestPower1D, Sig.convert $ ModSet.varLocalPower1D],
+          One.requirementDistribution =  requDistrubution, 
           One.sequFilterTime=0.01,
           One.sequFilterEnergy=0 }
 

@@ -40,8 +40,8 @@ import qualified EFA.Report.Base as ReportBase
 import qualified EFA.Report.Report as Report
 import qualified EFA.Report.Typ as Typ
 
-import qualified Data.Map as Map ; import Data.Map (Map)
-import qualified Data.Set as Set ; import Data.Set (Set)
+--import qualified Data.Map as Map ; import Data.Map (Map)
+--import qualified Data.Set as Set ; import Data.Set (Set)
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as ListHT
@@ -63,6 +63,7 @@ import Prelude
            String, (++),
            Int, Double, (-), show,(==),(>=),(>), (<=),not,(&&),(||),Bool(True,False),Maybe(Just,Nothing))
 import qualified Prelude as P
+--import Data.Maybe(fromMaybe)
 --import qualified System.Random as Random
 
 ----------------------------------------------------------
@@ -1846,6 +1847,49 @@ newtype Class a = Class a deriving (Show,Ord,Eq)
 classifyEven :: (P.RealFrac d) => d -> d -> d -> Class d
 classifyEven interval offs x = Class (P.fromIntegral((P.round ((x P.+ offs) P./ interval))::P.Integer) P.* interval P.- offs)
 
+classifyWithMidVector :: 
+  (Sum d,Product d,Constant d,SV.Zipper v,SV.Len (v d),
+   SV.Walker v,
+   SV.Storage v Bool,
+   SV.Singleton v,Ord d,Show d,
+   Eq d, 
+   SV.Storage v d, 
+   SV.Lookup v, 
+   SV.Find v) =>
+   UTSignal v d -> d -> Class d
+classifyWithMidVector midVector x = Class $ fromSample $ getSample midVector indexOut
+  where 
+    maxIdx = (len midVector) P.- 1
+    index = findIndex (>x) midVector
+    firstElem = fromSample $ getSample midVector (SignalIdx 0)
+    sndElem =  fromSample $ getSample midVector (SignalIdx 1)
+    lastElem = fromSample $ getSample midVector (SignalIdx maxIdx)
+    foreLastElem = fromSample $ getSample midVector (SignalIdx (maxIdx P.- 1))
+    firstWidth = (sndElem ~- firstElem)  ~/ (Arith.fromRational 2.0)
+    lastWidth = (lastElem ~- foreLastElem)  ~/ (Arith.fromRational 2.0)
+    isMonoton = all (==True) $ deltaMap (\ xa xb -> xb >= xa) midVector
+    indexOut = if maxIdx P.< 2  || (not $ isMonoton) 
+     then error ("ClassificationVector to short or not monoton" ++ show x)
+     else case index of
+       (Just idx) -> if x P.< (firstElem ~- firstWidth) 
+                     then (error "classifyWithMidVector - Value out of Range")
+                     else  if leftDist <= rightDist 
+                           then leftIndex 
+                           else rightIndex
+         where
+           rightIndex = idx                                                                    
+           leftIndex = indexAdd rightIndex (-1)
+           leftElem =  fromSample $ getSample midVector leftIndex
+           rightElem = fromSample $ getSample midVector rightIndex
+           leftDist = Arith.abs $ x ~- leftElem
+           rightDist = Arith.abs $ rightElem ~- x  
+           
+                          
+       Nothing -> if x P.<= (lastElem ~+lastWidth) 
+                  then (SignalIdx maxIdx) 
+                  else error ("Value outside classification area: " ++ show x)                                      
+
+
 -- | Calculate a 1-d distribution -- collect signal Indices in classes
 genDistribution1D :: (SV.Unique v (Class d),
                       SV.Storage v ([Class d],[SignalIdx]),
@@ -1862,6 +1906,8 @@ genDistribution1D classify sig = changeSignalType $ map count $ unique classSig
   where classSig = map classify sig
         count cl = ([cl], toList $ findIndices (cl P.==) classSig)
 
+
+{- Umgezogen nach EFA.Map.Free
 genDistributionND ::
    (Ord d, SV.Storage v (Class d),
     SV.Storage v d, SV.Walker v, SV.FromList v) =>
@@ -1870,7 +1916,17 @@ genDistributionND classify =
    Map.fromListWith Set.union .
    P.flip List.zip (fmap Set.singleton [SignalIdx 0 ..]) .
    List.transpose . fmap (toList . map classify)
+-}
+genDistributionND :: 
+  (Ord d, SV.Walker v, SV.Unique v (Class d), SV.Storage v d,
+   SV.Storage v (Class d), SV.Storage v Int,
+   SV.Storage v SignalIdx, SV.Storage v ([Class d], [SignalIdx]),
+   SV.FromList v, SV.Find v, SV.Filter v) =>
+  [(d -> Class d, UTFSignal v d)]->
+  UTDistr v ([Class d], [SignalIdx])
 
+genDistributionND xs = combineDistributions $ P.map f xs 
+  where f (g,x) = genDistribution1D g x
 
 
 -- | combine an amount of N 1d-Distributions in an N-d distribution
@@ -1887,7 +1943,8 @@ combineWith :: (SV.Storage v d3,
                 SV.FromList v,
                 SV.Storage v d1,
                 SV.Storage v d2) =>
-               (d1 -> d2 -> d3) -> TC s t (Data (v :> Nil) d1) -> TC s t (Data (v :> Nil) d2) ->  TC s t (Data (v :> Nil) d3)
+               (d1 -> d2 -> d3) -> TC s t (Data (v :> Nil) d1) -> 
+               TC s t (Data (v :> Nil) d2) ->  TC s t (Data (v :> Nil) d3)
 combineWith f xs ys =
   fromList $ liftA2 f (toList xs) (toList ys)
 
@@ -2044,7 +2101,7 @@ duplicateL s = fromList $ f $ toList s
         f (_:[]) = []
         f (x:xs) = [x,x] ++ f xs
 
-
+-- | Needs to be rewritten - the always new generated random values don't provide reproducible results
 scatter ::
   (SV.Storage v d, SV.FromList v, Sum d, Product d)=>
   [d] -> Int -> d -> TC s t (Data (v :> Nil) d) -> TC s t (Data (v:> Nil) d)
@@ -2066,4 +2123,6 @@ densifyTime n s = fromList $ f $ toList s
         f (x:xs) = (P.map g  [0 .. (n P.- 1)]) ++ f xs
           where g cnt = x ~+ (step ~* (Arith.fromInteger cnt))
                 step = ((P.head xs) ~- x)~/(Arith.fromInteger n)
+
+
 

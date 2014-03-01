@@ -145,6 +145,8 @@ data OptimisationParams node list sweep vec a = OptimisationParams {
 data SimulationParams node vec a = SimulationParams {
   varReqRoomPower1D :: Sig.PSignal vec a,
   varReqRoomPower2D :: Sig.PSignal2 Vector vec a,
+  requirementGrid :: [Sig.PSignal vec a],
+  requirementDistribution :: Sig.UTDistr vec ([Sig.Class a], [Sig.SignalIdx]),
   reqsRec :: PowerRecord node vec a,
   sequFilterTime :: a,
   sequFilterEnergy :: a}

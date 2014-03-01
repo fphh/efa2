@@ -114,6 +114,9 @@ varRestPower', varLocalPower' :: [[Double]]
 varRestPower1D :: Sig.PSignal UV.Vector Double
 varRestPower1D = Sig.fromList rest
 
+varLocalPower1D :: Sig.PSignal UV.Vector Double
+varLocalPower1D = Sig.fromList local
+
 varRestPower :: Sig.PSignal2 Vector UV.Vector Double
 varRestPower = Sig.fromList2 varRestPower'
 
