@@ -70,7 +70,7 @@ interpolateOptimalSolution ::
   One.SystemParams node b->
   One.OptimisationParams node list sweep vec a->
   One.SimulationParams node vec2 b->
-  Map.Map[b](Maybe(b, b, Idx.State, Type.EnvResult node b))->
+  Type.OptimalSolution node b -> --Map.Map[b](Maybe(b, b, Idx.State, Type.EnvResult node b))->
   Type.Interpolation node vec2 b
 interpolateOptimalSolution sysParams optParams simParams optimalSolution =
   let (prest, plocal) =

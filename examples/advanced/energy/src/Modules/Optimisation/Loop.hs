@@ -43,6 +43,7 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Part.Index as Idx
 
 --import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data (Data(Data)) --, Nil, Apply)
 
@@ -120,15 +121,67 @@ checkBalance :: (Ord a, Arith.Sum a) =>
 checkBalance optParams bal = all g $ Map.elems bal
   where g x = (Arith.abs x) <= eps
         One.BalanceThreshold eps =  One.balanceThreshold optParams
+        
+-- Check whether balance Step is already the smallest possible 
+-- This is the case when only index or stateindex in the optimal Solution differs
+-- Only active fields have to be probed 
+checkBalanceStep :: 
+  (Ord a,Arith.Constant a,
+   SV.Storage vec ([(Sig.ClassIdx, Sig.Class a)], [Sig.SignalIdx]),
+   SV.FromList vec) =>
+  One.SimulationParams node vec a -> 
+  One.Balance node a -> One.Balance node a ->
+  (a2, Type.OptimiseStateAndSimulate node2 sweep1 sweepVec1 a intVec1 b1 simVec1 c1 efaVec1 d1) ->
+  (a1, Type.OptimiseStateAndSimulate node1 sweep sweepVec a intVec b simVec c efaVec d) ->
+  Bool
+checkBalanceStep simParams bal bal1 res res1 = trace ("Diffs: " ++ show differenceList) numberOfDifferences <= (1::Integer) && 
+                                               (map (Arith.sign) $ Map.elems bal) /= (map (Arith.sign) $ Map.elems bal1)
+  where optSolution = Type.optimalSolution $ snd res
+        optSolution1 = Type.optimalSolution $ snd res1
+        differenceList = zipWith cmpFunct indexList indexList1
+        cmpFunct x y = case ((ModUt.frth5 x == ModUt.frth5 y) 
+                       ,(ModUt.thd5 x == ModUt.thd5 y)) of 
+                         (True, True) -> 0
+                         (False,False) -> 2
+                         (_,_) -> 1
+        classList = map (\ xs -> map (\ (_,Sig.Class x) -> x) xs) $
+          map fst $ Sig.toList $ One.requirementDistribution simParams            
+        lookupValues mp xs = map (\ k -> fromMaybe (error m2) $ fromMaybe (error m) $ 
+                                         Map.lookup k mp) xs
+        indexList = lookupValues optSolution classList
+        indexList1 = lookupValues optSolution1 classList
+        m = "Error in checkBalanceStep"
+        m2 = "Cycle touches Invalid Area"
+        numberOfDifferences = (foldl (+) (0) differenceList)
+        
 
-iterateBalanceUntil ::
-  (Ord node,Arith.Sum a, Ord a, Arith.Constant a) =>
+-- | Rate Balance Deviation by sum of Standard Deviation and Overall Sum 
+balanceDeviation :: 
+  (Arith.Product a,
+   Ord a,
+   Arith.Constant a,
+   Arith.Sum a) =>
+  One.Balance node a -> a
+balanceDeviation m = (Map.foldl (\ acc x -> acc Arith.~+ (x Arith.~* x)) (Arith.zero) m) Arith.~+ 
+                     (Arith.abs  (Map.foldl (\ acc x -> acc Arith.~+ x) (Arith.zero) m)) 
+
+getBalanceResult ::
+  (Ord node,Arith.Sum a, Ord a, Arith.Constant a, Show a) =>
   [BalanceLoopItem node a (Type.OptimisationPerState node a) z] ->
   (Map.Map node (One.SocDrive a),Map.Map node (One.SocDrive a),
    Type.OptimalSolutionPerState node a)
-iterateBalanceUntil balLoop =
-  (bForcing $ lastElem, bFStep lastElem, Type.optimalSolutionPerState $ fst $ bResult lastElem)
-  where lastElem = vlast "interateBalanceUntil"  balLoop
+getBalanceResult balLoop =
+  (bForcing $ bestElem, bFStep bestElem, Type.optimalSolutionPerState $ fst $ bResult bestElem)
+  where bestElem = if (length balLoop) == 1 
+                   then lastElem
+                   else choice
+        lastElem =  vlast "interateBalanceUntil" balLoop            
+        beforeElem = vlast "interateBalanceUntil" $ init $ balLoop
+        choice = trace ("Choice " ++ show (balanceDeviation $ balance lastElem) ++ " " ++ 
+                        show (balanceDeviation $ balance lastElem)) $ 
+                        if (balanceDeviation $ balance lastElem) <= 
+                    (balanceDeviation $ balance beforeElem)
+                   then lastElem else beforeElem 
 
 balanceIteration::
   (efaVec~[], intVec ~ [], sweep ~ Sweep, a ~ d, simVec ~ [],
@@ -151,7 +204,6 @@ balanceIteration::
   One.IndexConversionMap ->
   [BalanceLoopItem node a (Type.OptimisationPerState node a)
     (Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)]
-
 balanceIteration sysParams optParams simParams perStateSweep balForceIn balStepsIn statForceIn indexConversionMap =
   go 0 balForceIn balStepsIn resStart
   where
@@ -165,7 +217,8 @@ balanceIteration sysParams optParams simParams perStateSweep balForceIn balSteps
                       Type.signals $ Type.simulation $ snd res
 
     go cnt force step res  = BalanceLoopItem cnt force step  bal res :
-                                 if checkBalance optParams bal || cnt >= maxStepCnt then []
+                                 if checkBalance optParams bal || cnt >= maxStepCnt || checkBalanceStep simParams bal bal1 res res1 
+                                 then [BalanceLoopItem (cnt+1) force1 step1  bal1 res1]
                                  else go (cnt+1) force1 step1 res1
 
       where force1 = Map.mapWithKey (\k x -> One.setSocDrive $ (One.getSocDrive x) ~+
@@ -176,6 +229,7 @@ balanceIteration sysParams optParams simParams perStateSweep balForceIn balSteps
             bal = accessf res
             res1 = fsys $ force1
             bal1 = accessf res1
+            
             step1 = Map.mapWithKey (\ k s -> One.setSocDrive $ f  k s) step
 
             f k stp = let
@@ -253,12 +307,12 @@ checkStateTimes optParams stateDurs stateSteps =
         (One.StateTimeThreshold uThr) = One.stateTimeUpperThreshold optParams
         (One.StateTimeThreshold lThr) = One.stateTimeLowerThreshold optParams
 
-iterateStateUntil ::
+getStateResult ::
   [StateLoopItem node a z] ->
   (Map.Map Idx.AbsoluteState (One.StateForcing a),
       Map.Map Idx.AbsoluteState (One.StateForcingStep a),
       One.StateDurations a,One.Balance node a)
-iterateStateUntil statLoop =
+getStateResult statLoop =
   (sForcing $ lastElem , sFStep lastElem, stateDurations $ lastElem, sBalance $ lastElem)
   where lastElem = vlast "interateStateUntil" $ statLoop
 
@@ -286,9 +340,10 @@ stateIteration sysParams optParams simParams optimalObjectivePerState stateForce
   where initialSteps = j staStepsIn
 
         j (Just st) = st
-        j (Nothing) = Map.map (\x -> if x==0 then seed else One.DontForceState) initialTimes
+--        j (Nothing) = Map.map (\x -> if x==0 then seed else One.DontForceState) initialTimes
+        j (Nothing) = Map.map (\x -> if x==0 then One.StateForcingStep Arith.zero  else One.DontForceState) initialTimes
 
-        seed = One.stateForcingSeed optParams
+        --seed = One.stateForcingSeed optParams
         fsys sf = NonIO.optimiseStateAndSimulate sysParams optParams simParams sf optimalObjectivePerState indexConversionMap
         initialResults = fsys stateForceIn
         initialTimes = accessTimes initialResults
@@ -406,10 +461,10 @@ iterateInnerLoop sysParams optParams simParams perStateSweep balForceIn stateFor
       where
 
         balLoop = balanceIteration sysParams optParams simParams perStateSweep balForce balSteps statForce indexConversionMap
-        (bForceOut, balStepsOut, optimalObjectivePerState) = iterateBalanceUntil balLoop
+        (bForceOut, balStepsOut, optimalObjectivePerState) = getBalanceResult balLoop
 
         statLoop = stateIteration sysParams optParams simParams optimalObjectivePerState statForce statSteps indexConversionMap
-        (statForceOut,staStepsOut, sta,bal) = iterateStateUntil statLoop
+        (statForceOut,staStepsOut, sta,bal) = getStateResult statLoop
 
 
 iterateEtaWhile ::

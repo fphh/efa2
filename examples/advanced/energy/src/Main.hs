@@ -120,11 +120,10 @@ main1 = do
       ienv = AppOpt.storageEdgeXFactors optParams 3 3
                $ AppOpt.initialEnv optParams System.stateFlowGraph
                
-               
-      requDistrubution = Base.genRequirementDistribution 
-                         (Record.partIntegrate $ Base.convertRecord reqsRecStep)
+      requDistribution = Base.genRequirementDistribution 
+                         (Base.convertRecord reqsRecStep)
                          (map (Sig.classifyWithMidVector) $ map Sig.untype $ 
-                          [ ModSet.varRestPower1D, ModSet.varLocalPower1D])
+                          [ ModSet.varLocalPower1D, ModSet.varRestPower1D])
                
 
       sysParams = One.SystemParams {
@@ -145,9 +144,9 @@ main1 = do
           One.etaToOptimise = Nothing,
           One.maxEtaIterations = One.MaxEtaIterations 2,
           One.maxInnerLoopIterations = One.MaxInnerLoopIterations 3,
-          One.maxBalanceIterations = One.MaxBalanceIterations 20,
+          One.maxBalanceIterations = One.MaxBalanceIterations 100,
           One.maxStateIterations = One.MaxStateIterations 100,
-          One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 0)],
+          One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 0.05)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.2,
           One.balanceThreshold = One.BalanceThreshold 0.2,
@@ -158,11 +157,12 @@ main1 = do
 
       simParams :: One.SimulationParams Node [] Double
       simParams = One.SimulationParams {
+        -- TODO -- Vertauschung local / rest ??
           One.varReqRoomPower1D = Sig.convert $ ModSet.varRestPower1D,
           One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
           One.reqsRec = Base.convertRecord reqsRecStep,
-          One.requirementGrid = [Sig.convert $ ModSet.varRestPower1D, Sig.convert $ ModSet.varLocalPower1D],
-          One.requirementDistribution =  requDistrubution, 
+          One.requirementGrid = [Sig.convert $ ModSet.varLocalPower1D, Sig.convert $ ModSet.varRestPower1D],
+          One.requirementDistribution =  requDistribution, 
           One.sequFilterTime=0.01,
           One.sequFilterEnergy=0 }
 
@@ -197,13 +197,14 @@ main1 = do
     $ Draw.stateFlowGraph Draw.optionsDefault
     $ StateQty.mapGraph g g ienv
 -}
-
+  print reqsRecStep 
+  print requDistribution
 
 --  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
   concurrentlyMany_ [
     ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
---    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
---    ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
+    ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
     --ModLoop.checkRangeIO sysParams optParams simParams]
      mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
 --    sequence_ (ModLoop.printEtaLoop optParams ol)]

@@ -311,10 +311,11 @@ defaultPlot terminal title xs = do
     title t (LineSpec.title "") id frameOpts varRestPower varLocalPower xs
 
 withFuncToMatrix ::
-  (Ord b, Arith.Constant a, a ~ b) =>
-  ((b, b, Idx.State, Type.EnvResult node b) -> a) ->
+  (Ord b, Arith.Constant b, a~b) =>
+  -- (Type.OptimalSolution node a -> a) ->   
+  ((b, b, Idx.State, Int, Type.EnvResult node b) -> b) ->
   Type.OptimiseStateAndSimulate node sweep sweepVec a intVec b simVec c efaVec d ->
-  Sig.PSignal2 Vector Vector a
+  Sig.PSignal2 Vector Vector b
 withFuncToMatrix func =
   to2DMatrix
   . Map.map (maybe ModUt.nan func)
@@ -326,7 +327,7 @@ plotMax ::
   (Terminal.C term, b ~ a, a ~ Double) =>
   IO term ->
   String ->
-  ((b, b, Idx.State, Type.EnvResult node b) -> b) ->
+  ((b, b, Idx.State, Int, Type.EnvResult node b) -> b) ->
   Type.OptimiseStateAndSimulate node sweep sweepVec a intVec b simVec c efaVec d ->
   IO ()
 plotMax term title func =
@@ -344,7 +345,7 @@ maxPos ::
 maxPos pos@(TopoIdx.Position f t) terminal =
   plotMax (terminal $ filename ("maxPos", pos))
           ("Maximal Value for: " ++ showEdge pos)
-          (\(_, _, st, env) -> g $ StateQty.lookup (StateIdx.power st f t) env)
+          (\(_, _, st, idx, env) -> g $ StateQty.lookup (StateIdx.power st f t) env)
   where g (Just (Determined x)) = x
         g _ = ModUt.nan
 
@@ -355,7 +356,7 @@ maxEta ::
   IO ()
 maxEta term =
   plotMax (term "maxEta") "Maximal Eta of All States"
-    ModUt.snd4
+    ModUt.snd5
 
 maxObj ::
   (Terminal.C term, a ~ b,b ~ Double) =>
@@ -363,14 +364,14 @@ maxObj ::
   Type.OptimiseStateAndSimulate node sweep sweepVec a intVec b simVec c efaVec d ->
   IO ()
 maxObj term =
-  plotMax (term "maxObj") "Maximal Objective of All States" ModUt.fst4
+  plotMax (term "maxObj") "Maximal Objective of All States" ModUt.fst5
 
 bestStateCurve ::
   (Ord b, Arith.Constant a, Num a, a ~ b) =>
   Type.OptimiseStateAndSimulate node sweep sweepVec a intVec b simVec c efaVec d ->
   Sig.PSignal2 Vector Vector a
 bestStateCurve =
-  withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . ModUt.thd4)
+  withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . ModUt.thd5)
 
 stateRange2 ::
   (Ord b, Terminal.C term) =>

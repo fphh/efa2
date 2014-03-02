@@ -38,7 +38,7 @@ type OptimalSolutionPerState node a =
   Map Idx.State (Map [a] (Maybe (a, a, Int, EnvResult node a)))
 
 -- | Data Type to store the optimal solution of all states
-type OptimalSolution node a = Map [a] (Maybe (a, a, Idx.State, EnvResult node a))
+type OptimalSolution node a = Map [a] (Maybe (a, a, Idx.State, Int, EnvResult node a))
 
 -- | Data Type to store the stack of the optimal abjective Function per state
 type OptStackPerState (sweep :: (* -> *) -> * -> *) vec a =  Map Idx.State (Map [a] (Result (sweep vec a)))
@@ -68,7 +68,7 @@ data SweepPerReq node (sweep :: (* -> *) -> * -> *) vec a =
    SweepPerReq {
     etaSys :: Result (sweep vec a),
     condVec :: Result (sweep vec Bool),
-    storagePowerMap :: StoragePowerMap node sweep vec a, --Map node (Maybe (sweep vec a)),
+    storagePowerMap :: StoragePowerMap node sweep vec a,
     envResult :: EnvResult node (sweep vec a) }
 
 data Interpolation node vec a =
@@ -83,7 +83,7 @@ data Simulation node vec a =
 
 data EnergyFlowAnalysis node vec a = EnergyFlowAnalysis {
     powerSequence :: Sequ.List (Record.PowerRecord node vec a),
-    sequenceFlowGraph :: --SeqQty.Graph node (Result (Data Nil a)) (Result (Data Nil a)),
+    sequenceFlowGraph :: 
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data (vec :> Nil) a)),
     stateFlowGraph :: EnvResult node (Data Nil a)}
 

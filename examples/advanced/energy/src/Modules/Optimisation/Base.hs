@@ -55,7 +55,7 @@ import Data.Monoid (Monoid)
 import Control.Monad (join)
 import Control.Applicative (liftA2)
 
-
+import Debug.Trace (trace)
 
 perStateSweep ::
   (Node.C node, Show node,RealFloat a,
@@ -177,25 +177,25 @@ selectOptimalState _params stateForcing stateMap indexConversionMap =
       g _ x Nothing = x
       g f (Just x) (Just y) = Just (f x y)
 
-  in List.foldl1' (Map.unionWith (g $ ModUt.maxByWithNaN ModUt.fst4))
+  in List.foldl1' (Map.unionWith (g $ ModUt.maxByWithNaN ModUt.fst5))
      $ map (\(st, m) ->
              Map.map (fmap
-                      (\(objVal, eta, _ ,env) ->
+                      (\(objVal, eta, idx ,env) ->
                         (objVal Arith.~+
                          maybe (error "Base.selectOptimalState")
                          One.unpackStateForcing
                          (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
-                         eta, st, env))) m)
+                         eta, st, idx, env))) m)
      $ Map.toList stateMap
 
-{-
+
 genRequirementDistribution ::
-  (Ord a,
-   Vec.Unique vec (Sig.Class a),
-   Vec.Storage vec ([Sig.Class a], [Sig.SignalIdx]),
+  (Ord a,Show (vec a),
+   Vec.Unique vec (Sig.ClassIdx,Sig.Class a),
+   Vec.Storage vec ([(Sig.ClassIdx,Sig.Class a)], [Sig.SignalIdx]),
    Vec.Storage vec Sig.SignalIdx,
    Vec.Storage vec Int,
-   Vec.Storage vec (Sig.Class a),
+   Vec.Storage vec (Sig.ClassIdx,Sig.Class a),
    Vec.FromList vec,
    Vec.Find vec,
    Vec.Filter vec, 
@@ -206,21 +206,12 @@ genRequirementDistribution ::
    Arith.Constant a, 
    Show a,
    Vec.Storage vec Bool,
-   Vec.Lookup vec,
-   Vec.Len (Sig.UTSignal vec a))=> 
-  One.SimulationParams node vec a -> 
-  Sig.UTDistr vec ([Sig.Class a], [Sig.SignalIdx])-}
+   Vec.Lookup vec) =>
+  Record.PowerRecord node vec a ->
+  [(a -> (Sig.ClassIdx,Sig.Class a))] ->
+  Sig.UTDistr vec ([(Sig.ClassIdx, Sig.Class a)], [Sig.SignalIdx])
 genRequirementDistribution (Record.Record _ m) functList = 
-  Sig.genDistributionND $ zip functList $ map Sig.untype $ Map.elems $ m 
-  where
-  --  (Record.Record _ m) = Record.partIntegrate $ One.reqsRec params
-  --  sigList = map Sig.untype $ Map.elems $ m 
-  --  functList = map (Sig.classifyWithMidVector) $ map Sig.untype $ requList  
-  --  requList = One.requirementGrid params                 
-              
- 
-
-
+  Sig.genDistributionND $ zip functList $ map Sig.untype $ trace (show $ Map.elems m) Map.elems $ m 
 
 envToPowerRecord ::
   (Ord node) =>
@@ -285,14 +276,14 @@ signCorrectedOptimalPowerMatrices ::
    Vec.Storage varVec (Maybe (Result a)),
    Vec.FromList varVec) =>
   One.SystemParams node a ->
-  Map [a] (Maybe (a, a, Idx.State, EnvResult node a)) ->
+  Map [a] (Maybe (a, a, Idx.State, Int, EnvResult node a)) ->
   ReqsAndDofs.Dofs (TopoIdx.Position node) ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector varVec (Maybe (Result a)))
 signCorrectedOptimalPowerMatrices systemParams m (ReqsAndDofs.Dofs ppos) =
   Map.fromList $ map g ppos
   where g pos = (pos, ModUt.to2DMatrix $ Map.map f m)
           where f Nothing = Nothing
-                f (Just (_, _, st, graph)) =
+                f (Just (_, _, st, _, graph)) =
                   case StateQty.lookup (StateIdx.powerFromPosition st pos) graph of
                        Just sig -> Just $
                          if isFlowDirectionPositive systemParams st pos graph

@@ -1842,6 +1842,7 @@ concat (TC x) = TC (D.concat x)
 
 -- | Class Type
 newtype Class a = Class a deriving (Show,Ord,Eq)
+newtype ClassIdx = ClassIdx Int deriving (Show,Ord,Eq)
 
 -- | A Simple classification Method with even class-Size
 classifyEven :: (P.RealFrac d) => d -> d -> d -> Class d
@@ -1856,8 +1857,8 @@ classifyWithMidVector ::
    SV.Storage v d, 
    SV.Lookup v, 
    SV.Find v) =>
-   UTSignal v d -> d -> Class d
-classifyWithMidVector midVector x = Class $ fromSample $ getSample midVector indexOut
+   UTSignal v d -> d -> (ClassIdx, Class d)
+classifyWithMidVector midVector x = (ClassIdx indexOut, Class $ fromSample $ getSample midVector (SignalIdx indexOut))
   where 
     maxIdx = (len midVector) P.- 1
     index = findIndex (>x) midVector
@@ -1868,16 +1869,17 @@ classifyWithMidVector midVector x = Class $ fromSample $ getSample midVector ind
     firstWidth = (sndElem ~- firstElem)  ~/ (Arith.fromRational 2.0)
     lastWidth = (lastElem ~- foreLastElem)  ~/ (Arith.fromRational 2.0)
     isMonoton = all (==True) $ deltaMap (\ xa xb -> xb >= xa) midVector
-    indexOut = if maxIdx P.< 2  || (not $ isMonoton) 
+    (SignalIdx indexOut) = if maxIdx P.< 2  || (not $ isMonoton) 
      then error ("ClassificationVector to short or not monoton" ++ show x)
      else case index of
-       (Just idx) -> if x P.< (firstElem ~- firstWidth) 
-                     then (error "classifyWithMidVector - Value out of Range")
-                     else  if leftDist <= rightDist 
-                           then leftIndex 
-                           else rightIndex
+       (Just (SignalIdx idx)) -> if idx==0 then if x P.< (firstElem ~- firstWidth) 
+                                    then (error $ "classifyWithMidVector - Value out of Range: " ++ show x)
+                                    else rightIndex 
+                               else if leftDist <= rightDist 
+                                             then leftIndex 
+                                             else rightIndex
          where
-           rightIndex = idx                                                                    
+           rightIndex = SignalIdx idx                                                                    
            leftIndex = indexAdd rightIndex (-1)
            leftElem =  fromSample $ getSample midVector leftIndex
            rightElem = fromSample $ getSample midVector rightIndex
@@ -1891,21 +1893,40 @@ classifyWithMidVector midVector x = Class $ fromSample $ getSample midVector ind
 
 
 -- | Calculate a 1-d distribution -- collect signal Indices in classes
-genDistribution1D :: (SV.Unique v (Class d),
-                      SV.Storage v ([Class d],[SignalIdx]),
-                      SV.Storage v d,
-                      SV.FromList v,
-                      Ord (Class d),
-                      SV.Walker v,
-                      SV.Storage v (Class d),
-                      SV.Storage v Int,
-                      SV.Storage v SignalIdx,
-                      SV.Find v) =>
-                     (d -> Class d) -> UTFSignal v d -> UTDistr v ([Class d], [SignalIdx])
+genDistribution1D :: 
+  (SV.Unique v (ClassIdx, Class d),
+   SV.Storage v (ClassIdx, Class d),
+   SV.Storage v ([(ClassIdx, Class d)], [SignalIdx]),
+   SV.Storage v d,
+   SV.FromList v,
+   Ord (Class d),
+   SV.Walker v,
+   SV.Storage v Int,
+   SV.Storage v SignalIdx,
+   SV.Find v) =>
+  (d -> (ClassIdx, Class d)) -> UTSignal v d -> 
+  UTDistr v ([(ClassIdx, Class d)], [SignalIdx])
 genDistribution1D classify sig = changeSignalType $ map count $ unique classSig
   where classSig = map classify sig
         count cl = ([cl], toList $ findIndices (cl P.==) classSig)
 
+-- | Calculate a 1-d distribution -- collect signal Indices in classes
+genDistribution1D' :: 
+  (SV.Unique v (Class d),
+   SV.Storage v (Class d),
+   SV.Storage v ([Class d], [SignalIdx]),
+   SV.Storage v d,
+   SV.FromList v,
+   Ord (Class d),
+   SV.Walker v,
+   SV.Storage v Int,
+   SV.Storage v SignalIdx,
+   SV.Find v) =>
+  (d -> Class d) -> UTSignal v d -> 
+  UTDistr v ([Class d], [SignalIdx])
+genDistribution1D' classify sig = changeSignalType $ map count $ unique classSig
+  where classSig = map classify sig
+        count cl = ([cl], toList $ findIndices (cl P.==) classSig)
 
 {- Umgezogen nach EFA.Map.Free
 genDistributionND ::
@@ -1918,21 +1939,21 @@ genDistributionND classify =
    List.transpose . fmap (toList . map classify)
 -}
 genDistributionND :: 
-  (Ord d, SV.Walker v, SV.Unique v (Class d), SV.Storage v d,
-   SV.Storage v (Class d), SV.Storage v Int,
-   SV.Storage v SignalIdx, SV.Storage v ([Class d], [SignalIdx]),
+  (Ord d, SV.Walker v, SV.Unique v (ClassIdx, Class d), SV.Storage v d,
+   SV.Storage v (ClassIdx,Class d), SV.Storage v Int,
+   SV.Storage v SignalIdx, SV.Storage v ([(ClassIdx,Class d)], [SignalIdx]),
    SV.FromList v, SV.Find v, SV.Filter v) =>
-  [(d -> Class d, UTFSignal v d)]->
-  UTDistr v ([Class d], [SignalIdx])
+  [(d -> (ClassIdx, Class d), UTSignal v d)]->
+  UTDistr v ([(ClassIdx, Class d)], [SignalIdx])
 
 genDistributionND xs = combineDistributions $ P.map f xs 
   where f (g,x) = genDistribution1D g x
 
 
 -- | combine an amount of N 1d-Distributions in an N-d distribution
-combineDistributions :: (SV.Storage v ([Class d], [SignalIdx]),
+combineDistributions :: (SV.Storage v ([(ClassIdx,Class d)], [SignalIdx]),
                          SV.FromList v,SV.Filter v) =>
-                        [UTDistr v ([Class d], [SignalIdx])] -> UTDistr v ([Class d],[SignalIdx])
+                        [UTDistr v ([(ClassIdx,Class d)], [SignalIdx])] -> UTDistr v ([(ClassIdx,Class d)],[SignalIdx])
 combineDistributions [] =  error("Error - empty list in combineDistributions")
 combineDistributions (d:ds) = P.foldl f d ds
   where f acc e = filter (P.not . P.null . P.snd) $ combineWith g acc e
@@ -1958,30 +1979,32 @@ calcDistributionValues :: (Eq d1, SV.Walker v, SV.Storage v d1, SV.Lookup v,
 calcDistributionValues d s = setType $ map f d
   where f = fromScalar . sum . subSignal1D s . P.snd
 
+
 -- | etrigger or respectively ptrigger is the power signal used for classification
 -- | usually local ein or eout is used
 -- | pDist is the effective average trigger power which should be used as
 -- | abscissa for efficiency over power
-etaDistribution1D :: (P.RealFrac d,
-                     Constant d,
-                     SV.Zipper v,
-                     SV.Lookup v,
-                     SV.Walker v,
-                     SV.Storage v d,
-                     SV.FromList v,
-                     SV.Find v,
-                     SV.Unique v (Class d),
-                     SV.Storage v SignalIdx,
-                     SV.Storage v Int,
-                     SV.Storage v (Class d),
-                     SV.Storage v ([Class d], [SignalIdx]),
-                     SV.Storage v (d, d),
-                     SV.Singleton v,
-                     SV.Storage v (d, (d, d))) =>
-                    d -> d -> DTFSignal v d ->  FFSignal v d -> FFSignal v d  -> FFSignal v d ->
-                    (PDistr v d, FDistr v d,FDistr v d, NDistr v d)
+etaDistribution1D :: (
+  SV.Unique v (Class d),
+  SV.Storage v ([Class d], [SignalIdx]),
+  SV.Storage v (Class d),
+  P.RealFrac d,
+  Constant d,
+  SV.Zipper v,
+  SV.Lookup v,
+  SV.Walker v,
+  SV.Storage v d,
+  SV.FromList v,
+  SV.Find v,
+  SV.Storage v SignalIdx,
+  SV.Storage v Int,
+  SV.Storage v (d, d),
+  SV.Singleton v,
+  SV.Storage v (d, (d, d))) =>
+                     d -> d -> DTFSignal v d ->  FFSignal v d -> FFSignal v d  -> FFSignal v d ->
+                     (PDistr v d, FDistr v d,FDistr v d, NDistr v d)
 etaDistribution1D interval offs dtime  ein eout etrigger  = (pDist, einDist, eoutDist, nDist)
-  where dist = genDistribution1D (classifyEven interval offs) $ untype ptrigger
+  where dist = genDistribution1D' (classifyEven interval offs) $ changeSignalType $ untype ptrigger
         ptrigger = etrigger./dtime
         einDist = calcDistributionValues dist ein
         eoutDist = calcDistributionValues dist eout

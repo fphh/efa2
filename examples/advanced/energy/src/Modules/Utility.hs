@@ -67,6 +67,18 @@ thd4 (_, _, a, _) = a
 frth4 :: (a, b, c, d) -> d
 frth4 (_, _, _, a) = a
 
+fst5 :: (a, b, c, d, e) -> a
+fst5 (a, _, _, _,_) = a
+
+snd5 :: (a, b, c, d, e) -> b
+snd5 (_, b, _, _,_) = b
+
+thd5 :: (a, b, c, d, e) -> c
+thd5 (_, _, c, _,_) = c
+
+frth5 :: (a, b, c, d, e) -> d
+frth5 (_, _, _, d,_) = d
+
 unzip4Map :: Map k (a, b, c, d) -> (Map k a, Map k b, Map k c, Map k d)
 unzip4Map m = (Map.map fst4 m, Map.map snd4 m, Map.map thd4 m, Map.map frth4 m)
 

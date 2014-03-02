@@ -696,6 +696,7 @@ partIntegrate :: (V.Zipper v,
                   Constant d) => PowerRecord node v d -> FlowRecord node v d
 partIntegrate rec@(Record time _) = map (S.partIntegrate time) rec
 
+{-
 -- | Classify a flow record to get a distribution record
 distribution :: (V.FromList v,
                  V.Filter v,
@@ -721,7 +722,7 @@ distribution rec@(Record _ pMap) xs interval offset = Record classification ener
               xs
         energyDistribution =
            Map.map (S.calcDistributionValues classification) pMap
-
+-}
 -- | Careful quick hack
 
 sumFlowRecord :: (V.FromList v,
