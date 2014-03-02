@@ -43,8 +43,9 @@ gas =   [7,8]
 --local = [0.1, 0.2 .. 1.2]
 -- rest =  [2.0, 2.1 .. 3.2]
 
-local =  [0.1,0.3 .. 2.1] -- auch ResidualLV -- [-2.1,-1.6  .. (-0.1)] ++ [0.1,0.3 .. 2.1]
-rest =  [0.1, 1 .. 6.1] -- auch ResidualHV
+--rest =  [0,2 .. 10]  
+local = [0.1,0.3 .. 2.1] -- auch ResidualHV 
+rest = [0.1, 1 .. 6.1] -- auch ResidualLV
 
 water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]

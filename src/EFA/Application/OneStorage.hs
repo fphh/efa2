@@ -146,7 +146,7 @@ data SimulationParams node vec a = SimulationParams {
   varReqRoomPower1D :: Sig.PSignal vec a,
   varReqRoomPower2D :: Sig.PSignal2 Vector vec a,
   requirementGrid :: [Sig.PSignal vec a],
-  requirementDistribution :: Sig.UTDistr vec ([(Sig.ClassIdx, Sig.Class a)], [Sig.SignalIdx]),
+  activeSupportPoints :: Sig.UTDistr vec ([[a]], [Sig.SignalIdx]),
   reqsRec :: PowerRecord node vec a,
   sequFilterTime :: a,
   sequFilterEnergy :: a}

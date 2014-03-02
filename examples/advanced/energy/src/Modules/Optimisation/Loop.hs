@@ -58,6 +58,7 @@ import qualified Data.Vector.Unboxed as UV
 import Data.Maybe (fromMaybe)
 import Debug.Trace (trace)
 
+import qualified Data.Set as Set
 import qualified Data.Bimap as Bimap
 --import Data.Bimap (Bimap)
 
@@ -126,8 +127,8 @@ checkBalance optParams bal = all g $ Map.elems bal
 -- This is the case when only index or stateindex in the optimal Solution differs
 -- Only active fields have to be probed 
 checkBalanceStep :: 
-  (Ord a,Arith.Constant a,
-   SV.Storage vec ([(Sig.ClassIdx, Sig.Class a)], [Sig.SignalIdx]),
+  (Ord a,Arith.Constant a,Show a,
+   SV.Storage vec ([[a]], [Sig.SignalIdx]),
    SV.FromList vec) =>
   One.SimulationParams node vec a -> 
   One.Balance node a -> One.Balance node a ->
@@ -144,16 +145,25 @@ checkBalanceStep simParams bal bal1 res res1 = trace ("Diffs: " ++ show differen
                          (True, True) -> 0
                          (False,False) -> 2
                          (_,_) -> 1
-        classList = map (\ xs -> map (\ (_,Sig.Class x) -> x) xs) $
-          map fst $ Sig.toList $ One.requirementDistribution simParams            
-        lookupValues mp xs = map (\ k -> fromMaybe (error m2) $ fromMaybe (error m) $ 
+        classList = buildSupportHyperCube $
+          map fst $ Sig.toList $ One.activeSupportPoints simParams            
+        lookupValues mp xs = map (\ k -> fromMaybe (error $ m2 k) $ fromMaybe (error $ m k) $ 
                                          Map.lookup k mp) xs
         indexList = lookupValues optSolution classList
         indexList1 = lookupValues optSolution1 classList
-        m = "Error in checkBalanceStep"
-        m2 = "Cycle touches Invalid Area"
+        m k = ("Error in checkBalanceStep - support Point doesn't exist" ++ show k)
+        m2 k = ("Cycle touches Invalid Area " ++ show k)
         numberOfDifferences = (foldl (+) (0) differenceList)
         
+buildSupportHyperCube :: Ord d => [[[d]]] -> [[d]]
+buildSupportHyperCube edgeList = Set.toList $ Set.fromList $ concat $ map g edgeList
+ where 
+   g xs = foldl f [] xs
+   f [] [x] = [[x]]
+   f [] [x1,x2] = [[x1],[x2]]
+   f acc [x] = map (++[x]) acc
+   f acc [x1,x2] = map (++[x1]) acc ++ map (++[x2]) acc
+   f _ _ = error "buildSupportHyperCube - invalid amout of edge Points"
 
 -- | Rate Balance Deviation by sum of Standard Deviation and Overall Sum 
 balanceDeviation :: 

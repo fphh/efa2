@@ -189,13 +189,13 @@ selectOptimalState _params stateForcing stateMap indexConversionMap =
      $ Map.toList stateMap
 
 
-genRequirementDistribution ::
-  (Ord a,Show (vec a),
-   Vec.Unique vec (Sig.ClassIdx,Sig.Class a),
-   Vec.Storage vec ([(Sig.ClassIdx,Sig.Class a)], [Sig.SignalIdx]),
+supportPoints ::
+  (Ord a,Show (vec a),Vec.Len (vec a),
+   Vec.Unique vec [a],
+   Vec.Storage vec ([[a]], [Sig.SignalIdx]),
    Vec.Storage vec Sig.SignalIdx,
    Vec.Storage vec Int,
-   Vec.Storage vec (Sig.ClassIdx,Sig.Class a),
+   Vec.Storage vec ([a]),
    Vec.FromList vec,
    Vec.Find vec,
    Vec.Filter vec, 
@@ -208,10 +208,10 @@ genRequirementDistribution ::
    Vec.Storage vec Bool,
    Vec.Lookup vec) =>
   Record.PowerRecord node vec a ->
-  [(a -> (Sig.ClassIdx,Sig.Class a))] ->
-  Sig.UTDistr vec ([(Sig.ClassIdx, Sig.Class a)], [Sig.SignalIdx])
-genRequirementDistribution (Record.Record _ m) functList = 
-  Sig.genDistributionND $ zip functList $ map Sig.untype $ trace (show $ Map.elems m) Map.elems $ m 
+  [(a -> [a])] ->
+  Sig.UTDistr vec ([[a]], [Sig.SignalIdx])
+supportPoints (Record.Record _ m) functList = 
+  Sig.getActiveSupportPointsND $ zip functList $ map Sig.untype $ trace (show $ Map.elems m) Map.elems $ m 
 
 envToPowerRecord ::
   (Ord node) =>

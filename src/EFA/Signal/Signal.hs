@@ -1848,66 +1848,56 @@ newtype ClassIdx = ClassIdx Int deriving (Show,Ord,Eq)
 classifyEven :: (P.RealFrac d) => d -> d -> d -> Class d
 classifyEven interval offs x = Class (P.fromIntegral((P.round ((x P.+ offs) P./ interval))::P.Integer) P.* interval P.- offs)
 
-classifyWithMidVector :: 
-  (Sum d,Product d,Constant d,SV.Zipper v,SV.Len (v d),
-   SV.Walker v,
-   SV.Storage v Bool,
-   SV.Singleton v,Ord d,Show d,
-   Eq d, 
+findSupportPoints :: 
+  (SV.Lookup v,
+   SV.Len (v d),
    SV.Storage v d, 
-   SV.Lookup v, 
-   SV.Find v) =>
-   UTSignal v d -> d -> (ClassIdx, Class d)
-classifyWithMidVector midVector x = (ClassIdx indexOut, Class $ fromSample $ getSample midVector (SignalIdx indexOut))
-  where 
+   SV.Find v,
+   SV.Zipper v,
+   SV.Walker v,
+   SV.Storage v Bool,Show d,Eq d,
+   SV.Singleton v,Ord d) =>
+   UTSignal v d -> d -> [d]
+findSupportPoints midVector x = 
+  let 
+    v idx = fromSample $ getSample midVector (SignalIdx idx)
     maxIdx = (len midVector) P.- 1
     index = findIndex (>x) midVector
-    firstElem = fromSample $ getSample midVector (SignalIdx 0)
-    sndElem =  fromSample $ getSample midVector (SignalIdx 1)
-    lastElem = fromSample $ getSample midVector (SignalIdx maxIdx)
-    foreLastElem = fromSample $ getSample midVector (SignalIdx (maxIdx P.- 1))
-    firstWidth = (sndElem ~- firstElem)  ~/ (Arith.fromRational 2.0)
-    lastWidth = (lastElem ~- foreLastElem)  ~/ (Arith.fromRational 2.0)
     isMonoton = all (==True) $ deltaMap (\ xa xb -> xb >= xa) midVector
-    (SignalIdx indexOut) = if maxIdx P.< 2  || (not $ isMonoton) 
+  in if maxIdx P.< 1  || (not $ isMonoton)
      then error ("ClassificationVector to short or not monoton" ++ show x)
      else case index of
-       (Just (SignalIdx idx)) -> if idx==0 then if x P.< (firstElem ~- firstWidth) 
-                                    then (error $ "classifyWithMidVector - Value out of Range: " ++ show x)
-                                    else rightIndex 
-                               else if leftDist <= rightDist 
-                                             then leftIndex 
-                                             else rightIndex
-         where
-           rightIndex = SignalIdx idx                                                                    
-           leftIndex = indexAdd rightIndex (-1)
-           leftElem =  fromSample $ getSample midVector leftIndex
-           rightElem = fromSample $ getSample midVector rightIndex
-           leftDist = Arith.abs $ x ~- leftElem
-           rightDist = Arith.abs $ rightElem ~- x  
-           
-                          
-       Nothing -> if x P.<= (lastElem ~+lastWidth) 
-                  then (SignalIdx maxIdx) 
+       (Just (SignalIdx idx)) -> if idx==0 then if x==(v 0) then [v 0] 
+                                                else (error $ "classifyWithMidVector - Value out of Range: " ++ show x)
+                                            else if x == v (idx-1) then [v (idx-1)]
+                                                 else if x == v idx then  [v idx]
+                                                        else  [v (idx-1),v idx]         
+       Nothing -> if x == v maxIdx then [v maxIdx] 
                   else error ("Value outside classification area: " ++ show x)                                      
 
 
--- | Calculate a 1-d distribution -- collect signal Indices in classes
-genDistribution1D :: 
-  (SV.Unique v (ClassIdx, Class d),
-   SV.Storage v (ClassIdx, Class d),
-   SV.Storage v ([(ClassIdx, Class d)], [SignalIdx]),
-   SV.Storage v d,
+-- | Get active inpolation support points
+getActiveSupportPoints1D :: 
+  (SV.Unique v [d],
+   SV.Storage v [d],
+   SV.Storage v ([[d]], [SignalIdx]),
+   SV.Storage v d, Show d,
    SV.FromList v,
-   Ord (Class d),
+   Ord d,
+   SV.Zipper v,
+   SV.Storage v Bool,
+   SV.Singleton v,
+   SV.Lookup v,
+   SV.Len (v d),
    SV.Walker v,
    SV.Storage v Int,
    SV.Storage v SignalIdx,
    SV.Find v) =>
-  (d -> (ClassIdx, Class d)) -> UTSignal v d -> 
-  UTDistr v ([(ClassIdx, Class d)], [SignalIdx])
-genDistribution1D classify sig = changeSignalType $ map count $ unique classSig
-  where classSig = map classify sig
+  (d -> [d]) -> 
+  UTSignal v d -> 
+  UTDistr v ([[d]], [SignalIdx])
+getActiveSupportPoints1D f sig = changeSignalType $ map count $ unique classSig
+  where classSig = map f sig
         count cl = ([cl], toList $ findIndices (cl P.==) classSig)
 
 -- | Calculate a 1-d distribution -- collect signal Indices in classes
@@ -1938,24 +1928,32 @@ genDistributionND classify =
    P.flip List.zip (fmap Set.singleton [SignalIdx 0 ..]) .
    List.transpose . fmap (toList . map classify)
 -}
-genDistributionND :: 
-  (Ord d, SV.Walker v, SV.Unique v (ClassIdx, Class d), SV.Storage v d,
-   SV.Storage v (ClassIdx,Class d), SV.Storage v Int,
-   SV.Storage v SignalIdx, SV.Storage v ([(ClassIdx,Class d)], [SignalIdx]),
+getActiveSupportPointsND :: 
+  (Show d,
+   SV.Zipper v,
+   SV.Storage v Bool,
+   SV.Singleton v,
+   SV.Lookup v,
+   SV.Len (v d), 
+   Ord d, SV.Walker v, 
+   SV.Unique v [d], SV.Storage v d,
+   SV.Storage v [d], SV.Storage v Int,
+   SV.Storage v SignalIdx, 
+   SV.Storage v ([[d]], [SignalIdx]),
    SV.FromList v, SV.Find v, SV.Filter v) =>
-  [(d -> (ClassIdx, Class d), UTSignal v d)]->
-  UTDistr v ([(ClassIdx, Class d)], [SignalIdx])
+  [(d->[d], UTSignal v d)]->
+  UTDistr v ([[d]], [SignalIdx])
 
-genDistributionND xs = combineDistributions $ P.map f xs 
-  where f (g,x) = genDistribution1D g x
+getActiveSupportPointsND xs = combineSupportPoints $ P.map f xs 
+  where f (g,x) = getActiveSupportPoints1D g x
 
 
 -- | combine an amount of N 1d-Distributions in an N-d distribution
-combineDistributions :: (SV.Storage v ([(ClassIdx,Class d)], [SignalIdx]),
+combineSupportPoints :: (SV.Storage v ([[d]], [SignalIdx]),
                          SV.FromList v,SV.Filter v) =>
-                        [UTDistr v ([(ClassIdx,Class d)], [SignalIdx])] -> UTDistr v ([(ClassIdx,Class d)],[SignalIdx])
-combineDistributions [] =  error("Error - empty list in combineDistributions")
-combineDistributions (d:ds) = P.foldl f d ds
+                        [UTDistr v ([[d]], [SignalIdx])] -> UTDistr v ([[d]],[SignalIdx])
+combineSupportPoints [] =  error("Error - empty list in combineDistributions")
+combineSupportPoints (d:ds) = P.foldl f d ds
   where f acc e = filter (P.not . P.null . P.snd) $ combineWith g acc e
         g (classes1,indices1) (classes2,indices2) = (classes1++classes2,List.intersect indices1 indices2)
 

@@ -95,6 +95,7 @@ main1 = do
       ctime = Sig.convert time
 
       pLocal = Sig.offset 1 . Sig.scale 4.5 $ Sig.convert $ local
+--      pLocal = Sig.offset 0.2 . Sig.scale 1.3 $ Sig.convert $  local
       pRest = Sig.offset 0.2 . Sig.scale 1.3 $ Sig.convert $  rest
 
       reqsRec :: Record.PowerRecord Node UV.Vector Double
@@ -120,9 +121,9 @@ main1 = do
       ienv = AppOpt.storageEdgeXFactors optParams 3 3
                $ AppOpt.initialEnv optParams System.stateFlowGraph
                
-      requDistribution = Base.genRequirementDistribution 
+      supportPoints = Base.supportPoints
                          (Base.convertRecord reqsRecStep)
-                         (map (Sig.classifyWithMidVector) $ map Sig.untype $ 
+                         (map (Sig.findSupportPoints) $ map Sig.untype $ 
                           [ ModSet.varLocalPower1D, ModSet.varRestPower1D])
                
 
@@ -157,12 +158,11 @@ main1 = do
 
       simParams :: One.SimulationParams Node [] Double
       simParams = One.SimulationParams {
-        -- TODO -- Vertauschung local / rest ??
           One.varReqRoomPower1D = Sig.convert $ ModSet.varRestPower1D,
           One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
           One.reqsRec = Base.convertRecord reqsRecStep,
           One.requirementGrid = [Sig.convert $ ModSet.varLocalPower1D, Sig.convert $ ModSet.varRestPower1D],
-          One.requirementDistribution =  requDistribution, 
+          One.activeSupportPoints =  supportPoints, 
           One.sequFilterTime=0.01,
           One.sequFilterEnergy=0 }
 
@@ -197,16 +197,16 @@ main1 = do
     $ Draw.stateFlowGraph Draw.optionsDefault
     $ StateQty.mapGraph g g ienv
 -}
-  print reqsRecStep 
-  print requDistribution
+--  print reqsRecStep 
+  print supportPoints
 
 --  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
   concurrentlyMany_ [
     ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
     ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
     ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
-    --ModLoop.checkRangeIO sysParams optParams simParams]
-     mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
+    ModLoop.checkRangeIO sysParams optParams simParams,
+    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
 --    sequence_ (ModLoop.printEtaLoop optParams ol)]
 
 
@@ -226,3 +226,6 @@ main1 = do
 main :: IO ()
 main = main1
 
+{-
+TC (Data [([[0.3,0.5],[1.9]],[SignalIdx 0,SignalIdx 1]),([[0.3,0.5],[2.8]],[SignalIdx 6,SignalIdx 7]),([[0.3,0.5],[3.6999999999999997,4.6]],[SignalIdx 8,SignalIdx 9,SignalIdx 30,SignalIdx 31]),([[0.3,0.5],[4.6,5.5]],[SignalIdx 32,SignalIdx 33]),([[0.5,0.7],[1.0,1.9]],[SignalIdx 2,SignalIdx 3]),([[0.5,0.7],[1.9,2.8]],[SignalIdx 44,SignalIdx 45]),([[0.5,0.7],[5.5]],[SignalIdx 20,SignalIdx 21]),([[0.7,0.8999999999999999],[1.9]],[SignalIdx 22,SignalIdx 23,SignalIdx 36,SignalIdx 37]),([[0.7,0.8999999999999999],[1.9,2.8]],[SignalIdx 4,SignalIdx 5]),([[0.7,0.8999999999999999],[2.8,3.6999999999999997]],[SignalIdx 38,SignalIdx 39]),([[0.7,0.8999999999999999],[3.6999999999999997]],[SignalIdx 28,SignalIdx 29]),([[0.7,0.8999999999999999],[4.6]],[SignalIdx 10,SignalIdx 11]),([[0.7,0.8999999999999999],[5.5]],[SignalIdx 18,SignalIdx 19]),([[0.8999999999999999,1.0999999999999999],[4.6]],[SignalIdx 14,SignalIdx 15,SignalIdx 42,SignalIdx 43]),([[0.8999999999999999,1.0999999999999999],[5.5]],[SignalIdx 34,SignalIdx 35]),([[1.0999999999999999,1.2999999999999998],[1.9]],[SignalIdx 12,SignalIdx 13,SignalIdx 16,SignalIdx 17,SignalIdx 26,SignalIdx 27]),([[1.0999999999999999,1.2999999999999998],[2.8]],[SignalIdx 40,SignalIdx 41]),([[1.4999999999999998,1.6999999999999997],[4.6,5.5]],[SignalIdx 24,SignalIdx 25])])
+-}
