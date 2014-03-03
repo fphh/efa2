@@ -49,7 +49,7 @@ convertToSignal3D2D = convertHelp tail
 
 varMat :: [a] -> [b] -> ([[a]], [[b]])
 varMat xs ys =
-  (Match.replicate ys xs, map (Match.replicate xs) ys)
+  ( map (Match.replicate ys) xs, Match.replicate xs ys)
 
 
 convertToSignal3D ::

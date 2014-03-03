@@ -57,7 +57,7 @@ import qualified Data.Map as Map; --import Data.Map (Map)
 --import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 import Data.Monoid (Monoid, mempty, (<>))
-
+import Debug.Trace(trace)
 
 interpolateOptimalSolution ::
   (Eq (vec2 b), Ord b, Show b, Show (vec2 b),
@@ -73,23 +73,25 @@ interpolateOptimalSolution ::
   Type.OptimalSolution node b -> --Map.Map[b](Maybe(b, b, Idx.State, Type.EnvResult node b))->
   Type.Interpolation node vec2 b
 interpolateOptimalSolution sysParams optParams simParams optimalSolution =
-  let (prest, plocal) =
+  let (plocal,prest) =
         case map (Record.getSig demandSignals) (ReqsAndDofs.unReqs $ One.reqsPos optParams) of
              [r, l] -> (r, l)
              _ -> error "NonIO.simulation: number of signals"
 
       demandSignals = One.reqsRec simParams
+      
+      g str x = trace (str ++": " ++ show x) x  
 
       dofsSignals =  Map.mapWithKey f optimalControlMatrices
         where f key mat =
                 Sig.tzipWith
                 (Sig.interp2WingProfile
-                 ("simulation-interpolate Signals" ++ show key)
-                 (One.varReqRoomPower1D simParams)
-                 (One.varReqRoomPower2D simParams)
-                 $ Sig.convert mat)
-                prest
-                plocal
+                 ("simulation-interpolate Signals" ++ show (g "Position: " key))
+                 (g "X:" $ One.varReqRoomPower1D simParams)
+                 (g "Y:" $ One.varReqRoomPower2D simParams)
+                 $ (g "Z:" $ Sig.convert mat))
+                (g "xSig:" plocal)
+                (g "ySig:" prest)
 
       optimalControlMatrices =
         Map.map (Sig.map ModUt.nothing2Nan) $

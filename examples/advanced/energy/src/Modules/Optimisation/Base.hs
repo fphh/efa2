@@ -190,7 +190,7 @@ selectOptimalState _params stateForcing stateMap indexConversionMap =
 
 
 supportPoints ::
-  (Ord a,Show (vec a),Vec.Len (vec a),
+  (Ord a,Show (vec a),Vec.Len (vec a),Node.C node,
    Vec.Unique vec [a],
    Vec.Storage vec ([[a]], [Sig.SignalIdx]),
    Vec.Storage vec Sig.SignalIdx,
@@ -207,11 +207,12 @@ supportPoints ::
    Show a,
    Vec.Storage vec Bool,
    Vec.Lookup vec) =>
+  [ TopoIdx.Position node] ->
   Record.PowerRecord node vec a ->
   [(a -> [a])] ->
   Sig.UTDistr vec ([[a]], [Sig.SignalIdx])
-supportPoints (Record.Record _ m) functList = 
-  Sig.getActiveSupportPointsND $ zip functList $ map Sig.untype $ trace (show $ Map.elems m) Map.elems $ m 
+supportPoints idList rec functList = 
+  Sig.getActiveSupportPointsND $ zip functList $ map Sig.untype $ map (Record.getSig rec) idList
 
 envToPowerRecord ::
   (Ord node) =>

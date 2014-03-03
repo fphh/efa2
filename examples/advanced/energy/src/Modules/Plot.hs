@@ -33,7 +33,7 @@ import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph as Graph
 import qualified EFA.Graph.Topology.Node as Node
 
-import EFA.Equation.Result (Result(Determined))
+import EFA.Equation.Result (Result(Determined, Undetermined))
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Report.FormatValue as FormatValue
 
@@ -132,7 +132,7 @@ plotMaps terminal func title =
             id
             -- id
             (Graph3D.typ "lines")
-            frameOpts varRestPower varLocalPower
+            frameOpts varLocalPower varRestPower
             (func mat)
 
 plotSweeps ::
@@ -161,7 +161,7 @@ plotSweeps terminal func title =
             t
             id
             (Graph3D.typ "lines")
-            (Opts.key False . frameOpts) varRestPower varLocalPower
+            (Opts.key False . frameOpts) varLocalPower varRestPower
             (func mat)
 
 
@@ -307,8 +307,8 @@ defaultPlot ::
 defaultPlot terminal title xs = do
   t <- terminal
   AppPlot.surfaceWithOpts
---    title t (LineSpec.title "") (Graph3D.typ "lines") frameOpts varRestPower varLocalPower xs
-    title t (LineSpec.title "") id frameOpts varRestPower varLocalPower xs
+--    title t (LineSpec.title "") (Graph3D.typ "lines") frameOpts varLocalPower varRestPower xs
+    title t (LineSpec.title "") id frameOpts varLocalPower varRestPower xs
 
 withFuncToMatrix ::
   (Ord b, Arith.Constant b, a~b) =>
@@ -334,7 +334,7 @@ plotMax term title func =
   defaultPlot term title
   . withFuncToMatrix func
 
-
+-- TODO: g Nothing = Arith.zero is dangerous -- better solution ? 
 maxPos ::
   (Ord node, Show node, Filename node, Node.C node,Arith.Constant b,a ~ b,b ~ Double,
    Terminal.C term) =>
@@ -347,7 +347,8 @@ maxPos pos@(TopoIdx.Position f t) terminal =
           ("Maximal Value for: " ++ showEdge pos)
           (\(_, _, st, idx, env) -> g $ StateQty.lookup (StateIdx.power st f t) env)
   where g (Just (Determined x)) = x
-        g _ = ModUt.nan
+        g Nothing = Arith.zero -- show Power of inactive Edges
+        g (Just (Undetermined)) = ModUt.nan
 
 maxEta ::
   (Terminal.C term, a ~ b,b ~ Double) =>
@@ -391,7 +392,7 @@ stateRange terminal =
             terminal
             id
             (Graph3D.typ "lines")
-            frameOpts varRestPower varLocalPower
+            frameOpts varLocalPower varRestPower
   . Map.elems
   . Map.mapWithKey (\state@(Idx.State st)  -> label (show state) . to2DMatrix . fmap (m2n . fmap (f st)))
   . Type.optimalSolutionPerState
@@ -419,7 +420,7 @@ maxStateContour terminal opt = do
   term <- terminal "maxStateContour"
   AppPlot.surfaceWithOpts
     "Best State of All States"
-    term id id (Plot.contour . frameOpts) varRestPower varLocalPower
+    term id id (Plot.contour . frameOpts) varLocalPower varRestPower
     $ bestStateCurve opt
 
 
@@ -590,6 +591,36 @@ sweepStackPerStateCondition terminal params =
                 . sweepResultTo2DMatrix len)
      . Map.map (Map.map (f . Type.condVec))
 
+{-
+sweepStackPerStatePowerPos ::
+  (Show (vec Double),a ~ Double,Show node,sweep ~ Sweep.Sweep,vec ~ UV.Vector,
+   Node.C node,
+   Arith.Product (sweep vec a),
+   Sweep.SweepVector vec a,
+   Sweep.SweepClass sweep vec a,
+   Terminal.C term) =>
+  (FilePath -> IO term) ->
+  One.OptimisationParams node f sweep vec a ->
+  TopoIdx.Position node ->
+  Type.Sweep node sweep vec a ->
+  IO ()
+sweepStackPerStatePowerPos terminal params pos@(TopoIdx.Position f t) =
+  let len = One.sweepLength params
+      g (Just (Just x)) = x
+      g _ = error ("Error in sweepStackPerStateStoragePower - no Power found for Position: " ++ show pos)
+
+  in plotSweeps terminal id ("Per State Sweep -- PowerPosition: " ++ show pos)
+     . Map.map (matrix2ListOfMatrices len
+                . Sig.map Sweep.toList
+                . sweepResultTo2DMatrix len)
+     . Map.mapWithKey (\st x -> (Map.map (g . StateQty.lookup (StateIdx.power st f t) . Type.envResult) x))
+-}
+
+{-
+g $ StateQty.lookup (StateIdx.power st f t) env)
+  where g (Just (Determined x)) = x
+        g _ = ModUt.nan     
+-}     
 
 plotOptimal ::
   (Terminal.C term, Ord b) =>
@@ -601,7 +632,7 @@ plotOptimal terminal f title =
             terminal
             id
             (Graph3D.typ "lines")
-            frameOpts varRestPower varLocalPower
+            frameOpts varLocalPower varRestPower
   . Map.elems
   . Map.mapWithKey (\state -> label (show state) . to2DMatrix . fmap (m2n . fmap (f state)))
   . Type.optimalSolutionPerState

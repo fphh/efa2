@@ -19,6 +19,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
+import Data.List (transpose)
 
 
 
@@ -40,12 +41,12 @@ water = [5,6]
 gas =   [7,8]
 -}
 
---local = [0.1, 0.2 .. 1.2]
--- rest =  [2.0, 2.1 .. 3.2]
 
---rest =  [0,2 .. 10]  
-local = [0.1,0.3 .. 2.1] -- auch ResidualHV 
-rest = [0.1, 1 .. 6.1] -- auch ResidualLV
+--local = [0.1,0.3 .. 2.1] -- auch ResidualHV 
+--rest = [0.1, 1 .. 6.1] -- auch ResidualLV
+
+local = [0.1,0.6 .. 6.2]
+rest = [0.1,0.3 .. 2.1] 
 
 water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]
@@ -119,10 +120,10 @@ varLocalPower1D :: Sig.PSignal UV.Vector Double
 varLocalPower1D = Sig.fromList local
 
 varRestPower :: Sig.PSignal2 Vector UV.Vector Double
-varRestPower = Sig.fromList2 varRestPower'
+varRestPower = Sig.fromList2 $ varRestPower'
 
 varLocalPower :: Sig.PSignal2 Vector UV.Vector Double
-varLocalPower = Sig.fromList2 varLocalPower'
+varLocalPower = Sig.fromList2 $ varLocalPower'
 
 
 initStorageState :: (Arith.Constant a) => One.InitStorageState System.Node a

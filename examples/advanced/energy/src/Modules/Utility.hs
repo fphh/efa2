@@ -123,8 +123,8 @@ to2DMatrix ::
   Map [b] a ->
   Sig.TC tr (Typ x y z) (Data (v2 :> v1 :> Nil) a)
 to2DMatrix =
-  Sig.fromList2 . List.transpose . Map.elems .
-  Map.mapKeysWith (++) f . fmap (:[])
+  Sig.fromList2 . Map.elems  -- . List.transpose . Map.elems
+  . Map.mapKeysWith (\xs ys -> ys ++ xs) f . fmap (:[])
   where f (x:_) = x
         f [] = error "to2DMatrix: empty list"
 

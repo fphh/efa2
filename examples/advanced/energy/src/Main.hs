@@ -21,7 +21,7 @@ import EFA.Application.Sweep (Sweep)
 import qualified EFA.Application.Optimisation as AppOpt
 
 --import qualified EFA.Flow.Topology.Index as TopoIdx
---import qualified EFA.Flow.State.Quantity as StateQty
+import qualified EFA.Flow.State.Quantity as StateQty
 
 --import qualified EFA.Graph.Topology as Topology
 --import qualified EFA.Graph as Graph
@@ -39,7 +39,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Flow.Draw as Draw
 
 import EFA.Utility.Async (concurrentlyMany_)
---import EFA.Utility.List (vhead)
+import EFA.Utility.List (vhead)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
@@ -94,7 +94,7 @@ main1 = do
 
       ctime = Sig.convert time
 
-      pLocal = Sig.offset 1 . Sig.scale 4.5 $ Sig.convert $ local
+      pLocal = Sig.offset 0.1 . Sig.scale 3 $ Sig.convert $ local
 --      pLocal = Sig.offset 0.2 . Sig.scale 1.3 $ Sig.convert $  local
       pRest = Sig.offset 0.2 . Sig.scale 1.3 $ Sig.convert $  rest
 
@@ -121,7 +121,8 @@ main1 = do
       ienv = AppOpt.storageEdgeXFactors optParams 3 3
                $ AppOpt.initialEnv optParams System.stateFlowGraph
                
-      supportPoints = Base.supportPoints
+      supportPoints = Base.supportPoints ([TopoIdx.ppos System.LocalRest System.LocalNetwork,
+                                           TopoIdx.ppos System.Rest System.Network])
                          (Base.convertRecord reqsRecStep)
                          (map (Sig.findSupportPoints) $ map Sig.untype $ 
                           [ ModSet.varLocalPower1D, ModSet.varRestPower1D])
@@ -158,8 +159,8 @@ main1 = do
 
       simParams :: One.SimulationParams Node [] Double
       simParams = One.SimulationParams {
-          One.varReqRoomPower1D = Sig.convert $ ModSet.varRestPower1D,
-          One.varReqRoomPower2D = Sig.convert $ ModSet.varLocalPower ,
+          One.varReqRoomPower1D = Sig.convert $ ModSet.varLocalPower1D,
+          One.varReqRoomPower2D = Sig.convert $ ModSet.varRestPower ,
           One.reqsRec = Base.convertRecord reqsRecStep,
           One.requirementGrid = [Sig.convert $ ModSet.varLocalPower1D, Sig.convert $ ModSet.varRestPower1D],
           One.activeSupportPoints =  supportPoints, 
@@ -188,7 +189,7 @@ main1 = do
       opt3 = ModLoop.withChargeDrive optParams reqsRec (Type.stateFlowGraph $ Type.simulation opt2) 0
 -}
 
-{-
+
   let g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
 
@@ -196,17 +197,17 @@ main1 = do
     $ Draw.title "State Flow Graph from Simulation"
     $ Draw.stateFlowGraph Draw.optionsDefault
     $ StateQty.mapGraph g g ienv
--}
+
 --  print reqsRecStep 
-  print supportPoints
+--  print supportPoints
 
 --  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
   concurrentlyMany_ [
     ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
     ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
     ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
-    ModLoop.checkRangeIO sysParams optParams simParams,
-    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
+    ModLoop.checkRangeIO sysParams optParams simParams]
+--    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
 --    sequence_ (ModLoop.printEtaLoop optParams ol)]
 
 
@@ -227,5 +228,49 @@ main :: IO ()
 main = main1
 
 {-
-TC (Data [([[0.3,0.5],[1.9]],[SignalIdx 0,SignalIdx 1]),([[0.3,0.5],[2.8]],[SignalIdx 6,SignalIdx 7]),([[0.3,0.5],[3.6999999999999997,4.6]],[SignalIdx 8,SignalIdx 9,SignalIdx 30,SignalIdx 31]),([[0.3,0.5],[4.6,5.5]],[SignalIdx 32,SignalIdx 33]),([[0.5,0.7],[1.0,1.9]],[SignalIdx 2,SignalIdx 3]),([[0.5,0.7],[1.9,2.8]],[SignalIdx 44,SignalIdx 45]),([[0.5,0.7],[5.5]],[SignalIdx 20,SignalIdx 21]),([[0.7,0.8999999999999999],[1.9]],[SignalIdx 22,SignalIdx 23,SignalIdx 36,SignalIdx 37]),([[0.7,0.8999999999999999],[1.9,2.8]],[SignalIdx 4,SignalIdx 5]),([[0.7,0.8999999999999999],[2.8,3.6999999999999997]],[SignalIdx 38,SignalIdx 39]),([[0.7,0.8999999999999999],[3.6999999999999997]],[SignalIdx 28,SignalIdx 29]),([[0.7,0.8999999999999999],[4.6]],[SignalIdx 10,SignalIdx 11]),([[0.7,0.8999999999999999],[5.5]],[SignalIdx 18,SignalIdx 19]),([[0.8999999999999999,1.0999999999999999],[4.6]],[SignalIdx 14,SignalIdx 15,SignalIdx 42,SignalIdx 43]),([[0.8999999999999999,1.0999999999999999],[5.5]],[SignalIdx 34,SignalIdx 35]),([[1.0999999999999999,1.2999999999999998],[1.9]],[SignalIdx 12,SignalIdx 13,SignalIdx 16,SignalIdx 17,SignalIdx 26,SignalIdx 27]),([[1.0999999999999999,1.2999999999999998],[2.8]],[SignalIdx 40,SignalIdx 41]),([[1.4999999999999998,1.6999999999999997],[4.6,5.5]],[SignalIdx 24,SignalIdx 25])])
+X:: TC (Data [0.1,0.6,1.0999999999999999,1.5999999999999996,2.0999999999999996,2.5999999999999996,3.0999999999999996,3.5999999999999996,4.1,4.6,5.1,5.6,6.1])
+
+Y:: TC (Data fromList [
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996],
+           [0.1,0.3,0.5,0.7,0.8999999999999999,1.0999999999999999,1.2999999999999998,1.4999999999999998,1.6999999999999997,1.8999999999999997,2.0999999999999996]])
+-}
+{-
+Z:: TC (Data fromList [
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN],
+[-0.8,-0.8,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,-0.6000000000000001,0.2,0.2,NaN,NaN,NaN,NaN,NaN]])
+
+Z:: TC (Data fromList [
+[0.7000000000000001,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.8,NaN,NaN,NaN,NaN,NaN],
+[0.30000000000000004,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.8,NaN,NaN,NaN,NaN,NaN],
+[0.30000000000000004,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.8,NaN,NaN,NaN,NaN,NaN],
+[0.2,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.8,NaN,NaN,NaN,NaN,NaN],
+[0.2,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.8,NaN,NaN,NaN,NaN,NaN],
+[0.2,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.6000000000000001,NaN,NaN,NaN,NaN,NaN],
+[0.2,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.6000000000000001,NaN,NaN,NaN,NaN,NaN],
+[0.2,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.6000000000000001,NaN,NaN,NaN,NaN,NaN],
+[0.2,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.6000000000000001,NaN,NaN,NaN,NaN,NaN],
+[0.2,0.6000000000000001,0.0,0.0,0.0,0.0,0.8,0.6000000000000001,NaN,NaN,NaN,NaN,NaN],
+[0.2,0.6000000000000001,0.0,0.0,0.0,0.0,0.30000000000000004,0.7000000000000001,NaN,NaN,NaN,NaN,NaN]])
+
+
 -}

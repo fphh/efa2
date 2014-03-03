@@ -764,13 +764,31 @@ checkRangeIO sysParams optParams simParams = do
         balanceIteration sysParams optParams simParams swp initBalF initialBalSteps
         statForce indexConversionMap
       term = ModPlot.gpXTerm
+      _posLocal = TopoIdx.Position System.LocalRest System.LocalNetwork
+      _posRest = TopoIdx.Position System.Rest System.Network
+      _posWater = TopoIdx.Position System.Network System.Water
+      _posGas = TopoIdx.Position System.LocalNetwork System.Gas
+      _posTrafo = TopoIdx.Position System.LocalNetwork System.Network
 
+  print $ Type.reqsAndDofsSignals $ Type.interpolation opt2
+  
   concurrentlyMany_ [
     putStrLn $ showBalanceLoopItem optParams b,
     ModPlot.reqsRec term $ One.reqsRec simParams,
     ModPlot.sweepStackPerStateCondition term optParams swp,
     ModPlot.stateRange2 term opt,
-    ModPlot.maxState term opt2]
+    ModPlot.maxState term opt2,
+    ModPlot.maxEta term opt2,
+    ModPlot.maxObj term opt2,
+    ModPlot.maxPos _posLocal term opt2,
+    ModPlot.maxPos _posRest term opt2,
+    ModPlot.maxPos _posWater term opt2,
+    ModPlot.maxPos _posGas term opt2,
+    ModPlot.maxPos _posTrafo term opt2,
+    ModPlot.givenSignals term opt2,
+    ModPlot.simulationSignals term opt2,
+    ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.3,0.5] 0 swp
+    ]
 
 
 
