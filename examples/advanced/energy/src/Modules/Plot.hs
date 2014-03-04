@@ -345,7 +345,7 @@ maxPos ::
 maxPos pos@(TopoIdx.Position f t) terminal =
   plotMax (terminal $ filename ("maxPos", pos))
           ("Maximal Value for: " ++ showEdge pos)
-          (\(_, _, st, idx, env) -> g $ StateQty.lookup (StateIdx.power st f t) env)
+          (\(_, _, st, _, env) -> g $ StateQty.lookup (StateIdx.power st f t) env)
   where g (Just (Determined x)) = x
         g Nothing = Arith.zero -- show Power of inactive Edges
         g (Just (Undetermined)) = ModUt.nan
@@ -702,11 +702,11 @@ requirements ::
   Sig.PSignal v Double ->
   IO ()
 requirements terminal plocal prest = do
-  let rs = Sig.toList $ trace (show prest) prest
-      ls = Sig.toList $ trace (show plocal) plocal
+  let rs = Sig.toList prest
+      ls = Sig.toList plocal
 
       ts :: [([Double], [Double])]
-      ts = map unzip $ zipWith (findTile ModSet.rest ModSet.local) rs ls
+      ts = map unzip $ zipWith (findTile ModSet.local ModSet.rest ) rs ls
 
       sigStyle _ =
         LineSpec.pointSize 1 $
@@ -735,7 +735,7 @@ requirements terminal plocal prest = do
     ( Opts.yLabel (showNode System.Rest) $
       Opts.xLabel (showNode System.LocalRest) $
       Plot.xyFrameAttr "Requirements" prest plocal)
-    ( (mconcat $ map f []) --ts) --ts)
+    ( (mconcat $ map f ts) --ts) --ts)
       <> Plot.xy sigStyle [prest] [AppPlot.label "" plocal])
 
 

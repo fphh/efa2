@@ -293,11 +293,6 @@ signCorrectedOptimalPowerMatrices systemParams m (ReqsAndDofs.Dofs ppos) =
                        _ -> fmap (const (Determined Arith.zero))
                                  (getEdgeFromPosition st pos graph)
 
-
-
-
-
-
 isFlowDirectionPositive ::
   (Ord node, Show node) =>
   One.SystemParams node a ->

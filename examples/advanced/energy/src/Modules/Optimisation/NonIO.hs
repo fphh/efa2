@@ -49,7 +49,7 @@ import qualified EFA.Signal.Vector as SV
 
 import EFA.Signal.Data (Data(Data), Nil) --, (:>))
 
-
+--import qualified EFA.Signal.Data as Data
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
@@ -57,7 +57,77 @@ import qualified Data.Map as Map; --import Data.Map (Map)
 --import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 import Data.Monoid (Monoid, mempty, (<>))
+--import Data.Maybe(fromMaybe)
 --import Debug.Trace(trace)
+
+interpolateOptimalSolutionPerState :: 
+  (Eq (vec1 a1), Ord a1, Show a1, Show (vec1 a1),
+   Show node, SV.Zipper vec1, SV.Walker vec1,
+   SV.Storage vec1 Bool, SV.Storage vec1 a1,
+   SV.Storage vec1 (Maybe (Result a1)),
+   SV.Singleton vec1, SV.Lookup vec1,
+   SV.Len (vec1 a1), SV.FromList vec1,
+   SV.Find vec1, SV.Convert vec1 vec1,
+   Node.C node, Arith.Constant a1) =>
+  One.SystemParams node a1 -> 
+  One.OptimisationParams node list sweep vec a -> 
+  One.SimulationParams node vec1 a1 -> 
+  Type.OptimalSolutionPerState node a1 -> 
+  Map.Map Idx.State (Type.Interpolation node vec1 a1)
+interpolateOptimalSolutionPerState sysParams optParams simParams = 
+  Map.mapWithKey (interpolateOptimalSolutionForOneState sysParams optParams simParams)
+
+
+interpolateOptimalSolutionForOneState ::
+  (Eq (vec1 a1), Ord a1, Show node,
+   Show (vec1 a1), Show a1, SV.Zipper vec1,
+   SV.Walker vec1,
+   SV.Storage vec1 (Maybe (Result a1)),
+   SV.Storage vec1 a1, SV.Storage vec1 Bool,
+   SV.Singleton vec1, SV.Lookup vec1,
+   SV.Len (vec1 a1), SV.FromList vec1,
+   SV.Find vec1, SV.Convert vec1 vec1,
+   Node.C node, Arith.Constant a1) =>
+  One.SystemParams node a1 -> 
+  One.OptimisationParams node list sweep vec a-> 
+  One.SimulationParams node vec1 a1 -> 
+  Idx.State ->
+  Map.Map [a1] (Maybe (a1, a1, Int, Type.EnvResult node a1)) ->
+  Type.Interpolation node vec1 a1
+interpolateOptimalSolutionForOneState sysParams optParams simParams state optimalSolutionPerState = 
+  let (plocal,prest) =
+        case map (Record.getSig demandSignals) (ReqsAndDofs.unReqs $ One.reqsPos optParams) of
+             [r, l] -> (r, l)
+             _ -> error "NonIO.simulation: number of signals"
+
+      demandSignals = One.reqsRec simParams
+      
+      g _str x = x
+      h m = Map.map (fmap (\(o,e,i,v) -> (o,e,state,i,v))) m 
+
+      dofsSignals =  Map.mapWithKey f optimalControlMatrices
+        where f key mat =
+                Sig.tzipWith
+                (Sig.interp2WingProfile
+                 ("simulation-interpolate Signals" ++ show (g "Position: " key))
+                 (g "X:" $ One.varReqRoomPower1D simParams)
+                 (g "Y:" $ One.varReqRoomPower2D simParams)
+                 $ (g "Z:" $ Sig.convert mat))
+                (g "xSig:" plocal)
+                (g "ySig:" prest)
+
+      optimalControlMatrices =
+        Map.map (Sig.map ModUt.nothing2Nan) $
+          Base.signCorrectedOptimalPowerMatrices
+            sysParams
+            (h optimalSolutionPerState )
+            (One.dofsPos optParams)
+
+      demandAndControlSignals = Record.addSignals (Map.toList dofsSignals) demandSignals
+
+  in Type.Interpolation optimalControlMatrices demandAndControlSignals
+
+
 
 interpolateOptimalSolution ::
   (Eq (vec2 b), Ord b, Show b, Show (vec2 b),
