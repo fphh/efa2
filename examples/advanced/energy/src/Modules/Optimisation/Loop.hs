@@ -135,7 +135,7 @@ checkBalanceStep ::
   (a2, Type.OptimiseStateAndSimulate node2 sweep1 sweepVec1 a intVec1 b1 simVec1 c1 efaVec1 d1) ->
   (a1, Type.OptimiseStateAndSimulate node1 sweep sweepVec a intVec b simVec c efaVec d) ->
   Bool
-checkBalanceStep simParams bal bal1 res res1 = trace ("Diffs: " ++ show differenceList) numberOfDifferences <= (1::Integer) && 
+checkBalanceStep simParams bal bal1 res res1 = trace ("Diffs: " ++ show numberOfDifferences) numberOfDifferences <= (2::Integer) && 
                                                (map (Arith.sign) $ Map.elems bal) /= (map (Arith.sign) $ Map.elems bal1)
   where optSolution = Type.optimalSolution $ snd res
         optSolution1 = Type.optimalSolution $ snd res1
@@ -225,7 +225,8 @@ balanceIteration sysParams optParams simParams perStateSweep balForceIn balSteps
 
     accessf res = StateEta.balanceFromRecord (One.storagePositions sysParams) $
                       Type.signals $ Type.simulation $ snd res
-
+                      
+    -- TODO: Hier fehlt eine Schleife pro Speicher !!
     go cnt force step res  = BalanceLoopItem cnt force step  bal res :
                                  if checkBalance optParams bal || cnt >= maxStepCnt || checkBalanceStep simParams bal bal1 res res1 
                                  then [BalanceLoopItem (cnt+1) force1 step1  bal1 res1]
@@ -250,17 +251,17 @@ balanceIteration sysParams optParams simParams perStateSweep balForceIn balSteps
               j (Just x) = x
               j Nothing =  error ("Error in balanceIteration: Storage not found")
 
-              _3 = Arith.fromInteger 3
+              _1 = Arith.fromRational 1.1
               _2 = Arith.fromInteger 2
 
               newStepSize = (Arith.abs st) ~/(Arith.one ~+
                         (Arith.abs $ y0) ~/ (Arith.abs $ y1))
 
-              in if False then case (Arith.sign $ y0, Arith.sign $ y1) of
-                              (Negative, Negative) -> ((Arith.abs st) ~* _2)
-                              (Positive, Positive) -> (Arith.negate $ (Arith.abs st) ~* _2)
-                              (Negative, Positive) -> (Arith.negate $ (Arith.abs st) ~/ _3)
-                              (Positive, Negative) -> ((Arith.abs st) ~/ _3)
+              in if True then case (Arith.sign $ y0, Arith.sign $ y1) of
+                              (Negative, Negative) -> ((Arith.abs st) ~* _1)
+                              (Positive, Positive) -> (Arith.negate $ (Arith.abs st) ~* _1)
+                              (Negative, Positive) -> (Arith.negate $ (Arith.abs st) ~* 0.7)
+                              (Positive, Negative) -> ((Arith.abs st) ~* 0.7)
                               (Zero, Positive)  -> Arith.negate $ One.getSocDrive seed
                               (Zero, Negative)  -> One.getSocDrive seed
                               (_, Zero)  -> Arith.zero
@@ -278,7 +279,105 @@ balanceIteration sysParams optParams simParams perStateSweep balForceIn balSteps
                     (Zero, Negative)  ->  One.getSocDrive seed
                     (_, Zero)  ->  Arith.zero
 
--- | TODO : move to korrekt Position -- State Labels == Times ??
+{-
+balanceIteration2 :: 
+  (efaVec~[], intVec ~ [], sweep ~ Sweep, a ~ d, simVec ~ [],
+   Ord d,RealFloat d,Show d,Show node,
+   UV.Unbox d,Node.C node,Arith.ZeroTestable d,Arith.Constant d) =>
+  One.SystemParams node a ->
+  One.OptimisationParams node [] Sweep UV.Vector a ->
+  One.SimulationParams node simVec a ->
+  Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node Sweep UV.Vector a)) ->
+  Map.Map node (One.SocDrive a) ->
+  Map.Map node (One.SocDrive a) ->
+  Map.Map Idx.AbsoluteState (One.StateForcing a) ->
+  One.IndexConversionMap ->
+  [BalanceLoopItem node a (Type.OptimisationPerState node a)
+    (Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)]
+balanceIteration2 sysParams optParams simParams perStateSweep balForceIn balStepsIn statForcing indexConversionMap = 
+  go 0 balForceIn balStepsIn resStart
+  where
+    One.MaxBalanceIterations maxStepCnt = One.maxBalanceIterations optParams
+    seed = One.balanceForcingSeed optParams
+    resStart = fsys balForceIn
+    fsys bf = NonIO.optimiseAndSimulate sysParams optParams simParams bf statForcing
+              perStateSweep indexConversionMap
+
+    accessf res = StateEta.balanceFromRecord (One.storagePositions sysParams) $
+                      Type.signals $ Type.simulation $ snd res  go 0 balForceIn
+  
+    go cnt forcing stepping res = oneIterationOfAllStorages : 
+         if checkBalance optParams balance then [] else go cnt forcing1 stepping1 res1
+      where                              
+           oneIterationOfAllStorages = foldl (++iterateOneStorage fsys accessf forcing stepping) 
+                                       [] $ Map.keys forcing
+                                       
+           balance = balance $ vlast "iterateBalance" $ oneIterationOfAllStorages
+           forcing1 = bForcing $ vlast "iterateBalance" $ oneIterationOfAllStorages
+           stepping1 = bFStep $ vlast "iterateBalance" $ oneIterationOfAllStorages
+           res1 = bResult $ vlast "iterateBalance" $ oneIterationOfAllStorages
+           
+
+    -- The location of the Zero Crossing could be moved elsewehre by Balancing on other storages
+    -- therefore lets start with an unknown intervall
+-- TODO: Was ist korrekt ?? calculateNextBalanceStep (force1,bal1) -- 0 oder 1 ?? 
+        step1 = calculateNextBalanceStep (force1,bal1) sto
+
+-}
+{-
+iterateOneStorage ::  
+  (Ord a, Arith.Constant a,Ord node, Show node) =>
+  Int -> 
+  (Map.Map node (One.SocDrive a) -> zz)->
+  (zz -> One.Balance node a)->
+  One.BalanceForcing node a ->
+  One.BalanceForcingStep node a ->
+  z -> 
+  node ->
+  [BalanceLoopItem node a (Type.OptimisationPerState node a) 
+    (Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)] 
+iterateOneStorage cntIn fsys accessf forcingIn steppingIn res sto = 
+  go cntIn forcingIn steppingIn initialResult (Nothing,Nothing)
+  where
+    initialResult = fsys forcingIn
+    go cnt force step res bestPair = BalanceLoopItem cnt force step1 bal res : 
+                                     if True --checkBalanceSingle 
+                                     then [BalanceLoopItem (cnt+1) force1 step  bal1 res1]
+                                       else go (cnt+1) force1 step1 res1 bestPair1
+      where
+        force1 = One.addForcingStep force sto step
+        res1 = fsys force1
+        bal1 = accessf res1 
+        bal = accessf res 
+        bestPair1 = One.rememberBestBalanceForcing bestPair 
+                    (One.getStorageBalance "iterateOneStorage" bal1 sto, 
+                     force1)
+        step1 = One.updateForcingStep step sto $ calculateNextBalanceStep 
+                (One.getStorageForcing force1 sto,
+                 One.getStorageBalance bal1 sto) sto
+-}
+calculateNextBalanceStep :: 
+  (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a) =>
+  (One.SocDrive a,a) -> 
+  (Maybe (One.SocDrive a,a), Maybe (One.SocDrive a,a)) -> 
+  (One.SocDrive a)->
+  (One.SocDrive a)
+calculateNextBalanceStep (_,bal) bestPair step = One.setSocDrive step1
+ where 
+   fact = Arith.fromRational 2.0
+   divi = Arith.fromRational 1.7
+   intervall = One.getForcingIntervall bestPair
+   step1 = case (intervall, Arith.sign bal) of   
+                    -- Zero Crossing didn't occur so far -- increase step to search faster
+                    (Nothing,Negative) -> Arith.abs $ (One.getSocDrive step) ~* fact
+                    (Nothing,Positive) ->  Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
+                    -- The Zero Crossing is contained in the intervall
+                    -- defined by bestPair - step just a little over the middle
+                    (Just int, Negative) ->  (One.getSocDrive int) ~/ divi
+                    (Just int, Positive) ->   (Arith.negate $ One.getSocDrive int) ~/ divi
+                    (_, Zero)  ->  Arith.zero   
+
+-- | TODO : move to correct Position 
 getStateTimes ::
   Arith.Constant a =>
   Map.Map Idx.AbsoluteState a1 ->

@@ -55,7 +55,7 @@ import Data.Monoid (Monoid)
 import Control.Monad (join)
 import Control.Applicative (liftA2)
 
-import Debug.Trace (trace)
+--import Debug.Trace (trace)
 
 perStateSweep ::
   (Node.C node, Show node,RealFloat a,

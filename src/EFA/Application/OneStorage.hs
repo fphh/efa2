@@ -22,6 +22,7 @@ import EFA.Signal.Record(PowerRecord)
 import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector(Vector)
 import Data.Bimap (Bimap)
+import Data.Maybe(fromMaybe)
 
 
 -- | The 'SocDrive' data type should always contain positive values.
@@ -162,7 +163,73 @@ newtype MaxInnerLoopIterations  =  MaxInnerLoopIterations Int
 
 
 type Balance node a = Map node a
+type BalanceForcing node a = Map node (SocDrive a)
+type BalanceForcingStep node a = Map node (SocDrive a)
 
 
 type StateDurations a = Map Idx.AbsoluteState a
   
+type BestBalance node a = Map node (Maybe (SocDrive a,a), Maybe (SocDrive a,a))
+
+
+                        
+rememberBestBalanceForcing :: 
+  (Arith.Constant a, Ord a) =>
+   (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) -> 
+  (SocDrive a,a) -> 
+  (Maybe (SocDrive a,a), Maybe (SocDrive a,a))
+rememberBestBalanceForcing (neg,pos) (force,bal) = 
+  if bal >= Arith.zero then (neg, g pos) else (g neg, pos) 
+  where
+   g(Just (f,b)) = if (Arith.abs bal) >= (Arith.abs b) then Just (f,b) else Just (force,bal)
+   g Nothing  = Just (force,bal)
+
+checkCrossingEverOccured :: 
+  (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) -> Bool
+checkCrossingEverOccured (Just _, Just _) = True
+checkCrossingEverOccured (_, _) = False
+
+getForcingIntervall ::  (Ord a, Arith.Constant a) =>
+  (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) 
+  -> Maybe (SocDrive a)
+getForcingIntervall (Just (n,_), Just (p,_)) = 
+  Just $ setSocDrive ((Arith.abs $ getSocDrive n) Arith.~+ (getSocDrive p))
+getForcingIntervall (_,_) = Nothing
+
+
+addForcingStep :: 
+  (Ord node, Ord a, Arith.Constant a) =>
+  BalanceForcing node a -> 
+  node -> 
+  (SocDrive a) -> 
+  BalanceForcing node a 
+addForcingStep forcing storage step = Map.adjust f storage forcing  
+  where f force = setSocDrive $ (getSocDrive force) Arith.~+ (getSocDrive step)
+
+updateForcingStep ::
+  (Ord node, Ord a, Arith.Constant a) =>
+  BalanceForcingStep node a ->
+  node -> 
+  (SocDrive a) -> 
+  BalanceForcingStep node a
+updateForcingStep forcing storage step = Map.adjust f storage forcing
+  where f _ = step
+
+getStorageForcing :: 
+  (Ord node, Show node) =>
+  String ->  
+  BalanceForcing node a ->
+  node ->  SocDrive a
+getStorageForcing caller balance sto = fromMaybe (error m) $ Map.lookup sto balance 
+  where m = "Error in getStorageForcing called by " ++ caller 
+            ++ "- gStorage not in Map : " ++ show sto
+            
+getStorageBalance :: 
+  (Ord node, Show node) =>
+  String ->  Balance node a ->
+  node ->  a
+getStorageBalance caller balance sto = fromMaybe (error m) $ Map.lookup sto balance 
+  where m = "Error in getStorageBalance called by " ++ caller 
+            ++ "- gStorage not in Map : " ++ show sto  
+
+data StatForcing = StateForcingOn | StateForcingOff

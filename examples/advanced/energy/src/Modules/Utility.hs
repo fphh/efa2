@@ -28,7 +28,7 @@ import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Signal.Typ (Typ)
 
 import qualified Data.Map as Map; import Data.Map (Map)
-import qualified Data.List as List
+--import qualified Data.List as List
 import Data.Tuple.HT (fst3, snd3, thd3)
 
 import qualified EFA.Report.Format as Format

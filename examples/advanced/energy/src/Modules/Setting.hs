@@ -19,7 +19,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
-import Data.List (transpose)
+--import Data.List (transpose)
 
 
 

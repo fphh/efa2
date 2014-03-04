@@ -57,7 +57,7 @@ import qualified Data.Map as Map; --import Data.Map (Map)
 --import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 import Data.Monoid (Monoid, mempty, (<>))
-import Debug.Trace(trace)
+--import Debug.Trace(trace)
 
 interpolateOptimalSolution ::
   (Eq (vec2 b), Ord b, Show b, Show (vec2 b),
@@ -80,7 +80,7 @@ interpolateOptimalSolution sysParams optParams simParams optimalSolution =
 
       demandSignals = One.reqsRec simParams
       
-      g str x = trace (str ++": " ++ show x) x  
+      g _str x = x -- trace (str ++": " ++ show x) x  
 
       dofsSignals =  Map.mapWithKey f optimalControlMatrices
         where f key mat =

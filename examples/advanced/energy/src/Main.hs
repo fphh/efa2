@@ -32,7 +32,7 @@ import qualified EFA.Signal.ConvertTable as CT
 
 import qualified EFA.IO.TableParser as Table
 
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+--import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Equation.Arithmetic as Arith
 
@@ -49,14 +49,14 @@ import qualified Data.Empty as Empty
 
 --import qualified EFA.Signal.Plot as Plot
 
-import Data.Vector (Vector)
+--import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 --import Text.Printf (printf)
 
-import qualified System.Random as Random
+--import qualified System.Random as Random
 
 
 initEnv ::
@@ -74,7 +74,7 @@ main1 = do
 
   tabPower <- Table.read "../maps/power.txt.bak"
 
-  rndGen <- Random.getStdGen
+  --rndGen <- Random.getStdGen
 
   let etaMap =
          Map.mapKeys One.Name $
@@ -148,7 +148,7 @@ main1 = do
           One.maxInnerLoopIterations = One.MaxInnerLoopIterations 3,
           One.maxBalanceIterations = One.MaxBalanceIterations 100,
           One.maxStateIterations = One.MaxStateIterations 100,
-          One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 0.05)],
+          One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.2,
           One.balanceThreshold = One.BalanceThreshold 0.2,
@@ -206,8 +206,8 @@ main1 = do
     ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
     ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
     ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
-    ModLoop.checkRangeIO sysParams optParams simParams]
---    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
+--    ModLoop.checkRangeIO sysParams optParams simParams]
+    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
 --    sequence_ (ModLoop.printEtaLoop optParams ol)]
 
 
