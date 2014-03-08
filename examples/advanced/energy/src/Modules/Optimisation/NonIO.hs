@@ -159,7 +159,7 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
 
 optimalSignalBasedSolution :: 
   (Ord node, SV.Storage vec Bool, SV.Storage vec [Idx.State],SV.Storage vec (a, a),
-   SV.Singleton vec,
+   SV.Singleton vec,Arith.Sum (Sig.UTSignal vec a),   
    SV.FromList vec,
    Arith.Constant a,
    SV.Storage vec (Map.Map Idx.State a),
@@ -173,7 +173,7 @@ optimalSignalBasedSolution ::
   Record.PowerRecord node vec a
 optimalSignalBasedSolution interpolation statForcing = Record.Record newTime (Map.mapWithKey f pMap)
   where
-    indexSignal = Base.genOptimalStatesSignal interpolation
+    indexSignal = Base.genOptimalStatesSignal statForcing interpolation
     newTime = Base.genOptimalTime indexSignal time
     (Record.Record time pMap) =  Type.reqsAndDofsSignalsOfState $ 
               vhead "optimalSignalBasedSolution" $ Map.elems interpolation

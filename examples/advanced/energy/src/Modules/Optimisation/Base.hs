@@ -447,27 +447,52 @@ genOptimalObjectiveSignal interpolation = optimalObjectiveSignal
 
 findOptimalObjectiveStates :: 
   (Vec.Zipper vec,Ord a,Vec.Storage vec Bool,
+   Vec.Singleton vec,
+   Arith.Sum (Sig.UTSignal vec a),
+   Arith.Sum a,
    Vec.Walker vec,
    Vec.Storage vec a) =>
+  One.StatForcing ->
   Type.InterpolationOfAllStates node vec a -> Map Idx.State (Sig.UTSignal vec Bool)
-findOptimalObjectiveStates interpolation = isEqualToMax
+findOptimalObjectiveStates statForcing interpolation = isEqualToMax
   where
     opt = genOptimalObjectiveSignal interpolation
     isEqualToMax = Map.map (Sig.zipWith g opt) $ 
-                   Map.map Type.optObjectiveSignalOfState interpolation 
+                   Map.map (forceOptimalStateSignal statForcing opt . 
+                            Type.optObjectiveSignalOfState) interpolation 
     g mx x = mx == x
     
+forceOptimalStateSignal :: 
+  (Vec.Walker vec, Arith.Sum a, 
+   Arith.Sum (Sig.UTSignal vec a), 
+   Ord a, Vec.Storage vec a, Vec.Singleton vec) =>
+  One.StatForcing ->
+  Sig.UTSignal vec a ->
+  Sig.UTSignal vec a ->
+  Sig.UTSignal vec a 
+forceOptimalStateSignal stateForcing overallOptimalSignal optimalSignalOfState = case stateForcing of
+  One.StateForcingOn -> Sig.offset minimalDifference optimalSignalOfState
+  One.StateForcingOff -> optimalSignalOfState
+  where
+    differenceSignal = overallOptimalSignal Arith.~- optimalSignalOfState
+    minimalDifference = Sig.fromScalar $ Sig.minimum differenceSignal
+
+
 genOptimalStatesSignal ::
   (Ord a,Vec.Storage vec [Idx.State],
+   Vec.Singleton vec,
+   Arith.Sum a,
+   Arith.Sum (Sig.UTSignal vec a),
    Vec.Zipper vec,
    Vec.Walker vec,
    Vec.Storage vec a,
    Vec.Storage vec Bool) =>
+  One.StatForcing ->
   Type.InterpolationOfAllStates node vec a ->
    Sig.UTSignal vec [Idx.State]
-genOptimalStatesSignal interpolation = indexSignal
+genOptimalStatesSignal statForcing interpolation = indexSignal
   where
-    optStates = findOptimalObjectiveStates interpolation
+    optStates = findOptimalObjectiveStates statForcing interpolation
     indexSignal = foldl (\acc (state,sig) -> Sig.zipWith (g state) acc sig) 
                      emptyIndexSignal
                      (Map.toList $ optStates)
