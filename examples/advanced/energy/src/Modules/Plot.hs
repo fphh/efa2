@@ -691,7 +691,6 @@ reqsRec terminal (Record.Record _ pMap) = mapM_ f $ zip (init xs) (tail xs)
          f (x,y) = requirements terminal x y
 
 
--- | TODO Kacheln anzeigen deaktiviert: @HT -- sorry hat mit veraenderten Reqs kein Kacheln mehr gefunden
 requirements ::
   (Terminal.C term, Show (v Double),
    Vector.Walker v,

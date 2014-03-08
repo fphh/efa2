@@ -30,6 +30,7 @@ import qualified EFA.Flow.Sequence.Quantity as SeqQty
 
 import qualified EFA.Flow.Part.Map as PartMap
 import qualified EFA.Flow.Storage as Storage
+import EFA.Utility.List (vhead)
 
 import qualified EFA.Flow.SequenceState.Index as Idx
 
@@ -37,6 +38,7 @@ import qualified EFA.Graph as Graph
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Signal.Signal as Sig
+
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Vector as Vec
@@ -371,3 +373,145 @@ stateFlowBalance ::
 stateFlowBalance = fmap (f . Storage.nodes) . StateQty.storages
   where f pm = liftA2 (Arith.~-) (PartMap.exit pm) (PartMap.init pm)
 
+
+
+getOptimalControlMatricesOfOneState ::
+  (Vec.Walker varVec, Vec.Storage varVec a, 
+   Arith.Constant a, Ord node,
+   Ord a,
+   Show node,
+   Vec.Storage varVec (Maybe (Result a)),
+   Vec.FromList varVec,
+   Arith.Sum a) =>
+  One.SystemParams node a -> 
+  One.OptimisationParams node list sweep vec a -> 
+  Idx.State ->
+  Type.OptimalSolutionOfOneState node a ->
+  Map (TopoIdx.Position node) (Sig.PSignal2 Vector varVec a)
+getOptimalControlMatricesOfOneState sysParams optParams state optimalSolutionOfOneState =
+        Map.map (Sig.map ModUt.nothing2Nan) $
+          signCorrectedOptimalPowerMatrices
+            sysParams
+            (h optimalSolutionOfOneState)
+            (One.dofsPos optParams)
+   where         
+     h m = Map.map (fmap (\(o,e,i,v) -> (o,e,state,i,v))) m 
+            
+            
+optimalObjectiveMatrixOfOneState::
+  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a, 
+   Ord a, Vec.Storage varVec (Maybe (Result a)), Vec.FromList varVec) =>
+  Type.OptimalSolutionOfOneState node a ->
+  Sig.PSignal2 Vector varVec a
+optimalObjectiveMatrixOfOneState optimalSolutionOfOneState = Sig.map ModUt.nothing2Nan $ 
+                         ModUt.to2DMatrix $ j optimalSolutionOfOneState
+  where
+      j m = Map.map (fmap (Determined . ModUt.fst4)) m
+
+optimalEtaMatrixOfOneState::
+  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a, 
+   Ord a, Vec.Storage varVec (Maybe (Result a)), Vec.FromList varVec) =>
+  Type.OptimalSolutionOfOneState node a ->
+  Sig.PSignal2 Vector varVec a
+optimalEtaMatrixOfOneState optimalSolutionOfOneState = Sig.map ModUt.nothing2Nan $ 
+                         ModUt.to2DMatrix $ j optimalSolutionOfOneState
+  where
+      j m = Map.map (fmap (Determined . ModUt.snd4)) m
+
+optimalIndexMatrixOfOneState::
+  (Vec.Storage varVec Int, Arith.Constant Int, 
+   Vec.Storage varVec (Maybe (Result Int))) =>
+  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a, 
+   Ord a, Vec.Storage varVec (Maybe (Result a)), Vec.FromList varVec) =>
+  Type.OptimalSolutionOfOneState node a ->
+  Sig.PSignal2 Vector varVec Int
+optimalIndexMatrixOfOneState optimalSolutionOfOneState = Sig.map ModUt.nothing2Nan $ 
+                         ModUt.to2DMatrix $ j optimalSolutionOfOneState
+  where
+      j m = Map.map (fmap (Determined . ModUt.thd4)) m
+
+
+genOptimalObjectiveSignal :: 
+  (Vec.Zipper vec,Ord a,
+   Vec.Walker vec,
+   Vec.Storage vec a) =>
+  Type.InterpolationOfAllStates node vec a -> Sig.UTSignal vec a
+genOptimalObjectiveSignal interpolation = optimalObjectiveSignal
+  where
+    objectiveSigPerState = map (Type.optObjectiveSignalOfState) $ 
+                               Map.elems interpolation                     
+    optimalObjectiveSignal =  foldl (Sig.zipWith max) 
+             (vhead "optimalSignalBasedSolution" $ objectiveSigPerState)
+             (tail objectiveSigPerState)
+
+
+findOptimalObjectiveStates :: 
+  (Vec.Zipper vec,Ord a,Vec.Storage vec Bool,
+   Vec.Walker vec,
+   Vec.Storage vec a) =>
+  Type.InterpolationOfAllStates node vec a -> Map Idx.State (Sig.UTSignal vec Bool)
+findOptimalObjectiveStates interpolation = isEqualToMax
+  where
+    opt = genOptimalObjectiveSignal interpolation
+    isEqualToMax = Map.map (Sig.zipWith g opt) $ 
+                   Map.map Type.optObjectiveSignalOfState interpolation 
+    g mx x = mx == x
+    
+genOptimalStatesSignal ::
+  (Ord a,Vec.Storage vec [Idx.State],
+   Vec.Zipper vec,
+   Vec.Walker vec,
+   Vec.Storage vec a,
+   Vec.Storage vec Bool) =>
+  Type.InterpolationOfAllStates node vec a ->
+   Sig.UTSignal vec [Idx.State]
+genOptimalStatesSignal interpolation = indexSignal
+  where
+    optStates = findOptimalObjectiveStates interpolation
+    indexSignal = foldl (\acc (state,sig) -> Sig.zipWith (g state) acc sig) 
+                     emptyIndexSignal
+                     (Map.toList $ optStates)
+    g st a True = a ++ [st]
+    g _ a False = a
+    time = Record.getTime $ Type.reqsAndDofsSignalsOfState $ vhead "mkOptimisationRecord" 
+           $ Map.elems interpolation
+    emptyIndexSignal = Sig.untype $ Sig.map (\_-> []) time  
+    
+
+genOptimalTime  :: 
+  (Vec.Zipper vec,
+   Vec.Walker vec,
+   Vec.Storage vec (a, a),Arith.Constant a,Vec.FromList vec,
+   Vec.Storage vec a,
+   Vec.Singleton vec,
+   Vec.Storage vec [Idx.State]) =>
+  Sig.UTSignal vec [Idx.State] -> 
+  Sig.TSignal vec a -> Sig.TSignal vec a
+genOptimalTime indexSignal time = Sig.fromList ([t0] ++ 
+  (concat $ zipWith f (Sig.toList indexSignal) 
+  (Sig.toList $ Sig.deltaMap ((,)) time)))
+  where
+    f states (t1,t2) = map (\cnt -> t2 Arith.~- (cnt Arith.~* (t2 Arith.~-t1)) )
+                                  $ map (Arith.fromRational . fromIntegral) [0..(length states-1)] 
+    t0 = vhead "genOptimalTime" $ Sig.toList time
+
+genOptimalSignal  :: 
+  (Vec.Storage vec [Idx.State], 
+   Vec.Zipper vec, Vec.Walker vec,
+   Vec.Storage vec a, Vec.FromList vec, 
+   Vec.Storage vec (Map Idx.State a)) =>
+  Sig.UTSignal vec [Idx.State] -> 
+  Map Idx.State (Sig.PSignal vec a) -> 
+  Sig.PSignal vec a 
+genOptimalSignal indexSignal signalMap = 
+  Sig.fromList $ [x0] ++ (concat $ zipWith g (Sig.toList indexSignal) signalOfMaps)
+  where
+    g states m = map (m Map.! ) states
+    x0 = (vhead "genOptimalSignal" $ signalOfMaps) 
+         Map.! (vhead "genOptimalSignal" $ vhead "genOptimalSignal" $ Sig.toList indexSignal) 
+    signalOfMaps = Sig.toList $ foldl (\acc (state,sig) -> 
+                                            Sig.zipWith (\a x -> Map.insert state x a) acc sig) 
+                   emptySig $ Map.toList signalMap
+    emptySig = Sig.map (\_ -> Map.empty) $ vhead "genOptimalSignal" $ Map.elems signalMap
+
+ 

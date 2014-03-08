@@ -37,6 +37,8 @@ type EnvResult node a = StateQty.Graph node (Result a) (Result a)
 type OptimalSolutionPerState node a =
   Map Idx.State (Map [a] (Maybe (a, a, Int, EnvResult node a)))
 
+type OptimalSolutionOfOneState node a = Map [a] (Maybe (a, a, Int, EnvResult node a))
+
 -- | Data Type to store the optimal solution of all states
 type OptimalSolution node a = Map [a] (Maybe (a, a, Idx.State, Int, EnvResult node a))
 
@@ -75,6 +77,17 @@ data Interpolation node vec a =
   Interpolation {
     controlMatrices :: ControlMatrices node vec a,
     reqsAndDofsSignals :: Record.PowerRecord node vec a}
+
+type InterpolationOfAllStates node vec a = 
+  Map Idx.State (InterpolationOfOneState node vec a)
+
+data InterpolationOfOneState node vec a = InterpolationOfOneState {
+    controlMatricesOfState :: ControlMatrices node vec a,
+    optObjectiveSignalOfState :: Sig.UTSignal vec a,
+--    tileChangeSignal :: vec [(a,a,a,a)],
+    reqsAndDofsSignalsOfState :: Record.PowerRecord node vec a}
+  
+
 
 data Simulation node vec a =
   Simulation {

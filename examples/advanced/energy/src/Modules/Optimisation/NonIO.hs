@@ -44,6 +44,7 @@ import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Chop as Chop
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Vector as SV
+import EFA.Utility.List (vhead)
 
 --import EFA.Report.FormatValue(formatValue)
 
@@ -73,13 +74,13 @@ interpolateOptimalSolutionPerState ::
   One.OptimisationParams node list sweep vec a -> 
   One.SimulationParams node vec1 a1 -> 
   Type.OptimalSolutionPerState node a1 -> 
-  Map.Map Idx.State (Type.Interpolation node vec1 a1)
+  Map.Map Idx.State (Type.InterpolationOfOneState node vec1 a1)
 interpolateOptimalSolutionPerState sysParams optParams simParams = 
   Map.mapWithKey (interpolateOptimalSolutionForOneState sysParams optParams simParams)
 
 
 interpolateOptimalSolutionForOneState ::
-  (Eq (vec1 a1), Ord a1, Show node,
+  (Eq (vec1 a1), Ord a1, Show node,-- SV.Storage vec2 (vec1 a4),
    Show (vec1 a1), Show a1, SV.Zipper vec1,
    SV.Walker vec1,
    SV.Storage vec1 (Maybe (Result a1)),
@@ -93,8 +94,8 @@ interpolateOptimalSolutionForOneState ::
   One.SimulationParams node vec1 a1 -> 
   Idx.State ->
   Map.Map [a1] (Maybe (a1, a1, Int, Type.EnvResult node a1)) ->
-  Type.Interpolation node vec1 a1
-interpolateOptimalSolutionForOneState sysParams optParams simParams state optimalSolutionPerState = 
+  Type.InterpolationOfOneState node vec1 a1 
+interpolateOptimalSolutionForOneState sysParams optParams simParams state optimalSolutionOfOneState = 
   let (plocal,prest) =
         case map (Record.getSig demandSignals) (ReqsAndDofs.unReqs $ One.reqsPos optParams) of
              [r, l] -> (r, l)
@@ -104,31 +105,82 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
       
       g _str x = x
       h m = Map.map (fmap (\(o,e,i,v) -> (o,e,state,i,v))) m 
+      
+-- TODO: Determined sauber auspacken 
+      j m = Map.map (fmap (Determined . ModUt.fst4)) m
+      
+--      optSignal = undefined
+      
+
+      optSignal = Sig.tzipWith (Sig.interp2WingProfile
+                 ("interpolateOptimalSolutionForOneState - interpolate Signal - interpolate Index-Signal")
+                 (g "X:" $ One.varReqRoomPower1D simParams)
+                 (g "Y:" $ One.varReqRoomPower2D simParams)
+                 $ (g "Z:" $ optimalObjectiveMatrix))
+                (g "xSig:" plocal)
+                (g "ySig:" prest)
+
+{-      indexSignal = Sig.tzipWith (Sig.interp2WingProfile
+                 ("interpolateOptimalSolutionForOneState - interpolate Signal - interpolate Index-Signal")
+                 (g "X:" $ One.varReqRoomPower1D simParams)
+                 (g "Y:" $ One.varReqRoomPower2D simParams)
+                 $ (g "Z:" $ Sig.convert indexMat))
+                (g "xSig:" plocal)
+                (g "ySig:" prest)-}
+                    
+--      indexMat = ModUt.nothing2Nan $ ModUt.to2DMatrix 
+--                 Map.map (fmap  ModUt.thd4) optimalSolutionOfOneState
 
       dofsSignals =  Map.mapWithKey f optimalControlMatrices
         where f key mat =
                 Sig.tzipWith
                 (Sig.interp2WingProfile
-                 ("simulation-interpolate Signals" ++ show (g "Position: " key))
+                 ("interpolateOptimalSolutionForOneState - interpolate Signals" ++ show (g "Position: " key))
                  (g "X:" $ One.varReqRoomPower1D simParams)
                  (g "Y:" $ One.varReqRoomPower2D simParams)
                  $ (g "Z:" $ Sig.convert mat))
                 (g "xSig:" plocal)
                 (g "ySig:" prest)
 
+      optimalObjectiveMatrix = Sig.map ModUt.nothing2Nan $
+          ModUt.to2DMatrix $ j optimalSolutionOfOneState
+
+
       optimalControlMatrices =
         Map.map (Sig.map ModUt.nothing2Nan) $
           Base.signCorrectedOptimalPowerMatrices
             sysParams
-            (h optimalSolutionPerState )
+            (h optimalSolutionOfOneState )
             (One.dofsPos optParams)
 
       demandAndControlSignals = Record.addSignals (Map.toList dofsSignals) demandSignals
 
-  in Type.Interpolation optimalControlMatrices demandAndControlSignals
+  in Type.InterpolationOfOneState optimalControlMatrices optSignal demandAndControlSignals
 
-
-
+optimalSignalBasedSolution :: 
+  (Ord node, SV.Storage vec Bool, SV.Storage vec [Idx.State],SV.Storage vec (a, a),
+   SV.Singleton vec,
+   SV.FromList vec,
+   Arith.Constant a,
+   SV.Storage vec (Map.Map Idx.State a),
+   Show (vec a), Node.C node,
+   Ord a,
+   SV.Zipper vec,
+   SV.Walker vec,
+   SV.Storage vec a) =>
+  Type.InterpolationOfAllStates node vec a -> 
+  One.StatForcing -> 
+  Record.PowerRecord node vec a
+optimalSignalBasedSolution interpolation statForcing = Record.Record newTime (Map.mapWithKey f pMap)
+  where
+    indexSignal = Base.genOptimalStatesSignal interpolation
+    newTime = Base.genOptimalTime indexSignal time
+    (Record.Record time pMap) =  Type.reqsAndDofsSignalsOfState $ 
+              vhead "optimalSignalBasedSolution" $ Map.elems interpolation
+    f key _ = Base.genOptimalSignal indexSignal (signalMap key)
+    signalMap k = Map.map (\ x -> Record.getSig (Type.reqsAndDofsSignalsOfState x) k) interpolation
+  
+ 
 interpolateOptimalSolution ::
   (Eq (vec2 b), Ord b, Show b, Show (vec2 b),
    Show node, SV.Zipper vec2, SV.Walker vec2,
