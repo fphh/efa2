@@ -166,6 +166,7 @@ expectedValuePerState ::
 expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
 
+-- TODO: is this code is still neeed for Display purposes ? -- needs to work with new StatForcing -- does it make sense ?
 selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a,RealFloat a) =>
   One.OptimisationParams node list sweep vec a ->
@@ -482,7 +483,6 @@ genOptimalStatesSignal ::
   (Ord a,Vec.Storage vec [Idx.State],
    Vec.Singleton vec,
    Arith.Sum a,
---   Arith.Sum (Sig.UTSignal vec a),
    Vec.Zipper vec,
    Vec.Walker vec,
    Vec.Storage vec a,

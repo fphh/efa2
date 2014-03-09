@@ -50,7 +50,7 @@ import EFA.Utility.List (vhead)
 
 import EFA.Signal.Data (Data(Data), Nil) --, (:>))
 --import EFA.Signal.Typ(Typ,UT)
-import EFA.Signal.Signal(UTSignal)
+--import EFA.Signal.Signal(UTSignal)
   
 --import qualified EFA.Signal.Data as Data
 import qualified EFA.Equation.Arithmetic as Arith
@@ -194,7 +194,7 @@ interpolateOptimalSolution ::
   One.SystemParams node b->
   One.OptimisationParams node list sweep vec a->
   One.SimulationParams node vec2 b->
-  Type.OptimalSolution node b -> --Map.Map[b](Maybe(b, b, Idx.State, Type.EnvResult node b))->
+  Type.OptimalSolution node b -> 
   Type.Interpolation node vec2 b
 interpolateOptimalSolution sysParams optParams simParams optimalSolution =
   let (plocal,prest) =
@@ -332,73 +332,6 @@ toSweep params = StateQty.mapGraph f f
   where one = Sweep.fromRational (One.sweepLength params) Arith.one
         f (Determined (Data x)) = Determined $ Sweep.replicate one x
         f Undetermined = Undetermined
-{-
-optimiseAndSimulate :: (efaVec ~ simVec,intVec ~ simVec,a ~ d,intVec ~ [],
-  Eq (simVec d),
-  RealFloat d,
-  Show (simVec d),
-  SV.Zipper simVec,
-  SV.Walker simVec,
-  SV.Storage simVec (Maybe (Result d)),
-  SV.Storage simVec d,
-  SV.Storage simVec Bool,
-  SV.Singleton simVec,
-  SV.Lookup simVec,
-  SV.Len (simVec d),
-  SV.FromList simVec,
-  SV.Find simVec,
-  SV.Convert simVec simVec,
-  SV.Convert simVec [], SV.Convert [] simVec ,
-  Ord (sweep UV.Vector a), Ord a, Show a, Show node,
-   Monoid (sweep UV.Vector Bool), UV.Unbox a, Node.C node,
-   Arith.ZeroTestable a, Arith.Product (sweep UV.Vector a),
-   Arith.Constant a, Sweep.SweepClass sweep UV.Vector (a, a),
-   Sweep.SweepClass sweep UV.Vector (a, Bool),
-   Sweep.SweepClass sweep UV.Vector Bool,
-   Sweep.SweepClass sweep UV.Vector a) =>
-  One.SystemParams node a
-  -> One.OptimisationParams node [] sweep UV.Vector a
-  -> One.SimulationParams node intVec a
-  -> Map.Map node (One.SocDrive a)
-  -> Map.Map Idx.AbsoluteState (One.StateForcing a)
-  -> Map.Map
-  Idx.State
-  (Map.Map [a] (Type.SweepPerReq node sweep UV.Vector a))
-  -> One.IndexConversionMap
-  -> (Type.OptimisationPerState node a,
-      Type.OptimiseStateAndSimulate node sweep UV.Vector a intVec b simVec c efaVec d)
-optimiseAndSimulate sysParams optParams simParams balanceForcing stateForcing perStateSweep indexConversionMap =
-  let perStateOptimum  = Base.optimalObjectivePerState optParams balanceForcing perStateSweep
-      perStateAverage = Base.expectedValuePerState perStateSweep
-      optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
-      interpolation = interpolateOptimalSolution sysParams optParams simParams optimalSolution
-      sim = simulation sysParams $ Type.reqsAndDofsSignals interpolation
-      efa = energyFlowAnalysis sysParams simParams $ Type.signals sim
-      sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
-
-  in (Type.OptimisationPerState perStateOptimum perStateAverage,
-     Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep)
-
-
-optimiseStateAndSimulate:: (d ~ a, intVec ~ [], simVec ~ [], b ~ a, efaVec ~ [],RealFloat a) =>
-  (Ord b, Show node, Show b, Node.C node,Sweep.SweepClass sweep vec a,
-   Arith.ZeroTestable b, Arith.Constant b) =>
-  One.SystemParams node b
-  -> One.OptimisationParams node list sweep vec a
-  -> One.SimulationParams node [] b
-  -> Map.Map Idx.AbsoluteState (One.StateForcing b)
-  -> Type.OptimalSolutionPerState node a
-  -> One.IndexConversionMap
-  -> Type.OptimiseStateAndSimulate node sweep vec a intVec b simVec c efaVec d
-optimiseStateAndSimulate sysParams optParams simParams stateForcing perStateOptimum indexConversionMap =
-  let optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
-      interpolation = interpolateOptimalSolution sysParams optParams simParams optimalSolution
-      sim = simulation sysParams  $ Type.reqsAndDofsSignals interpolation
-      efa = energyFlowAnalysis sysParams simParams $ Type.signals sim
-      sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
-  in  Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep
--}
-
 optimiseAndSimulateSignalBased ::
   (efaVec ~ simVec,intVec ~ simVec,Show d,Arith.ZeroTestable d,
    Arith.Constant d,
@@ -420,13 +353,13 @@ optimiseAndSimulateSignalBased ::
    One.SimulationParams node intVec a -> 
    Map.Map node (One.SocDrive a) ->
    One.StatForcing ->
---   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
    Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
    One.IndexConversionMap -> 
    Type.SignalBasedOptimisation node sweep UV.Vector a intVec b simVec c efaVec d
 optimiseAndSimulateSignalBased sysParams optParams simParams balanceForcing statForcing perStateSweep indexConversionMap =   
   let perStateOptimum  = Base.optimalObjectivePerState optParams balanceForcing perStateSweep
       perStateAverage = Base.expectedValuePerState perStateSweep
+      -- do we want optimal solution Maps for display ? - probably Yes
 --      optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
       interpolation = interpolateOptimalSolutionPerState sysParams optParams simParams perStateOptimum
       optimalSignalSolution = optimalSignalBasedSolution interpolation statForcing
