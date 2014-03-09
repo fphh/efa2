@@ -5,7 +5,7 @@ module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
-import qualified Modules.Plot as ModPlot
+--import qualified Modules.Plot as ModPlot
 import qualified Modules.Utility as ModUt
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.Loop as ModLoop
@@ -144,7 +144,7 @@ main1 = do
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
           One.etaToOptimise = Nothing,
-          One.maxEtaIterations = One.MaxEtaIterations 2,
+          One.maxEtaIterations = One.MaxEtaIterations 5,
           One.maxInnerLoopIterations = One.MaxInnerLoopIterations 3,
           One.maxBalanceIterations = One.MaxBalanceIterations 100,
           One.maxStateIterations = One.MaxStateIterations 100,
@@ -179,8 +179,10 @@ main1 = do
 
 
   let
---      ol = --ModLoop.uniqueInnerLoopX
---           ModLoop.iterateEtaWhile sysParams optParams simParams
+    
+      
+      ol = --ModLoop.uniqueInnerLoopX
+           ModLoop.iterateEtaWhile sysParams optParams simParams
 
 
 
@@ -203,9 +205,9 @@ main1 = do
 
 --  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
   concurrentlyMany_ [
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
-    ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
+--    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
+--    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
+--    ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
 --    ModLoop.checkRangeIO sysParams optParams simParams]
     mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
 --    sequence_ (ModLoop.printEtaLoop optParams ol)]

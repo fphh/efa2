@@ -448,7 +448,7 @@ genOptimalObjectiveSignal interpolation = optimalObjectiveSignal
 findOptimalObjectiveStates :: 
   (Vec.Zipper vec,Ord a,Vec.Storage vec Bool,
    Vec.Singleton vec,
-   Arith.Sum (Sig.UTSignal vec a),
+--   Arith.Sum (Sig.UTSignal vec a),
    Arith.Sum a,
    Vec.Walker vec,
    Vec.Storage vec a) =>
@@ -463,8 +463,8 @@ findOptimalObjectiveStates statForcing interpolation = isEqualToMax
     g mx x = mx == x
     
 forceOptimalStateSignal :: 
-  (Vec.Walker vec, Arith.Sum a, 
-   Arith.Sum (Sig.UTSignal vec a), 
+  (Vec.Walker vec, Arith.Sum a,Vec.Zipper vec, 
+--   Arith.Sum (Sig.UTSignal vec a), 
    Ord a, Vec.Storage vec a, Vec.Singleton vec) =>
   One.StatForcing ->
   Sig.UTSignal vec a ->
@@ -474,7 +474,7 @@ forceOptimalStateSignal stateForcing overallOptimalSignal optimalSignalOfState =
   One.StateForcingOn -> Sig.offset minimalDifference optimalSignalOfState
   One.StateForcingOff -> optimalSignalOfState
   where
-    differenceSignal = overallOptimalSignal Arith.~- optimalSignalOfState
+    differenceSignal = overallOptimalSignal Sig..- optimalSignalOfState
     minimalDifference = Sig.fromScalar $ Sig.minimum differenceSignal
 
 
@@ -482,7 +482,7 @@ genOptimalStatesSignal ::
   (Ord a,Vec.Storage vec [Idx.State],
    Vec.Singleton vec,
    Arith.Sum a,
-   Arith.Sum (Sig.UTSignal vec a),
+--   Arith.Sum (Sig.UTSignal vec a),
    Vec.Zipper vec,
    Vec.Walker vec,
    Vec.Storage vec a,

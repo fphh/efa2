@@ -161,7 +161,7 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
 
 optimalSignalBasedSolution :: 
   (Ord node, SV.Storage vec Bool, SV.Storage vec [Idx.State],SV.Storage vec (a, a),
-   SV.Singleton vec,Arith.Sum (Sig.UTSignal vec a),   
+   SV.Singleton vec,
    SV.FromList vec,
    Arith.Constant a,
    SV.Storage vec (Map.Map Idx.State a),
@@ -332,7 +332,7 @@ toSweep params = StateQty.mapGraph f f
   where one = Sweep.fromRational (One.sweepLength params) Arith.one
         f (Determined (Data x)) = Determined $ Sweep.replicate one x
         f Undetermined = Undetermined
-
+{-
 optimiseAndSimulate :: (efaVec ~ simVec,intVec ~ simVec,a ~ d,intVec ~ [],
   Eq (simVec d),
   RealFloat d,
@@ -397,18 +397,12 @@ optimiseStateAndSimulate sysParams optParams simParams stateForcing perStateOpti
       efa = energyFlowAnalysis sysParams simParams $ Type.signals sim
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
   in  Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep
-
+-}
 
 optimiseAndSimulateSignalBased ::
   (efaVec ~ simVec,intVec ~ simVec,Show d,Arith.ZeroTestable d,
    Arith.Constant d,
    Sweep.SweepClass sweep UV.Vector Bool,
-   Show (vec a),
-   SV.Storage vec (Map.Map Idx.State a),
-   SV.Storage vec (a, a),
-   SV.Storage vec [Idx.State],
-   SV.Storage vec Bool,
-   Arith.Sum (Sig.UTSignal vec a),
    a ~ d,intVec ~ [], 
    Ord (sweep UV.Vector d),
    RealFloat d,
@@ -417,7 +411,6 @@ optimiseAndSimulateSignalBased ::
    UV.Unbox d,
    Node.C node,
    Arith.Sum d,
-   Arith.Sum (UTSignal [] d),
    Arith.Product (sweep UV.Vector d),
    Sweep.SweepClass sweep UV.Vector d,
    Sweep.SweepClass sweep UV.Vector (d, d),

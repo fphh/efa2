@@ -100,6 +100,7 @@ data EnergyFlowAnalysis node vec a = EnergyFlowAnalysis {
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data (vec :> Nil) a)),
     stateFlowGraph :: EnvResult node (Data Nil a)}
 
+{-
 data OptimisationPerState node a = OptimisationPerState {
     optimalSolutionPerState :: OptimalSolutionPerState node a,
     averageSolutionPerState :: AverageSolutionPerState node a}
@@ -112,15 +113,15 @@ data OptimiseStateAndSimulate node (sweep :: (* -> *) -> * -> *)
     simulation :: Simulation node simVec a,
     analysis :: EnergyFlowAnalysis node efaVec d,
     stateFlowGraphSweep :: EnvResult node (sweep sweepVec a)}
-
+-}
 
 data SignalBasedOptimisation node  (sweep :: (* -> *) -> * -> *)
      sweepVec a intVec b simVec c efaVec d = SignalBasedOptimisation {
-    optimalSolutionPerStateSig :: OptimalSolutionPerState node a,
-    averageSolutionPerStateSig :: AverageSolutionPerState node a,
-    interpolationPerStateSig :: InterpolationOfAllStates node intVec a,
+    optimalSolutionPerState :: OptimalSolutionPerState node a,
+    averageSolutionPerState :: AverageSolutionPerState node a,
+    interpolationPerState :: InterpolationOfAllStates node intVec a,
 --    optimalSolutionSig :: OptimalSolution node a,
-    simulationSig :: Simulation node simVec a,
-    analysisSig :: EnergyFlowAnalysis node efaVec d,
-    stateFlowGraphSweepSig :: EnvResult node (sweep sweepVec a)}
+    simulation :: Simulation node simVec a,
+    analysis :: EnergyFlowAnalysis node efaVec d,
+    stateFlowGraphSweep :: EnvResult node (sweep sweepVec a)}
     
