@@ -182,7 +182,7 @@ optimalSignalBasedSolution interpolation statForcing = Record.Record newTime (Ma
     f key _ = Base.genOptimalSignal indexSignal (signalMap key)
     signalMap k = Map.map (\ x -> Record.getSig (Type.reqsAndDofsSignalsOfState x) k) interpolation
   
- 
+{- 
 interpolateOptimalSolution ::
   (Eq (vec2 b), Ord b, Show b, Show (vec2 b),
    Show node, SV.Zipper vec2, SV.Walker vec2,
@@ -227,7 +227,7 @@ interpolateOptimalSolution sysParams optParams simParams optimalSolution =
       demandAndControlSignals = Record.addSignals (Map.toList dofsSignals) demandSignals
 
   in Type.Interpolation optimalControlMatrices demandAndControlSignals
-
+-}
 
 simulation ::
   (Ord a, Show a,
@@ -356,7 +356,7 @@ optimiseAndSimulateSignalBased ::
    Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
    One.IndexConversionMap -> 
    Type.SignalBasedOptimisation node sweep UV.Vector a intVec b simVec c efaVec d
-optimiseAndSimulateSignalBased sysParams optParams simParams balanceForcing statForcing perStateSweep indexConversionMap =   
+optimiseAndSimulateSignalBased sysParams optParams simParams balanceForcing statForcing perStateSweep _indexConversionMap =   
   let perStateOptimum  = Base.optimalObjectivePerState optParams balanceForcing perStateSweep
       perStateAverage = Base.expectedValuePerState perStateSweep
       -- do we want optimal solution Maps for display ? - probably Yes

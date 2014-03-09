@@ -8,7 +8,7 @@ module Modules.Optimisation.Loop where
 
 import qualified Modules.System as System
 import Modules.System (Node)
--- import qualified Modules.Plot as ModPlot
+import qualified Modules.Plot as ModPlot
 import qualified Modules.Utility as ModUt
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.NonIO as NonIO
@@ -39,7 +39,7 @@ import qualified EFA.Flow.State as FlowState
 --import qualified EFA.Report.FormatValue as FormatValue
 
 -- import qualified EFA.Flow.State.Index as StateIdx
---import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.Part.Index as Idx
 
 --import qualified EFA.Signal.Record as Record
@@ -47,8 +47,8 @@ import qualified EFA.Flow.Part.Index as Idx
 --import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data (Data(Data)) --, Nil, Apply)
 
-import EFA.Utility.List (vlast) 
---import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility.List (vlast,vhead) 
+import EFA.Utility.Async (concurrentlyMany_)
 
 --import qualified Data.Monoid as Monoid
 import qualified Data.Map as Map
@@ -497,7 +497,7 @@ printBalanceLoopItem _optParams _b@(BalanceLoopItem _bStp _bForcing _bFStep _bal
     -- ModPlot.maxStateContour (ModPlot.gpPNG dir bStep) opt-}
 
 
-{-
+
 checkRangeIO :: 
   One.SystemParams Node Double -> 
   One.OptimisationParams Node [] Sweep UV.Vector Double ->
@@ -508,38 +508,43 @@ checkRangeIO sysParams optParams simParams = do
       indexConversionMap = ModUt.indexConversionMap System.topology sfg
       swp = Base.perStateSweep sysParams optParams sfg
       initBalF =  One.initialBattForcing optParams
-      initialBalSteps = One.initialBattForceStep optParams
-      statForce = Map.map (const $ One.StateForcing Arith.zero) (Bimap.toMapR indexConversionMap)
-      b@(BalanceLoopItem _bStp _bForcing _bFStep _bal (opt,opt2)) = vhead "checkRangeIO" $
-        balanceIteration sysParams optParams simParams swp initBalF initialBalSteps
-        statForce indexConversionMap
---      term = ModPlot.gpXTerm
+      initialBalSteps = One.initialBattForceStep optParams        
+      statForcing = One.StateForcingOn
+      fsys balanceForcing = NonIO.optimiseAndSimulateSignalBased sysParams optParams simParams 
+                                  balanceForcing statForcing swp indexConversionMap
+      
+      accessf x = StateEta.balanceFromRecord (One.storagePositions sysParams) $
+                      Type.signals $ Type.simulation $ x
+      
+      b@(BalanceLoopItem _bStp _bForcing _bFStep _bal opt) = vhead "checkRangeIO" $ 
+                                                             balanceIteration optParams fsys accessf initBalF initialBalSteps 
+      term = ModPlot.gpXTerm
       _posLocal = TopoIdx.Position System.LocalRest System.LocalNetwork
       _posRest = TopoIdx.Position System.Rest System.Network
       _posWater = TopoIdx.Position System.Network System.Water
       _posGas = TopoIdx.Position System.LocalNetwork System.Gas
       _posTrafo = TopoIdx.Position System.LocalNetwork System.Network
 
-  print $ "Hallo" --Type.reqsAndDofsSignals $ Type.interpolation opt2
+  --print $ Type.reqsAndDofsSignals $ Type.interpolation opt2
   
   concurrentlyMany_ [
-    putStrLn $ "Hallo" -- showBalanceLoopItem optParams b
-{-    ModPlot.reqsRec term $ One.reqsRec simParams,
+    putStrLn $ showBalanceLoopItem optParams b,
+    ModPlot.reqsRec term $ One.reqsRec simParams,
     ModPlot.sweepStackPerStateCondition term optParams swp,
     ModPlot.stateRange2 term opt,
-    ModPlot.maxState term opt2,
-    ModPlot.maxEta term opt2,
-    ModPlot.maxObj term opt2,
-    ModPlot.maxPos _posLocal term opt2,
-    ModPlot.maxPos _posRest term opt2,
-    ModPlot.maxPos _posWater term opt2,
-    ModPlot.maxPos _posGas term opt2,
-    ModPlot.maxPos _posTrafo term opt2,
-    ModPlot.givenSignals term opt2,
-    ModPlot.simulationSignals term opt2,
-    ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.3,0.5] 0 swp-}
+    --ModPlot.maxState term opt,
+    --ModPlot.maxEta term opt,
+    --ModPlot.maxObj term opt,
+    --ModPlot.maxPos _posLocal term opt,
+    --ModPlot.maxPos _posRest term opt,
+    --ModPlot.maxPos _posWater term opt,
+    --ModPlot.maxPos _posGas term opt,
+    --ModPlot.maxPos _posTrafo term opt,
+    --ModPlot.givenSignals term opt,
+    ModPlot.simulationSignals term opt,
+    ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.3,0.5] 0 swp
     ]
--}
+
 
 
 

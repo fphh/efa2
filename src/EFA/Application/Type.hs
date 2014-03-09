@@ -73,10 +73,13 @@ data SweepPerReq node (sweep :: (* -> *) -> * -> *) vec a =
     storagePowerMap :: StoragePowerMap node sweep vec a,
     envResult :: EnvResult node (sweep vec a) }
 
+{-
 data Interpolation node vec a =
   Interpolation {
     controlMatrices :: ControlMatrices node vec a,
     reqsAndDofsSignals :: Record.PowerRecord node vec a}
+-}
+
 
 type InterpolationOfAllStates node vec a = 
   Map Idx.State (InterpolationOfOneState node vec a)
@@ -99,21 +102,6 @@ data EnergyFlowAnalysis node vec a = EnergyFlowAnalysis {
     sequenceFlowGraph :: 
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data (vec :> Nil) a)),
     stateFlowGraph :: EnvResult node (Data Nil a)}
-
-{-
-data OptimisationPerState node a = OptimisationPerState {
-    optimalSolutionPerState :: OptimalSolutionPerState node a,
-    averageSolutionPerState :: AverageSolutionPerState node a}
-
-data OptimiseStateAndSimulate node (sweep :: (* -> *) -> * -> *)
-     sweepVec a intVec b simVec c efaVec d =
-  OptimiseStateAndSimulate {
-    optimalSolution :: OptimalSolution node a,
-    interpolation :: Interpolation node intVec a,
-    simulation :: Simulation node simVec a,
-    analysis :: EnergyFlowAnalysis node efaVec d,
-    stateFlowGraphSweep :: EnvResult node (sweep sweepVec a)}
--}
 
 data SignalBasedOptimisation node  (sweep :: (* -> *) -> * -> *)
      sweepVec a intVec b simVec c efaVec d = SignalBasedOptimisation {
