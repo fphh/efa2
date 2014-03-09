@@ -49,7 +49,9 @@ import EFA.Utility.List (vhead)
 --import EFA.Report.FormatValue(formatValue)
 
 import EFA.Signal.Data (Data(Data), Nil) --, (:>))
-
+--import EFA.Signal.Typ(Typ,UT)
+import EFA.Signal.Signal(UTSignal)
+  
 --import qualified EFA.Signal.Data as Data
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
@@ -396,3 +398,47 @@ optimiseStateAndSimulate sysParams optParams simParams stateForcing perStateOpti
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
   in  Type.OptimiseStateAndSimulate optimalSolution interpolation sim efa sfgSweep
 
+
+optimiseAndSimulateSignalBased ::
+  (efaVec ~ simVec,intVec ~ simVec,Show d,Arith.ZeroTestable d,
+   Arith.Constant d,
+   Sweep.SweepClass sweep UV.Vector Bool,
+   Show (vec a),
+   SV.Storage vec (Map.Map Idx.State a),
+   SV.Storage vec (a, a),
+   SV.Storage vec [Idx.State],
+   SV.Storage vec Bool,
+   Arith.Sum (Sig.UTSignal vec a),
+   a ~ d,intVec ~ [], 
+   Ord (sweep UV.Vector d),
+   RealFloat d,
+   Show node,
+   Monoid (sweep UV.Vector Bool),
+   UV.Unbox d,
+   Node.C node,
+   Arith.Sum d,
+   Arith.Sum (UTSignal [] d),
+   Arith.Product (sweep UV.Vector d),
+   Sweep.SweepClass sweep UV.Vector d,
+   Sweep.SweepClass sweep UV.Vector (d, d),
+   Sweep.SweepClass sweep UV.Vector (d, Bool)) =>
+   One.SystemParams node a -> 
+   One.OptimisationParams node [] sweep UV.Vector a -> 
+   One.SimulationParams node intVec a -> 
+   Map.Map node (One.SocDrive a) ->
+   One.StatForcing ->
+   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
+   Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
+   One.IndexConversionMap -> 
+   Type.SignalBasedOptimisation node sweep UV.Vector a intVec b simVec c efaVec d
+optimiseAndSimulateSignalBased sysParams optParams simParams balanceForcing statForcing stateForcing perStateSweep indexConversionMap =   
+  let perStateOptimum  = Base.optimalObjectivePerState optParams balanceForcing perStateSweep
+      perStateAverage = Base.expectedValuePerState perStateSweep
+      optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
+      interpolation = interpolateOptimalSolutionPerState sysParams optParams simParams perStateOptimum
+      optimalSignalSolution = optimalSignalBasedSolution interpolation statForcing
+      sim = simulation sysParams $ optimalSignalSolution
+      efa = energyFlowAnalysis sysParams simParams $ Type.signals sim
+      sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
+
+  in Type.SignalBasedOptimisation perStateOptimum perStateAverage interpolation optimalSolution sim efa sfgSweep

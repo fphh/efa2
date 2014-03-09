@@ -114,3 +114,13 @@ data OptimiseStateAndSimulate node (sweep :: (* -> *) -> * -> *)
     stateFlowGraphSweep :: EnvResult node (sweep sweepVec a)}
 
 
+data SignalBasedOptimisation node  (sweep :: (* -> *) -> * -> *)
+     sweepVec a intVec b simVec c efaVec d = SignalBasedOptimisation {
+    optimalSolutionPerStateSig :: OptimalSolutionPerState node a,
+    averageSolutionPerStateSig :: AverageSolutionPerState node a,
+    interpolationPerStateSig :: InterpolationOfAllStates node intVec a,
+    optimalSolutionSig :: OptimalSolution node a,
+    simulationSig :: Simulation node simVec a,
+    analysisSig :: EnergyFlowAnalysis node efaVec d,
+    stateFlowGraphSweepSig :: EnvResult node (sweep sweepVec a)}
+    
