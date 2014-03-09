@@ -119,7 +119,7 @@ data SignalBasedOptimisation node  (sweep :: (* -> *) -> * -> *)
     optimalSolutionPerStateSig :: OptimalSolutionPerState node a,
     averageSolutionPerStateSig :: AverageSolutionPerState node a,
     interpolationPerStateSig :: InterpolationOfAllStates node intVec a,
-    optimalSolutionSig :: OptimalSolution node a,
+--    optimalSolutionSig :: OptimalSolution node a,
     simulationSig :: Simulation node simVec a,
     analysisSig :: EnergyFlowAnalysis node efaVec d,
     stateFlowGraphSweepSig :: EnvResult node (sweep sweepVec a)}

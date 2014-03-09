@@ -174,13 +174,16 @@ type BestBalance node a = Map node (Maybe (SocDrive a,a), Maybe (SocDrive a,a))
 
                         
 rememberBestBalanceForcing :: 
-  (Arith.Constant a, Ord a) =>
+  (Arith.Constant a, Ord a, Ord node, Show node) =>
    (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) -> 
-  (SocDrive a,a) -> 
+  (BalanceForcing node a, Balance node a) -> 
+  node ->
   (Maybe (SocDrive a,a), Maybe (SocDrive a,a))
-rememberBestBalanceForcing (neg,pos) (force,bal) = 
+rememberBestBalanceForcing (neg,pos) (forceMap,balMap) sto = 
   if bal >= Arith.zero then (neg, g pos) else (g neg, pos) 
   where
+   bal = getStorageBalance "rememberBestBalanceForcing" balMap sto
+   force = getStorageForcing "rememberBestBalanceForcing" forceMap sto
    g(Just (f,b)) = if (Arith.abs bal) >= (Arith.abs b) then Just (f,b) else Just (force,bal)
    g Nothing  = Just (force,bal)
 
@@ -198,13 +201,14 @@ getForcingIntervall (_,_) = Nothing
 
 
 addForcingStep :: 
-  (Ord node, Ord a, Arith.Constant a) =>
+  (Ord node, Ord a, Arith.Constant a, Show node) =>
   BalanceForcing node a -> 
-  node -> 
-  (SocDrive a) -> 
-  BalanceForcing node a 
-addForcingStep forcing storage step = Map.adjust f storage forcing  
+  BalanceForcingStep node a -> 
+  node ->   
+  BalanceForcing node a
+addForcingStep forcing stepMap sto = Map.adjust f sto forcing  
   where f force = setSocDrive $ (getSocDrive force) Arith.~+ (getSocDrive step)
+        step = getStorageForcingStep "addForcingStep" stepMap sto
 
 updateForcingStep ::
   (Ord node, Ord a, Arith.Constant a) =>
@@ -220,9 +224,21 @@ getStorageForcing ::
   String ->  
   BalanceForcing node a ->
   node ->  SocDrive a
-getStorageForcing caller balance sto = fromMaybe (error m) $ Map.lookup sto balance 
+getStorageForcing caller forcing sto = fromMaybe (error m) $ Map.lookup sto forcing
   where m = "Error in getStorageForcing called by " ++ caller 
             ++ "- gStorage not in Map : " ++ show sto
+            
+getStorageForcingStep :: 
+  (Ord node, Show node) =>
+  String ->  
+  BalanceForcing node a ->
+  node ->  SocDrive a
+getStorageForcingStep caller forcing sto = fromMaybe (error m) $ Map.lookup sto forcing
+  where m = "Error in getStorageForcingStep called by " ++ caller 
+            ++ "- gStorage not in Map : " ++ show sto
+              
+            
+            
             
 getStorageBalance :: 
   (Ord node, Show node) =>

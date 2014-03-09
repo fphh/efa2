@@ -427,18 +427,18 @@ optimiseAndSimulateSignalBased ::
    One.SimulationParams node intVec a -> 
    Map.Map node (One.SocDrive a) ->
    One.StatForcing ->
-   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
+--   Map.Map Idx.AbsoluteState (One.StateForcing a) ->
    Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
    One.IndexConversionMap -> 
    Type.SignalBasedOptimisation node sweep UV.Vector a intVec b simVec c efaVec d
-optimiseAndSimulateSignalBased sysParams optParams simParams balanceForcing statForcing stateForcing perStateSweep indexConversionMap =   
+optimiseAndSimulateSignalBased sysParams optParams simParams balanceForcing statForcing perStateSweep indexConversionMap =   
   let perStateOptimum  = Base.optimalObjectivePerState optParams balanceForcing perStateSweep
       perStateAverage = Base.expectedValuePerState perStateSweep
-      optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
+--      optimalSolution = Base.selectOptimalState optParams stateForcing perStateOptimum indexConversionMap
       interpolation = interpolateOptimalSolutionPerState sysParams optParams simParams perStateOptimum
       optimalSignalSolution = optimalSignalBasedSolution interpolation statForcing
       sim = simulation sysParams $ optimalSignalSolution
       efa = energyFlowAnalysis sysParams simParams $ Type.signals sim
       sfgSweep = toSweep optParams $ Type.stateFlowGraph efa
 
-  in Type.SignalBasedOptimisation perStateOptimum perStateAverage interpolation optimalSolution sim efa sfgSweep
+  in Type.SignalBasedOptimisation perStateOptimum perStateAverage interpolation sim efa sfgSweep
