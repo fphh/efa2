@@ -177,7 +177,7 @@ getBalanceResult balLoop =
 -}
 
 balanceIteration::  
-  (Ord a, Arith.Constant a,Ord node, Show node) =>
+  (Ord a, Arith.Constant a,Ord node, Show node, Show a) =>
   One.OptimisationParams node [] Sweep UV.Vector a ->
   (One.BalanceForcing node a -> z)->
   (z -> One.Balance node a)->
@@ -202,7 +202,7 @@ balanceIteration optParams fsys accessf balForceIn balStepsIn =
            lastElem = vlast "iterateBalance" $ oneIterationOfAllStorages
 
 iterateOneStorage ::  
-  (Ord a, Arith.Constant a,Ord node, Show node) =>
+  (Ord a, Arith.Constant a,Ord node, Show node, Show a) =>
   Int -> 
   (One.BalanceForcing node a -> z)->
   (z -> One.Balance node a)->
@@ -230,7 +230,7 @@ iterateOneStorage cntIn fsys accessf forcingIn steppingIn sto =
                 step sto
 
 calculateNextBalanceStep :: 
-  (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, 
+  (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
    Ord node, Show node) =>
   (One.BalanceForcing node a,One.Balance node a) -> 
   (Maybe (One.SocDrive a,a), Maybe (One.SocDrive a,a)) -> 
@@ -244,15 +244,16 @@ calculateNextBalanceStep (_,balMap) bestPair stepMap sto = One.updateForcingStep
    fact = Arith.fromRational 2.0
    divi = Arith.fromRational 1.7
    intervall = One.getForcingIntervall bestPair
+   g _ x =  x --trace (str ++": "++ show x) x
    step1 = case (intervall, Arith.sign bal) of   
                     -- Zero Crossing didn't occur so far -- increase step to search faster
-                    (Nothing,Negative) -> Arith.abs $ (One.getSocDrive step) ~* fact
-                    (Nothing,Positive) ->  Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
+                    (Nothing,Negative) -> g "A" $ Arith.abs $ (One.getSocDrive step) ~* fact
+                    (Nothing,Positive) ->  g "B" $ Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
                     -- The Zero Crossing is contained in the intervall
                     -- defined by bestPair - step just a little over the middle
-                    (Just int, Negative) ->  (One.getSocDrive int) ~/ divi
-                    (Just int, Positive) ->   (Arith.negate $ One.getSocDrive int) ~/ divi
-                    (_, Zero)  ->  Arith.zero   
+                    (Just int, Negative) ->  g "C" $ (One.getSocDrive int) ~/ divi
+                    (Just int, Positive) ->   g "D" $ (Arith.negate $ One.getSocDrive  int) ~/ divi
+                    (_, Zero)  ->  g "E" $ Arith.zero   
 
 -- | TODO : move to correct Position 
 getStateTimes ::

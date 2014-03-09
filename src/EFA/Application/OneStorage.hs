@@ -23,6 +23,7 @@ import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector(Vector)
 import Data.Bimap (Bimap)
 import Data.Maybe(fromMaybe)
+-- import Debug.Trace(trace)
 
 
 -- | The 'SocDrive' data type should always contain positive values.
@@ -174,7 +175,7 @@ type BestBalance node a = Map node (Maybe (SocDrive a,a), Maybe (SocDrive a,a))
 
                         
 rememberBestBalanceForcing :: 
-  (Arith.Constant a, Ord a, Ord node, Show node) =>
+  (Arith.Constant a, Ord a, Ord node, Show node, Show a) =>
    (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) -> 
   (BalanceForcing node a, Balance node a) -> 
   node ->
@@ -184,7 +185,7 @@ rememberBestBalanceForcing (neg,pos) (forceMap,balMap) sto =
   where
    bal = getStorageBalance "rememberBestBalanceForcing" balMap sto
    force = getStorageForcing "rememberBestBalanceForcing" forceMap sto
-   g(Just (f,b)) = if (Arith.abs bal) >= (Arith.abs b) then Just (f,b) else Just (force,bal)
+   g(Just (f,b)) = if (Arith.abs bal) > (Arith.abs b) then Just (f,b) else Just (force,bal)
    g Nothing  = Just (force,bal)
 
 checkCrossingEverOccured :: 

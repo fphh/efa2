@@ -208,8 +208,8 @@ main1 = do
     ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
     ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
     ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
-    ModLoop.checkRangeIO sysParams optParams simParams]
---    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
+--    ModLoop.checkRangeIO sysParams optParams simParams]
+    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
 --    sequence_ (ModLoop.printEtaLoop optParams ol)]
 
 
