@@ -210,6 +210,8 @@ Executable test-efa
   Else
     Buildable: False
   Other-Modules:
+    EFA.Test.Signal
+    EFA.Test.Sweep
     EFA.Test.Utility
     EFA.Test.Sequence
     EFA.Test.MultiValue
