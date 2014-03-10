@@ -207,6 +207,7 @@ Executable test-efa
       non-empty,
       utility-ht,
       vector,
+      random,
       template-haskell >=2.7 && <2.9,
       base
   Else
@@ -302,6 +303,7 @@ Executable example-energy
       text,
       directory,
       base,
+      random,
       bimap
   Else
     Buildable: False

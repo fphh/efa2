@@ -12,13 +12,10 @@ import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 
 import EFA.TestUtility (Func(Func))
 
-import qualified Test.QuickCheck as QC
 import Test.QuickCheck.All (quickCheckAll)
 
-
-import Prelude hiding (Left, Right)
-
 import qualified Data.Vector.Unboxed as UV
+
 
 
 --------------------------------------------------------------

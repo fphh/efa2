@@ -16,7 +16,8 @@ import EFA.Signal.Typ(Typ,UT)
 import qualified EFA.Signal.Interp as Interp
 import EFA.Signal.Interp
   (Val(Inter, Extra, Invalid),
-   Method(..), ExtrapMethod(..))
+   Method(Linear, Nearest),
+   ExtrapMethod(ExtrapLinear, ExtrapNone, ExtrapLast, ExtrapVal, ExtrapError))
 
 import EFA.TestUtility (Func(Func), unFunc)
 
