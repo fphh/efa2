@@ -6,6 +6,7 @@ import qualified EFA.Test.Stack as Stack
 import qualified EFA.Test.Utility as Util
 import qualified EFA.Test.Sequence as Seq
 import qualified EFA.Test.Signal as Sig
+import qualified EFA.Test.Sweep as Sweep
 
 import qualified EFA.Test.Mix as Mix
 import qualified EFA.Test.Cumulated as Cumulated
@@ -25,6 +26,7 @@ main = do
    void $ Util.runTests
    void $ Seq.runTests
    void $ Sig.runTests
+   void $ Sweep.runTests
    void $ FindBestIndex.runTests
    EqSys.runTests
    Cumulated.runTests

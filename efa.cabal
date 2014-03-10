@@ -206,11 +206,15 @@ Executable test-efa
       explicit-exception,
       non-empty,
       utility-ht,
+      vector,
+      random,
       template-haskell >=2.7 && <2.9,
       base
   Else
     Buildable: False
   Other-Modules:
+    EFA.Test.Signal
+    EFA.Test.Sweep
     EFA.Test.Utility
     EFA.Test.Sequence
     EFA.Test.MultiValue
@@ -299,6 +303,7 @@ Executable example-energy
       text,
       directory,
       base,
+      random,
       bimap
   Else
     Buildable: False

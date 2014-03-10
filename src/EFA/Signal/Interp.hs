@@ -1,27 +1,43 @@
-module EFA.Signal.Interp where
+{-# LANGUAGE FlexibleInstances #-}
 
-import qualified Prelude as P
-import Prelude ((==),(>=), (>),Show,Eq, String, Ord,error,(++), ($), show, Bool(True, False),fmap,Functor)
+
+module EFA.Signal.Interp where
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-), Product, (~*), (~/), Constant)
 
-import Data.Ord (compare, Ordering(GT, EQ, LT))
 
-data Pos = HitLeft | Inside | HitRight | Outside | Undefined
-data Val a = Inter a | Extra a | Invalid deriving (Show, Eq)
+import qualified Test.QuickCheck as QC
+import System.Random (Random)
+
+import Control.Applicative
+
+data Pos = HitLeft | Inside | HitRight | Outside | Undefined deriving (Show)
+
+data Val a = Inter a
+           | Extra a
+           | Invalid deriving (Show, Eq)
 
 instance Functor Val where
   fmap _ Invalid = Invalid
-  fmap f (Extra x) = (Extra $ f x)
-  fmap f (Inter x) = (Inter $ f x)
+  fmap f (Extra x) = Extra (f x)
+  fmap f (Inter x) = Inter (f x)
+
+instance Applicative Val where
+  pure x = Inter x
+  Extra f <*> Extra x = Extra (f x)
+  Extra f <*> Inter x = Extra (f x)
+  Inter f <*> Extra x = Extra (f x)
+  Inter f <*> Inter x = Inter (f x)
+  _ <*> _ = Invalid
+
 
 instance (Arith.Sum a) => Arith.Sum (Val a) where
-  x ~+ y = combine (~+) x y
+  x ~+ y = liftA2 (~+) x y
   {-# INLINE (~+) #-}
 
-  x ~- y =  combine (~-) x y
+  x ~- y =  liftA2 (~-) x y
   {-# INLINE (~-) #-}
 
   negate x =  fmap Arith.negate x
@@ -30,10 +46,10 @@ instance (Arith.Sum a) => Arith.Sum (Val a) where
 
 instance (Arith.Product a, Arith.Constant a) =>
          Arith.Product (Val  a) where
-  x ~* y = combine (~*) x y
+  x ~* y = liftA2 (~*) x y
   {-# INLINE (~*) #-}
 
-  x ~/ y = combine (~/) x y
+  x ~/ y = liftA2 (~/) x y
   {-# INLINE (~/) #-}
 
   recip x = fmap Arith.recip x
@@ -43,6 +59,7 @@ instance (Arith.Product a, Arith.Constant a) =>
   {-# INLINE constOne #-}
 
 {-
+
 instance Arith.Integrate (Sweep vec a) where
   type Scalar (Sweep vec a) = (Sweep vec a)
   integrate = id
@@ -81,22 +98,24 @@ unpack Invalid = (Arith.zero) ~/ (Arith.zero)
 makeInvalid :: Product a => a -> Val a
 makeInvalid _ = Invalid
 
-data Method a = Linear | Linear2 | Nearest
-data ExtrapMethod a = ExtrapLinear | ExtrapLinear2 | ExtrapNone | ExtrapVal a | ExtrapLast | ExtrapError
+data Method a = Linear | Nearest deriving (Show)
 
-lin1 :: (Product a, Sum a) => (a,a) -> (a,a) -> a  -> a
-lin1 (x1,x2) (y1,y2) x = ((y2 ~- y1) ~/ (x2 ~- x1)) ~* (x ~- x1) ~+ y1
+data ExtrapMethod a =
+  ExtrapLinear
+  | ExtrapNone
+  | ExtrapVal a
+  | ExtrapLast
+  | ExtrapError
+  deriving (Show)
 
-lin1' :: (Product a, Sum a) => (a,a) -> (a,a) -> a  -> a
-lin1' (x1,x2) (y1,y2) x = ((y2 ~- y1) ~/ (x2 ~- x1)) ~* (x ~- x2) ~+ y2
+linear :: (Product a, Sum a) => (a, a) -> (a, a) -> a  -> a
+linear (x0, x1) (y0, y1) x = 
+  y0 ~* (x1 ~- x) ~/ (x1 ~- x0) ~+ y1 ~* (x ~- x0) ~/ (x1 ~- x0)
 
-lin1_twice ::(Product a, Sum a) => (a,a) -> (a,a) -> a  -> a
-lin1_twice (x1,x2) (y1,y2) x = (y~+y')~/(Arith.constOne x1 ~+ Arith.constOne x1)
-  where y =  lin1 (x1,x2) (y1,y2) x
-        y' =  lin1' (x1,x2) (y1,y2) x
+nearest :: (Ord a, Sum a,Product a) => (a, a) -> (a, a) -> a  -> a
+nearest (x1, x2) (y1, y2) x =
+  if Arith.abs (x1 ~- x) < Arith.abs (x2 ~- x) then y1 else y2
 
-nearest1 :: (Ord a, Sum a,Product a) => (a,a) -> (a,a) -> a  -> a
-nearest1 (x1,x2) (y1,y2) x = if x >= (x1~+x2)~/ (Arith.constOne x1 ~+ Arith.constOne x1) then y2 else y1
 
 dim1 :: (Eq a,Ord a, Sum a, Product a, Show a) =>
               String ->
@@ -104,58 +123,99 @@ dim1 :: (Eq a,Ord a, Sum a, Product a, Show a) =>
               ExtrapMethod a ->
               (a,a) -> (a,a) -> a -> Val a
 
-dim1 caller inmethod exmethod (x1,x2) (y1,y2) x = case compare x2 x1 of
-  LT -> error ("Error in interp1Core called by " ++ caller ++ ": x1 greater than x2")
-  EQ -> case getPos (x1,x2) x of
-            Undefined -> Invalid
-            Outside -> case exmethod of
-              ExtrapLinear ->  Invalid
-              ExtrapLinear2 ->  Invalid
-              ExtrapLast ->  Extra $ nearest1 (x1,x2) (y1,y2) x
-              (ExtrapVal val) ->  Extra $ val
-              ExtrapNone ->  Invalid
-              ExtrapError -> error ("Error in interp1Core called by " ++ caller ++
-                                      ": Method ExtrapError - Extrapolation not allowed" ++
-                                      "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
-            _   -> Inter $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)
+dim1 caller inmethod exmethod (x1, x2) (y1, y2) x =
+  case compare x1 x2 of
 
-  GT ->  case getPos (x1,x2) x of
-                Undefined -> Invalid
-                HitLeft -> Inter y1
-                HitRight -> Inter y2
-                Inside -> case inmethod of
-                  Linear -> Inter $ lin1 (x1,x2) (y1,y2) x
-                  Linear2 -> Inter $ lin1_twice (x1,x2) (y1,y2) x
-                  Nearest -> Inter $ nearest1 (x1,x2) (y1,y2) x
-                Outside -> case exmethod of
-                  ExtrapLinear ->  Extra $ lin1 (x1,x2) (y1,y2) x
-                  ExtrapLinear2 ->  Extra $ lin1_twice (x1,x2) (y1,y2) x
-                  ExtrapLast ->  Extra $ nearest1 (x1,x2) (y1,y2) x
-                  (ExtrapVal val) ->  Extra $ val
-                  ExtrapNone ->  Invalid
-                  ExtrapError -> error ("Error in interp1Core called by " ++ caller ++
-                                      ": Method ExtrapError - Extrapolation not allowed" ++
-                                      "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
+    LT -> case getPos (x1, x2) x of
+               Undefined -> Invalid
+               HitLeft -> Inter y1
+               HitRight -> Inter y2
+               Inside ->
+                 case inmethod of
+                   Linear -> Inter $ linear (x1,x2) (y1,y2) x
+                   Nearest -> Inter $ nearest (x1, x2) (y1, y2) x
+               Outside ->
+                 case exmethod of
+                   ExtrapLinear ->  Extra $ linear (x1,x2) (y1,y2) x
+                   ExtrapLast ->  Extra $ nearest (x1, x2) (y1,y2) x
+                   (ExtrapVal val) ->  Extra $ val
+                   ExtrapNone ->  Invalid
+                   ExtrapError ->
+                     error $ "Error in interp1Core called by " ++ caller ++
+                             ": Method ExtrapError - Extrapolation not allowed" ++
+                             "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x
+
+    EQ -> case getPos (x1, x2) x of
+               Undefined -> Invalid
+               Outside ->
+                 case exmethod of
+                   ExtrapLinear ->  Invalid
+                   ExtrapLast -> Extra $ if x < x1 then y1 else y2
+                   (ExtrapVal val) ->  Extra $ val
+                   ExtrapNone ->  Invalid
+                   ExtrapError ->
+                     error $ "Error in interp1Core called by " ++ caller ++
+                             ": Method ExtrapError - Extrapolation not allowed" ++
+                             "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x
+
+               _   -> Inter $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)
+
+    GT -> error ("Error in interp1Core called by " ++ caller ++ ": x1 greater than x2")
 
 getPos :: (Eq a, Ord a) => (a,a) -> a -> Pos
-getPos (x1,x2) x = case (x P.== x1, x P.> x1 , x P.< x2 , x P.== x2) of
-  (True,_,_,False) -> HitLeft
-  (False,_,_,True) -> HitRight
-  (True,_,_,True) -> Inside -- aplies when step in signal => x1=x2=x
-  (_,True,True,_) -> Inside
-  (_,False,True,_) -> Outside
-  (_,True,False,_) -> Outside
-  (_,_,_,_) -> Undefined -- error "Error in getPos - Impossible branch"
-
-combine :: (a -> a -> a) -> Val a -> Val a -> Val a
-combine _ Invalid _ = Invalid
-combine _ _ Invalid = Invalid
-combine f (Extra x) (Extra y) = Extra $ f x y
-combine f (Extra x) (Inter y) = Extra $ f x y
-combine f (Inter x) (Extra y) = Extra $ f x y
-combine f (Inter x) (Inter y) = Inter $ f x y
+getPos (x1,x2) x =
+  case (x == x1, x > x1 , x < x2 , x == x2) of
+       (True,_,_,False) -> HitLeft
+       (False,_,_,True) -> HitRight
+       (True,_,_,True) -> Inside -- aplies when step in signal => x1=x2=x
+       (_,True,True,_) -> Inside
+       (_,False,True,_) -> Outside
+       (_,True,False,_) -> Outside
+       (_,_,_,_) -> Undefined -- error "Error in getPos - Impossible branch"
 
 
-combineResults:: Val a -> Val a -> Val a -> Val a
-combineResults x y z = combine (\ v _ -> v) z h
-  where h= combine (\ v _ -> v) x y  
+combine3 :: Val a -> Val a -> Val a -> Val a
+combine3 x y z =
+  liftA3 (\a _ _ -> a) z y x
+
+
+-- = Only for testing
+
+newtype ValConstructor a = ValConstructor (a -> Val a)
+
+instance QC.Arbitrary (ValConstructor a) where
+  arbitrary = do
+    m <- QC.choose (0, 2 :: Int)
+    return $ ValConstructor $
+      case m of
+           0 -> const Invalid
+           1 -> Extra
+           2 -> Inter
+           x -> error $ "3: not defined for " ++ show x
+
+
+instance (QC.Arbitrary a, Num a, Random a) => QC.Arbitrary (ExtrapMethod a) where
+  arbitrary = QC.choose (0, 3 :: Int) >>= f
+    where f 0 = return ExtrapLinear
+          f 1 = return ExtrapNone
+          f 2 = QC.choose (-100, 100) >>= return . ExtrapVal
+          f 3 = return ExtrapLast
+          f x = error $ "1: f not defined for " ++ show x
+
+instance (QC.Arbitrary a, Num a, Random a) => QC.Arbitrary (Method a) where
+  arbitrary = QC.choose (0, 1 :: Int) >>= f
+    where f 0 = return Linear
+          f 1 = return Nearest
+          f x = error $ "2: f not defined for " ++ show x
+
+instance QC.Arbitrary (Val (Double -> Double)) where
+  arbitrary = do
+    f <- QC.arbitrary
+    ValConstructor ctr <- QC.arbitrary
+    return (ctr f)
+
+instance QC.Arbitrary (Val Double) where
+  arbitrary = do
+    x <- QC.choose (negate 10, 10 :: Double)
+    ValConstructor f <- QC.arbitrary
+    return (f x)

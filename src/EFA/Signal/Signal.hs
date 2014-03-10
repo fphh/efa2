@@ -1645,7 +1645,8 @@ interp2WingProfileValid :: (SV.Len (v a),
                       TC Sample t1 (Data Nil a) ->
                       TC Sample t2 (Data Nil a) ->
                       TC Sample t3 (Data Nil (Interp.Val a))
-interp2WingProfileValid caller inMethod exMethod xSig ySig zSig x y = TC $ Data $ Interp.combineResults z1 z2 z
+interp2WingProfileValid caller inMethod exMethod xSig ySig zSig x y =
+   TC $ Data $ Interp.combine3 z1 z2 z
    where
      idx = interpIndex (caller++ ">interp1LinValid_new") xSig x
      x1 = fromSample $ getSample xSig (indexAdd idx (-1))
@@ -1757,7 +1758,7 @@ interp3WingProfileValid :: (SV.Len (v a),
                       TC Sample t2 (Data Nil a) ->
                       TC Sample t3 (Data Nil a) ->
                       TC Sample t4 (Data Nil (Interp.Val a))
-interp3WingProfileValid caller inMethod exMethod xSig ySig zSig vSig x y z = TC $ Data $ Interp.combineResults v1 v2 v
+interp3WingProfileValid caller inMethod exMethod xSig ySig zSig vSig x y z = TC $ Data $ Interp.combine3 v1 v2 v
  where
 
      idx = interpIndex (caller++ ">interp1LinValid_new") xSig x
@@ -1955,7 +1956,8 @@ combineSupportPoints :: (SV.Storage v ([[d]], [SignalIdx]),
 combineSupportPoints [] =  error("Error - empty list in combineDistributions")
 combineSupportPoints (d:ds) = P.foldl f d ds
   where f acc e = filter (P.not . P.null . P.snd) $ combineWith g acc e
-        g (classes1,indices1) (classes2,indices2) = (classes1++classes2,List.intersect indices1 indices2)
+        g (classes1, indices1) (classes2, indices2) =
+          (classes1 ++ classes2, List.intersect indices1 indices2)
 
 
 combineWith :: (SV.Storage v d3,

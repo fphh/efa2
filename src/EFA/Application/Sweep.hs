@@ -17,19 +17,24 @@ import qualified Data.Vector.Unboxed as UV
 
 import Data.Monoid(Monoid, mempty, mappend)
 
+import qualified Test.QuickCheck as QC
+
 import Prelude hiding (map)
 
 
 
 data Sweep vec a = Sweep { unSweep :: (vec a) } deriving (Show)
 
+
 instance (UV.Unbox a, Eq a) => Eq (Sweep UV.Vector a) where
-  _ == _ = error $ "EFA.Application.Sweep: Eq undefined: probable cause: "
-                   ++ "use of more than one storage forcing"
+  (Sweep xs) == (Sweep ys) = xs == ys
+
 
 instance (UV.Unbox a, Eq a, Ord a) => Ord (Sweep UV.Vector a) where
+--  compare (Sweep xs) (Sweep ys) = compare xs ys
   compare _ _ = error $ "EFA.Application.Sweep: Ord undefined: probable cause: "
                         ++ " use of more than one storage forcing"
+
 
 
 instance Monoid (Sweep UV.Vector Bool) where
@@ -108,6 +113,7 @@ instance (UV.Unbox a, UV.Unbox b, SweepClass sweep UV.Vector a,
   map f = toSweep . UV.map f . fromSweep
   {-# INLINE map #-}
 
+
 instance (Arith.Sum a, UV.Unbox a) => Arith.Sum (Sweep UV.Vector a) where
   (Sweep x) ~+ (Sweep y) = Sweep $ UV.zipWith (~+) x y
   {-# INLINE (~+) #-}
@@ -151,4 +157,9 @@ instance (FormatValue.FormatValue a, UV.Unbox a) =>
          FormatValue.FormatValue (Sweep UV.Vector a) where
   formatValue = FormatValue.formatValue . toList
 
+
+-- = Only testing
+
+instance QC.Arbitrary (Sweep UV.Vector Double) where
+  arbitrary = fmap fromList QC.arbitrary
 
