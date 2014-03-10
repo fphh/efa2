@@ -32,11 +32,11 @@ import qualified EFA.Signal.ConvertTable as CT
 
 import qualified EFA.IO.TableParser as Table
 
---import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Equation.Arithmetic as Arith
 
---import qualified EFA.Flow.Draw as Draw
+import qualified EFA.Flow.Draw as Draw
 
 import EFA.Utility.Async (concurrentlyMany_)
 --import EFA.Utility.List (vhead)
@@ -85,49 +85,34 @@ main1 = do
   let
 
       (time,
-       NonEmpty.Cons r
-          (NonEmpty.Cons l Empty.Cons)) =
+       NonEmpty.Cons local
+          (NonEmpty.Cons rest Empty.Cons)) =
         CT.getPowerSignalsWithSameTime tabPower
           ("rest" !: "local" !: Empty.Cons)
-
-      transformRest1 = Sig.offset 2.2 . Sig.scale 0.6
-      transformLocal1 = Sig.offset 0.4 . Sig.scale 0.5
-
-      prest1, plocal1 :: Sig.PSignal Vector Double
-      prest1 = Sig.convert $ transformRest1 r
-
-      plocal1 = Sig.convert $ transformLocal1 l
-
--- ACHTUNG ACHTUNG hieran muessen wir uns orientieren !!! 26.01.2014
 
       reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos ModSet.reqs
 
       ctime = Sig.convert time
 
-      prest = Sig.convert $ prest1 --Sig..++ prest2
-      plocal = Sig.convert $ plocal1 --Sig..++ plocal2
+      pLocal = Sig.offset 1.5 . Sig.scale 1 $ Sig.convert $ local
+      pRest = Sig.offset 0.3 . Sig.scale 0.9 $ Sig.convert $  rest
 
--- ACHTUNG ACHTUNG wir haben local und rest verwechselt !!! 26.01.2014
       reqsRec :: Record.PowerRecord Node UV.Vector Double
-      reqsRec = Record.scatter rndGen 50 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [prest, plocal]))
+      reqsRec = Record.scatter rndGen 50 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
 
       reqsRecStep :: Record.PowerRecord Node UV.Vector Double
       reqsRecStep = Record.makeStepped reqsRec
 
 
-{-
-  concurrentlyMany_ [
-    Draw.xterm $ Draw.labeledTopology $ System.labeledTopology,
-    Draw.xterm $
+
+{-  concurrentlyMany_ [
+      Draw.xterm $ Draw.labeledTopology $ System.labeledTopology,
+      Draw.xterm $
       Draw.flowTopologies $
-      StateAnalysis.advanced System.topology ]
--}
+      StateAnalysis.advanced System.topology ]-}
 
 
-  concurrentlyMany_ [
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec, 
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
-    ModPlot.reqsRec ModPlot.gpXTerm reqsRec]
+
 
 
   let
@@ -152,9 +137,9 @@ main1 = do
           One.etaToOptimise = Nothing,
           One.maxEtaIterations = One.MaxEtaIterations 1,
           One.maxInnerLoopIterations = One.MaxInnerLoopIterations 1,
-          One.maxBalanceIterations = One.MaxBalanceIterations 1,
+          One.maxBalanceIterations = One.MaxBalanceIterations 5,
           One.maxStateIterations = One.MaxStateIterations 1,
-          One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
+          One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 0)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.2,
           One.balanceThreshold = One.BalanceThreshold 0.4,
@@ -205,9 +190,15 @@ main1 = do
 
 
 
-  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
+--  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
+  concurrentlyMany_ [
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec, 
+    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
+    ModPlot.reqsRec ModPlot.gpXTerm reqsRec, 
+--    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol), 
+    sequence_ (ModLoop.printEtaLoop optParams ol)]
 
-  sequence_ (ModLoop.printEtaLoop optParams ol)
+  
 
 {-
   concurrentlyMany_ [

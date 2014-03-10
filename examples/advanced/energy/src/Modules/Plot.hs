@@ -22,6 +22,9 @@ import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vector
 
 import qualified EFA.Flow.SequenceState.Index as Idx
+
+import qualified EFA.Flow.Sequence.Algorithm as SeqAlgo
+
 import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Flow.State.Quantity as StateQty
@@ -666,7 +669,7 @@ requirements ::
   Sig.PSignal v Double ->
   Sig.PSignal v Double ->
   IO ()
-requirements terminal prest plocal = do
+requirements terminal plocal prest = do
   let rs = Sig.toList $ trace (show prest) prest
       ls = Sig.toList $ trace (show plocal) plocal
 
@@ -708,6 +711,9 @@ simulationGraphs ::
   (FormatValue.FormatValue b, UV.Unbox b,
    Vector.Storage efaVec d,
    Vector.FromList efaVec,
+   Vector.Walker efaVec,
+   Arith.ZeroTestable d,
+   Arith.Constant d,
    FormatValue.FormatValue d,
    Node.C node,
    Sweep.SweepClass sweep vec b,
@@ -723,6 +729,11 @@ simulationGraphs terminal (Type.OptimiseStateAndSimulate _ _ _ efa _) = do
     $ Draw.title "Sequence Flow Graph from Simulation"
     $ Draw.seqFlowGraph Draw.optionsDefault (Type.sequenceFlowGraph efa)
 
+  terminal "simulationGraphsSequenceAccumulated"
+    $ Draw.bgcolour DarkSeaGreen2
+    $ Draw.title "Accumulated Sequence Flow Graph from Simulation"
+    $ Draw.seqFlowGraph Draw.optionsDefault
+    $ SeqAlgo.accumulate (Type.sequenceFlowGraph efa)
 
   terminal "simulationGraphsState"
     $ Draw.bgcolour Lavender
@@ -790,30 +801,31 @@ instance PNG (IO PNG.T) where
 
 -}
 
--- TODO: -- only shows first Result of sweep stack
+-- TODO: linearer sweepIndex der richtige Weg ?
 drawSweepStateFlowGraph :: 
   (Node.C node, FormatValue.FormatValue b,
   Sweep.SweepVector vec b, Sweep.SweepClass sweep vec b) =>
   String ->
+  Int ->
   StateQty.Graph node (Result (sweep vec b)) (Result (sweep vec b)) ->
   IO ()
-drawSweepStateFlowGraph title sfgSweep =   
+drawSweepStateFlowGraph title sweepIndex sfgSweep =   
   Draw.xterm $ Draw.title title $ Draw.stateFlowGraph Draw.optionsDefault 
   $ StateQty.mapGraph g g sfgSweep
-     where g = fmap (vhead "simulationGraphs" . Sweep.toList)
+     where g = fmap (vhead "simulationGraphs" . drop sweepIndex . Sweep.toList)
 
--- TODO: -- only shows first Result of sweep stack
 drawSweepStackStateFlowGraph ::
   (Ord [a], Node.C node,Show a,FormatValue.FormatValue b,
    Sweep.SweepVector vec b,
    Sweep.SweepClass sweep vec b) =>
   Idx.State ->
   [a] -> 
+  Int ->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep vec b)) -> 
   IO ()
-drawSweepStackStateFlowGraph state reqsPos sweep = 
+drawSweepStackStateFlowGraph state reqsPos sweepIndex sweep = 
   drawSweepStateFlowGraph ("StateFlowGraph from SweepStack - State : " ++ show state ++
-                           " - Requirement Position :" ++ show reqsPos ++ "- SearchIndex: 0" ) sfgSweep
+                           " - Requirement Position :" ++ show reqsPos ++ "- Sweep Index: " ++ show sweepIndex) sweepIndex sfgSweep
   where sfgSweep =  Type.envResult $ 
                     Maybe.maybe (error $ "drawSweepStackStateFlowGraph - Position not found: "++ show reqsPos) 
                     id $ Map.lookup reqsPos $ 
