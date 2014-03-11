@@ -1131,6 +1131,10 @@ maximum, minimum ::
 maximum (TC x) = TC $ Data $ D.maximum x
 minimum (TC x) = TC $ Data $ D.minimum x
 
+minimumWithNaN :: (P.RealFloat (Apply ab c), D.Storage c1 (Apply ab c), D.Fold c1) =>
+                  TC t t1 (Data c1 (Apply ab c)) -> TC s t2 (Data ab c)
+minimumWithNaN (TC x) = TC $ Data $ D._minimumWithNaN x
+
 minmax ::
    (D.Maximum c, D.Storage c d, Ord d) =>
    TC s typ (Data c d) -> TC Scalar typ (Data Nil (d, d))
@@ -1901,7 +1905,7 @@ getActiveSupportPoints1D f sig = changeSignalType $ map count $ unique classSig
         count cl = ([cl], toList $ findIndices (cl P.==) classSig)
 
 -- | Calculate a 1-d distribution -- collect signal Indices in classes
-genDistribution1D' :: 
+genDistribution1D :: 
   (SV.Unique v (Class d),
    SV.Storage v (Class d),
    SV.Storage v ([Class d], [SignalIdx]),
@@ -1912,9 +1916,9 @@ genDistribution1D' ::
    SV.Storage v Int,
    SV.Storage v SignalIdx,
    SV.Find v) =>
-  (d -> Class d) -> UTSignal v d -> 
+  (d -> Class d) -> UTFSignal v d -> 
   UTDistr v ([Class d], [SignalIdx])
-genDistribution1D' classify sig = changeSignalType $ map count $ unique classSig
+genDistribution1D classify sig = changeSignalType $ map count $ unique classSig
   where classSig = map classify sig
         count cl = ([cl], toList $ findIndices (cl P.==) classSig)
 
@@ -1967,6 +1971,16 @@ combineWith :: (SV.Storage v d3,
 combineWith f xs ys =
   fromList $ liftA2 f (toList xs) (toList ys)
 
+-- | combine an amount of N 1d-Distributions in an N-d distribution
+combineDistributions :: (SV.Storage v ([Class d], [SignalIdx]),
+                         SV.FromList v,SV.Filter v) =>
+                        [UTDistr v ([Class d], [SignalIdx])] -> UTDistr v ([Class d],[SignalIdx])
+combineDistributions [] =  error("Error - empty list in combineDistributions")
+combineDistributions (d:ds) = P.foldl f d ds
+  where f acc e = filter (P.not . P.null . P.snd) $ combineWith g acc e
+        g (classes1,indices1) (classes2,indices2) = (classes1++classes2,List.intersect indices1 indices2)
+
+
 
 calcDistributionValues :: (Eq d1, SV.Walker v, SV.Storage v d1, SV.Lookup v,
                            Constant d1, D.Storage c d1, D.Storage c (a, [SignalIdx]),
@@ -2002,7 +2016,7 @@ etaDistribution1D :: (
                      d -> d -> DTFSignal v d ->  FFSignal v d -> FFSignal v d  -> FFSignal v d ->
                      (PDistr v d, FDistr v d,FDistr v d, NDistr v d)
 etaDistribution1D interval offs dtime  ein eout etrigger  = (pDist, einDist, eoutDist, nDist)
-  where dist = genDistribution1D' (classifyEven interval offs) $ changeSignalType $ untype ptrigger
+  where dist = genDistribution1D (classifyEven interval offs) $ changeSignalType $ untype ptrigger
         ptrigger = etrigger./dtime
         einDist = calcDistributionValues dist ein
         eoutDist = calcDistributionValues dist eout

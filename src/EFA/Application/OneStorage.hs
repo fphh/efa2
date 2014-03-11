@@ -23,7 +23,7 @@ import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector(Vector)
 import Data.Bimap (Bimap)
 import Data.Maybe(fromMaybe)
--- import Debug.Trace(trace)
+--import Debug.Trace(trace)
 
 
 -- | The 'SocDrive' data type should always contain positive values.
@@ -32,7 +32,7 @@ data SocDrive a =
   NoDrive               -- ^ No drive
   | ChargeDrive a       -- ^ Charging states should be prefered
   | DischargeDrive a    -- ^ Discharging states should be prefered
-  deriving (Show, Eq)
+  deriving (Show)
 
 
 --type ForcingPerNode node a = Map node (SocDrive a)
@@ -181,12 +181,25 @@ rememberBestBalanceForcing ::
   node ->
   (Maybe (SocDrive a,a), Maybe (SocDrive a,a))
 rememberBestBalanceForcing (neg,pos) (forceMap,balMap) sto = 
-  if bal >= Arith.zero then (neg, g pos) else (g neg, pos) 
+  if bal >= Arith.zero then (neg, g pos) else (h neg, pos) 
   where
    bal = getStorageBalance "rememberBestBalanceForcing" balMap sto
    force = getStorageForcing "rememberBestBalanceForcing" forceMap sto
-   g(Just (f,b)) = if (Arith.abs bal) > (Arith.abs b) then Just (f,b) else Just (force,bal)
+   
+   -- | TODO :: Fix is compensating for non-Monotonic behaviour of Forcing -> Balance
+   -- | Correct solution would be to work with an Balance Intervall
+   -- | Which is calculated by maximum duration charging states to max. duration discharging states
+   g(Just (f,b)) = if bal <= b || 
+                      (getSocDrive force) <  (getSocDrive force) && bal > b 
+                   then Just (force,bal) else Just (f,b)
    g Nothing  = Just (force,bal)
+   
+   h(Just (f,b)) = if (Arith.abs bal) <= (Arith.abs b) || 
+                   (getSocDrive force) > (getSocDrive f) && bal < b then Just (force,bal) else Just (f,b)
+   h Nothing  = Just (force,bal)
+   
+   
+   
 
 checkCrossingEverOccured :: 
   (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) -> Bool

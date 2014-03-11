@@ -433,29 +433,33 @@ optimalIndexMatrixOfOneState optimalSolutionOfOneState = Sig.map ModUt.nothing2N
 
 
 genOptimalObjectiveSignal :: 
-  (Vec.Zipper vec,Ord a,
+  (Vec.Zipper vec,Ord a,Show (vec Bool),Show (vec a),RealFloat a,
    Vec.Walker vec,
    Vec.Storage vec a) =>
   Type.InterpolationOfAllStates node vec a -> Sig.UTSignal vec a
-genOptimalObjectiveSignal interpolation = optimalObjectiveSignal
+genOptimalObjectiveSignal interpolation = myTrace "optimalObjectiveSignal" optimalObjectiveSignal
   where
     objectiveSigPerState = map (Type.optObjectiveSignalOfState) $ 
                                Map.elems interpolation                     
-    optimalObjectiveSignal =  foldl (Sig.zipWith max) 
+    optimalObjectiveSignal =  foldl (Sig.zipWith (ModUt.maxByWithNaN id)) 
              (vhead "optimalSignalBasedSolution" $ objectiveSigPerState)
              (tail objectiveSigPerState)
 
+myTrace :: String -> a -> a
+myTrace _ x = x -- trace (str ++ ": " ++ show x) x
+
+
 
 findOptimalObjectiveStates :: 
-  (Vec.Zipper vec,Ord a,Vec.Storage vec Bool,
-   Vec.Singleton vec,
+  (Vec.Zipper vec,Ord a,Vec.Storage vec Bool,Show (vec Bool),
+   Vec.Singleton vec,Show (vec a),RealFloat a,Show a,
 --   Arith.Sum (Sig.UTSignal vec a),
    Arith.Sum a,
    Vec.Walker vec,
    Vec.Storage vec a) =>
   One.StatForcing ->
   Type.InterpolationOfAllStates node vec a -> Map Idx.State (Sig.UTSignal vec Bool)
-findOptimalObjectiveStates statForcing interpolation = isEqualToMax
+findOptimalObjectiveStates statForcing interpolation =  myTrace "equal2Max" isEqualToMax
   where
     opt = genOptimalObjectiveSignal interpolation
     isEqualToMax = Map.map (Sig.zipWith g opt) $ 
@@ -464,7 +468,7 @@ findOptimalObjectiveStates statForcing interpolation = isEqualToMax
     g mx x = mx == x
     
 forceOptimalStateSignal :: 
-  (Vec.Walker vec, Arith.Sum a,Vec.Zipper vec, 
+  (Vec.Walker vec, Arith.Sum a,Vec.Zipper vec, Show a,RealFloat a,
 --   Arith.Sum (Sig.UTSignal vec a), 
    Ord a, Vec.Storage vec a, Vec.Singleton vec) =>
   One.StatForcing ->
@@ -476,23 +480,24 @@ forceOptimalStateSignal stateForcing overallOptimalSignal optimalSignalOfState =
   One.StateForcingOff -> optimalSignalOfState
   where
     differenceSignal = overallOptimalSignal Sig..- optimalSignalOfState
-    minimalDifference = Sig.fromScalar $ Sig.minimum differenceSignal
+    minimalDifference = myTrace "minDifference" $
+                        Sig.fromScalar $ Sig.minimumWithNaN differenceSignal
 
 
 genOptimalStatesSignal ::
-  (Ord a,Vec.Storage vec [Idx.State],
-   Vec.Singleton vec,
+  (Ord a,Vec.Storage vec [Idx.State],Show (vec [Idx.State]),Show (vec Bool),
+   Vec.Singleton vec,Show (vec a),Show a,
    Arith.Sum a,
    Vec.Zipper vec,
    Vec.Walker vec,
-   Vec.Storage vec a,
+   Vec.Storage vec a,RealFloat a,
    Vec.Storage vec Bool) =>
   One.StatForcing ->
   Type.InterpolationOfAllStates node vec a ->
    Sig.UTSignal vec [Idx.State]
-genOptimalStatesSignal statForcing interpolation = indexSignal
+genOptimalStatesSignal statForcing interpolation = myTrace "indexSignal" indexSignal
   where
-    optStates = findOptimalObjectiveStates statForcing interpolation
+    optStates = myTrace "optSignalPerState" $ findOptimalObjectiveStates statForcing interpolation
     indexSignal = foldl (\acc (state,sig) -> Sig.zipWith (g state) acc sig) 
                      emptyIndexSignal
                      (Map.toList $ optStates)

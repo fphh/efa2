@@ -161,10 +161,10 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
 
 optimalSignalBasedSolution :: 
   (Ord node, SV.Storage vec Bool, SV.Storage vec [Idx.State],SV.Storage vec (a, a),
-   SV.Singleton vec,
+   SV.Singleton vec,Show a,
    SV.FromList vec,
-   Arith.Constant a,
-   SV.Storage vec (Map.Map Idx.State a),
+   Arith.Constant a,RealFloat a,
+   SV.Storage vec (Map.Map Idx.State a),Show (vec [Idx.State]),Show (vec Bool),
    Show (vec a), Node.C node,
    Ord a,
    SV.Zipper vec,

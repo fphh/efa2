@@ -33,7 +33,7 @@ import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph as Graph
 import qualified EFA.Graph.Topology.Node as Node
 
-import EFA.Equation.Result (Result(Determined, Undetermined))
+import EFA.Equation.Result (Result(Determined))
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Report.FormatValue as FormatValue
 
