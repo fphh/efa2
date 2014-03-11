@@ -61,7 +61,7 @@ import qualified Data.Map as Map; --import Data.Map (Map)
 import qualified Data.Vector.Unboxed as UV
 import Data.Monoid (Monoid, mempty, (<>))
 --import Data.Maybe(fromMaybe)
---import Debug.Trace(trace)
+import Debug.Trace(trace)
 
 interpolateOptimalSolutionPerState :: 
   (Eq (vec1 a1), Ord a1, Show a1, Show (vec1 a1),
@@ -174,9 +174,10 @@ optimalSignalBasedSolution ::
   One.StatForcing -> 
   Record.PowerRecord node vec a
 optimalSignalBasedSolution interpolation statForcing = Record.Record newTime (Map.mapWithKey f pMap)
-  where
+  where -- (\x -> trace ("StateSignal: " ++ show x) x)
     indexSignal = Base.genOptimalStatesSignal statForcing interpolation
-    newTime = Base.genOptimalTime indexSignal time
+    -- (\x -> trace ("NewTime: " ++ show x) x)
+    newTime =  Base.genOptimalTime indexSignal time
     (Record.Record time pMap) =  Type.reqsAndDofsSignalsOfState $ 
               vhead "optimalSignalBasedSolution" $ Map.elems interpolation
     f key _ = Base.genOptimalSignal indexSignal (signalMap key)

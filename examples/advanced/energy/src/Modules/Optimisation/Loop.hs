@@ -417,8 +417,9 @@ printEtaLoopItem ::
    FormatValue.FormatValue a) =>
    One.OptimisationParams node [] Sweep UV.Vector a ->
    EtaLoopItem node Sweep UV.Vector a z -> IO ()
-printEtaLoopItem _params _e@(EtaLoopItem _step _sfgIn _sweep _sfgOut _res) = print "EtaLoop"
---  do
+printEtaLoopItem _params _e@(EtaLoopItem _step _sfgIn _sweep _sfgOut _res) = 
+  do
+    putStrLn $ showEtaLoopItem _params _e
 --    let -- dir = printf "outer-loop-%6.6d" olcnt
     --  stoPos = TopoIdx.Position System.Water System.Network
   --    gasPos = TopoIdx.Position System.Gas System.LocalNetwork
@@ -449,8 +450,8 @@ printEtaLoopItem _params _e@(EtaLoopItem _step _sfgIn _sweep _sfgOut _res) = pri
 
 --    concurrentlyMany_ [
       --putStrLn $ showEtaLoopItem params e]
---      ModPlot.drawSweepStateFlowGraph "sfgIn" 0 $ _sfgIn,
---      ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ _sfgOut]
+--    ModPlot.drawSweepStateFlowGraph "sfgIn" 0 $ _sfgIn
+--    ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ _sfgOut
       --Draw.xterm $ Draw.title "sfgIn" $ Draw.stateFlowGraph Draw.optionsDefault _sfgIn,
       --Draw.xterm $ Draw.title "sfgOut" $ Draw.stateFlowGraph Draw.optionsDefault _sfgOut]
 
@@ -483,20 +484,20 @@ printBalanceLoopItem ::
 printBalanceLoopItem _optParams _b@(BalanceLoopItem _bStp _bForcing _bFStep _bal _opt) = 
   do 
     
-    putStrLn $ showBalanceLoopItem _optParams _b
+    
     let  _gTerm = ModPlot.gpPNG _dir _bStp
          _xTerm = ModPlot.gpXTerm
          _term = _xTerm
          _dir = printf "outer-loop-%6.6d" _bStp
          _stoPos = TopoIdx.Position System.Water System.Network
-     
-    concurrentlyMany_ [
+    putStrLn $ showBalanceLoopItem _optParams _b 
+--    concurrentlyMany_ [
 --       ModPlot.maxIndexPerState _term _opt, 
 --       ModPlot.givenSignals _term _opt, 
-       print (Map.map (Type.reqsAndDofsSignalsOfState) $ 
-              Type.interpolationPerState _opt),
-       ModPlot.simulationSignals _term _opt
-       ]
+--       print (Map.map (Type.reqsAndDofsSignalsOfState) $ 
+--              Type.interpolationPerState _opt),
+--    ModPlot.simulationSignals _term _opt
+--       ]
 --       ModPlot.maxEta _xTerm opt2 -}
      --ModPlot.optimalObjs term _opt
 --       ModPlot.stateRange2 term _opt,

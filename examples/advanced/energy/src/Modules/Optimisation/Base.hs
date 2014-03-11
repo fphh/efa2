@@ -57,7 +57,7 @@ import Data.Monoid (Monoid)
 import Control.Monad (join)
 import Control.Applicative (liftA2)
 
---import Debug.Trace (trace)
+import Debug.Trace (trace)
 
 perStateSweep ::
   (Node.C node, Show node,RealFloat a,
@@ -445,8 +445,8 @@ genOptimalObjectiveSignal interpolation = myTrace "optimalObjectiveSignal" optim
              (vhead "optimalSignalBasedSolution" $ objectiveSigPerState)
              (tail objectiveSigPerState)
 
-myTrace :: String -> a -> a
-myTrace _ x = x -- trace (str ++ ": " ++ show x) x
+myTrace :: Show a => String -> a -> a
+myTrace str x = trace (str ++ ": " ++ show x) x
 
 
 
@@ -507,6 +507,9 @@ genOptimalStatesSignal statForcing interpolation = myTrace "indexSignal" indexSi
            $ Map.elems interpolation
     emptyIndexSignal = Sig.untype $ Sig.map (\_-> []) time  
     
+-- TODO test bauen::
+-- TC (Data [0.0,0.3333333333333333,0.6666666666666666,1.0,1.25,1.5,1.75,2.0])
+-- genOptimalTime (Sig.fromList [[Idx.State 0],[Idx.State 1, Idx.State 1, Idx.State 1, Idx.State 0],[Idx.State 1]]) (Sig.fromList [0,1,2]) :: Sig.TSignal [] Double
 
 genOptimalTime  :: 
   (Vec.Zipper vec,
@@ -521,8 +524,8 @@ genOptimalTime indexSignal time = Sig.fromList ([t0] ++
   (concat $ zipWith f (Sig.toList indexSignal) 
   (Sig.toList $ Sig.deltaMap ((,)) time)))
   where
-    f states (t1,t2) = map (\cnt -> t2 Arith.~- (cnt Arith.~* (t2 Arith.~-t1)) )
-                                  $ map (Arith.fromRational . fromIntegral) [0..(length states-1)] 
+    f states (t1,t2) = map (\cnt -> t1 Arith.~+ (cnt Arith.~* (t2 Arith.~-t1) Arith.~/ (Arith.fromRational $ fromIntegral $ length states)) )
+                                  $ map (Arith.fromRational . fromIntegral) [1..(length states)] 
     t0 = vhead "genOptimalTime" $ Sig.toList time
 
 genOptimalSignal  :: 
