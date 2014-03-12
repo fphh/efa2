@@ -144,14 +144,14 @@ main1 = do
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
           One.etaToOptimise = Nothing,
-          One.maxEtaIterations = One.MaxEtaIterations 5,
+          One.maxEtaIterations = One.MaxEtaIterations 1,
           One.maxInnerLoopIterations = One.MaxInnerLoopIterations 3,
           One.maxBalanceIterations = One.MaxBalanceIterations 100,
-          One.maxStateIterations = One.MaxStateIterations 100,
+          One.maxStateIterations = One.MaxStateIterations 1,
           One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
           One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
           One.etaThreshold = One.EtaThreshold 0.2,
-          One.balanceThreshold = One.BalanceThreshold 0.2,
+          One.balanceThreshold = One.BalanceThreshold 0.5,
           One.stateTimeUpperThreshold = One.StateTimeThreshold 3,
           One.stateTimeLowerThreshold = One.StateTimeThreshold 0,
           One.stateForcingSeed = One.StateForcingStep 0.05,
@@ -209,8 +209,8 @@ main1 = do
     ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
     ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
 --    ModLoop.checkRangeIO sysParams optParams simParams]
-    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
---    sequence_ (ModLoop.printEtaLoop optParams ol)]
+--    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
+    sequence_ (ModLoop.printEtaLoop optParams ol)]
 
 
 
@@ -229,3 +229,21 @@ main1 = do
 main :: IO ()
 main = main1
 
+{-
+
+fromList [
+  
+OK  (State 0,TC (Data [False,False,False,False,False,False,False,False,False,False,True,True,False,False,True,True,False,False,True,True,True,True,False,False,True,True,False,False,False,False,False,False,True,True,True,True,False,False,False,False,False,False,True,True,False,False])),
+          
+No          (State 1,TC (Data [False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False])),
+          
+OK          (State 2,TC (Data [False,False,False,False,False,False,True,True,True,True,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,True,True,True,True,False,False,False,False,False,False,True,True,True,True,False,False,False,False])),
+          
+No          (State 3,TC (Data [False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False])),
+          
+No          (State 4,TC (Data [False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False])),
+          
+No          (State 5,TC (Data [False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False]))]
+
+indexSignal: TC (Data [[],[],[],[],[],[],[State 2],[State 2],[State 2],[State 2],[State 0],[State 0],[],[],[State 0],[State 0],[],[],[State 0],[State 0],[State 0],[State 0],[],[],[State 0],[State 0],[],[],[State 2],[State 2],[State 2],[State 2],[State 0],[State 0],[State 0],[State 0],[],[],[State 2],[State 2],[State 2],[State 2],[State 0],[State 0],[],[]])
+-}

@@ -57,7 +57,7 @@ import Data.Monoid (Monoid)
 import Control.Monad (join)
 import Control.Applicative (liftA2)
 
---import Debug.Trace (trace)
+import Debug.Trace (trace)
 
 perStateSweep ::
   (Node.C node, Show node,RealFloat a,
@@ -433,29 +433,33 @@ optimalIndexMatrixOfOneState optimalSolutionOfOneState = Sig.map ModUt.nothing2N
 
 
 genOptimalObjectiveSignal :: 
-  (Vec.Zipper vec,Ord a,
+  (Vec.Zipper vec,Ord a,Show (vec Bool),Show (vec a),RealFloat a,
    Vec.Walker vec,
    Vec.Storage vec a) =>
   Type.InterpolationOfAllStates node vec a -> Sig.UTSignal vec a
-genOptimalObjectiveSignal interpolation = optimalObjectiveSignal
+genOptimalObjectiveSignal interpolation = myTrace "optimalObjectiveSignal" optimalObjectiveSignal
   where
     objectiveSigPerState = map (Type.optObjectiveSignalOfState) $ 
                                Map.elems interpolation                     
-    optimalObjectiveSignal =  foldl (Sig.zipWith max) 
+    optimalObjectiveSignal =  foldl (Sig.zipWith (ModUt.maxByWithNaN id)) 
              (vhead "optimalSignalBasedSolution" $ objectiveSigPerState)
              (tail objectiveSigPerState)
 
+myTrace :: Show a => String -> a -> a
+myTrace str x = trace (str ++ ": " ++ show x) x
+
+
 
 findOptimalObjectiveStates :: 
-  (Vec.Zipper vec,Ord a,Vec.Storage vec Bool,
-   Vec.Singleton vec,
+  (Vec.Zipper vec,Ord a,Vec.Storage vec Bool,Show (vec Bool),
+   Vec.Singleton vec,Show (vec a),RealFloat a,Show a,
 --   Arith.Sum (Sig.UTSignal vec a),
    Arith.Sum a,
    Vec.Walker vec,
    Vec.Storage vec a) =>
   One.StatForcing ->
   Type.InterpolationOfAllStates node vec a -> Map Idx.State (Sig.UTSignal vec Bool)
-findOptimalObjectiveStates statForcing interpolation = isEqualToMax
+findOptimalObjectiveStates statForcing interpolation =  myTrace "equal2Max" isEqualToMax
   where
     opt = genOptimalObjectiveSignal interpolation
     isEqualToMax = Map.map (Sig.zipWith g opt) $ 
@@ -464,7 +468,7 @@ findOptimalObjectiveStates statForcing interpolation = isEqualToMax
     g mx x = mx == x
     
 forceOptimalStateSignal :: 
-  (Vec.Walker vec, Arith.Sum a,Vec.Zipper vec, 
+  (Vec.Walker vec, Arith.Sum a,Vec.Zipper vec, Show a,RealFloat a,
 --   Arith.Sum (Sig.UTSignal vec a), 
    Ord a, Vec.Storage vec a, Vec.Singleton vec) =>
   One.StatForcing ->
@@ -476,23 +480,24 @@ forceOptimalStateSignal stateForcing overallOptimalSignal optimalSignalOfState =
   One.StateForcingOff -> optimalSignalOfState
   where
     differenceSignal = overallOptimalSignal Sig..- optimalSignalOfState
-    minimalDifference = Sig.fromScalar $ Sig.minimum differenceSignal
+    minimalDifference = myTrace "minDifference" $
+                        Sig.fromScalar $ Sig.minimumWithNaN differenceSignal
 
 
 genOptimalStatesSignal ::
-  (Ord a,Vec.Storage vec [Idx.State],
-   Vec.Singleton vec,
+  (Ord a,Vec.Storage vec [Idx.State],Show (vec [Idx.State]),Show (vec Bool),
+   Vec.Singleton vec,Show (vec a),Show a,
    Arith.Sum a,
    Vec.Zipper vec,
    Vec.Walker vec,
-   Vec.Storage vec a,
+   Vec.Storage vec a,RealFloat a,
    Vec.Storage vec Bool) =>
   One.StatForcing ->
   Type.InterpolationOfAllStates node vec a ->
    Sig.UTSignal vec [Idx.State]
-genOptimalStatesSignal statForcing interpolation = indexSignal
+genOptimalStatesSignal statForcing interpolation = myTrace "indexSignal" indexSignal
   where
-    optStates = findOptimalObjectiveStates statForcing interpolation
+    optStates = myTrace "optSignalPerState" $ findOptimalObjectiveStates statForcing interpolation
     indexSignal = foldl (\acc (state,sig) -> Sig.zipWith (g state) acc sig) 
                      emptyIndexSignal
                      (Map.toList $ optStates)
@@ -502,6 +507,9 @@ genOptimalStatesSignal statForcing interpolation = indexSignal
            $ Map.elems interpolation
     emptyIndexSignal = Sig.untype $ Sig.map (\_-> []) time  
     
+-- TODO test bauen::
+-- TC (Data [0.0,0.3333333333333333,0.6666666666666666,1.0,1.25,1.5,1.75,2.0])
+-- genOptimalTime (Sig.fromList [[Idx.State 0],[Idx.State 1, Idx.State 1, Idx.State 1, Idx.State 0],[Idx.State 1]]) (Sig.fromList [0,1,2]) :: Sig.TSignal [] Double
 
 genOptimalTime  :: 
   (Vec.Zipper vec,
@@ -516,8 +524,8 @@ genOptimalTime indexSignal time = Sig.fromList ([t0] ++
   (concat $ zipWith f (Sig.toList indexSignal) 
   (Sig.toList $ Sig.deltaMap ((,)) time)))
   where
-    f states (t1,t2) = map (\cnt -> t2 Arith.~- (cnt Arith.~* (t2 Arith.~-t1)) )
-                                  $ map (Arith.fromRational . fromIntegral) [0..(length states-1)] 
+    f states (t1,t2) = map (\cnt -> t1 Arith.~+ (cnt Arith.~* (t2 Arith.~-t1) Arith.~/ (Arith.fromRational $ fromIntegral $ length states)) )
+                                  $ map (Arith.fromRational . fromIntegral) [1..(length states)] 
     t0 = vhead "genOptimalTime" $ Sig.toList time
 
 genOptimalSignal  :: 
