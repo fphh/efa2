@@ -563,16 +563,16 @@ sweepStackPerStateOpt ::
    Terminal.C term) =>
   (FilePath -> IO term) ->
   One.OptimisationParams node f sweep vec a ->
-  Map node (One.SocDrive a) ->
+  One.BalanceForcing node a ->
   Type.Sweep node sweep vec a ->
   IO ()
 sweepStackPerStateOpt terminal params balanceForcing =
   let len = One.sweepLength params
 
   in plotSweeps terminal id "Per State Sweep -- Opt"
-     . Map.map (\ m -> (matrix2ListOfMatrices len
-                $ Sig.map Sweep.toList
-                $ sweepResultTo2DMatrix len m))
+     . Map.map (matrix2ListOfMatrices len
+                . Sig.map Sweep.toList
+                . sweepResultTo2DMatrix len)
      . (Base.optStackPerState params balanceForcing)
 
 sweepStackPerStateCondition ::

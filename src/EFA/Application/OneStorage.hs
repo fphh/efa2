@@ -1,4 +1,7 @@
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE FlexibleInstances #-}
+
+
 module EFA.Application.OneStorage where
 
 import qualified EFA.Application.Sweep as Sweep
@@ -16,6 +19,9 @@ import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Graph.Topology as Topology
 
 import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic ((~+))
+
+
 import EFA.Equation.Result (Result)
 import EFA.Signal.Record(PowerRecord)
 
@@ -34,6 +40,11 @@ data SocDrive a =
   | DischargeDrive a    -- ^ Discharging states should be prefered
   deriving (Show)
 
+
+instance Functor SocDrive where
+  fmap f (ChargeDrive x) = ChargeDrive (f x)
+  fmap f (DischargeDrive x) = DischargeDrive (f x)
+  fmap _ NoDrive = NoDrive
 
 --type ForcingPerNode node a = Map node (SocDrive a)
 
@@ -60,12 +71,15 @@ noforcing ::
 noforcing _ _ = Arith.zero
 
 
-newtype StateForcing a = StateForcing a deriving Show
-data StateForcingStep a = StateForcingStep a | DontForceState deriving (Show,Eq)
+newtype StateForcing a = StateForcing { unStateForcing :: a } deriving Show
+
+data StateForcingStep a = StateForcingStep a
+                        | DontForceState deriving (Show,Eq)
 
 instance Functor StateForcingStep where
   fmap f (StateForcingStep x) = StateForcingStep $ f x
-  fmap _ (DontForceState ) = DontForceState
+  fmap _ DontForceState = DontForceState
+
 
 {-
 instance (Arith.Sum a) => Arith.Sum (StateForcing a) where
@@ -83,11 +97,18 @@ type IndexConversionMap =
   Bimap Idx.State Idx.AbsoluteState
 
 
+{-
 unpackStateForcing :: StateForcing a -> a
 unpackStateForcing (StateForcing x) = x
+-}
 
-zeroStateForcing :: Arith.Constant a => StateQty.Graph node b (Result v) -> Map Idx.State (StateForcing a)
-zeroStateForcing sg = Map.map (\_ -> StateForcing Arith.zero) $ states sg
+
+zeroStateForcing ::
+  Arith.Constant a =>
+  StateQty.Graph node b (Result v) ->
+  Map Idx.State (StateForcing a)
+zeroStateForcing sg =
+  Map.map (const $ StateForcing Arith.zero) $ states sg
 
 
 nocondition :: StateQty.Graph node b (Result v) -> Bool
@@ -106,10 +127,13 @@ type EtaAssignMap node = Map (TopoIdx.Position node) (Name, Name)
 
 
 
-newtype InitStorageState node a = InitStorageState { unInitStorageState :: Map node a }
-newtype InitStorageSeq node a = InitStorageSeq { unInitStorageSeq :: Map node a }
+newtype InitStorageState node a =
+  InitStorageState { unInitStorageState :: Map node a }
 
-newtype Name = Name String deriving (Eq, Ord, Show)
+newtype InitStorageSeq node a =
+  InitStorageSeq { unInitStorageSeq :: Map node a }
+
+newtype Name = Name { unName :: String } deriving (Eq, Ord, Show)
 
 type OptimalEtaWithEnv node list v =
   Map Idx.State (Map (TopoIdx.Position node) (Map (list v) (v, v, v)))
@@ -120,29 +144,29 @@ data SystemParams node a = SystemParams {
   etaMap :: Map Name (a -> a),
   storagePositions:: [TopoIdx.Position node],
   initStorageState :: InitStorageState node a,
-  initStorageSeq :: InitStorageSeq node a}
+  initStorageSeq :: InitStorageSeq node a }
 
 
 data OptimisationParams node list sweep vec a = OptimisationParams {
   stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
-  points :: Map (list a) (ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),
+  points :: Map (list a) 
+                (ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a),
   sweepLength :: Int,
   etaToOptimise :: Maybe (TopoIdx.Position node),
   maxEtaIterations :: MaxEtaIterations ,
   maxInnerLoopIterations:: MaxInnerLoopIterations ,
   maxBalanceIterations:: MaxBalanceIterations ,
   maxStateIterations:: MaxStateIterations ,
-  initialBattForcing :: Map node (SocDrive a),
-  initialBattForceStep :: Map node (SocDrive a),
+  initialBattForcing :: BalanceForcing node a,
+  initialBattForceStep :: BalanceForcingStep node a,
   etaThreshold :: EtaThreshold a,
   balanceThreshold :: BalanceThreshold a,
   stateTimeUpperThreshold :: StateTimeThreshold a,
   stateTimeLowerThreshold :: StateTimeThreshold a,
   stateForcingSeed :: StateForcingStep a,
-  balanceForcingSeed :: SocDrive a
-  }
+  balanceForcingSeed :: SocDrive a }
 
 data SimulationParams node vec a = SimulationParams {
   varReqRoomPower1D :: Sig.PSignal vec a,
@@ -151,26 +175,49 @@ data SimulationParams node vec a = SimulationParams {
   activeSupportPoints :: Sig.UTDistr vec ([[a]], [Sig.SignalIdx]),
   reqsRec :: PowerRecord node vec a,
   sequFilterTime :: a,
-  sequFilterEnergy :: a}
+  sequFilterEnergy :: a }
 
 
-newtype MaxEtaIterations  =  MaxEtaIterations Int
+newtype MaxEtaIterations  =  MaxEtaIterations { unMaxEtaIterations :: Int }
+
 newtype MaxBalanceIterations  = MaxBalanceIterations Int
+
 newtype MaxStateIterations  = MaxStateIterations Int
-newtype BalanceThreshold  a = BalanceThreshold a
-newtype StateTimeThreshold  a = StateTimeThreshold a
+
+newtype BalanceThreshold  a = BalanceThreshold { unBalanceThreshold :: a }
+
+newtype StateTimeThreshold  a = StateTimeThreshold { unStateTimeThreshold :: a }
+
 newtype EtaThreshold  a = EtaThreshold a
+
 newtype MaxInnerLoopIterations  =  MaxInnerLoopIterations Int
 
 
 type Balance node a = Map node a
-type BalanceForcing node a = Map node (SocDrive a)
-type BalanceForcingStep node a = Map node (SocDrive a)
+
+
+--newtype BalanceForcing node a =
+--  BalanceForcing { unBalanceForcing :: Map node (SocDrive a) } deriving (Show)
+
+data Absolute
+data Step
+
+newtype BalanceForcingMap x a =
+  BalanceForcingMap { unBalanceForcingMap :: a } deriving (Show)
+
+instance Functor (BalanceForcingMap x) where
+  fmap f (BalanceForcingMap m) = BalanceForcingMap (f m)
+
+type BalanceForcing node a =
+  BalanceForcingMap Absolute (Map node (SocDrive a))
+
+type BalanceForcingStep node a =
+  BalanceForcingMap Step (Map node (SocDrive a))
 
 
 type StateDurations a = Map Idx.AbsoluteState a
-  
-type BestBalance node a = Map node (Maybe (SocDrive a,a), Maybe (SocDrive a,a))
+
+type BestBalance node a = Map node (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
 
 
                         
@@ -179,39 +226,42 @@ rememberBestBalanceForcing ::
    (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) -> 
   (BalanceForcing node a, Balance node a) -> 
   node ->
-  (Maybe (SocDrive a,a), Maybe (SocDrive a,a))
-rememberBestBalanceForcing (neg,pos) (forceMap,balMap) sto = 
-  if bal >= Arith.zero then (neg, g pos) else (h neg, pos) 
+  (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
+rememberBestBalanceForcing (neg, pos) (forceMap, balMap) sto = 
+  if bal >= Arith.zero then (neg, g pos) else (h neg, pos)
   where
-   bal = getStorageBalance "rememberBestBalanceForcing" balMap sto
-   force = getStorageForcing "rememberBestBalanceForcing" forceMap sto
+    bal = getStorageBalance "rememberBestBalanceForcing" balMap sto
+    force = getStorageForcing "rememberBestBalanceForcing" forceMap sto
    
-   -- | TODO :: Fix is compensating for non-Monotonic behaviour of Forcing -> Balance
-   -- | Correct solution would be to work with an Balance Intervall
-   -- | Which is calculated by maximum duration charging states to max. duration discharging states
-   g(Just (f,b)) = if bal <= b || 
-                      (getSocDrive force) <  (getSocDrive force) && bal > b 
-                   then Just (force,bal) else Just (f,b)
-   g Nothing  = Just (force,bal)
+    -- TODO :: Fix is compensating for non-Monotonic behaviour of Forcing -> Balance
+    -- Correct solution would be to work with an Balance Intervall
+    -- Which is calculated by maximum duration charging states to max. duration discharging states
+
+
+    g (Just (f, b)) =
+      if bal <= b || (getSocDrive force < getSocDrive force && bal > b)
+         then Just (force, bal)
+         else Just (f, b)
+    g Nothing = Just (force, bal)
    
-   h(Just (f,b)) = if (Arith.abs bal) <= (Arith.abs b) || 
-                   (getSocDrive force) > (getSocDrive f) && bal < b then Just (force,bal) else Just (f,b)
-   h Nothing  = Just (force,bal)
-   
-   
-   
+    h (Just (f, b)) =
+      if (Arith.abs bal <= Arith.abs b) || (getSocDrive force > getSocDrive f && bal < b)
+         then Just (force, bal)
+         else Just (f, b)
+    h Nothing = Just (force, bal)
+
 
 checkCrossingEverOccured :: 
-  (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) -> Bool
+  (Maybe (SocDrive a,a), Maybe (SocDrive a, a)) -> Bool
 checkCrossingEverOccured (Just _, Just _) = True
-checkCrossingEverOccured (_, _) = False
+checkCrossingEverOccured _ = False
 
 getForcingIntervall ::  (Ord a, Arith.Constant a) =>
-  (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) 
-  -> Maybe (SocDrive a)
-getForcingIntervall (Just (n,_), Just (p,_)) = 
-  Just $ setSocDrive ((Arith.abs $ getSocDrive n) Arith.~+ (getSocDrive p))
-getForcingIntervall (_,_) = Nothing
+  (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
+  Maybe (SocDrive a)
+getForcingIntervall (Just (n, _), Just (p, _)) = 
+  Just $ setSocDrive $ Arith.abs $ (getSocDrive n ~+ getSocDrive p)
+getForcingIntervall _ = Nothing
 
 
 addForcingStep :: 
@@ -220,46 +270,54 @@ addForcingStep ::
   BalanceForcingStep node a -> 
   node ->   
   BalanceForcing node a
-addForcingStep forcing stepMap sto = Map.adjust f sto forcing  
-  where f force = setSocDrive $ (getSocDrive force) Arith.~+ (getSocDrive step)
+addForcingStep forcing stepMap sto =
+  fmap (Map.adjust f sto) forcing
+  where f force = setSocDrive $ getSocDrive force ~+ getSocDrive step
         step = getStorageForcingStep "addForcingStep" stepMap sto
 
 updateForcingStep ::
   (Ord node, Ord a, Arith.Constant a) =>
   BalanceForcingStep node a ->
-  node -> 
-  (SocDrive a) -> 
+  node ->
+  SocDrive a ->
   BalanceForcingStep node a
-updateForcingStep forcing storage step = Map.adjust f storage forcing
-  where f _ = step
+updateForcingStep forcing storage step =
+  fmap (Map.adjust (const step) storage) forcing
 
 getStorageForcing :: 
   (Ord node, Show node) =>
   String ->  
   BalanceForcing node a ->
-  node ->  SocDrive a
-getStorageForcing caller forcing sto = fromMaybe (error m) $ Map.lookup sto forcing
-  where m = "Error in getStorageForcing called by " ++ caller 
-            ++ "- gStorage not in Map : " ++ show sto
-            
+  node ->
+  SocDrive a
+getStorageForcing caller forcing sto =
+  fromMaybe (error m) $ Map.lookup sto $ unBalanceForcingMap forcing
+  where m = "Error in getStorageForcing called by " ++ caller
+            ++ " - gStorage not in Map: " ++ show sto
+
+
 getStorageForcingStep :: 
   (Ord node, Show node) =>
   String ->  
-  BalanceForcing node a ->
-  node ->  SocDrive a
-getStorageForcingStep caller forcing sto = fromMaybe (error m) $ Map.lookup sto forcing
-  where m = "Error in getStorageForcingStep called by " ++ caller 
-            ++ "- gStorage not in Map : " ++ show sto
-              
-            
-            
-            
+  BalanceForcingStep node a ->
+  node ->
+  SocDrive a
+getStorageForcingStep caller forcing sto =
+  fromMaybe (error m) $ Map.lookup sto $ unBalanceForcingMap forcing
+  where m = "Error in getStorageForcing called by " ++ caller 
+            ++ " - gStorage not in Map: " ++ show sto
+
+
 getStorageBalance :: 
   (Ord node, Show node) =>
   String ->  Balance node a ->
-  node ->  a
-getStorageBalance caller balance sto = fromMaybe (error m) $ Map.lookup sto balance 
+  node -> a
+getStorageBalance caller balance sto =
+  fromMaybe (error m) $ Map.lookup sto balance 
   where m = "Error in getStorageBalance called by " ++ caller 
-            ++ "- gStorage not in Map : " ++ show sto  
+            ++ " - gStorage not in Map: " ++ show sto  
 
 data StatForcing = StateForcingOn | StateForcingOff
+
+
+

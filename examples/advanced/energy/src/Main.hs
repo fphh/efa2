@@ -79,7 +79,7 @@ main1 = do
   let etaMap =
          Map.mapKeys One.Name $
          CT.makeEtaFunctions2D
-            (Map.mapKeys (\(One.Name str) -> str) ModSet.scaleTableEta)
+            (Map.mapKeys One.unName ModSet.scaleTableEta)
             tabEta
 
   let
@@ -119,14 +119,15 @@ main1 = do
 
   let
       ienv = AppOpt.storageEdgeXFactors optParams 3 3
-               $ AppOpt.initialEnv optParams System.stateFlowGraph
+             $ AppOpt.initialEnv optParams System.stateFlowGraph
                
-      supportPoints = Base.supportPoints ([TopoIdx.ppos System.LocalRest System.LocalNetwork,
-                                           TopoIdx.ppos System.Rest System.Network])
-                         (Base.convertRecord reqsRecStep)
-                         (map (Sig.findSupportPoints) $ map Sig.untype $ 
-                          [ ModSet.varLocalPower1D, ModSet.varRestPower1D])
-               
+      supportPoints =
+        Base.supportPoints
+          [ TopoIdx.ppos System.LocalRest System.LocalNetwork,
+            TopoIdx.ppos System.Rest System.Network ]
+          (Base.convertRecord reqsRecStep)
+          (map (Sig.findSupportPoints. Sig.untype) 
+               [ ModSet.varLocalPower1D, ModSet.varRestPower1D])
 
       sysParams = One.SystemParams {
          One.systemTopology = System.topology,
@@ -134,7 +135,7 @@ main1 = do
          One.etaMap = etaMap,
          One.storagePositions = ([TopoIdx.ppos System.Water System.Network]),
          One.initStorageState = ModSet.initStorageState,
-         One.initStorageSeq = ModSet.initStorageSeq}
+         One.initStorageSeq = ModSet.initStorageSeq }
 
       optParams :: One.OptimisationParams Node [] Sweep UV.Vector Double
       optParams = One.OptimisationParams {
@@ -148,26 +149,34 @@ main1 = do
           One.maxInnerLoopIterations = One.MaxInnerLoopIterations 3,
           One.maxBalanceIterations = One.MaxBalanceIterations 100,
           One.maxStateIterations = One.MaxStateIterations 1,
-          One.initialBattForcing = Map.fromList [(System.Water, One.DischargeDrive 1)],
-          One.initialBattForceStep = Map.fromList [(System.Water, One.ChargeDrive 0.1)],
+
+          One.initialBattForcing =
+            One.BalanceForcingMap
+            $ Map.fromList [(System.Water, One.DischargeDrive 1)],
+
+          One.initialBattForceStep =
+            One.BalanceForcingMap
+            $ Map.fromList [(System.Water, One.ChargeDrive 0.1)],
+
           One.etaThreshold = One.EtaThreshold 0.2,
           One.balanceThreshold = One.BalanceThreshold 0.5,
           One.stateTimeUpperThreshold = One.StateTimeThreshold 3,
           One.stateTimeLowerThreshold = One.StateTimeThreshold 0,
           One.stateForcingSeed = One.StateForcingStep 0.05,
-          One.balanceForcingSeed = One.ChargeDrive 0.01}
+          One.balanceForcingSeed = One.ChargeDrive 0.01 }
 
       simParams :: One.SimulationParams Node [] Double
       simParams = One.SimulationParams {
           One.varReqRoomPower1D = Sig.convert $ ModSet.varLocalPower1D,
           One.varReqRoomPower2D = Sig.convert $ ModSet.varRestPower ,
           One.reqsRec = Base.convertRecord reqsRecStep,
-          One.requirementGrid = [Sig.convert $ ModSet.varLocalPower1D, Sig.convert $ ModSet.varRestPower1D],
+          One.requirementGrid = [ Sig.convert $ ModSet.varLocalPower1D,
+                                  Sig.convert $ ModSet.varRestPower1D ],
           One.activeSupportPoints =  supportPoints, 
           One.sequFilterTime=0.01,
           One.sequFilterEnergy=0 }
 
-  print (map (ModUt.absoluteStateIndex $ One.systemTopology sysParams) System.flowStates)
+  print $ map (ModUt.absoluteStateIndex (One.systemTopology sysParams)) System.flowStates
 
 
 {-
@@ -228,6 +237,8 @@ main1 = do
 
 main :: IO ()
 main = main1
+
+-- BL: 99 |    | Sto:   Water   | F: -0.008990804596724   | B: -0.280414940376781
 
 {-
 

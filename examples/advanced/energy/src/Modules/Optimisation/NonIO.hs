@@ -352,7 +352,7 @@ optimiseAndSimulateSignalBased ::
    One.SystemParams node a -> 
    One.OptimisationParams node [] sweep UV.Vector a -> 
    One.SimulationParams node intVec a -> 
-   Map.Map node (One.SocDrive a) ->
+   One.BalanceForcing node a ->
    One.StatForcing ->
    Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
    One.IndexConversionMap -> 

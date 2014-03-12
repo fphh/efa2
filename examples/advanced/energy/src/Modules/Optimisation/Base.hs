@@ -97,12 +97,12 @@ balForcing ::
    Arith.Sum (sweep vec a),
    Sweep.SweepMap sweep vec a a,
    Arith.Constant a) =>
-  Map node (One.SocDrive a)->
+  One.BalanceForcing node a ->
   One.OptimisationParams node list sweep vec a ->
   Type.StoragePowerMap node sweep vec a ->
   Result (sweep vec a)
 balForcing balanceForcing params powerMap =
-  Map.foldWithKey f zero balanceForcing
+  Map.foldWithKey f zero (One.unBalanceForcingMap balanceForcing)
       where
         zero = Determined $ Sweep.fromRational (One.sweepLength params) Arith.zero
         f stoNode forcingFactor acc = g acc force
@@ -126,7 +126,7 @@ optStackPerState ::
    Arith.Constant a,
    Sweep.SweepClass sweep UV.Vector (a, a)) =>
   One.OptimisationParams node list sweep UV.Vector a ->
-  Map node (One.SocDrive a)->
+  One.BalanceForcing node a ->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
   Type.OptStackPerState sweep UV.Vector a
 optStackPerState params balanceForcing  =
@@ -146,7 +146,7 @@ optimalObjectivePerState ::
    Sweep.SweepClass sweep UV.Vector  a,
    Sweep.SweepMap sweep UV.Vector  a a) =>
   One.OptimisationParams node list sweep UV.Vector a ->
-  Map node (One.SocDrive a)->
+  One.BalanceForcing node a ->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
   Type.OptimalSolutionPerState node a
 optimalObjectivePerState params balanceForcing =
@@ -186,7 +186,7 @@ selectOptimalState _params stateForcing stateMap indexConversionMap =
                       (\(objVal, eta, idx ,env) ->
                         (objVal Arith.~+
                          maybe (error "Base.selectOptimalState")
-                         One.unpackStateForcing
+                         One.unStateForcing
                          (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
                          eta, st, idx, env))) m)
      $ Map.toList stateMap

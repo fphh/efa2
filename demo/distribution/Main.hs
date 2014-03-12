@@ -29,13 +29,13 @@ ks3 :: S.UTFSignal [] (Class Double)
 ks3 = S.map (classifyEven 10 0) s3
 
 d1, d2, d3, d4 :: S.UTDistr [] ([Class Double], [SignalIdx])
-d1 = S.genDistribution1D (classifyEven 10 0) s1
-d2 = S.genDistribution1D (classifyEven 10 0) s2
-d3 = S.genDistribution1D (classifyEven 10 0) s3
+d1 = S.etaDistribution1D (classifyEven 10 0) s1
+d2 = S.etaDistribution1D (classifyEven 10 0) s2
+d3 = S.etaDistribution1D (classifyEven 10 0) s3
 
 
-d4 = S.combineDistributions [d1, d2, d3]
-
+-- d4 = S.combineDistributions [d1, d2, d3]
+d4 = S.combineSupportPoints [d1, d2, d3]
 
 df4 :: S.FDistr [] Double
 df4 = S.calcDistributionValues d4 e1
