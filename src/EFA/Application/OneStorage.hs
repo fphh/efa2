@@ -260,7 +260,7 @@ getForcingIntervall ::  (Ord a, Arith.Constant a) =>
   (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
   Maybe (SocDrive a)
 getForcingIntervall (Just (n, _), Just (p, _)) = 
-  Just $ setSocDrive $ Arith.abs $ (getSocDrive n ~+ getSocDrive p)
+  Just $ setSocDrive $ (Arith.abs $ getSocDrive n) ~+ getSocDrive p
 getForcingIntervall _ = Nothing
 
 

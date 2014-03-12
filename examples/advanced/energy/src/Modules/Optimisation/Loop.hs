@@ -152,11 +152,37 @@ iterateOneStorage cntIn fsys accessf forcingIn steppingIn sto =
         res1 = fsys force1
         bal1 = accessf res1
         bal = accessf res
-        bestPair1 = One.rememberBestBalanceForcing bestPair (force1, bal1) sto
+        bestPair1 =  One.rememberBestBalanceForcing bestPair (force1, bal1) sto
         step1 = calculateNextBalanceStep 
                 (force1, bal1) bestPair1
                 step sto
 
+calculateNextBalanceStep :: 
+  (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
+   Ord node, Show node) =>
+  (One.BalanceForcing node a,One.Balance node a) -> 
+  (Maybe (One.SocDrive a,a), Maybe (One.SocDrive a,a)) -> 
+  (One.BalanceForcingStep node a)->
+  node ->
+  (One.BalanceForcingStep node a)
+calculateNextBalanceStep (_,balMap) bestPair stepMap sto = One.updateForcingStep stepMap sto $ One.setSocDrive step1
+ where
+   bal = One.getStorageBalance "calculateNextBalanceStep" balMap sto
+   step = One.getStorageForcingStep "calculateNextBalanceStep" stepMap sto
+   fact = Arith.fromRational 2.0
+   divi = Arith.fromRational 1.7
+   intervall = g "Intervall: " $ One.getForcingIntervall $ g "BestPair: " bestPair
+   g str x =  trace (str ++": "++ show x) x
+   step1 = case (intervall, Arith.sign bal) of   
+                    -- Zero Crossing didn't occur so far -- increase step to search faster
+                    (Nothing,Negative) -> g "A" $ Arith.abs $ (One.getSocDrive step) ~* fact
+                    (Nothing,Positive) ->  g "B" $ Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
+                    -- The Zero Crossing is contained in the intervall
+                    -- defined by bestPair - step just a little over the middle
+                    (Just int, Negative) ->  g "C" $ (One.getSocDrive int) ~/ divi
+                    (Just int, Positive) ->   g "D" $ (Arith.negate $ One.getSocDrive  int) ~/ divi
+                    (_, Zero)  ->  g "E" $ Arith.zero   
+{-                    
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
    Ord node, Show node) =>
@@ -187,7 +213,7 @@ calculateNextBalanceStep (_, balMap) bestPair stepMap sto =
            (Just int, Negative) -> (One.getSocDrive int) ~/ divi
            (Just int, Positive) -> (Arith.negate $ One.getSocDrive  int) ~/ divi
            (_, Zero)  -> Arith.zero
-
+-}
 -- | TODO : move to correct Position 
 getStateTimes ::
   Arith.Constant a =>

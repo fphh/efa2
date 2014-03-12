@@ -446,7 +446,7 @@ genOptimalObjectiveSignal interpolation = myTrace "optimalObjectiveSignal" optim
              (tail objectiveSigPerState)
 
 myTrace :: Show a => String -> a -> a
-myTrace str x = trace (str ++ ": " ++ show x) x
+myTrace str x = x -- trace (str ++ ": " ++ show x) x
 
 
 
