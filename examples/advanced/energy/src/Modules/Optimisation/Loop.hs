@@ -2,6 +2,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
+
+
 module Modules.Optimisation.Loop where
 --import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
@@ -51,7 +53,7 @@ import EFA.Utility.List (vlast,vhead)
 import EFA.Utility.Async (concurrentlyMany_)
 
 --import qualified Data.Monoid as Monoid
-import qualified Data.Map as Map
+import qualified Data.Map as Map; import Data.Map (Map)
 --import qualified Data.List as List
 import qualified Data.Vector.Unboxed as UV
 --import Data.Vector (Vector)
@@ -64,6 +66,7 @@ import qualified Data.Bimap as Bimap
 
 import Text.Printf (printf, PrintfArg) --,IsChar)
 
+
 data BalanceLoopItem node a z =
   BalanceLoopItem { bStep :: Int,
                     bForcing :: One.BalanceForcing node a,
@@ -71,31 +74,32 @@ data BalanceLoopItem node a z =
                     balance :: One.Balance node a,
                     bResult :: z }
 
+
 data EtaLoopItem node sweep vec a z = EtaLoopItem {
   stateFlowIn :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
   sweep :: Type.Sweep node sweep vec a,
   stateFlowOut :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
   balanceLoop :: [BalanceLoopItem node a z] }
 
-eta ::
-  (Node.C node, UV.Unbox a,
-   Arith.Product a) =>
-  Type.EnergyFlowAnalysis node vec a -> a
-eta efa =
-  case StateEta.etaSys (Type.stateFlowGraph efa) of
-       Determined (Data e) -> e
-       _ -> error "Main.iterateBalanceIO"
+
+data StateForceDemand =
+  MoreForcingNeeded
+  | CorrectForcing
+  | NoForcingNeeded
+  | LessForcingNeeded deriving (Show)
+
 
 checkBalance ::
   (Ord a, Arith.Sum a) =>
   One.OptimisationParams node list sweep vec a ->
   One.Balance node a ->
   Bool
-checkBalance optParams bal = all g $ Map.elems bal
-  where g x = Arith.abs x <= One.unBalanceThreshold (One.balanceThreshold optParams)
+checkBalance optParams bal =
+  Map.foldl' (\acc v -> acc && Arith.abs v <= bt) True bal
+  where bt = One.unBalanceThreshold (One.balanceThreshold optParams)
 
 
--- | Rate Balance Deviation by sum of Standard Deviation and Overall Sum 
+-- Rate Balance Deviation by sum of Standard Deviation and Overall Sum 
 balanceDeviation :: 
   (Arith.Product a,
    Ord a,
@@ -122,8 +126,9 @@ balanceIteration optParams fsys accessf balForceIn balStepsIn =
           if checkBalance optParams bal then [] else go cnt1 forcing1 stepping1
 
           where oneIterationOfAllStorages =
-                  foldl f [] $ Map.keys $ One.unBalanceForcingMap forcing
-                f acc sto = acc ++ iterateOneStorage cnt fsys accessf forcing stepping sto
+                  Map.foldlWithKey f [] (One.unBalanceForcingMap forcing)
+
+                f acc sto _ = acc ++ iterateOneStorage cnt fsys accessf forcing stepping sto
 
                 bal = balance $ lastElem
                 forcing1 = bForcing $ lastElem
@@ -153,9 +158,7 @@ iterateOneStorage cntIn fsys accessf forcingIn steppingIn sto =
         bal1 = accessf res1
         bal = accessf res
         bestPair1 =  One.rememberBestBalanceForcing bestPair (force1, bal1) sto
-        step1 = calculateNextBalanceStep 
-                (force1, bal1) bestPair1
-                step sto
+        step1 = calculateNextBalanceStep (force1, bal1) bestPair1 step sto
 
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
@@ -165,33 +168,7 @@ calculateNextBalanceStep ::
   (One.BalanceForcingStep node a)->
   node ->
   (One.BalanceForcingStep node a)
-calculateNextBalanceStep (_,balMap) bestPair stepMap sto = One.updateForcingStep stepMap sto $ One.setSocDrive step1
- where
-   bal = One.getStorageBalance "calculateNextBalanceStep" balMap sto
-   step = One.getStorageForcingStep "calculateNextBalanceStep" stepMap sto
-   fact = Arith.fromRational 2.0
-   divi = Arith.fromRational 1.7
-   intervall = g "Intervall: " $ One.getForcingIntervall $ g "BestPair: " bestPair
-   g str x =  trace (str ++": "++ show x) x
-   step1 = case (intervall, Arith.sign bal) of   
-                    -- Zero Crossing didn't occur so far -- increase step to search faster
-                    (Nothing,Negative) -> g "A" $ Arith.abs $ (One.getSocDrive step) ~* fact
-                    (Nothing,Positive) ->  g "B" $ Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
-                    -- The Zero Crossing is contained in the intervall
-                    -- defined by bestPair - step just a little over the middle
-                    (Just int, Negative) ->  g "C" $ (One.getSocDrive int) ~/ divi
-                    (Just int, Positive) ->   g "D" $ (Arith.negate $ One.getSocDrive  int) ~/ divi
-                    (_, Zero)  ->  g "E" $ Arith.zero   
-{-                    
-calculateNextBalanceStep :: 
-  (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
-   Ord node, Show node) =>
-  (One.BalanceForcing node a, One.Balance node a) -> 
-  (Maybe (One.SocDrive a,a), Maybe (One.SocDrive a,a)) -> 
-  (One.BalanceForcingStep node a) ->
-  node ->
-  (One.BalanceForcingStep node a)
-calculateNextBalanceStep (_, balMap) bestPair stepMap sto =
+calculateNextBalanceStep (_,balMap) bestPair stepMap sto =
   One.updateForcingStep stepMap sto $ One.setSocDrive step1
   where
     bal = One.getStorageBalance "calculateNextBalanceStep" balMap sto
@@ -199,27 +176,24 @@ calculateNextBalanceStep (_, balMap) bestPair stepMap sto =
     fact = Arith.fromRational 2.0
     divi = Arith.fromRational 1.7
     intervall = One.getForcingIntervall bestPair
-
-
     step1 =
       case (intervall, Arith.sign bal) of   
-
            -- Zero Crossing didn't occur so far -- increase step to search faster
-           (Nothing, Negative) -> Arith.abs $ (One.getSocDrive step) ~* fact
-           (Nothing, Positive) -> Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
+           (Nothing,Negative) -> Arith.abs $ (One.getSocDrive step) ~* fact
+           (Nothing,Positive) -> Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
 
            -- The Zero Crossing is contained in the intervall
            -- defined by bestPair - step just a little over the middle
            (Just int, Negative) -> (One.getSocDrive int) ~/ divi
            (Just int, Positive) -> (Arith.negate $ One.getSocDrive  int) ~/ divi
-           (_, Zero)  -> Arith.zero
--}
--- | TODO : move to correct Position 
+           (_, Zero)  -> Arith.zero   
+
+-- TODO : move to correct Position 
 getStateTimes ::
   Arith.Constant a =>
-  Map.Map Idx.AbsoluteState a1 ->
+  Map Idx.AbsoluteState a1 ->
   StateQty.Graph Node storageLabel (Result a) ->
-  Map.Map Idx.AbsoluteState (Result a)
+  Map Idx.AbsoluteState (Result a)
 getStateTimes stateForceIn sfg = Map.mapWithKey f stateForceIn
   where timeMap = Map.map FlowTopo.label $ StateQty.states sfg
         indexMap = Bimap.toMap $ ModUt.indexConversionMap System.topology sfg
@@ -231,8 +205,8 @@ getStateTimes stateForceIn sfg = Map.mapWithKey f stateForceIn
                  (Map.lookup st indexMap)
 
 
--- | Find a solution where all states occur in the simlation signals at minimum state forcing,
--- | measurement unit ist state duration
+-- Find a solution where all states occur in the simlation signals at minimum state forcing,
+-- measurement unit ist state duration
 getStateTime ::
   Idx.State ->
   FlowState.Graph
@@ -245,17 +219,11 @@ getStateTime stateIdx sfg = FlowTopo.label state
                       ++ "doesn't exist in StateflowGraph"
 
 
-data StateForceDemand =
-  MoreForcingNeeded
-  | CorrectForcing
-  | NoForcingNeeded
-  | LessForcingNeeded deriving Show
-
 checkStateTimes ::
   (Num a, Ord a) =>
   One.OptimisationParams node [] Sweep vec a ->
   One.StateDurations a ->
-  Map.Map Idx.AbsoluteState (One.StateForcingStep a) ->
+  Map Idx.AbsoluteState (One.StateForcingStep a) ->
   Bool
 checkStateTimes optParams stateDurs stateSteps =
   and $ zipWith g (Map.elems stateDurs) (Map.elems stateSteps)
@@ -303,36 +271,36 @@ iterateEtaWhile sysParams optParams simParams =
 
 -------------------------------- OutPut Below -----------------------------------
 
-printfMap :: (Show k, Show a) => Map.Map k a -> String
-printfMap m = concatMap f $ Map.toList m
-  where f (k, x) =
-          printf "%16s\t%16s\n" (show k) (show x)
+concatZipMapsWith :: ((k0, a) -> (k1, b) -> [c]) -> Map k0 a -> Map k1 b -> [c]
+concatZipMapsWith f s t = concat $ zipWith f (Map.toList s) (Map.toList t)
+
+printfMap :: (Show k, Show a) => Map k a -> String
+printfMap m = Map.foldWithKey f "" m
+  where f k v acc = printf "%16s\t%16s\n" (show k) (show v) ++ acc
 
 printfStateMap ::
   (PrintfArg t, PrintfArg t2) =>
-  Map.Map Idx.AbsoluteState (One.StateForcing t) ->
-  Map.Map t1 t2 -> [Char]
-printfStateMap forceMap timeMap = concat$ zipWith f (Map.toList forceMap) (Map.toList timeMap)
-  where f (Idx.AbsoluteState k, One.StateForcing x) (_, y) =
-          "S" ++ (printf "%2d" k) ++ " (" ++ (printf "%5.3f" x) ++ "," ++ (printf "%5.3f" y) ++ ") "
+  Map Idx.AbsoluteState (One.StateForcing t) ->
+  Map t1 t2 -> [Char]
+printfStateMap forceMap timeMap = concatZipMapsWith f forceMap timeMap
+  where f (Idx.AbsoluteState k, One.StateForcing x) (_, y) = printf "S%2d%5.3f%5.3f" k x y
 
 printfBalanceFMap ::
   (Show node, PrintfArg a1, PrintfArg t1, Arith.Constant a1) =>
   One.BalanceForcing node a1 ->
-  Map.Map t t1 ->
+  Map t t1 ->
   [Char]
 printfBalanceFMap forceMap balanceMap =
-  concat$ zipWith f (Map.toList $ One.unBalanceForcingMap forceMap) (Map.toList balanceMap)
-  where f (k,x) (_, y) =
-          "   | Sto: " ++ (printf "%7s" $ show k) ++ "   | F: " ++ (printf "%10.15f" $ One.getSocDrive x)
-          ++ "   | B: " ++ (printf "%10.15f" y)
+  concatZipMapsWith f (One.unBalanceForcingMap forceMap) balanceMap
+  where f (k, x) (_, y) =
+          printf "   | Sto: %7s   | F: %10.15f   | B: %10.15f"
+                 (show k) (One.getSocDrive x) y
 
 printfBalanceMap ::
   (Show a, PrintfArg t) =>
-  Map.Map a t -> [Char]
-printfBalanceMap balanceMap = concat $ map f (Map.toList balanceMap)
-  where f (k,x) =
-          " Sto: " ++ (printf "%7s" $ show k) ++ " B: " ++ (printf "%5.3f" x)
+  Map a t -> String
+printfBalanceMap balanceMap = Map.foldWithKey f "" balanceMap
+  where f k v acc = printf " Sto: %7s B: %5.3f" (show k) v ++ acc
           
 showEtaLoop ::
   (Show node, Show a, PrintfArg a, Arith.Constant a) =>
@@ -352,11 +320,10 @@ iterateLoops ::
   [(Int, EtaLoopItem node Sweep UV.Vector a z)]->
   [o]
 iterateLoops optParams elf blf etaLoop =
-  concat $ map g $ take n1 etaLoop
-  where g x = [elf optParams x] ++ (concat $ take n2 $ map h $ balanceLoop (snd x))
-        h x = [blf optParams x]
-        (One.MaxEtaIterations n1) = One.maxEtaIterations optParams
-        (One.MaxBalanceIterations n2) = One.maxBalanceIterations optParams
+  concatMap g $ take mei etaLoop
+  where g x = elf optParams x : map (blf optParams) (take mbi $ balanceLoop (snd x))
+        mei = One.unMaxEtaIterations $ One.maxEtaIterations optParams
+        mbi = One.unMaxBalanceIterations $ One.maxBalanceIterations optParams
 
 
 showEtaLoopItem::
@@ -364,15 +331,14 @@ showEtaLoopItem::
   (Int, EtaLoopItem node Sweep UV.Vector a z) ->
   String
 showEtaLoopItem _optParams (step, EtaLoopItem _sfgIn _sweep _sfgOut _) =
-      "EL: " ++ printf "%8d" step
+  printf "EL: %8d" step
 
 showBalanceLoopItem::(Show a, Show node,PrintfArg a,Arith.Constant a )=>
   One.OptimisationParams node [] Sweep UV.Vector a ->
   BalanceLoopItem node a z ->
   String
 showBalanceLoopItem _optParams (BalanceLoopItem bStp bForc _bFStep bal _) =
-        " BL: " ++ printf "%2d | " bStp ++
-         printfBalanceFMap bForc bal
+  printf " BL: %2d | " bStp ++ printfBalanceFMap bForc bal
 
 printEtaLoop:: 
   (UV.Unbox a,Show (intVec Double),
@@ -559,6 +525,18 @@ checkRangeIO sysParams optParams simParams = do
 
 
 {-
+eta ::
+  (Node.C node, UV.Unbox a,
+   Arith.Product a) =>
+  Type.EnergyFlowAnalysis node vec a -> a
+eta efa =
+  case StateEta.etaSys (Type.stateFlowGraph efa) of
+       Determined (Data e) -> e
+       _ -> error "Main.iterateBalanceIO"
+-}
+
+
+{-
 iterateEtaWhile ::
   (Num a, Ord a, Show a, UV.Unbox a, Arith.ZeroTestable a,
    z ~ Type.SignalBasedOptimisation Node Sweep UV.Vector a [] b0 [] c0 [] a,
@@ -598,7 +576,7 @@ iterateEtaWhile sysParams optParams simParams =
 getBalanceResult ::
   (Ord node,Arith.Sum a, Ord a, Arith.Constant a, Show a) =>
   [BalanceLoopItem node a (Type.OptimisationPerState node a) z] ->
-  (Map.Map node (One.SocDrive a),Map.Map node (One.SocDrive a),
+  (Map node (One.SocDrive a),Map node (One.SocDrive a),
    Type.OptimalSolutionPerState node a)
 getBalanceResult balLoop =
   (bForcing $ bestElem, bFStep bestElem, Type.optimalSolutionPerState $ fst $ bResult bestElem)
@@ -669,4 +647,37 @@ checkBalanceStep simParams bal bal1 res res1 = trace ("Diffs: " ++ show numberOf
         m k = ("Error in checkBalanceStep - support Point doesn't exist" ++ show k)
         m2 k = ("Cycle touches Invalid Area " ++ show k)
         numberOfDifferences = (foldl (+) (0) differenceList)
--}     
+-}
+
+{-                    
+calculateNextBalanceStep :: 
+  (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
+   Ord node, Show node) =>
+  (One.BalanceForcing node a, One.Balance node a) -> 
+  (Maybe (One.SocDrive a,a), Maybe (One.SocDrive a,a)) -> 
+  (One.BalanceForcingStep node a) ->
+  node ->
+  (One.BalanceForcingStep node a)
+calculateNextBalanceStep (_, balMap) bestPair stepMap sto =
+  One.updateForcingStep stepMap sto $ One.setSocDrive step1
+  where
+    bal = One.getStorageBalance "calculateNextBalanceStep" balMap sto
+    step = One.getStorageForcingStep "calculateNextBalanceStep" stepMap sto
+    fact = Arith.fromRational 2.0
+    divi = Arith.fromRational 1.7
+    intervall = One.getForcingIntervall bestPair
+
+
+    step1 =
+      case (intervall, Arith.sign bal) of   
+
+           -- Zero Crossing didn't occur so far -- increase step to search faster
+           (Nothing, Negative) -> Arith.abs $ (One.getSocDrive step) ~* fact
+           (Nothing, Positive) -> Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
+
+           -- The Zero Crossing is contained in the intervall
+           -- defined by bestPair - step just a little over the middle
+           (Just int, Negative) -> (One.getSocDrive int) ~/ divi
+           (Just int, Positive) -> (Arith.negate $ One.getSocDrive  int) ~/ divi
+           (_, Zero)  -> Arith.zero
+-}

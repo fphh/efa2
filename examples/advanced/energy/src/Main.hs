@@ -201,26 +201,27 @@ main1 = do
 -}
 
 
-  let g = fmap (vhead "simulationGraphs" . Sweep.toList)
+  -- let g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
-
+{-
   Draw.xterm
     $ Draw.title "State Flow Graph from Simulation"
     $ Draw.stateFlowGraph Draw.optionsDefault
     $ StateQty.mapGraph g g ienv
+-}
 
 --  print reqsRecStep 
 --  print supportPoints
 
+
 --  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
   concurrentlyMany_ [
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
-    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
-    ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
+    --ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
+    --ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
+    --ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
 --    ModLoop.checkRangeIO sysParams optParams simParams]
 --    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
     sequence_ (ModLoop.printEtaLoop optParams ol)]
-
 
 
 {-

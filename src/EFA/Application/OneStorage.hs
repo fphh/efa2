@@ -178,19 +178,19 @@ data SimulationParams node vec a = SimulationParams {
   sequFilterEnergy :: a }
 
 
-newtype MaxEtaIterations  =  MaxEtaIterations { unMaxEtaIterations :: Int }
+newtype MaxEtaIterations = MaxEtaIterations { unMaxEtaIterations :: Int }
 
-newtype MaxBalanceIterations  = MaxBalanceIterations Int
+newtype MaxBalanceIterations = MaxBalanceIterations { unMaxBalanceIterations :: Int }
 
-newtype MaxStateIterations  = MaxStateIterations Int
+newtype MaxStateIterations = MaxStateIterations Int
 
-newtype BalanceThreshold  a = BalanceThreshold { unBalanceThreshold :: a }
+newtype BalanceThreshold a = BalanceThreshold { unBalanceThreshold :: a }
 
-newtype StateTimeThreshold  a = StateTimeThreshold { unStateTimeThreshold :: a }
+newtype StateTimeThreshold a = StateTimeThreshold { unStateTimeThreshold :: a }
 
-newtype EtaThreshold  a = EtaThreshold a
+newtype EtaThreshold a = EtaThreshold a
 
-newtype MaxInnerLoopIterations  =  MaxInnerLoopIterations Int
+newtype MaxInnerLoopIterations = MaxInnerLoopIterations Int
 
 
 type Balance node a = Map node a
