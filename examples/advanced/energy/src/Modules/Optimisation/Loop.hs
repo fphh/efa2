@@ -267,7 +267,7 @@ data StateForceDemand =
   | CorrectForcing
   | NoForcingNeeded
   | LessForcingNeeded deriving Show
-
+{-
 checkStateTimes ::
   (Num a, Ord a) =>
   One.OptimisationParams node [] Sweep vec a ->
@@ -279,6 +279,7 @@ checkStateTimes optParams stateDurs stateSteps =
   where g time step = (time > lThr) && ( time <= uThr || step == One.DontForceState )
         uThr = One.unStateTimeThreshold $ One.stateTimeUpperThreshold optParams
         lThr = One.unStateTimeThreshold $ One.stateTimeLowerThreshold optParams
+-}
 
 iterateEtaWhile ::
   (Num a, Ord a, Show a, UV.Unbox a, Arith.ZeroTestable a,
@@ -324,7 +325,7 @@ printfMap :: (Show k, Show a) => Map.Map k a -> String
 printfMap m = concatMap f $ Map.toList m
   where f (k, x) =
           printf "%16s\t%16s\n" (show k) (show x)
-
+{-
 printfStateMap ::
   (PrintfArg t, PrintfArg t2) =>
   Map.Map Idx.AbsoluteState (One.StateForcing t) ->
@@ -332,6 +333,7 @@ printfStateMap ::
 printfStateMap forceMap timeMap = concat$ zipWith f (Map.toList forceMap) (Map.toList timeMap)
   where f (Idx.AbsoluteState k, One.StateForcing x) (_, y) =
           "S" ++ (printf "%2d" k) ++ " (" ++ (printf "%5.3f" x) ++ "," ++ (printf "%5.3f" y) ++ ") "
+-}
 
 printfBalanceFMap ::
   (Show node, PrintfArg a1, PrintfArg t1, Arith.Constant a1) =>

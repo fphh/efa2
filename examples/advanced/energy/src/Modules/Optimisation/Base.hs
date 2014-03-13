@@ -166,6 +166,7 @@ expectedValuePerState ::
 expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
 
+{-
 -- TODO: is this code is still neeed for Display purposes ? -- needs to work with new StatForcing -- does it make sense ?
 selectOptimalState ::
   (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a,RealFloat a) =>
@@ -190,7 +191,7 @@ selectOptimalState _params stateForcing stateMap indexConversionMap =
                          (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
                          eta, st, idx, env))) m)
      $ Map.toList stateMap
-
+-}
 
 supportPoints ::
   (Ord a,Show (vec a),Vec.Len (vec a),Node.C node,
