@@ -512,7 +512,7 @@ genOptimalStatesSignal statForcing interpolation = myTrace "indexSignal" indexSi
 -- genOptimalTime (Sig.fromList [[Idx.State 0],[Idx.State 1, Idx.State 1, Idx.State 1, Idx.State 0],[Idx.State 1]]) (Sig.fromList [0,1,2]) :: Sig.TSignal [] Double
 
 genOptimalSteppedTime  :: 
-  (Vec.Zipper vec,Eq a,
+  (Vec.Zipper vec,Eq a,Show a,Show (vec a),
    Vec.Walker vec,
    Vec.Storage vec (a, a),
    Arith.Constant a,
@@ -522,20 +522,26 @@ genOptimalSteppedTime  ::
    Vec.Storage vec [Idx.State]) =>
   Sig.UTSignal vec [Idx.State] -> 
   Sig.TSignal vec a -> Sig.TSignal vec a
-genOptimalSteppedTime indexSignal time = Sig.fromList ([t0] ++ 
+genOptimalSteppedTime indexSignal time = Sig.fromList (
   (concat $ zipWith f (Sig.toList indexSignal) 
   (Sig.toList $ Sig.deltaMap ((,)) time)))
   where
-    f states (t1,t2) = 
-      if t1 == t2 then [t2]
-      else map (\cnt -> t1 Arith.~+ (cnt Arith.~* (t2 Arith.~-t1) 
+    f states (t1,t2) =
+      if t1 == t2 then []
+      else concat $ zipWith (\ x y -> [x]++[y]) leftTimes rightTimes
+        where rightTimes = map (\cnt -> t1 Arith.~+ (cnt Arith.~* (t2 Arith.~-t1) 
                          Arith.~/ (Arith.fromRational $ fromIntegral $ length states)) )
                                   $ map (Arith.fromRational . fromIntegral) [1..(length states)] 
+              leftTimes = map (\cnt -> t1 Arith.~+ (cnt Arith.~* (t2 Arith.~-t1) 
+                         Arith.~/ (Arith.fromRational $ fromIntegral $ length states)) )
+                                  $ map (Arith.fromRational . fromIntegral) [0..((length states)-1)]              
+                           
+                           
     t0 = vhead "genOptimalTime" $ Sig.toList time
 
 genOptimalSteppedSignal  :: 
-  (Vec.Storage vec [Idx.State], Eq a,Vec.Storage vec (a, a), 
-   Vec.Singleton vec,
+  (Vec.Storage vec [Idx.State], Eq a,Vec.Storage vec (a, a), Show (vec a),
+   Vec.Singleton vec,Show a,
    Vec.Zipper vec, Vec.Walker vec,
    Vec.Storage vec a, Vec.FromList vec, 
    Vec.Storage vec (Map Idx.State a)) =>
@@ -543,18 +549,18 @@ genOptimalSteppedSignal  ::
   Sig.TSignal vec a ->
   Map Idx.State (Sig.PSignal vec a) -> 
   Sig.PSignal vec a 
-genOptimalSteppedSignal indexSignal time signalMap = 
+genOptimalSteppedSignal indexSignal time signalMap =
   Sig.fromList $ (concat $ zipWith g (zip (Sig.toList indexSignal) 
-                                      (Sig.toList $ Sig.deltaMap ((,)) time)) signalOfMaps)++[xlast]
+                                      (Sig.toList $ Sig.deltaMap ((,)) time)) signalOfMaps)
   where
     g (states,(t1,t2)) m = if t1 == t2 
-                         then [m Map.! (vlast "genOptimalSteppedSignal" states)] 
-                         else map (m Map.! ) states
+                         then []
+                         else duplicate $ map (m Map.! ) states
     xlast = (vhead "genOptimalSignal" $ signalOfMaps) 
          Map.! (vlast "genOptimalSignal" $ vhead "genOptimalSignal" $ Sig.toList indexSignal) 
     signalOfMaps = Sig.toList $ foldl (\acc (state,sig) -> 
                                             Sig.zipWith (\a x -> Map.insert state x a) acc sig) 
                    emptySig $ Map.toList signalMap
     emptySig = Sig.map (\_ -> Map.empty) $ vhead "genOptimalSignal" $ Map.elems signalMap
-
+    duplicate xs =  concat $ map (\x -> [x,x]) xs 
  
