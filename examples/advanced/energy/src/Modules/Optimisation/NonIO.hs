@@ -111,9 +111,6 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
 -- TODO: Determined sauber auspacken 
       j m = Map.map (fmap (Determined . ModUt.fst4)) m
       
---      optSignal = undefined
-      
-
       optSignal = Sig.tzipWith (Sig.interp2WingProfile
                  ("interpolateOptimalSolutionForOneState - interpolate Signal - interpolate Index-Signal")
                  (g "X:" $ One.varReqRoomPower1D simParams)
@@ -267,18 +264,20 @@ energyFlowAnalysis ::
    SV.Zipper vec,
    Show a, Node.C node,
    Arith.ZeroTestable a,
+   Show (vec a),
    Arith.Constant a) =>
   One.SystemParams node a ->
   One.SimulationParams node vec a ->
   Record.PowerRecord node vec a ->
   Type.EnergyFlowAnalysis node vec a
-energyFlowAnalysis sysParams simParams powerRecord =
+energyFlowAnalysis sysParams simParams powerRecord = 
       -- Liefert nur delta-Zeiten und keinen Zeitvektor
       -- Deshalb wird der urspruenglichen Zeitvektor behalten
-  let recZeroCross =
+  let recZeroCross = --(\x -> trace ("recZeroCross" ++ show x) x) $
         Chop.addZeroCrossings $ Base.convertRecord powerRecord
 
-      sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord r)
+      sequencePowerRecord = --(\x -> trace ("sequencePowerRecord" ++ show x) x) $ 
+                            Sequ.mapWithSection (\ _ r ->  Base.convertRecord r)
                             $ Chop.genSequ recZeroCross
 
       thrT = One.sequFilterTime simParams

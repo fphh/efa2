@@ -17,12 +17,12 @@ import EFA.Equation.Result(Result(Determined))
 import qualified EFA.Application.Type as Type
 import EFA.Application.Type (EnvResult)
 import qualified EFA.Application.OneStorage as One
---import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Sweep as Sweep
 import EFA.Application.Sweep (Sweep)
 
 --import qualified EFA.Graph as Graph
 --import EFA.Graph (Graph)
---import qualified EFA.Flow.Draw as Draw
+import qualified EFA.Flow.Draw as Draw
 
 --import qualified EFA.Graph.Topology as Topology
 import qualified EFA.Graph.Topology.Node as Node
@@ -94,7 +94,15 @@ checkBalance ::
 checkBalance optParams bal = all g $ Map.elems bal
   where g x = Arith.abs x <= One.unBalanceThreshold (One.balanceThreshold optParams)
 
-
+checkBalanceSingle ::
+  (Ord a, Arith.Sum a, Ord node, Show node) =>
+  One.OptimisationParams node list sweep vec a ->
+  One.Balance node a ->
+  node ->
+  Bool
+checkBalanceSingle optParams bal sto = Arith.abs x <= One.unBalanceThreshold (One.balanceThreshold optParams)
+  where x = One.getStorageBalance "checkBalanceSingle" bal sto
+    
 -- | Rate Balance Deviation by sum of Standard Deviation and Overall Sum 
 balanceDeviation :: 
   (Arith.Product a,
@@ -117,13 +125,16 @@ balanceIteration::
   [BalanceLoopItem node a z]
 balanceIteration optParams fsys accessf balForceIn balStepsIn =
   go 0 balForceIn balStepsIn 
-  where go cnt forcing stepping =
+  where (One.MaxBalanceIterations maxCnt) = One.maxBalanceIterations optParams
+        numberOfStorages = length $ Map.keys $ One.unBalanceForcingMap balForceIn
+        go cnt forcing stepping =
           oneIterationOfAllStorages ++ 
-          if checkBalance optParams bal then [] else go cnt1 forcing1 stepping1
+          if checkBalance optParams bal || cnt >= (maxCnt * numberOfStorages) 
+          then [] else go cnt1 forcing1 stepping1
 
           where oneIterationOfAllStorages =
                   foldl f [] $ Map.keys $ One.unBalanceForcingMap forcing
-                f acc sto = acc ++ iterateOneStorage cnt fsys accessf forcing stepping sto
+                f acc sto = acc ++ iterateOneStorage optParams cnt fsys accessf forcing stepping sto
 
                 bal = balance $ lastElem
                 forcing1 = bForcing $ lastElem
@@ -133,6 +144,7 @@ balanceIteration optParams fsys accessf balForceIn balStepsIn =
 
 iterateOneStorage ::  
   (Ord a, Arith.Constant a,Ord node, Show node, Show a) =>
+  One.OptimisationParams node [] Sweep UV.Vector a ->
   Int -> 
   (One.BalanceForcing node a -> z)->
   (z -> One.Balance node a)->
@@ -140,12 +152,15 @@ iterateOneStorage ::
   One.BalanceForcingStep node a ->
   node ->
   [BalanceLoopItem node a z]
-iterateOneStorage cntIn fsys accessf forcingIn steppingIn sto = 
+iterateOneStorage optParams cntIn fsys accessf forcingIn steppingIn sto = 
   go cntIn forcingIn steppingIn initialResult (Nothing, Nothing)
   where
+    (One.MaxBalanceIterations maxCnt) = One.maxBalanceIterations optParams
     initialResult = fsys forcingIn
     go cnt force step res bestPair =
       BalanceLoopItem cnt force step1 bal res : 
+      if checkBalanceSingle optParams bal sto || cnt >= maxCnt
+          then [] else 
         go (cnt+1) force1 step1 res1 bestPair1
       where
         force1 = One.addForcingStep force step sto
@@ -365,7 +380,7 @@ showEtaLoopItem::
   One.OptimisationParams node [] Sweep UV.Vector a ->
   (Int, EtaLoopItem node Sweep UV.Vector a z) ->
   String
-showEtaLoopItem _optParams (step, EtaLoopItem _sfgIn _sweep _sfgOut _) =
+showEtaLoopItem _optParams (step, EtaLoopItem _sfgIn _sweep  _sfgOut _) =
       "EL: " ++ printf "%8d" step
 
 showBalanceLoopItem::(Show a, Show node,PrintfArg a,Arith.Constant a )=>
@@ -377,14 +392,19 @@ showBalanceLoopItem _optParams (BalanceLoopItem bStp bForc _bFStep bal _) =
          printfBalanceFMap bForc bal
 
 printEtaLoop:: 
-  (UV.Unbox a,Show (intVec Double),Show (simVec Double),
-   Node.C node,SV.Walker simVec,
+  (SV.Walker efaVec,UV.Unbox b,b~Double,
+   SV.Storage efaVec Double,
+   SV.FromList efaVec,
+   FormatValue.FormatValue b,  
+   UV.Unbox a,Show (intVec Double),Show (simVec Double),
+   Node.C node,SV.Walker simVec,Ord a,Fractional a,
    SV.Storage simVec Double,
    SV.FromList simVec,
    FormatValue.FormatValue a,
    z ~ Type.SignalBasedOptimisation
-         node sweep vec Double intVec b simVec c efaVec d,
-   Show a, Show node, PrintfArg a, Arith.Constant a) =>
+         node sweep vec Double intVec b simVec c efaVec d,Show (efaVec Double),
+   Show a, Show node, PrintfArg a, Arith.Constant a, a ~ Double, d ~ Double, vec ~ UV.Vector, 
+   sweep ~ Sweep) =>
   One.OptimisationParams node [] Sweep UV.Vector a ->
   [EtaLoopItem node Sweep UV.Vector a z] ->
   [IO ()]
@@ -394,8 +414,17 @@ printEtaLoop optParams ol =
 
 
 printEtaLoopItem ::
-  (UV.Unbox a,
-   Node.C node,
+  (z ~ Type.SignalBasedOptimisation
+       node Sweep UV.Vector a intVec b simVec c vec d, 
+   Show node, Show (vec a),
+   UV.Unbox a,Fractional a,UV.Unbox b,
+   SV.Walker vec,
+   SV.Storage vec d,FormatValue.FormatValue b,
+   SV.FromList vec,
+   FormatValue.FormatValue d,
+   Arith.ZeroTestable d,
+   Arith.Constant d,
+   Node.C node,Ord a, Show a,
    FormatValue.FormatValue a) =>
    One.OptimisationParams node [] Sweep UV.Vector a ->
    (Int, EtaLoopItem node Sweep UV.Vector a z) ->
@@ -403,7 +432,8 @@ printEtaLoopItem ::
 printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _sfgOut _res) = 
   do
      putStrLn $ showEtaLoopItem _params _e
---    let -- dir = printf "outer-loop-%6.6d" olcnt
+     let -- dir = printf "outer-loop-%6.6d" olcnt
+      _opt = vlast "printEtaLoopItem" _res
     --  stoPos = TopoIdx.Position System.Water System.Network
   --    gasPos = TopoIdx.Position System.Gas System.LocalNetwork
       --  _term = ModPlot.gpXTerm
@@ -414,31 +444,25 @@ printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _sfgOut _res) =
 --    ModPlot.sweepStackPerStateOpt term params balanceForcing _sweep
 --    ModPlot.sweepStackPerStateCondition term params  _sweep
 
-{-
-    concurrentlyMany_ [
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 0 _sweep,
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 1 _sweep,
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 2 _sweep,
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 3 _sweep] -}
 
---    putStrLn (printf "Loop %6.6d" olcnt)
+     concurrentlyMany_ [
+--       ModPlot.simulationGraphs ModPlot.dotXTerm _opt,
+--       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 0 _sweep,
+--       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 1 _sweep,
+--       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 2 _sweep,
+--       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 3 _sweep, 
 
---    concurrentlyMany_ [
       --ModPlot.maxEtaPerState ModPlot.gpXTerm opt,
  --     ModPlot.simulationGraphs ModPlot.dotXTerm opt ]
       --ModPlot.expectedEtaPerState ModPlot.gpXTerm opt,
       --ModPlot.maxObjPerState ModPlot.gpXTerm opt ]
 
---    putStrLn $ showEtaLoopItem params e
-
---    concurrentlyMany_ [
-      --putStrLn $ showEtaLoopItem params e]
---    ModPlot.drawSweepStateFlowGraph "sfgIn" 0 $ _sfgIn
---    ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ _sfgOut
-      --Draw.xterm $ Draw.title "sfgIn" $ Draw.stateFlowGraph Draw.optionsDefault _sfgIn,
-      --Draw.xterm $ Draw.title "sfgOut" $ Draw.stateFlowGraph Draw.optionsDefault _sfgOut]
-
-      --ModPlot.simulationGraphs ModPlot.dotXTerm opt]
+--      ModPlot.drawSweepStateFlowGraph "sfgIn" 0 $ _sfgIn,
+--        ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ _sfgOut,
+--        print $ Type.powerSequence $ Type.analysis $ bResult _opt,
+--        print $ Type.stateFlowGraph $ Type.analysis $ bResult _opt,
+--        ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ Type.stateFlowGraphSweep $ bResult _opt,
+        ModPlot.simulationGraphs ModPlot.dotXTerm $ bResult _opt]
  {-     ModPlot.simulationSignals term opt,
       ModPlot.maxPos stoPos term opt,
       ModPlot.maxPos gasPos term opt,
@@ -473,14 +497,16 @@ printBalanceLoopItem _optParams _b@(BalanceLoopItem _bStp _bForcing _bFStep _bal
          _term = _xTerm
          _dir = printf "outer-loop-%6.6d" _bStp
          _stoPos = TopoIdx.Position System.Water System.Network
-    putStrLn $ showBalanceLoopItem _optParams _b 
+
     concurrentlyMany_ [
+      putStrLn $ showBalanceLoopItem _optParams _b 
 --       ModPlot.maxIndexPerState _term _opt, 
 --       ModPlot.givenSignals _term _opt, 
 --       print (Map.map (Type.reqsAndDofsSignalsOfState) $ 
 --              Type.interpolationPerState _opt),
 --      print $ Type.signals $ Type.simulation $ _opt,
-      ModPlot.simulationSignals _term _opt
+--      ModPlot.simulationSignals _term _opt
+--      ModPlot.simulationGraphs (ModPlot.dot _dir _bFStep) _opt      
 --      ModPlot.givenSignals _term _opt
        ]
 --       ModPlot.maxEta _xTerm opt2 -}
@@ -489,7 +515,7 @@ printBalanceLoopItem _optParams _b@(BalanceLoopItem _bStp _bForcing _bFStep _bal
 
 
 --     ModPlot.simulationSignals term opt2
---    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
+
 --     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
 --     ModPlot.givenSignals term opt2
 --    ModPlot.maxEtaPerState (ModPlot.gpPNG dir bStep) opt
