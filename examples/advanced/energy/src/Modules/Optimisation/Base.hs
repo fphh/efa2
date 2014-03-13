@@ -30,7 +30,7 @@ import qualified EFA.Flow.Sequence.Quantity as SeqQty
 
 import qualified EFA.Flow.Part.Map as PartMap
 import qualified EFA.Flow.Storage as Storage
-import EFA.Utility.List (vhead)
+import EFA.Utility.List (vhead,vlast)
 
 import qualified EFA.Flow.SequenceState.Index as Idx
 
@@ -537,11 +537,11 @@ genOptimalSignal  ::
   Map Idx.State (Sig.PSignal vec a) -> 
   Sig.PSignal vec a 
 genOptimalSignal indexSignal signalMap = 
-  Sig.fromList $ [x0] ++ (concat $ zipWith g (Sig.toList indexSignal) signalOfMaps)
+  Sig.fromList $ (concat $ zipWith g (Sig.toList indexSignal) signalOfMaps)++[xlast]
   where
     g states m = map (m Map.! ) states
-    x0 = (vhead "genOptimalSignal" $ signalOfMaps) 
-         Map.! (vhead "genOptimalSignal" $ vhead "genOptimalSignal" $ Sig.toList indexSignal) 
+    xlast = (vhead "genOptimalSignal" $ signalOfMaps) 
+         Map.! (vlast "genOptimalSignal" $ vhead "genOptimalSignal" $ Sig.toList indexSignal) 
     signalOfMaps = Sig.toList $ foldl (\acc (state,sig) -> 
                                             Sig.zipWith (\a x -> Map.insert state x a) acc sig) 
                    emptySig $ Map.toList signalMap

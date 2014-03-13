@@ -156,7 +156,7 @@ iterateOneStorage cntIn fsys accessf forcingIn steppingIn sto =
         step1 = calculateNextBalanceStep 
                 (force1, bal1) bestPair1
                 step sto
-
+{-
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
    Ord node, Show node) =>
@@ -172,7 +172,7 @@ calculateNextBalanceStep (_,balMap) bestPair stepMap sto = One.updateForcingStep
    fact = Arith.fromRational 2.0
    divi = Arith.fromRational 1.7
    intervall = g "Intervall: " $ One.getForcingIntervall $ g "BestPair: " bestPair
-   g str x =  trace (str ++": "++ show x) x
+   g str x =  x --trace (str ++": "++ show x) x
    step1 = case (intervall, Arith.sign bal) of   
                     -- Zero Crossing didn't occur so far -- increase step to search faster
                     (Nothing,Negative) -> g "A" $ Arith.abs $ (One.getSocDrive step) ~* fact
@@ -182,7 +182,8 @@ calculateNextBalanceStep (_,balMap) bestPair stepMap sto = One.updateForcingStep
                     (Just int, Negative) ->  g "C" $ (One.getSocDrive int) ~/ divi
                     (Just int, Positive) ->   g "D" $ (Arith.negate $ One.getSocDrive  int) ~/ divi
                     (_, Zero)  ->  g "E" $ Arith.zero   
-{-                    
+-}
+                    
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
    Ord node, Show node) =>
@@ -213,7 +214,8 @@ calculateNextBalanceStep (_, balMap) bestPair stepMap sto =
            (Just int, Negative) -> (One.getSocDrive int) ~/ divi
            (Just int, Positive) -> (Arith.negate $ One.getSocDrive  int) ~/ divi
            (_, Zero)  -> Arith.zero
--}
+
+
 -- | TODO : move to correct Position 
 getStateTimes ::
   Arith.Constant a =>
@@ -375,7 +377,7 @@ showBalanceLoopItem _optParams (BalanceLoopItem bStp bForc _bFStep bal _) =
          printfBalanceFMap bForc bal
 
 printEtaLoop:: 
-  (UV.Unbox a,Show (intVec Double),
+  (UV.Unbox a,Show (intVec Double),Show (simVec Double),
    Node.C node,SV.Walker simVec,
    SV.Storage simVec Double,
    SV.FromList simVec,
@@ -453,7 +455,7 @@ printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _sfgOut _res) =
 
 
 printBalanceLoopItem ::
-  (Show node, Show a, PrintfArg a, Arith.Constant a, Show (intVec Double),
+  (Show node, Show a, PrintfArg a, Arith.Constant a, Show (intVec Double),Show (simVec Double),
    SV.Walker simVec,
    SV.Storage simVec Double,
    SV.FromList simVec,
@@ -472,18 +474,20 @@ printBalanceLoopItem _optParams _b@(BalanceLoopItem _bStp _bForcing _bFStep _bal
          _dir = printf "outer-loop-%6.6d" _bStp
          _stoPos = TopoIdx.Position System.Water System.Network
     putStrLn $ showBalanceLoopItem _optParams _b 
---    concurrentlyMany_ [
+    concurrentlyMany_ [
 --       ModPlot.maxIndexPerState _term _opt, 
 --       ModPlot.givenSignals _term _opt, 
 --       print (Map.map (Type.reqsAndDofsSignalsOfState) $ 
 --              Type.interpolationPerState _opt),
---    ModPlot.simulationSignals _term _opt
---       ]
+--      print $ Type.signals $ Type.simulation $ _opt,
+      ModPlot.simulationSignals _term _opt
+--      ModPlot.givenSignals _term _opt
+       ]
 --       ModPlot.maxEta _xTerm opt2 -}
      --ModPlot.optimalObjs term _opt
 --       ModPlot.stateRange2 term _opt,
 
---     putStrLn $ show $ Type.signals $ Type.simulation $ opt2
+
 --     ModPlot.simulationSignals term opt2
 --    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
 --     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
