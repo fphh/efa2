@@ -164,7 +164,8 @@ optimalSignalBasedSolution ::
    SV.Singleton vec,Show a,Show node,
    SV.FromList vec,
    Arith.Constant a,RealFloat a,
-   SV.Storage vec (Map.Map Idx.State a),Show (vec [Idx.State]),Show (vec Bool),
+   SV.Storage vec (Map.Map Idx.State a),
+   Show (vec [Idx.State]),Show (vec Bool),
    Show (vec a), Node.C node,
    Ord a,
    SV.Zipper vec,
@@ -177,10 +178,10 @@ optimalSignalBasedSolution interpolation statForcing = g "newRecord" $ Record.Re
   where -- (\x -> trace ("StateSignal: " ++ show x) x)
     indexSignal = Base.genOptimalStatesSignal statForcing interpolation
     g _ x  = x -- trace (str ++ ": " ++ show x) x
-    newTime =  Base.genOptimalTime indexSignal time
+    newTime =  Base.genOptimalSteppedTime indexSignal time
     (Record.Record time pMap) =  g "firstStateRecord" $ Type.reqsAndDofsSignalsOfState $ 
               vhead "optimalSignalBasedSolution" $ Map.elems interpolation
-    f key _ = Base.genOptimalSignal indexSignal (signalMap key)
+    f key _ = Base.genOptimalSteppedSignal indexSignal time (signalMap key)
     signalMap k = Map.map (\ x -> Record.getSig (Type.reqsAndDofsSignalsOfState x) k) interpolation
   
 {- 

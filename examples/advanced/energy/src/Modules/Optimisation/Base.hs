@@ -511,35 +511,45 @@ genOptimalStatesSignal statForcing interpolation = myTrace "indexSignal" indexSi
 -- TC (Data [0.0,0.3333333333333333,0.6666666666666666,1.0,1.25,1.5,1.75,2.0])
 -- genOptimalTime (Sig.fromList [[Idx.State 0],[Idx.State 1, Idx.State 1, Idx.State 1, Idx.State 0],[Idx.State 1]]) (Sig.fromList [0,1,2]) :: Sig.TSignal [] Double
 
-genOptimalTime  :: 
-  (Vec.Zipper vec,
+genOptimalSteppedTime  :: 
+  (Vec.Zipper vec,Eq a,
    Vec.Walker vec,
-   Vec.Storage vec (a, a),Arith.Constant a,Vec.FromList vec,
+   Vec.Storage vec (a, a),
+   Arith.Constant a,
+   Vec.FromList vec,
    Vec.Storage vec a,
    Vec.Singleton vec,
    Vec.Storage vec [Idx.State]) =>
   Sig.UTSignal vec [Idx.State] -> 
   Sig.TSignal vec a -> Sig.TSignal vec a
-genOptimalTime indexSignal time = Sig.fromList ([t0] ++ 
+genOptimalSteppedTime indexSignal time = Sig.fromList ([t0] ++ 
   (concat $ zipWith f (Sig.toList indexSignal) 
   (Sig.toList $ Sig.deltaMap ((,)) time)))
   where
-    f states (t1,t2) = map (\cnt -> t1 Arith.~+ (cnt Arith.~* (t2 Arith.~-t1) Arith.~/ (Arith.fromRational $ fromIntegral $ length states)) )
+    f states (t1,t2) = 
+      if t1 == t2 then [t2]
+      else map (\cnt -> t1 Arith.~+ (cnt Arith.~* (t2 Arith.~-t1) 
+                         Arith.~/ (Arith.fromRational $ fromIntegral $ length states)) )
                                   $ map (Arith.fromRational . fromIntegral) [1..(length states)] 
     t0 = vhead "genOptimalTime" $ Sig.toList time
 
-genOptimalSignal  :: 
-  (Vec.Storage vec [Idx.State], 
+genOptimalSteppedSignal  :: 
+  (Vec.Storage vec [Idx.State], Eq a,Vec.Storage vec (a, a), 
+   Vec.Singleton vec,
    Vec.Zipper vec, Vec.Walker vec,
    Vec.Storage vec a, Vec.FromList vec, 
    Vec.Storage vec (Map Idx.State a)) =>
   Sig.UTSignal vec [Idx.State] -> 
+  Sig.TSignal vec a ->
   Map Idx.State (Sig.PSignal vec a) -> 
   Sig.PSignal vec a 
-genOptimalSignal indexSignal signalMap = 
-  Sig.fromList $ (concat $ zipWith g (Sig.toList indexSignal) signalOfMaps)++[xlast]
+genOptimalSteppedSignal indexSignal time signalMap = 
+  Sig.fromList $ (concat $ zipWith g (zip (Sig.toList indexSignal) 
+                                      (Sig.toList $ Sig.deltaMap ((,)) time)) signalOfMaps)++[xlast]
   where
-    g states m = map (m Map.! ) states
+    g (states,(t1,t2)) m = if t1 == t2 
+                         then [m Map.! (vlast "genOptimalSteppedSignal" states)] 
+                         else map (m Map.! ) states
     xlast = (vhead "genOptimalSignal" $ signalOfMaps) 
          Map.! (vlast "genOptimalSignal" $ vhead "genOptimalSignal" $ Sig.toList indexSignal) 
     signalOfMaps = Sig.toList $ foldl (\acc (state,sig) -> 
