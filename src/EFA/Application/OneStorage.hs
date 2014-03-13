@@ -114,7 +114,7 @@ data SystemParams node a = SystemParams {
 
 
 data OptimisationParams node list sweep vec a = OptimisationParams {
-  stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),
+--  stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   points :: Map (list a) 

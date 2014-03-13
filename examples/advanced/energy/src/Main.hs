@@ -39,7 +39,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Flow.Draw as Draw
 
 import EFA.Utility.Async (concurrentlyMany_)
-import EFA.Utility.List (vhead)
+import EFA.Utility.List (vhead,vlast)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
@@ -118,7 +118,7 @@ main1 = do
 
 
   let
-      ienv = AppOpt.storageEdgeXFactors optParams 3 3
+      initEnv = AppOpt.storageEdgeXFactors optParams 3 3
              $ AppOpt.initialEnv optParams System.stateFlowGraph
                
       supportPoints =
@@ -139,7 +139,7 @@ main1 = do
 
       optParams :: One.OptimisationParams Node [] Sweep UV.Vector Double
       optParams = One.OptimisationParams {
-          One.stateFlowGraphOpt = ienv,
+--          One.stateFlowGraphOpt = ienv,
           One.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs),
           One.dofsPos = (ReqsAndDofs.dofsPos ModSet.dofs),
           One.points = ModSet.sweepPts,
@@ -184,7 +184,11 @@ main1 = do
     
       
       ol = --ModLoop.uniqueInnerLoopX
-           ModLoop.iterateEtaWhile sysParams optParams simParams
+           ModLoop.iterateEtaWhile sysParams optParams simParams initEnv One.StateForcingOn
+           
+      initEnv2 = ModLoop.stateFlowOut $ vlast "Main" ol
+           
+      ol2 = ModLoop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff     
 
 
 
@@ -200,7 +204,7 @@ main1 = do
   Draw.xterm
     $ Draw.title "Initial State Flow Graph for Optimisation"
     $ Draw.stateFlowGraph Draw.optionsDefault
-    $ StateQty.mapGraph g g ienv
+    $ StateQty.mapGraph g g initEnv
 
 --  print reqsRecStep 
 --  print supportPoints
@@ -214,7 +218,7 @@ main1 = do
 --    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
     sequence_ (ModLoop.printEtaLoop optParams ol)]
 
-
+  concurrentlyMany_ [sequence_ (ModLoop.printEtaLoop optParams ol2)]
 
 {-
   concurrentlyMany_ [

@@ -171,33 +171,6 @@ iterateOneStorage optParams cntIn fsys accessf forcingIn steppingIn sto =
         step1 = calculateNextBalanceStep 
                 (force1, bal1) bestPair1
                 step sto
-{-
-calculateNextBalanceStep :: 
-  (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
-   Ord node, Show node) =>
-  (One.BalanceForcing node a,One.Balance node a) -> 
-  (Maybe (One.SocDrive a,a), Maybe (One.SocDrive a,a)) -> 
-  (One.BalanceForcingStep node a)->
-  node ->
-  (One.BalanceForcingStep node a)
-calculateNextBalanceStep (_,balMap) bestPair stepMap sto = One.updateForcingStep stepMap sto $ One.setSocDrive step1
- where
-   bal = One.getStorageBalance "calculateNextBalanceStep" balMap sto
-   step = One.getStorageForcingStep "calculateNextBalanceStep" stepMap sto
-   fact = Arith.fromRational 2.0
-   divi = Arith.fromRational 1.7
-   intervall = g "Intervall: " $ One.getForcingIntervall $ g "BestPair: " bestPair
-   g str x =  x --trace (str ++": "++ show x) x
-   step1 = case (intervall, Arith.sign bal) of   
-                    -- Zero Crossing didn't occur so far -- increase step to search faster
-                    (Nothing,Negative) -> g "A" $ Arith.abs $ (One.getSocDrive step) ~* fact
-                    (Nothing,Positive) ->  g "B" $ Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
-                    -- The Zero Crossing is contained in the intervall
-                    -- defined by bestPair - step just a little over the middle
-                    (Just int, Negative) ->  g "C" $ (One.getSocDrive int) ~/ divi
-                    (Just int, Positive) ->   g "D" $ (Arith.negate $ One.getSocDrive  int) ~/ divi
-                    (_, Zero)  ->  g "E" $ Arith.zero   
--}
                     
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
@@ -288,13 +261,16 @@ iterateEtaWhile ::
   One.SystemParams Node a ->
   One.OptimisationParams Node [] Sweep UV.Vector a ->
   One.SimulationParams Node [] a ->
+  StateQty.Graph Node (Result (Sweep UV.Vector a)) (Result (Sweep UV.Vector a)) ->
+  One.StatForcing ->
   [EtaLoopItem Node Sweep UV.Vector a z]
-iterateEtaWhile sysParams optParams simParams =
-  go (One.stateFlowGraphOpt optParams) initBalF
+iterateEtaWhile sysParams optParams simParams sfgIn statForcing =
+  go 0 sfgIn initBalF
   where
         initBalF = One.initialBattForcing optParams
-
-        go sfg bfIn = EtaLoopItem sfg swp sfg1 res : go sfg1 bfOut
+        One.MaxEtaIterations maxCnt = One.maxEtaIterations optParams
+        go cnt sfg bfIn = EtaLoopItem sfg swp sfg1 res : 
+                          if cnt >= maxCnt then [] else go (cnt+1) sfg1 bfOut
           where
             swp = Base.perStateSweep sysParams optParams sfg
 
@@ -309,7 +285,6 @@ iterateEtaWhile sysParams optParams simParams =
                 (Type.signals (Type.simulation x))
 
             indexConversionMap = ModUt.indexConversionMap System.topology sfg
-            statForcing = One.StateForcingOn
             balStepsIn = One.initialBattForceStep optParams
 
             res = balanceIteration optParams fsys accessf bfIn balStepsIn 
@@ -535,13 +510,14 @@ printBalanceLoopItem _optParams _b@(BalanceLoopItem _bStp _bForcing _bFStep _bal
 
 
 
-checkRangeIO :: 
+checkRangeIO :: a~Double =>
   One.SystemParams Node Double -> 
   One.OptimisationParams Node [] Sweep UV.Vector Double ->
   One.SimulationParams Node [] Double ->
+  StateQty.Graph Node (Result (Sweep UV.Vector a)) (Result (Sweep UV.Vector a)) ->
   IO ()
-checkRangeIO sysParams optParams simParams = do
-  let sfg = One.stateFlowGraphOpt optParams
+checkRangeIO sysParams optParams simParams sfg = do
+  let 
       indexConversionMap = ModUt.indexConversionMap System.topology sfg
       swp = Base.perStateSweep sysParams optParams sfg
       initBalF =  One.initialBattForcing optParams
