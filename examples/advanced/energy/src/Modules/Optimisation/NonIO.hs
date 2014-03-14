@@ -161,7 +161,7 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
 
 optimalSignalBasedSolution :: 
   (Ord node, SV.Storage vec Bool, SV.Storage vec [Idx.State],SV.Storage vec (a, a),
-   SV.Singleton vec,Show a,
+   SV.Singleton vec,Show a,Show node,
    SV.FromList vec,
    Arith.Constant a,RealFloat a,
    SV.Storage vec (Map.Map Idx.State a),Show (vec [Idx.State]),Show (vec Bool),
@@ -173,12 +173,12 @@ optimalSignalBasedSolution ::
   Type.InterpolationOfAllStates node vec a -> 
   One.StatForcing -> 
   Record.PowerRecord node vec a
-optimalSignalBasedSolution interpolation statForcing = Record.Record newTime (Map.mapWithKey f pMap)
+optimalSignalBasedSolution interpolation statForcing = g "newRecord" $ Record.Record newTime (Map.mapWithKey f pMap)
   where -- (\x -> trace ("StateSignal: " ++ show x) x)
     indexSignal = Base.genOptimalStatesSignal statForcing interpolation
-    -- (\x -> trace ("NewTime: " ++ show x) x)
+    g _ x  = x -- trace (str ++ ": " ++ show x) x
     newTime =  Base.genOptimalTime indexSignal time
-    (Record.Record time pMap) =  Type.reqsAndDofsSignalsOfState $ 
+    (Record.Record time pMap) =  g "firstStateRecord" $ Type.reqsAndDofsSignalsOfState $ 
               vhead "optimalSignalBasedSolution" $ Map.elems interpolation
     f key _ = Base.genOptimalSignal indexSignal (signalMap key)
     signalMap k = Map.map (\ x -> Record.getSig (Type.reqsAndDofsSignalsOfState x) k) interpolation

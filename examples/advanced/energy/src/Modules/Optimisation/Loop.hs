@@ -159,15 +159,16 @@ iterateOneStorage fsys accessf forcingIn steppingIn sto =
             bestPair1 = One.rememberBestBalanceForcing bestPair (force1, bal1) sto
             step1 = calculateNextBalanceStep (force1, bal1) bestPair1 step sto
 
+                   
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
    Ord node, Show node) =>
-  (One.BalanceForcing node a,One.Balance node a) -> 
+  (One.BalanceForcing node a, One.Balance node a) -> 
   (Maybe (One.SocDrive a,a), Maybe (One.SocDrive a,a)) -> 
-  (One.BalanceForcingStep node a)->
+  (One.BalanceForcingStep node a) ->
   node ->
   (One.BalanceForcingStep node a)
-calculateNextBalanceStep (_,balMap) bestPair stepMap sto =
+calculateNextBalanceStep (_, balMap) bestPair stepMap sto =
   One.updateForcingStep stepMap sto $ One.setSocDrive step1
   where
     bal = One.getStorageBalance "calculateNextBalanceStep" balMap sto
@@ -175,19 +176,22 @@ calculateNextBalanceStep (_,balMap) bestPair stepMap sto =
     fact = Arith.fromRational 2.0
     divi = Arith.fromRational 1.7
     intervall = One.getForcingIntervall bestPair
+
+
     step1 =
       case (intervall, Arith.sign bal) of   
+
            -- Zero Crossing didn't occur so far -- increase step to search faster
-           (Nothing,Negative) -> Arith.abs $ (One.getSocDrive step) ~* fact
-           (Nothing,Positive) -> Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
+           (Nothing, Negative) -> Arith.abs $ (One.getSocDrive step) ~* fact
+           (Nothing, Positive) -> Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
 
            -- The Zero Crossing is contained in the intervall
            -- defined by bestPair - step just a little over the middle
            (Just int, Negative) -> (One.getSocDrive int) ~/ divi
            (Just int, Positive) -> (Arith.negate $ One.getSocDrive  int) ~/ divi
-           (_, Zero)  -> Arith.zero   
+           (_, Zero)  -> Arith.zero
 
--- TODO : move to correct Position 
+
 getStateTimes ::
   Arith.Constant a =>
   Map Idx.AbsoluteState a1 ->
@@ -341,7 +345,7 @@ showBalanceLoopItem _optParams (bStp, BalanceLoopItem bForc _bFStep bal _) =
   printf " BL: %2d | " bStp ++ printfBalanceFMap bForc bal
 
 printEtaLoop:: 
-  (UV.Unbox a,Show (intVec Double),
+  (UV.Unbox a,Show (intVec Double),Show (simVec Double),
    Node.C node,SV.Walker simVec,
    SV.Storage simVec Double,
    SV.FromList simVec,
@@ -419,7 +423,7 @@ printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _sfgOut _res) =
 
 
 printBalanceLoopItem ::
-  (Show node, Show a, PrintfArg a, Arith.Constant a, Show (intVec Double),
+  (Show node, Show a, PrintfArg a, Arith.Constant a, Show (intVec Double),Show (simVec Double),
    SV.Walker simVec,
    SV.Storage simVec Double,
    SV.FromList simVec,
@@ -438,18 +442,20 @@ printBalanceLoopItem _optParams _b@(_bStp, BalanceLoopItem _bForcing _bFStep _ba
          _dir = printf "outer-loop-%6.6d" _bStp
          _stoPos = TopoIdx.Position System.Water System.Network
     putStrLn $ showBalanceLoopItem _optParams _b 
---    concurrentlyMany_ [
+    concurrentlyMany_ [
 --       ModPlot.maxIndexPerState _term _opt, 
 --       ModPlot.givenSignals _term _opt, 
 --       print (Map.map (Type.reqsAndDofsSignalsOfState) $ 
 --              Type.interpolationPerState _opt),
---    ModPlot.simulationSignals _term _opt
---       ]
+--      print $ Type.signals $ Type.simulation $ _opt,
+--      ModPlot.simulationSignals _term _opt
+--      ModPlot.givenSignals _term _opt
+       ]
 --       ModPlot.maxEta _xTerm opt2 -}
      --ModPlot.optimalObjs term _opt
 --       ModPlot.stateRange2 term _opt,
 
---     putStrLn $ show $ Type.signals $ Type.simulation $ opt2
+
 --     ModPlot.simulationSignals term opt2
 --    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
 --     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
@@ -649,35 +655,4 @@ checkBalanceStep simParams bal bal1 res res1 = trace ("Diffs: " ++ show numberOf
         numberOfDifferences = (foldl (+) (0) differenceList)
 -}
 
-{-                    
-calculateNextBalanceStep :: 
-  (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
-   Ord node, Show node) =>
-  (One.BalanceForcing node a, One.Balance node a) -> 
-  (Maybe (One.SocDrive a,a), Maybe (One.SocDrive a,a)) -> 
-  (One.BalanceForcingStep node a) ->
-  node ->
-  (One.BalanceForcingStep node a)
-calculateNextBalanceStep (_, balMap) bestPair stepMap sto =
-  One.updateForcingStep stepMap sto $ One.setSocDrive step1
-  where
-    bal = One.getStorageBalance "calculateNextBalanceStep" balMap sto
-    step = One.getStorageForcingStep "calculateNextBalanceStep" stepMap sto
-    fact = Arith.fromRational 2.0
-    divi = Arith.fromRational 1.7
-    intervall = One.getForcingIntervall bestPair
 
-
-    step1 =
-      case (intervall, Arith.sign bal) of   
-
-           -- Zero Crossing didn't occur so far -- increase step to search faster
-           (Nothing, Negative) -> Arith.abs $ (One.getSocDrive step) ~* fact
-           (Nothing, Positive) -> Arith.negate $ (Arith.abs $ One.getSocDrive step) ~* fact
-
-           -- The Zero Crossing is contained in the intervall
-           -- defined by bestPair - step just a little over the middle
-           (Just int, Negative) -> (One.getSocDrive int) ~/ divi
-           (Just int, Positive) -> (Arith.negate $ One.getSocDrive  int) ~/ divi
-           (_, Zero)  -> Arith.zero
--}

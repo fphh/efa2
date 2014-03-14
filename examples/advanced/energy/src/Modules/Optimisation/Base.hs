@@ -546,31 +546,3 @@ genOptimalSignal indexSignal signalMap =
 
     emptySig = Sig.map (const Map.empty) $ snd $ Map.findMin signalMap
 
-
- 
-{-
--- TODO: is this code still needed for Display purposes ? -- needs to work with new StatForcing -- does it make sense ?
-selectOptimalState ::
-  (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a,RealFloat a) =>
-  One.OptimisationParams node list sweep vec a ->
-  Map Idx.AbsoluteState (One.StateForcing a) ->
-  Type.OptimalSolutionPerState node a ->
-  One.IndexConversionMap ->
-  Type.OptimalSolution node a 
-selectOptimalState _params stateForcing stateMap indexConversionMap =
-  let
-      g _ Nothing y = y
-      g _ x Nothing = x
-      g f (Just x) (Just y) = Just (f x y)
-
-  in List.foldl1' (Map.unionWith (g $ ModUt.maxByWithNaN ModUt.fst5))
-     $ map (\(st, m) ->
-             Map.map (fmap
-                      (\(objVal, eta, idx ,env) ->
-                        (objVal ~+
-                         maybe (error "Base.selectOptimalState")
-                         One.unStateForcing
-                         (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
-                         eta, st, idx, env))) m)
-     $ Map.toList stateMap
--}
