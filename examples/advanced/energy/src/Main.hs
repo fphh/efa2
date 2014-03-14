@@ -3,6 +3,12 @@
 
 module Main where
 
+{-
+
+* Alle Map.toList ersetzen durch Map.toAscList oder Map.findMin ?
+
+-}
+
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Setting as ModSet
 import qualified Modules.Plot as ModPlot

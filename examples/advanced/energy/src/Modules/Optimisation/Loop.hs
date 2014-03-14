@@ -49,7 +49,7 @@ import qualified EFA.Flow.Part.Index as Idx
 import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data (Data(Data)) --, Nil, Apply)
 
-import EFA.Utility.List (vlast,vhead) 
+import EFA.Utility.List (vlast, vhead) 
 import EFA.Utility.Async (concurrentlyMany_)
 
 --import qualified Data.Monoid as Monoid
@@ -70,17 +70,19 @@ type Counter = Int
 
 
 data BalanceLoopItem node a z =
-  BalanceLoopItem { bForcing :: One.BalanceForcing node a,
-                    bFStep :: One.BalanceForcingStep node a,
-                    balance :: One.Balance node a,
-                    bResult :: z }
+  BalanceLoopItem {
+    bForcing :: One.BalanceForcing node a,
+    bFStep :: One.BalanceForcingStep node a,
+    balance :: One.Balance node a,
+    bResult :: z }
 
 
-data EtaLoopItem node sweep vec a z = EtaLoopItem {
-  stateFlowIn :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
-  sweep :: Type.Sweep node sweep vec a,
-  stateFlowOut :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
-  balanceLoop :: [BalanceLoopItem node a z] }
+data EtaLoopItem node sweep vec a z =
+  EtaLoopItem {
+    stateFlowIn :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
+    sweep :: Type.Sweep node sweep vec a,
+    stateFlowOut :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
+    balanceLoop :: [BalanceLoopItem node a z] }
 
 
 data StateForceDemand =
@@ -121,21 +123,19 @@ balanceIteration::
   One.BalanceForcingStep node a ->
   [BalanceLoopItem node a z]
 balanceIteration optParams fsys accessf balForceIn balStepsIn =
-  -- takeWhile (not . 
   go balForceIn balStepsIn 
-  where go forcing stepping =
-          oneIterationOfAllStorages ++
-            if checkBalance optParams bal then [] else go forcing1 stepping1
+  where go forcing stepping = oneIterationOfAllStorages ++ go forcing1 stepping1
+
+            -- hier lieber mit takeWhile arbeiten oder ganz von ausserhalb kontrollieren
+            -- if checkBalance optParams bal then [] else go forcing1 stepping1
 
           where oneIterationOfAllStorages =
                   Map.foldlWithKey f [] (One.unBalanceForcingMap forcing)
-
                 f acc sto _ = acc ++ iterateOneStorage fsys accessf forcing stepping sto
 
-                bal = balance $ lastElem
-                forcing1 = bForcing $ lastElem
-                stepping1 = bFStep $ lastElem
-                -- cnt1 = bStep lastElem
+                bal = balance lastElem
+                forcing1 = bForcing lastElem
+                stepping1 = bFStep lastElem
                 lastElem = vlast "balanceIteration" oneIterationOfAllStorages
 
 iterateOneStorage ::  
@@ -152,13 +152,12 @@ iterateOneStorage fsys accessf forcingIn steppingIn sto =
     initialResult = fsys forcingIn
     go force step res bestPair =
       BalanceLoopItem force step1 bal res : go force1 step1 res1 bestPair1
-      where
-        force1 = One.addForcingStep force step sto
-        res1 = fsys force1
-        bal1 = accessf res1
-        bal = accessf res
-        bestPair1 =  One.rememberBestBalanceForcing bestPair (force1, bal1) sto
-        step1 = calculateNextBalanceStep (force1, bal1) bestPair1 step sto
+      where force1 = One.addForcingStep force step sto
+            res1 = fsys force1
+            bal1 = accessf res1
+            bal = accessf res
+            bestPair1 = One.rememberBestBalanceForcing bestPair (force1, bal1) sto
+            step1 = calculateNextBalanceStep (force1, bal1) bestPair1 step sto
 
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
@@ -265,7 +264,7 @@ iterateEtaWhile sysParams optParams simParams =
             res = balanceIteration optParams fsys accessf bfIn balStepsIn 
             sfg1 = Type.stateFlowGraphSweep (bResult lastElem)
             bfOut = bForcing lastElem
-            lastElem = vlast "iterateEtaWhile 2" res
+            lastElem = vlast "iterateEtaWhile: empty list" res
 
 
 

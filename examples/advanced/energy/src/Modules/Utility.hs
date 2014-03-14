@@ -79,6 +79,9 @@ thd5 (_, _, c, _,_) = c
 frth5 :: (a, b, c, d, e) -> d
 frth5 (_, _, _, d,_) = d
 
+findMinElem :: Map k a -> a
+findMinElem = snd . Map.findMin
+
 unzip4Map :: Map k (a, b, c, d) -> (Map k a, Map k b, Map k c, Map k d)
 unzip4Map m = (Map.map fst4 m, Map.map snd4 m, Map.map thd4 m, Map.map frth4 m)
 

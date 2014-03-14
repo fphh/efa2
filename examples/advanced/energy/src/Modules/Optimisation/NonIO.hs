@@ -152,8 +152,8 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
         Map.map (Sig.map ModUt.nothing2Nan) $
           Base.signCorrectedOptimalPowerMatrices
             sysParams
-            (h optimalSolutionOfOneState )
             (One.dofsPos optParams)
+            (h optimalSolutionOfOneState)
 
       demandAndControlSignals = Record.addSignals (Map.toList dofsSignals) demandSignals
 
