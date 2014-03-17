@@ -754,9 +754,7 @@ simulationGraphs ::
    Arith.ZeroTestable d,
    Arith.Constant d,
    FormatValue.FormatValue d,
-   Node.C node,
-   Sweep.SweepClass sweep vec b,
-   Sweep.SweepVector vec b) =>
+   Node.C node) =>
   (String -> DotGraph Text -> IO ()) ->
   Type.SignalBasedOptimisation node sweep sweepVec a intVec b simVec c efaVec d ->
   IO ()

@@ -58,7 +58,7 @@ doubleSweep ::
 doubleSweep = Map.map
 
 
-
+{-
 -- verallgemeinern für n states
 combineOptimalMaps ::
   Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax ->
@@ -69,6 +69,7 @@ combineOptimalMaps state charge discharge =
   Sig.zipWith
      (\s (c, d) -> case s of Sig.ArgMax0 -> c; Sig.ArgMax1 -> d) state $
   Sig.zip charge discharge
+-}
 
 
 

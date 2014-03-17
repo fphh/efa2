@@ -111,9 +111,6 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
 -- TODO: Determined sauber auspacken 
       j m = Map.map (fmap (Determined . ModUt.fst4)) m
       
---      optSignal = undefined
-      
-
       optSignal = Sig.tzipWith (Sig.interp2WingProfile
                  ("interpolateOptimalSolutionForOneState - interpolate Signal - interpolate Index-Signal")
                  (g "X:" $ One.varReqRoomPower1D simParams)
@@ -164,7 +161,8 @@ optimalSignalBasedSolution ::
    SV.Singleton vec,Show a,Show node,
    SV.FromList vec,
    Arith.Constant a,RealFloat a,
-   SV.Storage vec (Map.Map Idx.State a),Show (vec [Idx.State]),Show (vec Bool),
+   SV.Storage vec (Map.Map Idx.State a),
+   Show (vec [Idx.State]),Show (vec Bool),
    Show (vec a), Node.C node,
    Ord a,
    SV.Zipper vec,
@@ -177,10 +175,10 @@ optimalSignalBasedSolution interpolation statForcing = g "newRecord" $ Record.Re
   where -- (\x -> trace ("StateSignal: " ++ show x) x)
     indexSignal = Base.genOptimalStatesSignal statForcing interpolation
     g _ x  = x -- trace (str ++ ": " ++ show x) x
-    newTime =  Base.genOptimalTime indexSignal time
+    newTime =  Base.genOptimalSteppedTime indexSignal time
     (Record.Record time pMap) =  g "firstStateRecord" $ Type.reqsAndDofsSignalsOfState $ 
               vhead "optimalSignalBasedSolution" $ Map.elems interpolation
-    f key _ = Base.genOptimalSignal indexSignal (signalMap key)
+    f key _ = Base.genOptimalSteppedSignal indexSignal time (signalMap key)
     signalMap k = Map.map (\ x -> Record.getSig (Type.reqsAndDofsSignalsOfState x) k) interpolation
   
 {- 
@@ -266,18 +264,20 @@ energyFlowAnalysis ::
    SV.Zipper vec,
    Show a, Node.C node,
    Arith.ZeroTestable a,
+   Show (vec a),
    Arith.Constant a) =>
   One.SystemParams node a ->
   One.SimulationParams node vec a ->
   Record.PowerRecord node vec a ->
   Type.EnergyFlowAnalysis node vec a
-energyFlowAnalysis sysParams simParams powerRecord =
+energyFlowAnalysis sysParams simParams powerRecord = 
       -- Liefert nur delta-Zeiten und keinen Zeitvektor
       -- Deshalb wird der urspruenglichen Zeitvektor behalten
-  let recZeroCross =
+  let recZeroCross = --(\x -> trace ("recZeroCross" ++ show x) x) $
         Chop.addZeroCrossings $ Base.convertRecord powerRecord
 
-      sequencePowerRecord = Sequ.mapWithSection (\ _ r ->  Base.convertRecord r)
+      sequencePowerRecord = --(\x -> trace ("sequencePowerRecord" ++ show x) x) $ 
+                            Sequ.mapWithSection (\ _ r ->  Base.convertRecord r)
                             $ Chop.genSequ recZeroCross
 
       thrT = One.sequFilterTime simParams
