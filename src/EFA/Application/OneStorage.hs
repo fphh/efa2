@@ -71,44 +71,10 @@ noforcing ::
 noforcing _ _ = Arith.zero
 
 
-newtype StateForcing a = StateForcing { unStateForcing :: a } deriving Show
 
-data StateForcingStep a = StateForcingStep a
-                        | DontForceState deriving (Show,Eq)
-
-instance Functor StateForcingStep where
-  fmap f (StateForcingStep x) = StateForcingStep $ f x
-  fmap _ DontForceState = DontForceState
-
-
-{-
-instance (Arith.Sum a) => Arith.Sum (StateForcing a) where
-  (~+) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~+ y
-  (~-) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~- y
-  negate (StateForcing x) = StateForcing $ Arith.negate x
-
-instance (Arith.Product a) => Arith.Product (StateForcing a) where
-  (~*) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~* y
-  (~/) (StateForcing x) (StateForcing y) = StateForcing $ x Arith.~/ y
-  recip (StateForcing x) = StateForcing $ Arith.recip x
-  constOne (StateForcing x) = StateForcing $ Arith.constOne x
--}
 type IndexConversionMap =
   Bimap Idx.State Idx.AbsoluteState
 
-
-{-
-unpackStateForcing :: StateForcing a -> a
-unpackStateForcing (StateForcing x) = x
--}
-
-
-zeroStateForcing ::
-  Arith.Constant a =>
-  StateQty.Graph node b (Result v) ->
-  Map Idx.State (StateForcing a)
-zeroStateForcing sg =
-  Map.map (const $ StateForcing Arith.zero) $ states sg
 
 
 nocondition :: StateQty.Graph node b (Result v) -> Bool
@@ -148,7 +114,7 @@ data SystemParams node a = SystemParams {
 
 
 data OptimisationParams node list sweep vec a = OptimisationParams {
-  stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),
+--  stateFlowGraphOpt :: StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)),
   reqsPos :: ReqsAndDofs.Reqs (TopoIdx.Position node),
   dofsPos :: ReqsAndDofs.Dofs (TopoIdx.Position node),
   points :: Map (list a) 
@@ -156,16 +122,11 @@ data OptimisationParams node list sweep vec a = OptimisationParams {
   sweepLength :: Int,
   etaToOptimise :: Maybe (TopoIdx.Position node),
   maxEtaIterations :: MaxEtaIterations ,
-  maxInnerLoopIterations:: MaxInnerLoopIterations ,
   maxBalanceIterations:: MaxBalanceIterations ,
-  maxStateIterations:: MaxStateIterations ,
   initialBattForcing :: BalanceForcing node a,
   initialBattForceStep :: BalanceForcingStep node a,
   etaThreshold :: EtaThreshold a,
   balanceThreshold :: BalanceThreshold a,
-  stateTimeUpperThreshold :: StateTimeThreshold a,
-  stateTimeLowerThreshold :: StateTimeThreshold a,
-  stateForcingSeed :: StateForcingStep a,
   balanceForcingSeed :: SocDrive a }
 
 data SimulationParams node vec a = SimulationParams {
@@ -178,26 +139,29 @@ data SimulationParams node vec a = SimulationParams {
   sequFilterEnergy :: a }
 
 
-newtype MaxEtaIterations = MaxEtaIterations { unMaxEtaIterations :: Int }
+newtype MaxEtaIterations =
+  MaxEtaIterations { unMaxEtaIterations :: Int }
 
-newtype MaxBalanceIterations = MaxBalanceIterations { unMaxBalanceIterations :: Int }
+newtype MaxBalanceIterations =
+  MaxBalanceIterations { unMaxBalanceIterations :: Int }
 
-newtype MaxStateIterations = MaxStateIterations Int
+newtype MaxStateIterations =
+  MaxStateIterations { unMaxStateIterations :: Int }
 
-newtype BalanceThreshold a = BalanceThreshold { unBalanceThreshold :: a }
+newtype BalanceThreshold a =
+  BalanceThreshold { unBalanceThreshold :: a }
 
-newtype StateTimeThreshold a = StateTimeThreshold { unStateTimeThreshold :: a }
+newtype StateTimeThreshold a =
+  StateTimeThreshold { unStateTimeThreshold :: a }
 
-newtype EtaThreshold a = EtaThreshold a
+newtype EtaThreshold a =
+  EtaThreshold { unEtaThreshold :: a }
 
-newtype MaxInnerLoopIterations = MaxInnerLoopIterations Int
-
+newtype MaxInnerLoopIterations =
+  MaxInnerLoopIterations { unMaxInnerLoopIterations :: Int }
 
 type Balance node a = Map node a
 
-
---newtype BalanceForcing node a =
---  BalanceForcing { unBalanceForcing :: Map node (SocDrive a) } deriving (Show)
 
 data Absolute
 data Step
@@ -215,10 +179,9 @@ type BalanceForcingStep node a =
   BalanceForcingMap Step (Map node (SocDrive a))
 
 
-type StateDurations a = Map Idx.AbsoluteState a
-
 type BestBalance node a = Map node (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
 
+type StateDurations a = Map Idx.AbsoluteState a
 
                         
 rememberBestBalanceForcing :: 
@@ -317,7 +280,7 @@ getStorageBalance caller balance sto =
   where m = "Error in getStorageBalance called by " ++ caller 
             ++ " - gStorage not in Map: " ++ show sto  
 
-data StatForcing = StateForcingOn | StateForcingOff
+data StateForcing = StateForcingOn | StateForcingOff deriving (Show)
 
 
 

@@ -170,6 +170,33 @@ expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
 
 
+{-
+-- TODO: is this code is still neeed for Display purposes ? -- needs to work with new StateForcing -- does it make sense ?
+selectOptimalState ::
+  (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a,RealFloat a) =>
+  One.OptimisationParams node list sweep vec a ->
+  Map Idx.AbsoluteState (One.StateForcing a) ->
+  Type.OptimalSolutionPerState node a ->
+  One.IndexConversionMap ->
+  Type.OptimalSolution node a 
+selectOptimalState _params stateForcing stateMap indexConversionMap =
+  let
+      g _ Nothing y = y
+      g _ x Nothing = x
+      g f (Just x) (Just y) = Just (f x y)
+
+  in List.foldl1' (Map.unionWith (g $ ModUt.maxByWithNaN ModUt.fst5))
+     $ map (\(st, m) ->
+             Map.map (fmap
+                      (\(objVal, eta, idx ,env) ->
+                        (objVal Arith.~+
+                         maybe (error "Base.selectOptimalState")
+                         One.unStateForcing
+                         (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
+                         eta, st, idx, env))) m)
+     $ Map.toList stateMap
+-}
+
 supportPoints ::
   (Ord a,Show (vec a),Vec.Len (vec a),Node.C node,
    Vec.Unique vec [a],
@@ -442,7 +469,7 @@ findOptimalObjectiveStates ::
    Arith.Sum a,
    Vec.Walker vec,
    Vec.Storage vec a) =>
-  One.StatForcing ->
+  One.StateForcing ->
   Type.InterpolationOfAllStates node vec a -> Map Idx.State (Sig.UTSignal vec Bool)
 findOptimalObjectiveStates statForcing interpolation =
   Map.map (g . f . Type.optObjectiveSignalOfState) interpolation
@@ -453,7 +480,7 @@ findOptimalObjectiveStates statForcing interpolation =
 forceOptimalStateSignal :: 
   (Vec.Walker vec, Arith.Sum a,Vec.Zipper vec, Show a,RealFloat a,
    Ord a, Vec.Storage vec a, Vec.Singleton vec) =>
-  One.StatForcing ->
+  One.StateForcing ->
   Sig.UTSignal vec a ->
   Sig.UTSignal vec a ->
   Sig.UTSignal vec a 
@@ -473,7 +500,7 @@ genOptimalStatesSignal ::
    Vec.Walker vec,
    Vec.Storage vec a,RealFloat a,
    Vec.Storage vec Bool) =>
-  One.StatForcing ->
+  One.StateForcing ->
   Type.InterpolationOfAllStates node vec a ->
    Sig.UTSignal vec [Idx.State]
 genOptimalStatesSignal statForcing interpolation =
@@ -493,56 +520,72 @@ genOptimalStatesSignal statForcing interpolation =
 -- TC (Data [0.0,0.3333333333333333,0.6666666666666666,1.0,1.25,1.5,1.75,2.0])
 -- genOptimalTime (Sig.fromList [[Idx.State 0],[Idx.State 1, Idx.State 1, Idx.State 1, Idx.State 0],[Idx.State 1]]) (Sig.fromList [0,1,2]) :: Sig.TSignal [] Double
 
-
-
-
-genOptimalTime  :: 
-  (Vec.Zipper vec,
+genOptimalSteppedTime  :: 
+  (Vec.Zipper vec,Eq a,Show a,Show (vec a),
    Vec.Walker vec,
-   Vec.Storage vec (a, a),Arith.Constant a,Vec.FromList vec,
+   Vec.Storage vec (a, a),
+   Arith.Constant a,
+   Vec.FromList vec,
    Vec.Storage vec a,
    Vec.Singleton vec,
    Vec.Storage vec [Idx.State]) =>
   Sig.UTSignal vec [Idx.State] -> 
   Sig.TSignal vec a -> Sig.TSignal vec a
-genOptimalTime indexSignal time =
-  Sig.fromList (t0 : concat xs)
-  where xs = zipWith f (map length $ Sig.toList indexSignal)
-                       (Sig.toList $ Sig.deltaMap (,) time)
+genOptimalSteppedTime indexSignal time =
+  Sig.fromList $ concat $ zipWith f is ts
+  where f states (t1, t2) =
+          if t1 == t2
+             then []
+             else concat $ zipWith (\x y -> [x, y]) leftTimes rightTimes
 
-        t0 = case Sig.viewL time of
-                  Just (Sig.TC (Data x), _) -> x
-                  Nothing -> error "genOptimalTime: empty time signal"
+          where 
+                leftTimes = map (g . convert) [0 .. len]
+                rightTimes =
+                  case leftTimes of
+                       (_:xs) -> xs
+                       _ -> error "genOptimalSteppedTime: empty time list"
 
-        f numSt (t1, t2) =
-          map (g . Arith.fromRational . fromIntegral) [1 .. numSt]
-          where g cnt = t1 ~+ (cnt ~* ((t2 ~- t1) ~/ convert numSt))
+                len = length states
                 convert = Arith.fromRational . fromIntegral
+                g cnt = t1 ~+ (cnt ~* (t2 ~- t1) ~/ convert len)
 
+        is = Sig.toList indexSignal
+        ts = Sig.toList $ Sig.deltaMap (,) time
 
-genOptimalSignal  :: 
-  (Vec.Storage vec [Idx.State], Show a,
+genOptimalSteppedSignal  :: 
+  (Vec.Storage vec [Idx.State], Eq a,Vec.Storage vec (a, a), Show (vec a),
+   Vec.Singleton vec,Show a,
    Vec.Zipper vec, Vec.Walker vec,
    Vec.Storage vec a, Vec.FromList vec, 
    Vec.Storage vec (Map Idx.State a)) =>
   Sig.UTSignal vec [Idx.State] -> 
+  Sig.TSignal vec a ->
   Map Idx.State (Sig.PSignal vec a) -> 
   Sig.PSignal vec a 
-genOptimalSignal indexSignal signalMap =
-  Sig.fromList $ (x0 : concat (zipWith g (Sig.toList indexSignal) signalOfMaps))
+genOptimalSteppedSignal indexSignal time signalMap =
+  Sig.fromList $ concat $ zipWith3 g is ts signalOfMaps
   where
-    g states m =
-      map (\st -> fromMaybe (error $ err st m) (Map.lookup st m)) states
+    g states (t1, t2) m
+      = if t1 == t2 then [] else concatMap (h m) states
 
-    err x m = "genOptimalSignal: Element " ++ show x ++ " not found in " ++ show m
+    h m st = let x = fromMaybe (error $ err st m) (Map.lookup st m) in [x, x]
 
+    err x m = "genOptimalSteppedSignal: Element "
+              ++ show x ++ " not found in " ++ show m
 
-    x0 = case (signalOfMaps, Sig.toList indexSignal) of
-              (m:_, (x:_):_) -> fromMaybe (error $ err x m) (Map.lookup x m)
-              _ -> error "genOptimalSignal: empty list"
+    xlast =
+      case (signalOfMaps, is) of
+           (m:_, xs@(x:_):_) ->
+             let x = last xs in fromMaybe (error $ err x m) (Map.lookup x m)
+           _ -> error "genOptimalSteppedSignal: empty list"
 
     signalOfMaps = Sig.toList $
       Map.foldrWithKey' (Sig.zipWith . Map.insert) emptySig signalMap
 
+    is = Sig.toList indexSignal
+    ts = Sig.toList $ Sig.deltaMap (,) time
+
     emptySig = Sig.map (const Map.empty) $ snd $ Map.findMin signalMap
 
+
+ 

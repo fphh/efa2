@@ -19,12 +19,12 @@ import EFA.Equation.Result(Result(Determined))
 import qualified EFA.Application.Type as Type
 import EFA.Application.Type (EnvResult)
 import qualified EFA.Application.OneStorage as One
---import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Sweep as Sweep
 import EFA.Application.Sweep (Sweep)
 
 --import qualified EFA.Graph as Graph
 --import EFA.Graph (Graph)
---import qualified EFA.Flow.Draw as Draw
+import qualified EFA.Flow.Draw as Draw
 
 --import qualified EFA.Graph.Topology as Topology
 import qualified EFA.Graph.Topology.Node as Node
@@ -101,8 +101,16 @@ checkBalance optParams bal =
   Map.foldl' (\acc v -> acc && Arith.abs v <= bt) True bal
   where bt = One.unBalanceThreshold (One.balanceThreshold optParams)
 
-
--- Rate Balance Deviation by sum of Standard Deviation and Overall Sum 
+checkBalanceSingle ::
+  (Ord a, Arith.Sum a, Ord node, Show node) =>
+  One.OptimisationParams node list sweep vec a ->
+  One.Balance node a ->
+  node ->
+  Bool
+checkBalanceSingle optParams bal sto = Arith.abs x <= One.unBalanceThreshold (One.balanceThreshold optParams)
+  where x = One.getStorageBalance "checkBalanceSingle" bal sto
+    
+-- | Rate Balance Deviation by sum of Standard Deviation and Overall Sum 
 balanceDeviation :: 
   (Arith.Product a,
    Ord a,
@@ -123,6 +131,7 @@ balanceIteration::
   One.BalanceForcingStep node a ->
   [BalanceLoopItem node a z]
 balanceIteration optParams fsys accessf balForceIn balStepsIn =
+-- <<<<<<< HEAD
   go balForceIn balStepsIn 
   where go forcing stepping = oneIterationOfAllStorages ++ go forcing1 stepping1
 
@@ -131,7 +140,24 @@ balanceIteration optParams fsys accessf balForceIn balStepsIn =
 
           where oneIterationOfAllStorages =
                   Map.foldlWithKey f [] (One.unBalanceForcingMap forcing)
-                f acc sto _ = acc ++ iterateOneStorage fsys accessf forcing stepping sto
+                f acc sto _ =
+                  acc ++ iterateOneStorage optParams fsys accessf forcing stepping sto
+
+{-
+-- =======
+  go 0 balForceIn balStepsIn 
+  where (One.MaxBalanceIterations maxCnt) = One.maxBalanceIterations optParams
+        numberOfStorages = length $ Map.keys $ One.unBalanceForcingMap balForceIn
+        go cnt forcing stepping =
+          oneIterationOfAllStorages ++ 
+          if checkBalance optParams bal || cnt >= (maxCnt * numberOfStorages) 
+          then [] else go cnt1 forcing1 stepping1
+
+          where oneIterationOfAllStorages =
+                  foldl f [] $ Map.keys $ One.unBalanceForcingMap forcing
+                f acc sto = acc ++ iterateOneStorage optParams cnt fsys accessf forcing stepping sto
+-- >>>>>>> stateForcing
+-}
 
                 bal = balance lastElem
                 forcing1 = bForcing lastElem
@@ -140,15 +166,26 @@ balanceIteration optParams fsys accessf balForceIn balStepsIn =
 
 iterateOneStorage ::  
   (Ord a, Arith.Constant a,Ord node, Show node, Show a) =>
-  (One.BalanceForcing node a -> z)->
+-- <<<<<<< HEAD
+{-
+=======
+  One.OptimisationParams node [] Sweep UV.Vector a ->
+  Int -> 
+>>>>>>> stateForcing
+-}
+
+  One.OptimisationParams node [] Sweep UV.Vector a ->
+  (One.BalanceForcing node a -> z) ->
   (z -> One.Balance node a)->
   One.BalanceForcing node a ->
   One.BalanceForcingStep node a ->
   node ->
   [BalanceLoopItem node a z]
-iterateOneStorage fsys accessf forcingIn steppingIn sto = 
+-- <<<<<<< HEAD
+iterateOneStorage optParams fsys accessf forcingIn steppingIn sto = 
   go forcingIn steppingIn initialResult (Nothing, Nothing)
   where
+    (One.MaxBalanceIterations maxCnt) = One.maxBalanceIterations optParams
     initialResult = fsys forcingIn
     go force step res bestPair =
       BalanceLoopItem force step1 bal res : go force1 step1 res1 bestPair1
@@ -159,7 +196,26 @@ iterateOneStorage fsys accessf forcingIn steppingIn sto =
             bestPair1 = One.rememberBestBalanceForcing bestPair (force1, bal1) sto
             step1 = calculateNextBalanceStep (force1, bal1) bestPair1 step sto
 
-                   
+{-                
+=======
+    go cnt force step res bestPair =
+      BalanceLoopItem cnt force step1 bal res : 
+      if checkBalanceSingle optParams bal sto || cnt >= maxCnt
+          then [] else 
+        go (cnt+1) force1 step1 res1 bestPair1
+      where
+        force1 = One.addForcingStep force step sto
+        res1 = fsys force1
+        bal1 = accessf res1
+        bal = accessf res
+        bestPair1 =  One.rememberBestBalanceForcing bestPair (force1, bal1) sto
+        step1 = calculateNextBalanceStep 
+                (force1, bal1) bestPair1
+                step sto
+                    
+>>>>>>> stateForcing
+-}
+
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
    Ord node, Show node) =>
@@ -221,19 +277,6 @@ getStateTime stateIdx sfg = FlowTopo.label state
         err = error $ "Error in getStateTime: State " ++ show stateIdx
                       ++ "doesn't exist in StateflowGraph"
 
-
-checkStateTimes ::
-  (Num a, Ord a) =>
-  One.OptimisationParams node [] Sweep vec a ->
-  One.StateDurations a ->
-  Map Idx.AbsoluteState (One.StateForcingStep a) ->
-  Bool
-checkStateTimes optParams stateDurs stateSteps =
-  and $ zipWith g (Map.elems stateDurs) (Map.elems stateSteps)
-  where g time step = (time > lThr) && ( time <= uThr || step == One.DontForceState )
-        uThr = One.unStateTimeThreshold $ One.stateTimeUpperThreshold optParams
-        lThr = One.unStateTimeThreshold $ One.stateTimeLowerThreshold optParams
-
 iterateEtaWhile ::
   (Num a, Ord a, Show a, UV.Unbox a, Arith.ZeroTestable a,
    z ~ Type.SignalBasedOptimisation Node Sweep UV.Vector a [] b0 [] c0 [] a,
@@ -241,13 +284,16 @@ iterateEtaWhile ::
   One.SystemParams Node a ->
   One.OptimisationParams Node [] Sweep UV.Vector a ->
   One.SimulationParams Node [] a ->
+  StateQty.Graph Node (Result (Sweep UV.Vector a)) (Result (Sweep UV.Vector a)) ->
+  One.StateForcing ->
   [EtaLoopItem Node Sweep UV.Vector a z]
-iterateEtaWhile sysParams optParams simParams =
-  go (One.stateFlowGraphOpt optParams) initBalF
+iterateEtaWhile sysParams optParams simParams sfgIn statForcing =
+  go 0 sfgIn initBalF
   where
         initBalF = One.initialBattForcing optParams
-
-        go sfg bfIn = EtaLoopItem sfg swp sfg1 res : go sfg1 bfOut
+        One.MaxEtaIterations maxCnt = One.maxEtaIterations optParams
+        go cnt sfg bfIn = EtaLoopItem sfg swp sfg1 res : 
+                          if cnt >= maxCnt then [] else go (cnt+1) sfg1 bfOut
           where
             swp = Base.perStateSweep sysParams optParams sfg
 
@@ -262,7 +308,6 @@ iterateEtaWhile sysParams optParams simParams =
                 (Type.signals (Type.simulation x))
 
             indexConversionMap = ModUt.indexConversionMap System.topology sfg
-            statForcing = One.StateForcingOn
             balStepsIn = One.initialBattForceStep optParams
 
             res = balanceIteration optParams fsys accessf bfIn balStepsIn 
@@ -282,11 +327,11 @@ printfMap m = Map.foldWithKey f "" m
   where f k v acc = printf "%16s\t%16s\n" (show k) (show v) ++ acc
 
 printfStateMap ::
-  (PrintfArg t, PrintfArg t2) =>
-  Map Idx.AbsoluteState (One.StateForcing t) ->
-  Map t1 t2 -> [Char]
+  (PrintfArg k, PrintfArg v) =>
+  Map Idx.AbsoluteState One.StateForcing ->
+  Map k v -> [Char]
 printfStateMap forceMap timeMap = concatZipMapsWith f forceMap timeMap
-  where f (Idx.AbsoluteState k, One.StateForcing x) (_, y) = printf "S%2d%5.3f%5.3f" k x y
+  where f (Idx.AbsoluteState k, x) (_, y) = printf "S%2d%16sf%5.3f" k (show x) y
 
 printfBalanceFMap ::
   (Show node, PrintfArg a1, PrintfArg t1, Arith.Constant a1) =>
@@ -345,14 +390,19 @@ showBalanceLoopItem _optParams (bStp, BalanceLoopItem bForc _bFStep bal _) =
   printf " BL: %2d | " bStp ++ printfBalanceFMap bForc bal
 
 printEtaLoop:: 
-  (UV.Unbox a,Show (intVec Double),Show (simVec Double),
-   Node.C node,SV.Walker simVec,
+  (SV.Walker efaVec,UV.Unbox b,b~Double,
+   SV.Storage efaVec Double,
+   SV.FromList efaVec,
+   FormatValue.FormatValue b,  
+   UV.Unbox a,Show (intVec Double),Show (simVec Double),
+   Node.C node,SV.Walker simVec,Ord a,Fractional a,
    SV.Storage simVec Double,
    SV.FromList simVec,
    FormatValue.FormatValue a,
    z ~ Type.SignalBasedOptimisation
-         node sweep vec Double intVec b simVec c efaVec d,
-   Show a, Show node, PrintfArg a, Arith.Constant a) =>
+         node sweep vec Double intVec b simVec c efaVec d,Show (efaVec Double),
+   Show a, Show node, PrintfArg a, Arith.Constant a, a ~ Double, d ~ Double, vec ~ UV.Vector, 
+   sweep ~ Sweep) =>
   One.OptimisationParams node [] Sweep UV.Vector a ->
   [EtaLoopItem node Sweep UV.Vector a z] ->
   [IO ()]
@@ -362,8 +412,17 @@ printEtaLoop optParams ol =
 
 
 printEtaLoopItem ::
-  (UV.Unbox a,
-   Node.C node,
+  (z ~ Type.SignalBasedOptimisation
+       node Sweep UV.Vector a intVec b simVec c vec d, 
+   Show node, Show (vec a),
+   UV.Unbox a,Fractional a,UV.Unbox b,
+   SV.Walker vec,
+   SV.Storage vec d,FormatValue.FormatValue b,
+   SV.FromList vec,
+   FormatValue.FormatValue d,
+   Arith.ZeroTestable d,
+   Arith.Constant d,
+   Node.C node,Ord a, Show a,
    FormatValue.FormatValue a) =>
    One.OptimisationParams node [] Sweep UV.Vector a ->
    (Counter, EtaLoopItem node Sweep UV.Vector a z) ->
@@ -371,7 +430,8 @@ printEtaLoopItem ::
 printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _sfgOut _res) = 
   do
      putStrLn $ showEtaLoopItem _params _e
---    let -- dir = printf "outer-loop-%6.6d" olcnt
+     let -- dir = printf "outer-loop-%6.6d" olcnt
+      _opt = vlast "printEtaLoopItem" _res
     --  stoPos = TopoIdx.Position System.Water System.Network
   --    gasPos = TopoIdx.Position System.Gas System.LocalNetwork
       --  _term = ModPlot.gpXTerm
@@ -382,31 +442,25 @@ printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _sfgOut _res) =
 --    ModPlot.sweepStackPerStateOpt term params balanceForcing _sweep
 --    ModPlot.sweepStackPerStateCondition term params  _sweep
 
-{-
-    concurrentlyMany_ [
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 0 _sweep,
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 1 _sweep,
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 2 _sweep,
-      ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 3 _sweep] -}
 
---    putStrLn (printf "Loop %6.6d" olcnt)
+     concurrentlyMany_ [
+--       ModPlot.simulationGraphs ModPlot.dotXTerm _opt,
+--       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 0 _sweep,
+--       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 1 _sweep,
+--       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 2 _sweep,
+--       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 3 _sweep, 
 
---    concurrentlyMany_ [
       --ModPlot.maxEtaPerState ModPlot.gpXTerm opt,
  --     ModPlot.simulationGraphs ModPlot.dotXTerm opt ]
       --ModPlot.expectedEtaPerState ModPlot.gpXTerm opt,
       --ModPlot.maxObjPerState ModPlot.gpXTerm opt ]
 
---    putStrLn $ showEtaLoopItem params e
-
---    concurrentlyMany_ [
-      --putStrLn $ showEtaLoopItem params e]
---    ModPlot.drawSweepStateFlowGraph "sfgIn" 0 $ _sfgIn
---    ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ _sfgOut
-      --Draw.xterm $ Draw.title "sfgIn" $ Draw.stateFlowGraph Draw.optionsDefault _sfgIn,
-      --Draw.xterm $ Draw.title "sfgOut" $ Draw.stateFlowGraph Draw.optionsDefault _sfgOut]
-
-      --ModPlot.simulationGraphs ModPlot.dotXTerm opt]
+--      ModPlot.drawSweepStateFlowGraph "sfgIn" 0 $ _sfgIn,
+--        ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ _sfgOut,
+--        print $ Type.powerSequence $ Type.analysis $ bResult _opt,
+--        print $ Type.stateFlowGraph $ Type.analysis $ bResult _opt,
+--        ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ Type.stateFlowGraphSweep $ bResult _opt,
+        ModPlot.simulationGraphs ModPlot.dotXTerm $ bResult _opt]
  {-     ModPlot.simulationSignals term opt,
       ModPlot.maxPos stoPos term opt,
       ModPlot.maxPos gasPos term opt,
@@ -441,14 +495,17 @@ printBalanceLoopItem _optParams _b@(_bStp, BalanceLoopItem _bForcing _bFStep _ba
          _term = _xTerm
          _dir = printf "outer-loop-%6.6d" _bStp
          _stoPos = TopoIdx.Position System.Water System.Network
-    putStrLn $ showBalanceLoopItem _optParams _b 
+
     concurrentlyMany_ [
+      putStrLn $ showBalanceLoopItem _optParams _b 
 --       ModPlot.maxIndexPerState _term _opt, 
 --       ModPlot.givenSignals _term _opt, 
 --       print (Map.map (Type.reqsAndDofsSignalsOfState) $ 
 --              Type.interpolationPerState _opt),
 --      print $ Type.signals $ Type.simulation $ _opt,
 --      ModPlot.simulationSignals _term _opt
+
+--      ModPlot.simulationGraphs (ModPlot.dot _dir _bFStep) _opt      
 --      ModPlot.givenSignals _term _opt
        ]
 --       ModPlot.maxEta _xTerm opt2 -}
@@ -457,7 +514,7 @@ printBalanceLoopItem _optParams _b@(_bStp, BalanceLoopItem _bForcing _bFStep _ba
 
 
 --     ModPlot.simulationSignals term opt2
---    ModPlot.simulationGraphs (ModPlot.dot dir bStep) opt2
+
 --     print (Type.reqsAndDofsSignals $ Type.interpolation opt2)
 --     ModPlot.givenSignals term opt2
 --    ModPlot.maxEtaPerState (ModPlot.gpPNG dir bStep) opt
@@ -475,13 +532,14 @@ printBalanceLoopItem _optParams _b@(_bStp, BalanceLoopItem _bForcing _bFStep _ba
 
 
 
-checkRangeIO :: 
+checkRangeIO :: a~Double =>
   One.SystemParams Node Double -> 
   One.OptimisationParams Node [] Sweep UV.Vector Double ->
   One.SimulationParams Node [] Double ->
+  StateQty.Graph Node (Result (Sweep UV.Vector a)) (Result (Sweep UV.Vector a)) ->
   IO ()
-checkRangeIO sysParams optParams simParams = do
-  let sfg = One.stateFlowGraphOpt optParams
+checkRangeIO sysParams optParams simParams sfg = do
+  let 
       indexConversionMap = ModUt.indexConversionMap System.topology sfg
       swp = Base.perStateSweep sysParams optParams sfg
       initBalF =  One.initialBattForcing optParams
@@ -528,131 +586,4 @@ checkRangeIO sysParams optParams simParams = do
     ModPlot.simulationSignals term opt,
     ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.3,0.5] 0 swp
     ]
-
-
-{-
-eta ::
-  (Node.C node, UV.Unbox a,
-   Arith.Product a) =>
-  Type.EnergyFlowAnalysis node vec a -> a
-eta efa =
-  case StateEta.etaSys (Type.stateFlowGraph efa) of
-       Determined (Data e) -> e
-       _ -> error "Main.iterateBalanceIO"
--}
-
-
-{-
-iterateEtaWhile ::
-  (Num a, Ord a, Show a, UV.Unbox a, Arith.ZeroTestable a,
-   z ~ Type.SignalBasedOptimisation Node Sweep UV.Vector a [] b0 [] c0 [] a,
-   Arith.Constant a,RealFloat a, d ~ a) =>
-  One.SystemParams Node a->
-  One.OptimisationParams Node [] Sweep UV.Vector a->
-  One.SimulationParams Node [] a->
-  [EtaLoopItem Node Sweep UV.Vector a z]
-iterateEtaWhile sysParams optParams simParams =
-   go 0 (One.stateFlowGraphOpt optParams) initBalF
-   where
-         initBalF =  One.initialBattForcing optParams
-         One.MaxEtaIterations maxCnt = One.maxEtaIterations optParams
-         go cnt sfg bfIn =
-           EtaLoopItem cnt sfg swp sfg1 res :
-             if cnt > maxCnt-1 then [] else go (cnt+1) sfg1 bfOut
-           where
-            swp = trace "sweep" $ Base.perStateSweep sysParams optParams sfg
-            fsys balanceForcing = NonIO.optimiseAndSimulateSignalBased sysParams optParams simParams 
-                                  balanceForcing statForcing swp indexConversionMap
-      
-            accessf x = StateEta.balanceFromRecord (One.storagePositions sysParams) $
-                      Type.signals $ Type.simulation $ x
-
-            indexConversionMap = ModUt.indexConversionMap System.topology sfg
-            statForcing = One.StateForcingOn
-            balStepsIn = One.initialBattForceStep optParams
-
-            res = balanceIteration optParams fsys accessf bfIn balStepsIn 
-            sfg1 = Type.stateFlowGraphSweep (bResult lastElem)
-            bfOut = bForcing lastElem
-            lastElem = vlast "iterateEtaWhile 2" res
--}
-
-
-{-
-getBalanceResult ::
-  (Ord node,Arith.Sum a, Ord a, Arith.Constant a, Show a) =>
-  [BalanceLoopItem node a (Type.OptimisationPerState node a) z] ->
-  (Map node (One.SocDrive a),Map node (One.SocDrive a),
-   Type.OptimalSolutionPerState node a)
-getBalanceResult balLoop =
-  (bForcing $ bestElem, bFStep bestElem, Type.optimalSolutionPerState $ fst $ bResult bestElem)
-  where bestElem = if (length balLoop) == 1 
-                   then lastElem
-                   else choice
-        lastElem =  vlast "interateBalanceUntil" balLoop            
-        beforeElem = vlast "interateBalanceUntil" $ init $ balLoop
-        choice = trace ("Choice " ++ show (balanceDeviation $ balance lastElem) ++ " " ++ 
-                        show (balanceDeviation $ balance lastElem)) $ 
-                        if (balanceDeviation $ balance lastElem) <= 
-                    (balanceDeviation $ balance beforeElem)
-                   then lastElem else beforeElem 
--}
-
-{-
-uniqueBalanceLoopX ::
-  (Eq a, Eq node) => EtaLoop node a z -> EtaLoop node a z
-uniqueBalanceLoopX (EtaLoop ol) = EtaLoop (map f ol)
-  where f oli = oli { balanceLoop = BalanceLoop $ map (vlast "uniqueBalanceLoopX")
-                                            $ List.groupBy g fzcs }
-          where BalanceLoop fzcs = balanceLoop oli
-        g a b = snd (result a) == snd (result b)
--}
-
-{-
-buildSupportHyperCube :: Ord d => [[[d]]] -> [[d]]
-buildSupportHyperCube edgeList = Set.toList $ Set.fromList $ concat $ map g edgeList
- where g xs = foldl f [] xs
-       f [] [x] = [[x]]
-       f [] [x1, x2] = [[x1], [x2]]
-       f acc [x] = map (++ [x]) acc
-       f acc [x1, x2] = map (++ [x1]) acc ++ map (++ [x2]) acc
-       f _ _ = error "buildSupportHyperCube - invalid amout of edge Points"
--}
-
-
-
-{-
--- Check whether balance Step is already the smallest possible 
--- This is the case when only index or stateindex in the optimal Solution differs
--- Only active fields have to be probed 
-checkBalanceStep :: 
-  (Ord a,Arith.Constant a,Show a,
-   SV.Storage vec ([[a]], [Sig.SignalIdx]),
-   SV.FromList vec) =>
-  One.SimulationParams node vec a -> 
-  One.Balance node a -> One.Balance node a ->
-  (a2, Type.OptimiseStateAndSimulate node2 sweep1 sweepVec1 a intVec1 b1 simVec1 c1 efaVec1 d1) ->
-  (a1, Type.OptimiseStateAndSimulate node1 sweep sweepVec a intVec b simVec c efaVec d) ->
-  Bool
-checkBalanceStep simParams bal bal1 res res1 = trace ("Diffs: " ++ show numberOfDifferences) numberOfDifferences <= (2::Integer) && 
-                                               (map (Arith.sign) $ Map.elems bal) /= (map (Arith.sign) $ Map.elems bal1)
-  where optSolution = Type.optimalSolution $ snd res
-        optSolution1 = Type.optimalSolution $ snd res1
-        differenceList = zipWith cmpFunct indexList indexList1
-        cmpFunct x y = case ((ModUt.frth5 x == ModUt.frth5 y) 
-                       ,(ModUt.thd5 x == ModUt.thd5 y)) of 
-                         (True, True) -> 0
-                         (False,False) -> 2
-                         (_,_) -> 1
-        classList = buildSupportHyperCube $
-          map fst $ Sig.toList $ One.activeSupportPoints simParams            
-        lookupValues mp xs = map (\ k -> fromMaybe (error $ m2 k) $ fromMaybe (error $ m k) $ 
-                                         Map.lookup k mp) xs
-        indexList = lookupValues optSolution classList
-        indexList1 = lookupValues optSolution1 classList
-        m k = ("Error in checkBalanceStep - support Point doesn't exist" ++ show k)
-        m2 k = ("Cycle touches Invalid Area " ++ show k)
-        numberOfDifferences = (foldl (+) (0) differenceList)
--}
-
 
