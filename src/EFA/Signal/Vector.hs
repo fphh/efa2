@@ -509,6 +509,22 @@ lookUpGen look idxs =
          error $ "lookUpGen: indices out of Range: " ++ show invalidIdxs
                  ++ "\nAll indices: " ++ show idxs
 
+
+class LookupMaybe vec d where
+   lookupMaybe :: vec d -> Int -> Maybe d
+
+instance LookupMaybe [] d where
+   lookupMaybe xs idx = if idx >=0 && idx <= (length xs) 
+                        then Just $ xs List.!! idx 
+                             else Nothing
+
+instance LookupMaybe V.Vector d where
+   lookupMaybe xs idx = xs V.!? idx
+
+instance UV.Unbox d => LookupMaybe UV.Vector d where
+   lookupMaybe xs idx = xs UV.!? idx
+   
+
 class Reverse v where
    reverse :: (Storage v d) => v d -> v d
 

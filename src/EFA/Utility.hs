@@ -9,6 +9,8 @@ import Data.Stream (Stream)
 import Data.Bool.HT (if')
 
 
+type Caller = String
+
 checkJust :: String -> Maybe a -> a
 checkJust _ (Just x) = x
 checkJust str _ = error ("checkJust called from " ++ str)
