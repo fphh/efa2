@@ -107,7 +107,8 @@ checkBalanceSingle ::
   One.Balance node a ->
   node ->
   Bool
-checkBalanceSingle optParams bal sto = Arith.abs x <= One.unBalanceThreshold (One.balanceThreshold optParams)
+checkBalanceSingle optParams bal sto =
+  Arith.abs x <= One.unBalanceThreshold (One.balanceThreshold optParams)
   where x = One.getStorageBalance "checkBalanceSingle" bal sto
     
 -- | Rate Balance Deviation by sum of Standard Deviation and Overall Sum 
@@ -182,11 +183,15 @@ iterateOneStorage ::
   node ->
   [BalanceLoopItem node a z]
 -- <<<<<<< HEAD
+{-
 iterateOneStorage optParams fsys accessf forcingIn steppingIn sto = 
   go forcingIn steppingIn initialResult (Nothing, Nothing)
+
   where
     (One.MaxBalanceIterations maxCnt) = One.maxBalanceIterations optParams
     initialResult = fsys forcingIn
+
+
     go force step res bestPair =
       BalanceLoopItem force step1 bal res : go force1 step1 res1 bestPair1
       where force1 = One.addForcingStep force step sto
@@ -195,6 +200,37 @@ iterateOneStorage optParams fsys accessf forcingIn steppingIn sto =
             bal = accessf res
             bestPair1 = One.rememberBestBalanceForcing bestPair (force1, bal1) sto
             step1 = calculateNextBalanceStep (force1, bal1) bestPair1 step sto
+-}
+
+iterateOneStorage optParams fsys accessf forcingIn steppingIn sto = 
+  go forcingIn steppingIn initResult (Nothing, Nothing)
+
+  where
+    -- (One.MaxBalanceIterations maxCnt) = One.maxBalanceIterations optParams
+    initResult = fsys forcingIn
+    initBal = accessf initResult
+    initBestPair = (Nothing, Nothing)
+
+    bal = accessf $ fsys $ One.addForcingStep forcingIn steppingIn sto
+
+    initStep = calculateNextBalanceStep bal initBestPair steppingIn sto
+
+
+    initBalanceLoopItem =
+      BalanceLoopItem forcingIn initStep initBal initResult
+
+
+    go force step res bestPair =
+      BalanceLoopItem force step1 bal res : go force1 step1 res1 bestPair1
+
+      where force1 = One.addForcingStep force step sto
+            res1 = fsys force1
+            bal1 = accessf res1
+            bal = accessf res
+            bestPair1 = One.rememberBestBalanceForcing bestPair (force1, bal1) sto
+            step1 = calculateNextBalanceStep bal1 bestPair1 step sto
+
+
 
 {-                
 =======
@@ -219,12 +255,12 @@ iterateOneStorage optParams fsys accessf forcingIn steppingIn sto =
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
    Ord node, Show node) =>
-  (One.BalanceForcing node a, One.Balance node a) -> 
+  One.Balance node a ->
   (Maybe (One.SocDrive a,a), Maybe (One.SocDrive a,a)) -> 
   (One.BalanceForcingStep node a) ->
   node ->
   (One.BalanceForcingStep node a)
-calculateNextBalanceStep (_, balMap) bestPair stepMap sto =
+calculateNextBalanceStep balMap bestPair stepMap sto =
   One.updateForcingStep stepMap sto $ One.setSocDrive step1
   where
     bal = One.getStorageBalance "calculateNextBalanceStep" balMap sto
