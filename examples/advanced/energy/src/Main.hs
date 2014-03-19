@@ -183,8 +183,9 @@ main1 = do
   let
     
       
-      ol = ModLoop.iterateEtaWhile
-             sysParams optParams simParams initEnv One.StateForcingOn
+      ol = ModLoop.condition optParams
+           $ ModLoop.iterateEtaWhile
+               sysParams optParams simParams initEnv One.StateForcingOn
            
       -- initEnv2 = ModLoop.stateFlowOut $ vlast "Main" ol
            

@@ -244,3 +244,6 @@ absolute2State ::
 absolute2State = Bimap.lookupR
 
 
+ifNull :: b -> ([a] -> b) -> [a] -> b
+ifNull x _ [] = x
+ifNull _ f xs = f xs
