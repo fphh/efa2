@@ -124,10 +124,11 @@ balanceDeviation m =
   ~+ 
   Arith.abs (Map.foldl (~+) Arith.zero m)
 
+
+
 oneIterationOfAllStorages optParams fsys accessf force steps =
   Map.foldlWithKey f [] (One.unBalanceForcingMap force)
   where f acc sto _ = acc ++ iterateOneStorage optParams fsys accessf force steps sto
-
 
 balanceIterationInit optParams fsys accessf balForceIn balStepsIn =
   (balForceIn, balStepsIn, oioas)
@@ -170,6 +171,20 @@ balanceIteration optParams fsys accessf balForceIn balStepsIn =
                 f acc sto = acc ++ iterateOneStorage optParams cnt fsys accessf forcing stepping sto
 -}
 
+
+iterateOneStorageInit  optParams fsys accessf forcingIn steppingIn sto =
+  BalanceLoopItem forcingIn initStep initBal initResult
+  where
+    initResult = fsys forcingIn
+    initBal = accessf initResult
+    initBestPair = (Nothing, Nothing)
+
+    initStep =
+      calculateNextBalanceStep
+        (accessf $ fsys $ One.addForcingStep forcingIn steppingIn sto)
+        initBestPair 
+        steppingIn
+        sto
 
 iterateOneStorage ::  
   (Ord a, Arith.Constant a,Ord node, Show node, Show a) =>
