@@ -17,6 +17,9 @@ import EFA.Signal.Interp as Interp
 import qualified Data.Vector as V 
 import Data.Maybe(fromMaybe) 
 
+import EFA.Utility.Trace(mytrace)
+
+
 data Ortho dim vec a b = Ortho {
   getAxes :: Axes dim vec a, 
   getVector :: vec b } deriving Show
@@ -26,21 +29,24 @@ newtype LinIdx = LinIdx {getInt:: Int} deriving Show
 toLinear :: 
  (SV.Storage vec a, SV.Length vec)=>  
   Axes dim vec a -> Axes.DimIdx dim -> LinIdx
-toLinear (Dim.Data xs) (Axes.DimIdx (Dim.Data indices)) = LinIdx $
-  foldl (+) (0) $ zipWith (*) indices dimensionMultiplicators
+toLinear (Dim.Data xs) (Dim.Data indices) = LinIdx $
+  foldl (+) (0) $ zipWith (*) (map Axes.getInt indices) dimensionMultiplicators
   where dimensionMultiplicators = (init $ map Axes.len xs) ++ [1]
         
-lookupLin ::SV.LookupMaybe vec b =>  Caller -> Ortho dim vec a b -> LinIdx -> b
+lookupLin ::
+  (SV.LookupMaybe vec b,
+  Show (vec b)) =>  
+  Caller -> Ortho dim vec a b -> LinIdx -> b
 lookupLin caller (Ortho _ vec) (LinIdx idx) = fromMaybe (error m) $ SV.lookupMaybe vec idx
   where m = "Error in LookupLinear called by " ++ caller ++
-            " - linear Index out of Bounds: " ++ show idx  
+            " - linear Index out of Bounds - Index : " ++ show idx ++"- Vector: "++ show vec  
 
-lookup :: 
+lookUp :: 
   (SV.LookupMaybe vec b, 
-   SV.Storage vec a, 
+   SV.Storage vec a,Show (vec b), 
    SV.Length vec) =>
   Caller -> Axes.DimIdx dim -> Ortho dim vec a b -> b 
-lookup caller idx ortho@(Ortho axes _) = lookupLin (caller ++">lookup") ortho index
+lookUp caller idx ortho@(Ortho axes _) = lookupLin (caller ++">lookUp") ortho index
   where index = toLinear axes idx
 
 checkVector :: 
@@ -58,7 +64,8 @@ create ::
    SV.Singleton vec,
    SV.Storage vec b, 
    SV.Length vec,
-   Dim.FromList dim) =>
+   Dim.Dimensions dim
+  ) =>
   Caller -> [vec a] -> vec b -> Ortho dim vec a b
 create caller xs vec = 
   let axes = Axes.create (caller++">genOrtho") xs
@@ -75,27 +82,13 @@ getSubOrtho ::
   Ortho dim vec a b -> 
   Axes.Idx -> Ortho (Dim.SubDim dim) vec a b
 getSubOrtho caller (Ortho axes vec) (Axes.Idx idx) = Ortho (Dim.dropFirst (caller++">getSubOrtho") axes) subVec
-  where subVec = SV.slice (0) (l-1) vec
-        startIdx = idx*l
-        stopIdx = idx*l+(l-1) 
-        l = Axes.len $ Dim.getFirst (caller++">getSubOrtho") axes
+  where subVec = SV.slice startIdx l vec
+        startIdx = mytrace 0 "getSubOrtho" "startIdx" $ idx*l
+        l = mytrace 0 "getSubOrtho" "l" $ Axes.len $ Dim.getFirst (caller++">getSubOrtho") axes
 
-{-
-class Interpolate dim where
-  interpolate :: 
-    Caller -> 
-    ((a,a) -> (b,b) -> a -> Interp.Val b) -> 
-  Ortho dim vec a b -> 
-  (Dim.Data dim a) ->   
-  Interp.Val b
-
-instance Interpolate Dim1 where  
-         interpolate
--}
- 
 interpolate :: 
-  (Ord a,Arith.Constant b,
-   SV.UnsafeLookup vec a,
+  (Ord a,Arith.Constant b,Num b,SV.LookupMaybe vec b,
+   SV.UnsafeLookup vec a,Show (vec b),(Show (vec a)),
    SV.Storage vec a,
    SV.Length vec,
    SV.Find vec, 
@@ -108,13 +101,16 @@ interpolate ::
 interpolate caller interpFunction ortho coordinates = Interp.combine3 y1 y2 y
   where 
     newCaller = (caller ++ ">Ortho.interpolate")
-    axis = Dim.getFirst newCaller $ getAxes ortho
+    axis = mytrace 0 "interpolate" "axis" $ Dim.getFirst newCaller $ getAxes $ mytrace 0 "interpolate" "ortho" $ ortho
     subCoordinates = Dim.dropFirst newCaller coordinates
     x = Dim.getFirst newCaller $ coordinates
     ((idx1,idx2),(x1,x2)) = Axes.getSupportPoints axis x
-    y1 = interpolate newCaller interpFunction (getSubOrtho newCaller ortho idx1) subCoordinates
-    y2 = interpolate newCaller interpFunction (getSubOrtho newCaller ortho idx2) subCoordinates
-    y = interpFunction (x1,x2) (Interp.unpack y1,Interp.unpack y2) x 
+    f idx = interpolate newCaller interpFunction (getSubOrtho newCaller ortho idx) subCoordinates
+    (y1,y2) = if Dim.len coordinates >=2 then (f idx1, f idx2) 
+              else (Interp.Inter $ lookUp newCaller (Dim.Data [idx1]) ortho,
+                    Interp.Inter $ lookUp newCaller (Dim.Data [idx2]) ortho)
+    y = interpFunction (x1,x2) (Interp.unpack y1,Interp.unpack y2) x
+
     
 
   

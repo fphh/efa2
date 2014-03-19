@@ -12,12 +12,12 @@ import qualified EFA.Signal.Map.Dimension as Dim
 newtype Axis vec a = Axis (vec a) deriving Show
 newtype Data vec a = Data (vec a) deriving Show
 
-data Idx = Idx Int
+newtype Idx = Idx {getInt :: Int} deriving Show
 
 indexAdd :: Idx -> Int -> Idx
 indexAdd (Idx idx) num = Idx $ (idx+num) 
 
-newtype DimIdx dim = DimIdx (Dim.Data dim Int) deriving Show
+type DimIdx dim = Dim.Data dim Idx
 
 len ::
   (SV.Storage vec a, SV.Length vec)=>
@@ -38,7 +38,7 @@ fromVec caller vec =
 type Axes dim vec a = Dim.Data dim (Axis vec a)
 
 create :: 
-  (Dim.FromList dim,
+  (Dim.Dimensions dim,
    Ord a,
    SV.Zipper vec,
    SV.Storage vec a,
@@ -89,17 +89,3 @@ getSupportPoints axis x = ((leftIndex,rightIndex),
   where rightIndex = findRightInterpolationIndex axis x
         leftIndex = indexAdd rightIndex (-1)
 
-{-
-interpolate :: 
-  Caller -> 
-  Interp.Method b ->
-  Interp.ExtrapMethod b ->
-  Axes.Axis vec a -> 
-  Axes.Data vec b ->
-  a ->   
-  Interp.Val b
-interpolate caller inM exM axis curve x =  
-  let 
-    (xPair,yPair) = Axes.getSupportPoints axis curve x
-  in Interp.dim1 (caller++ ">interp1LinValid_new") inM exM xPair yPair x
--}

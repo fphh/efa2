@@ -23,49 +23,47 @@ type Dim4 = Succ Dim3
 type Dim5 = Succ Dim4
 type Dim6 = Succ Dim5
 type Dim7 = Succ Dim6  
+type Dim8 = Succ Dim7  
+type Dim9 = Succ Dim8  
+type Dim10 = Succ Dim9  
   
 data Data dim a = Data [a] deriving Show
 
 instance Functor (Data dim) where
   fmap f (Data xs) = Data (fmap f xs) 
 
-one :: a -> Data Dim1 a
-one x = Data [x]
+len :: Data dim a -> Int
+len (Data xs) = length xs
 
-append ::  Data dim a -> a -> Data (Succ dim) a
-append (Data xs) x = Data (xs++[x])
+fromList :: Dimensions dim => Caller -> [a] -> Data dim a
+fromList caller xs = 
+  let 
+    dim = Data xs 
+  in if len dim == num dim 
+     then dim
+     else error ("Error in Dimension.fromList called by " ++ caller ++ 
+           " list length doesn't match dimension") 
 
-class FromList dim where
- fromList :: Caller -> [a] -> Data dim a
- 
-instance FromList Dim1 where 
-  fromList caller xs = if length xs == 1 then (Data xs) else error (m caller) 
+class Dimensions dim where num :: Data dim a -> Int
 
-instance FromList Dim2 where 
-  fromList caller xs = if length xs == 2 then (Data xs) else error (m caller) 
-
-instance FromList Dim3 where 
-  fromList caller xs = if length xs == 3 then (Data xs) else error (m caller) 
-
-instance FromList Dim4 where 
-  fromList caller xs = if length xs == 4 then (Data xs) else error (m caller) 
-
-instance FromList Dim5 where 
-  fromList caller xs = if length xs == 5 then (Data xs) else error (m caller) 
-
-instance FromList Dim6 where 
-  fromList caller xs = if length xs == 5 then (Data xs) else error (m caller) 
-
-m caller = "Error in Dimension.fromList called by " ++ caller ++ 
-           " list length doesn't match dimension" 
+instance Dimensions Dim1 where num _ = 1 
+instance Dimensions Dim2 where num _ = 2 
+instance Dimensions Dim3 where num _ = 3 
+instance Dimensions Dim4 where num _ = 4 
+instance Dimensions Dim5 where num _ = 5 
+instance Dimensions Dim6 where num _ = 6 
+instance Dimensions Dim7 where num _ = 7 
+instance Dimensions Dim8 where num _ = 8 
+instance Dimensions Dim9 where num _ = 9 
+instance Dimensions Dim10 where num _ = 10 
 
 
 dropFirst :: Caller -> Data dim a -> Data (SubDim dim) a 
-dropFirst caller (Data [x]) = error $ "Error in Dimension.dropFirst called by " ++ 
-                         caller ++ "-only one Dimension left"
+dropFirst caller (Data []) = error $ "Error in Dimension.dropFirst called by " ++ 
+                         caller ++ "- no Dimension left"
 dropFirst _ (Data (x:xs)) = Data xs
 
 getFirst :: Caller -> Data dim a -> a 
-getFirst caller (Data [x]) = error $ "Error in Dimension.dropFirst called by " ++ 
-                         caller ++ "-only one Dimension left" 
+getFirst caller (Data []) = error $ "Error in Dimension.dropFirst called by " ++ 
+                         caller ++ "- no Dimension left" 
 getFirst _ (Data (x:xs)) = x

@@ -12,14 +12,14 @@ showarg x = trace (show x) x
 
 
 debugLevel :: Integer
-debugLevel = 0
+debugLevel = 1
 
 -- mytrace for single values
 mytrace ::
    (Show a, Show b, Show c) =>
    Integer -> b -> c -> a -> a
 mytrace dbgLevel function varName var =
-   if debugLevel >= dbgLevel
+   if dbgLevel >= debugLevel
      then trace ("myTrace: " ++ show function ++ "-" ++ show varName ++ " : " ++ show var) var
      else var
 
@@ -28,6 +28,6 @@ mytraceList ::
    (Show a, Show b, Show c) =>
    Integer -> b -> c -> [a] -> [a]
 mytraceList dbgLevel function varName var =
-   if debugLevel >= dbgLevel
+   if dbgLevel >= debugLevel
      then trace ("myTraceList: " ++ show function ++ "-" ++ show varName ++ " : " ++ myShowList var) var
-     else var
+     else var         
