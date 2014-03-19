@@ -8,7 +8,6 @@ import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 
 import qualified EFA.Flow.State.Quantity as StateQty
-import EFA.Flow.State(states)
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 

@@ -10,7 +10,6 @@ module Modules.Optimisation.NonIO where
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Utility as ModUt
---import qualified Modules.Setting as ModSet
 import Modules.Optimisation (external)
 
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
@@ -18,15 +17,10 @@ import qualified EFA.Application.Type as Type
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Simulation as AppSim
---import EFA.Application.Sweep (Sweep)
 
 import qualified EFA.Graph.Topology.Node as Node
---import qualified EFA.Graph.Topology as Topology
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
---import qualified EFA.Flow.Topology.Quantity as TopoQty
---import qualified EFA.Flow.Topology.Index as TopoIdx
---import qualified EFA.Flow.Topology as FlowTopo
 
 import qualified EFA.Flow.Sequence.Absolute as SeqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqQty
@@ -35,7 +29,6 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.Absolute as StateEqAbs
---import qualified EFA.Flow.State as FlowState
 
 import qualified EFA.Flow.SequenceState.Index as Idx
 
@@ -46,22 +39,16 @@ import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Vector as SV
 import EFA.Utility.List (vhead)
 
---import EFA.Report.FormatValue(formatValue)
-
-import EFA.Signal.Data (Data(Data), Nil) --, (:>))
---import EFA.Signal.Typ(Typ,UT)
---import EFA.Signal.Signal(UTSignal)
+import EFA.Signal.Data (Data(Data), Nil)
   
---import qualified EFA.Signal.Data as Data
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
-import qualified Data.Map as Map; --import Data.Map (Map)
---import Data.Vector (Vector)
+import qualified Data.Map as Map
 import qualified Data.Vector.Unboxed as UV
 import Data.Monoid (Monoid, mempty, (<>))
---import Data.Maybe(fromMaybe)
-import Debug.Trace(trace)
+
+-- import Debug.Trace(trace)
 
 interpolateOptimalSolutionPerState :: 
   (Eq (vec1 a1), Ord a1, Show a1, Show (vec1 a1),

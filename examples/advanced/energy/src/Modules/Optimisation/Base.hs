@@ -60,7 +60,7 @@ import Data.Maybe (fromMaybe)
 import Control.Monad (join)
 import Control.Applicative (liftA2)
 
-import Debug.Trace (trace)
+-- import Debug.Trace (trace)
 
 perStateSweep ::
   (Node.C node, Show node,RealFloat a,
@@ -573,11 +573,15 @@ genOptimalSteppedSignal indexSignal time signalMap =
     err x m = "genOptimalSteppedSignal: Element "
               ++ show x ++ " not found in " ++ show m
 
+{-
+    wofür ist das denn da?
+
     xlast =
       case (signalOfMaps, is) of
            (m:_, xs@(x:_):_) ->
              let x = last xs in fromMaybe (error $ err x m) (Map.lookup x m)
            _ -> error "genOptimalSteppedSignal: empty list"
+-}
 
     signalOfMaps = Sig.toList $
       Map.foldrWithKey' (Sig.zipWith . Map.insert) emptySig signalMap

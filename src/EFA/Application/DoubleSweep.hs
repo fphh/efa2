@@ -12,13 +12,7 @@ import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 import qualified EFA.Application.Type as Type
 
-import qualified EFA.Signal.Signal as Sig
-
---import qualified EFA.Flow.Sequence.Quantity as SeqFlow
---import qualified EFA.Flow.Sequence.SystemEta as SeqEta
-
 import qualified EFA.Flow.State.Quantity as StateFlow
---import qualified EFA.Flow.State.SystemEta as StateEta
 
 import qualified EFA.Flow.Topology.Variable as TopoVar
 
@@ -32,21 +26,15 @@ import qualified EFA.Graph.Topology.Node as Node
 import Control.Applicative (liftA2)
 
 import qualified Data.Map as Map; import Data.Map (Map)
---import qualified Data.NonEmpty as NonEmpty
-import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
---import Data.Maybe (mapMaybe)
 import Data.Monoid (Monoid)
---import Data.Ord (comparing)
 import qualified Control.Monad.Trans.Writer as MW
 
 import Control.Applicative (liftA3)
 
---import Data.Tuple.HT (snd3)
 
 --import Debug.Trace (trace)
-
 
 -- | Map a two dimensional load room (varX, varY) and find per load situation
 -- | the optimal solution in the 2d-solution room (two degrees of freevarOptX varOptY)
@@ -58,7 +46,7 @@ doubleSweep ::
 doubleSweep = Map.map
 
 
-
+{-
 -- verallgemeinern für n states
 combineOptimalMaps ::
   Sig.UTSignal2 V.Vector V.Vector Sig.ArgMax ->
@@ -69,6 +57,7 @@ combineOptimalMaps state charge discharge =
   Sig.zipWith
      (\s (c, d) -> case s of Sig.ArgMax0 -> c; Sig.ArgMax1 -> d) state $
   Sig.zip charge discharge
+-}
 
 
 
