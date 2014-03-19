@@ -183,19 +183,12 @@ main1 = do
   let
     
       
-      ol = --ModLoop.uniqueInnerLoopX
-           ModLoop.iterateEtaWhile sysParams optParams simParams initEnv One.StateForcingOn
+      ol = ModLoop.iterateEtaWhile
+             sysParams optParams simParams initEnv One.StateForcingOn
            
-      initEnv2 = ModLoop.stateFlowOut $ vlast "Main" ol
+      -- initEnv2 = ModLoop.stateFlowOut $ vlast "Main" ol
            
-      ol2 = ModLoop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff     
-
-
-
-{-      opt = ModLoop.withChargeDrive optParams reqsRec ienv (-5.2837473962302475e-3)
-      opt2 = ModLoop.withChargeDrive optParams reqsRec (Type.stateFlowGraph $ Type.simulation opt) 0
-      opt3 = ModLoop.withChargeDrive optParams reqsRec (Type.stateFlowGraph $ Type.simulation opt2) 0
--}
+      -- ol2 = ModLoop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff     
 
 
   -- let g = fmap (vhead "simulationGraphs" . Sweep.toList)

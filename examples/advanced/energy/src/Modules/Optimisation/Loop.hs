@@ -63,6 +63,7 @@ import Debug.Trace (trace)
 import qualified Data.Set as Set
 import qualified Data.Bimap as Bimap
 --import Data.Bimap (Bimap)
+import Data.Tuple.HT (thd3)
 
 import Text.Printf (printf, PrintfArg) --,IsChar)
 
@@ -81,7 +82,7 @@ data EtaLoopItem node sweep vec a z =
   EtaLoopItem {
     stateFlowIn :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
     sweep :: Type.Sweep node sweep vec a,
-    stateFlowOut :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
+    -- stateFlowOut :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
     balanceLoop :: [BalanceLoopItem node a z] }
 
 
@@ -123,7 +124,25 @@ balanceDeviation m =
   ~+ 
   Arith.abs (Map.foldl (~+) Arith.zero m)
 
-balanceIteration::  
+oneIterationOfAllStorages optParams fsys accessf force steps =
+  Map.foldlWithKey f [] (One.unBalanceForcingMap force)
+  where f acc sto _ = acc ++ iterateOneStorage optParams fsys accessf force steps sto
+
+
+balanceIterationInit optParams fsys accessf balForceIn balStepsIn =
+  (balForceIn, balStepsIn, oioas)
+  where oioas = oneIterationOfAllStorages optParams fsys accessf balForceIn balStepsIn
+
+balanceIterationAlgorithm optParams fsys accessf (forcing, stepping, _) =
+  (forcing1, stepping1, oioas)
+  where oioas = oneIterationOfAllStorages optParams fsys accessf forcing1 stepping1
+        bal = balance lastElem
+        forcing1 = bForcing lastElem
+        stepping1 = bFStep lastElem
+        lastElem = vlast "balanceIteration" oioas
+
+
+balanceIteration ::  
   (Ord a, Arith.Constant a,Ord node, Show node, Show a) =>
   One.OptimisationParams node [] Sweep UV.Vector a ->
   (One.BalanceForcing node a -> z) ->
@@ -132,20 +151,12 @@ balanceIteration::
   One.BalanceForcingStep node a ->
   [BalanceLoopItem node a z]
 balanceIteration optParams fsys accessf balForceIn balStepsIn =
--- <<<<<<< HEAD
-  go balForceIn balStepsIn 
-  where go forcing stepping = oneIterationOfAllStorages ++ go forcing1 stepping1
+  concatMap thd3 $ iterate (balanceIterationAlgorithm optParams fsys accessf) init
+  where init = balanceIterationInit optParams fsys accessf balForceIn balStepsIn
 
-            -- hier lieber mit takeWhile arbeiten oder ganz von ausserhalb kontrollieren
-            -- if checkBalance optParams bal then [] else go forcing1 stepping1
 
-          where oneIterationOfAllStorages =
-                  Map.foldlWithKey f [] (One.unBalanceForcingMap forcing)
-                f acc sto _ =
-                  acc ++ iterateOneStorage optParams fsys accessf forcing stepping sto
 
 {-
--- =======
   go 0 balForceIn balStepsIn 
   where (One.MaxBalanceIterations maxCnt) = One.maxBalanceIterations optParams
         numberOfStorages = length $ Map.keys $ One.unBalanceForcingMap balForceIn
@@ -157,24 +168,11 @@ balanceIteration optParams fsys accessf balForceIn balStepsIn =
           where oneIterationOfAllStorages =
                   foldl f [] $ Map.keys $ One.unBalanceForcingMap forcing
                 f acc sto = acc ++ iterateOneStorage optParams cnt fsys accessf forcing stepping sto
--- >>>>>>> stateForcing
 -}
 
-                bal = balance lastElem
-                forcing1 = bForcing lastElem
-                stepping1 = bFStep lastElem
-                lastElem = vlast "balanceIteration" oneIterationOfAllStorages
 
 iterateOneStorage ::  
   (Ord a, Arith.Constant a,Ord node, Show node, Show a) =>
--- <<<<<<< HEAD
-{-
-=======
-  One.OptimisationParams node [] Sweep UV.Vector a ->
-  Int -> 
->>>>>>> stateForcing
--}
-
   One.OptimisationParams node [] Sweep UV.Vector a ->
   (One.BalanceForcing node a -> z) ->
   (z -> One.Balance node a)->
@@ -182,75 +180,32 @@ iterateOneStorage ::
   One.BalanceForcingStep node a ->
   node ->
   [BalanceLoopItem node a z]
--- <<<<<<< HEAD
-{-
 iterateOneStorage optParams fsys accessf forcingIn steppingIn sto = 
-  go forcingIn steppingIn initialResult (Nothing, Nothing)
-
+  map snd $ iterate go (initBestPair, initBalanceLoopItem)
   where
-    (One.MaxBalanceIterations maxCnt) = One.maxBalanceIterations optParams
-    initialResult = fsys forcingIn
-
-
-    go force step res bestPair =
-      BalanceLoopItem force step1 bal res : go force1 step1 res1 bestPair1
-      where force1 = One.addForcingStep force step sto
-            res1 = fsys force1
-            bal1 = accessf res1
-            bal = accessf res
-            bestPair1 = One.rememberBestBalanceForcing bestPair (force1, bal1) sto
-            step1 = calculateNextBalanceStep (force1, bal1) bestPair1 step sto
--}
-
-iterateOneStorage optParams fsys accessf forcingIn steppingIn sto = 
-  go forcingIn steppingIn initResult (Nothing, Nothing)
-
-  where
-    -- (One.MaxBalanceIterations maxCnt) = One.maxBalanceIterations optParams
     initResult = fsys forcingIn
     initBal = accessf initResult
     initBestPair = (Nothing, Nothing)
 
-    bal = accessf $ fsys $ One.addForcingStep forcingIn steppingIn sto
-
-    initStep = calculateNextBalanceStep bal initBestPair steppingIn sto
-
+    initStep =
+      calculateNextBalanceStep
+        (accessf $ fsys $ One.addForcingStep forcingIn steppingIn sto)
+        initBestPair 
+        steppingIn
+        sto
 
     initBalanceLoopItem =
       BalanceLoopItem forcingIn initStep initBal initResult
 
 
-    go force step res bestPair =
-      BalanceLoopItem force step1 bal res : go force1 step1 res1 bestPair1
-
+    go (bestPair, BalanceLoopItem force step _ _) =
+      (bestPair1, BalanceLoopItem force1 step1 bal1 res1)
       where force1 = One.addForcingStep force step sto
             res1 = fsys force1
             bal1 = accessf res1
-            bal = accessf res
             bestPair1 = One.rememberBestBalanceForcing bestPair (force1, bal1) sto
             step1 = calculateNextBalanceStep bal1 bestPair1 step sto
 
-
-
-{-                
-=======
-    go cnt force step res bestPair =
-      BalanceLoopItem cnt force step1 bal res : 
-      if checkBalanceSingle optParams bal sto || cnt >= maxCnt
-          then [] else 
-        go (cnt+1) force1 step1 res1 bestPair1
-      where
-        force1 = One.addForcingStep force step sto
-        res1 = fsys force1
-        bal1 = accessf res1
-        bal = accessf res
-        bestPair1 =  One.rememberBestBalanceForcing bestPair (force1, bal1) sto
-        step1 = calculateNextBalanceStep 
-                (force1, bal1) bestPair1
-                step sto
-                    
->>>>>>> stateForcing
--}
 
 calculateNextBalanceStep :: 
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
@@ -296,7 +251,8 @@ getStateTimes stateForceIn sfg = Map.mapWithKey f stateForceIn
         timeMapAbs = Map.mapKeys g timeMap
 
         g st = fromMaybe 
-                 (error $ "getStateTime: key " ++ show st ++ " not found in " ++ show indexMap)
+                 (error $ "getStateTime: key "
+                          ++ show st ++ " not found in " ++ show indexMap)
                  (Map.lookup st indexMap)
 
 
@@ -324,33 +280,45 @@ iterateEtaWhile ::
   One.StateForcing ->
   [EtaLoopItem Node Sweep UV.Vector a z]
 iterateEtaWhile sysParams optParams simParams sfgIn statForcing =
-  go 0 sfgIn initBalF
+  map snd $ iterate go (initBalF, initEtaLoopItem)
   where
         initBalF = One.initialBattForcing optParams
-        One.MaxEtaIterations maxCnt = One.maxEtaIterations optParams
-        go cnt sfg bfIn = EtaLoopItem sfg swp sfg1 res : 
-                          if cnt >= maxCnt then [] else go (cnt+1) sfg1 bfOut
-          where
-            swp = Base.perStateSweep sysParams optParams sfg
+        balStepsIn = One.initialBattForceStep optParams
+   
+        accessf x =
+          StateEta.balanceFromRecord
+            (One.storagePositions sysParams)
+            (Type.signals (Type.simulation x))
 
-            fsys balanceForcing =
-              NonIO.optimiseAndSimulateSignalBased
-                sysParams optParams simParams 
-                balanceForcing statForcing swp indexConversionMap
-      
-            accessf x =
-              StateEta.balanceFromRecord
-                (One.storagePositions sysParams)
-                (Type.signals (Type.simulation x))
 
-            indexConversionMap = ModUt.indexConversionMap System.topology sfg
-            balStepsIn = One.initialBattForceStep optParams
+        initFsys balanceForcing =
+          NonIO.optimiseAndSimulateSignalBased
+            sysParams optParams simParams 
+            balanceForcing statForcing initSwp initIdxConvMap
 
-            res = balanceIteration optParams fsys accessf bfIn balStepsIn 
-            sfg1 = Type.stateFlowGraphSweep (bResult lastElem)
-            bfOut = bForcing lastElem
-            lastElem = vlast "iterateEtaWhile: empty list" res
+        initIdxConvMap = ModUt.indexConversionMap System.topology sfgIn
 
+
+        initSwp = Base.perStateSweep sysParams optParams sfgIn
+        initRes = balanceIteration optParams initFsys accessf initBalF balStepsIn
+        initEtaLoopItem = EtaLoopItem sfgIn initSwp initRes
+
+
+        go (bfIn, EtaLoopItem sfg _ res) =
+          (bfOut, EtaLoopItem sfg1 swp1 res1)
+          where sfg1 = Type.stateFlowGraphSweep (bResult lastElem)
+                swp1 = Base.perStateSweep sysParams optParams sfg
+
+                fsys balanceForcing =
+                  NonIO.optimiseAndSimulateSignalBased
+                    sysParams optParams simParams 
+                    balanceForcing statForcing swp1 idxConvMap
+
+                idxConvMap = ModUt.indexConversionMap System.topology sfg
+
+                res1 = balanceIteration optParams fsys accessf bfIn balStepsIn
+                lastElem = vlast "iterateEtaWhile: empty list" res
+                bfOut = bForcing lastElem
 
 
 -------------------------------- OutPut Below -----------------------------------
@@ -415,7 +383,7 @@ showEtaLoopItem::
   One.OptimisationParams node [] Sweep UV.Vector a ->
   (Counter, EtaLoopItem node Sweep UV.Vector a z) ->
   String
-showEtaLoopItem _optParams (step, EtaLoopItem _sfgIn _sweep _sfgOut _) =
+showEtaLoopItem _optParams (step, EtaLoopItem _sfgIn _sweep _) =
   printf "EL: %8d" step
 
 showBalanceLoopItem::(Show a, Show node,PrintfArg a,Arith.Constant a )=>
@@ -463,7 +431,7 @@ printEtaLoopItem ::
    One.OptimisationParams node [] Sweep UV.Vector a ->
    (Counter, EtaLoopItem node Sweep UV.Vector a z) ->
    IO ()
-printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _sfgOut _res) = 
+printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _res) = 
   do
      putStrLn $ showEtaLoopItem _params _e
      let -- dir = printf "outer-loop-%6.6d" olcnt
