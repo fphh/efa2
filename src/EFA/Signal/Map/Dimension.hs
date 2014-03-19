@@ -1,38 +1,29 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module EFA.Signal.Map.Dimension where
 
 import EFA.Utility(Caller)
 
-{-
-newtype Data ab c = Data {getData :: Apply ab c}
-
-data Nil a
-data ((a :: * -> *)  :>  (b :: * -> *)) c
-
-infixr 9 :>
-
--- | apply nested functor to the functor argument
-type family Apply (a :: * -> *) c
-
-type instance Apply Nil a = a
-type instance Apply (a :> b) c = a (Apply b c)
--}
-
-
 data Dim1
 data Succ a
+
+-- | apply nested functor to the functor argument
+type family SubDim a
+
+type instance SubDim Dim1 = Dim1
+type instance SubDim (Succ a) = a
 
 type Dim2 = Succ Dim1
 type Dim3 = Succ Dim2
 type Dim4 = Succ Dim3
 type Dim5 = Succ Dim4
 type Dim6 = Succ Dim5
-type Dim7 = Succ Dim6
-
-
+type Dim7 = Succ Dim6  
+  
 data Data dim a = Data [a] deriving Show
 
 instance Functor (Data dim) where
@@ -69,7 +60,7 @@ m caller = "Error in Dimension.fromList called by " ++ caller ++
            " list length doesn't match dimension" 
 
 
-dropFirst :: Caller -> Data (Succ dim) a -> Data dim a 
+dropFirst :: Caller -> Data dim a -> Data (SubDim dim) a 
 dropFirst caller (Data [x]) = error $ "Error in Dimension.dropFirst called by " ++ 
                          caller ++ "-only one Dimension left"
 dropFirst _ (Data (x:xs)) = Data xs

@@ -4,6 +4,7 @@ module EFA.Signal.Map.Ortho where
 
 import EFA.Utility(Caller)
 
+import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Map.Dimension as Dim
 import EFA.Signal.Map.Dimension(Dim2)
@@ -71,20 +72,39 @@ getSubOrtho ::
   (SV.Storage vec b, SV.Slice vec, 
    SV.Storage vec a, SV.Length vec) =>
   Caller ->
-  Ortho (Dim.Succ dim) vec a b -> 
-  Axes.Idx -> Ortho dim vec a b
+  Ortho dim vec a b -> 
+  Axes.Idx -> Ortho (Dim.SubDim dim) vec a b
 getSubOrtho caller (Ortho axes vec) (Axes.Idx idx) = Ortho (Dim.dropFirst (caller++">getSubOrtho") axes) subVec
   where subVec = SV.slice (0) (l-1) vec
         startIdx = idx*l
         stopIdx = idx*l+(l-1) 
         l = Axes.len $ Dim.getFirst (caller++">getSubOrtho") axes
-{-  
+
+{-
+class Interpolate dim where
+  interpolate :: 
+    Caller -> 
+    ((a,a) -> (b,b) -> a -> Interp.Val b) -> 
+  Ortho dim vec a b -> 
+  (Dim.Data dim a) ->   
+  Interp.Val b
+
+instance Interpolate Dim1 where  
+         interpolate
+-}
+ 
 interpolate :: 
+  (Ord a,Arith.Constant b,
+   SV.UnsafeLookup vec a,
+   SV.Storage vec a,
+   SV.Length vec,
+   SV.Find vec, 
+   SV.Storage vec b, SV.Slice vec) =>
   Caller ->  
   ((a,a) -> (b,b) -> a -> Interp.Val b) -> 
   Ortho dim vec a b -> 
   (Dim.Data dim a) ->   
-  Interp.Val b  
+  Interp.Val b
 interpolate caller interpFunction ortho coordinates = Interp.combine3 y1 y2 y
   where 
     newCaller = (caller ++ ">Ortho.interpolate")
@@ -96,5 +116,5 @@ interpolate caller interpFunction ortho coordinates = Interp.combine3 y1 y2 y
     y2 = interpolate newCaller interpFunction (getSubOrtho newCaller ortho idx2) subCoordinates
     y = interpFunction (x1,x2) (Interp.unpack y1,Interp.unpack y2) x 
     
- -} 
+
   
