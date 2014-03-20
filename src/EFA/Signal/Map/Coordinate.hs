@@ -2,11 +2,13 @@
 
 module EFA.Signal.Map.Coordinate where
 
-import EFA.Utility(Caller)
+import EFA.Utility(Caller,merror,(|>))
 import qualified EFA.Signal.Vector as SV
 
 import qualified EFA.Signal.Map.Dimension as Dim 
 
+modul::String
+modul = "coordinate"
 
 -- | Datatype with monotonically rising values 
 newtype Axis vec a = Axis {getVec :: vec a} deriving (Show,Eq)
@@ -43,8 +45,7 @@ fromVec ::
   Caller -> vec a -> Axis vec a
 fromVec caller vec = 
   if isMonoton then Axis vec   
-  else error ("Error in Axis.generate called by " ++ 
-       caller ++ " - vector of elements is not monotonically rising")   
+  else merror modul "fromVec" caller "Vector of elements is not monotonically rising"   
     where isMonoton = SV.all (==True) $ SV.deltaMap (\ x1 x2 -> x2 > x1) vec
           
 createSystem :: 
@@ -55,8 +56,8 @@ createSystem ::
    SV.Storage vec Bool,
    SV.Singleton vec) =>
             Caller -> [vec a] -> System dim vec a
-createSystem caller xs = Dim.fromList (caller ++">create")  
-                    $ map (fromVec (caller ++ ">create")) xs
+createSystem caller xs = Dim.fromList nc $ map (fromVec nc) xs
+  where nc = caller |> (modul,"createSystem")                         
 
 
 findIndex :: 
@@ -77,7 +78,7 @@ findRightInterpolationIndex axis x = rightIndex
   where 
     idx = findIndex (>x) axis
     rightIndex = case idx of
-      Just (Idx idx) -> if idx==0 then Idx 1 else Idx idx 
+      Just (Idx ix) -> if ix==0 then Idx 1 else Idx ix 
       Nothing   -> Idx $ (len axis)-1
 
 
@@ -104,10 +105,10 @@ vector::
    SV.Storage (Axis vec) a) =>
   System dim vec a -> 
   vec (Dim.Data dim a)
-vector axes = SV.map Dim.Data $ g axes   
+vector axs = SV.map Dim.Data $ g axs   
   where   
     g (Dim.Data [Axis axis]) = SV.map (\x -> [x]) $ axis
     g (Dim.Data axes) = 
-      SV.concat $ SV.toList $ SV.map (\x -> SV.map (\xs -> x:xs) vector) axis
+      SV.concat $ SV.toList $ SV.map (\x -> SV.map (\xs -> x:xs) vec) axis
       where axis = head axes
-            vector = g $ (Dim.Data $ tail axes)
+            vec = g $ (Dim.Data $ tail axes)

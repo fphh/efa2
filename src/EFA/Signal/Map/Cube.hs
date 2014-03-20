@@ -2,24 +2,24 @@
 
 module EFA.Signal.Map.Cube where
 
-import EFA.Utility(Caller)
+import EFA.Utility(Caller,merror,(|>))
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Map.Dimension as Dim
-import EFA.Signal.Map.Dimension(Dim2)
 import qualified EFA.Signal.Map.Coordinate as Coord
-import EFA.Signal.Map.Coordinate (Axis,System)
+import EFA.Signal.Map.Coordinate (System)
 
 import EFA.Signal.Interp as Interp
 
 import qualified Prelude as P
 import Prelude hiding (zipWith, map, foldl)
-import qualified Data.Vector as V 
 import Data.Maybe(fromMaybe) 
 
 import EFA.Utility.Trace(mytrace)
 
+modul :: String 
+modul = "Cube"
 
 data Cube dim vec a b = Cube {
   getAxes :: System dim vec a, 
@@ -39,16 +39,16 @@ lookupLin ::
   (SV.LookupMaybe vec b,
   Show (vec b)) =>  
   Caller -> Cube dim vec a b -> LinIdx -> b
-lookupLin caller (Cube _ vec) (LinIdx idx) = fromMaybe (error m) $ SV.lookupMaybe vec idx
-  where m = "Error in LookupLinear called by " ++ caller ++
-            " - linear Index out of Bounds - Index : " ++ show idx ++"- Vector: "++ show vec  
+lookupLin caller (Cube _ vec) (LinIdx idx) = fromMaybe e $ SV.lookupMaybe vec idx
+  where e = merror modul "lookupLinear" caller 
+            $ "linear Index out of Bounds - Index : " ++ show idx ++"- Vector: "++ show vec  
 
 lookUp :: 
   (SV.LookupMaybe vec b, 
    SV.Storage vec a,Show (vec b), 
    SV.Length vec) =>
   Caller -> Coord.DimIdx dim -> Cube dim vec a b -> b 
-lookUp caller idx ortho@(Cube axes _) = lookupLin (caller ++">lookUp") ortho index
+lookUp caller idx ortho@(Cube axes _) = lookupLin (caller |> (modul,">lookUp")) ortho index
   where index = toLinear axes idx
 
 checkVector :: 
@@ -70,11 +70,11 @@ create ::
   ) =>
   Caller -> [vec a] -> vec b -> Cube dim vec a b
 create caller xs vec = 
-  let axes = Coord.createSystem (caller++">genCube") xs
+  let axes = Coord.createSystem (caller |> (modul,"genCube")) xs
   in if checkVector axes vec
   then Cube axes vec
-       else error ("Error in Cube.genCube called by " ++ 
-            caller ++ " - Vector doesn't contain the right number of elements")
+       else merror modul "create" caller 
+            "Vector doesn't contain the right number of elements"
 
 map :: 
   (SV.Walker vec,
@@ -135,8 +135,7 @@ zipWith ::
   Cube dim vec a d
 zipWith caller f (Cube axes vec) (Cube axes1 vec1) = 
   if axes == axes1 then Cube axes $ SV.zipWith f vec vec1 
-                   else error ("Error in Cube.zipWith called by " ++ caller ++
-                               "- Axis differ")    
+                   else merror modul "zipWith" caller "Axes differ"    
 
 
 -- | Removes the first Dimension
@@ -146,10 +145,10 @@ getSubCube ::
   Caller ->
   Cube dim vec a b -> 
   Coord.Idx -> Cube (Dim.SubDim dim) vec a b
-getSubCube caller (Cube axes vec) (Coord.Idx idx) = Cube (Dim.dropFirst (caller++">getSubCube") axes) subVec
+getSubCube caller (Cube axes vec) (Coord.Idx idx) = Cube (Dim.dropFirst (caller |> (modul,"getSubCube")) axes) subVec
   where subVec = SV.slice startIdx l vec
         startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
-        l = mytrace 0 "getSubCube" "l" $ Coord.len $ Dim.getFirst (caller++">getSubCube") axes
+        l = mytrace 0 "getSubCube" "l" $ Coord.len $ Dim.getFirst (caller |> (modul,"getSubCube")) axes
 
 interpolate :: 
   (Ord a,Arith.Constant b,Num b,SV.LookupMaybe vec b,
@@ -165,7 +164,7 @@ interpolate ::
   Interp.Val b
 interpolate caller interpFunction ortho coordinates = Interp.combine3 y1 y2 y
   where 
-    newCaller = (caller ++ ">Cube.interpolate")
+    newCaller = (caller |> (modul,"interpolate"))
     axis = mytrace 0 "interpolate" "axis" $ Dim.getFirst newCaller $ 
            getAxes $ mytrace 0 "interpolate" "ortho" $ ortho
     subCoordinates = Dim.dropFirst newCaller coordinates
