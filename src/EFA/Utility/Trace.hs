@@ -30,4 +30,4 @@ mytraceList ::
 mytraceList dbgLevel function varName var =
    if dbgLevel >= debugLevel
      then trace ("myTraceList: " ++ show function ++ "-" ++ show varName ++ " : " ++ myShowList var) var
-     else var         
+     else var
