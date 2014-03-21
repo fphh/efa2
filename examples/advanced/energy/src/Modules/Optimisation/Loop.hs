@@ -547,13 +547,13 @@ printBalanceLoopItem _optParams _b@(_bStp, BalanceLoopItem _bForcing _bFStep _ba
          _stoPos = TopoIdx.Position System.Water System.Network
 
     concurrentlyMany_ [
-      putStrLn $ showBalanceLoopItem _optParams _b, 
+      putStrLn $ showBalanceLoopItem _optParams _b 
 --       ModPlot.maxIndexPerState _term _opt, 
 --       ModPlot.givenSignals _term _opt, 
 --       print (Map.map (Type.reqsAndDofsSignalsOfState) $ 
 --              Type.interpolationPerState _opt),
 --      print $ Type.signals $ Type.simulation $ _opt,
-      ModPlot.simulationSignals _term _opt
+--      ModPlot.simulationSignals _term _opt
 -- <<<<<<< HEAD
 -- =======
 --      ModPlot.simulationGraphs (ModPlot.dot _dir _bFStep) _opt      

@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module EFA.Signal.Map.Cube where
 
@@ -9,6 +10,8 @@ import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Map.Dimension as Dim
 import qualified EFA.Signal.Map.Coordinate as Coord
 import EFA.Signal.Map.Coordinate (System)
+import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Data as Data
 
 import EFA.Signal.Interp as Interp
 
@@ -179,5 +182,50 @@ interpolate caller interpFunction ortho coordinates = Interp.combine3 y1 y2 y
                     Interp.Inter $ lookUp newCaller (Dim.Data [idx2]) ortho)
     y = interpFunction (x1,x2) (Interp.unpack y1,Interp.unpack y2) x
 
-    
+{-    
 
+class ToSignal dim where
+  toSignal :: Cube dim vec a b -> TC Signal t (Data c) b
+  
+instance ToSignal Dim2 where  
+  toSignal (Cube axes vec) = 
+-}    
+    
+dimension :: Dim.Dimensions dim => Cube dim vec a b -> Int     
+dimension (Cube axes vec) = Dim.num axes
+    
+{-    
+-- | Removes the first Dimension
+makeNested ::  
+  (SV.Storage vec b, SV.Slice vec, 
+   SV.Storage vec a, SV.Length vec) =>
+  Caller ->
+  Cube dim vec a b -> 
+makeNested cube =  
+
+
+nest caller cube@(Cube axes vec) | dimension cube ==1 = vec
+nest caller cube@(Cube axes vec) = SV.imap f axis
+  where
+    axis = Dim.getFirst (nc "nest") $ axes
+    l = Coord.len axis
+    f (idx,_) = SV.slice startIdx l
+        where
+          startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
+-}          
+        
+class ToSignal dim where
+  toSignal :: Cube dim vec a b -> Sig.TC Sig.Signal t (Data.Data c b)
+       
+instance 
+  (SV.Walker (Coord.Axis vec),
+  SV.Storage (Coord.Axis vec) (v0 d0 -> v0 d0),
+  SV.Storage (Coord.Axis vec) aToSignal (Dim.Succ Dim.Dim1)) where 
+  toSignal cube@(Cube axes vec) = Sig.TC $ Data.Data $ SV.imap f axis
+      where 
+        axis = Dim.getFirst (nc "nest") $ axes
+        l = Coord.len axis
+        f idx _ = SV.slice startIdx l
+          where
+            startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
+ 

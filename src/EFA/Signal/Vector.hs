@@ -197,6 +197,7 @@ instance Singleton [] where
 -- | Functor
 class Walker vec where
    map :: (Storage vec a, Storage vec b) => (a -> b) -> vec a -> vec b
+   imap :: (Storage vec a, Storage vec b) => (Int -> a -> b) -> vec a -> vec b
    foldr :: (Storage vec a) => (a -> b -> b) -> b -> vec a -> b
    foldl :: (Storage vec a) => (b -> a -> b) -> b -> vec a -> b
    {- |
@@ -208,6 +209,7 @@ class Walker vec where
 
 instance Walker [] where
    map = List.map
+   imap f = List.zipWith f [0..]
    foldr = List.foldr
    foldl = List.foldl'
    equalBy f =
@@ -218,6 +220,7 @@ instance Walker [] where
 
 instance Walker UV.Vector where
    map f xs = writeUnbox (readUnbox (UV.map f) xs)
+   imap f xs = writeUnbox (readUnbox (UV.imap f) xs)
    foldr f a = readUnbox (UV.foldr f a)
    foldl f a = readUnbox (UV.foldl' f a)
    equalBy f =
@@ -227,6 +230,7 @@ instance Walker UV.Vector where
 
 instance Walker V.Vector where
    map = V.map
+   imap = V.imap
    foldr = V.foldr
    foldl = V.foldl'
    equalBy f xs ys =
