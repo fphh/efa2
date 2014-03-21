@@ -15,3 +15,10 @@ vlast caller xs =
      then error $ "vlast, " ++ caller ++ ": empty list"
      else last xs
 
+
+takeUntil :: (a -> Bool) -> [a] -> [a]
+takeUntil p list = f [] list
+  where    
+    f acc [] = []
+    f acc (x:xs) = if not (p x) then f (acc++[x]) xs else acc++[x]
+        

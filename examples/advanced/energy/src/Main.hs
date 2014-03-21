@@ -11,7 +11,7 @@ import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.Loop as ModLoop
 
 import EFA.Application.Type (EnvResult)
---import qualified EFA.Application.Type as Type
+import qualified EFA.Application.Type as Type
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
@@ -187,9 +187,12 @@ main1 = do
            $ ModLoop.iterateEtaWhile
                sysParams optParams simParams initEnv One.StateForcingOn
            
-      -- initEnv2 = ModLoop.stateFlowOut $ vlast "Main" ol
+      initEnv2 = --ModLoop.stateFlowOut $ 
+                 Type.stateFlowGraphSweep $ ModLoop.bResult $ vlast "Main" $
+                 vlast "Main" $ (ModLoop.balanceLoop $ vlast "Main" ol)
            
-      -- ol2 = ModLoop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff     
+      ol2 = ModLoop.condition optParams
+           $ ModLoop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff     
 
 
   -- let g = fmap (vhead "simulationGraphs" . Sweep.toList)
@@ -215,7 +218,7 @@ main1 = do
     sequence_ (ModLoop.printEtaLoop optParams ol)]
 
 
---  concurrentlyMany_ [sequence_ (ModLoop.printEtaLoop optParams ol2)]
+  concurrentlyMany_ [sequence_ (ModLoop.printEtaLoop optParams ol2)]
 
 {-
   concurrentlyMany_ [

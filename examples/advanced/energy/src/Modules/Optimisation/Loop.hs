@@ -22,6 +22,7 @@ import qualified EFA.Application.OneStorage as One
 --import qualified EFA.Application.Sweep as Sweep
 import EFA.Application.Sweep (Sweep)
 
+import qualified EFA.Utility.List as UtList
 --import qualified EFA.Graph as Graph
 --import EFA.Graph (Graph)
 --import qualified EFA.Flow.Draw as Draw
@@ -66,7 +67,7 @@ import Data.Tuple.HT (thd3)
 
 import Text.Printf (printf, PrintfArg) --,IsChar)
 
---import Debug.Trace (trace)
+import EFA.Utility.Trace (mytrace)
 
 type Counter = Int
 
@@ -199,12 +200,12 @@ iterateOneStorageInit fsys accessf forcingIn steppingIn sto =
     initBal = accessf initResult
     initBestPair = (Nothing, Nothing)
 
-    initStep =
-      calculateNextBalanceStep
+    initStep = steppingIn
+{-      calculateNextBalanceStep
         (accessf $ fsys $ One.addForcingStep forcingIn steppingIn sto)
         initBestPair 
         steppingIn
-        sto
+        sto-}
 
 iterateOneStorageAlgorithm ::
   (Ord node, Ord a, Show node, Show a, Arith.Constant a) =>
@@ -369,7 +370,7 @@ iterateEtaWhile sysParams optParams simParams sfgIn statForcing =
 -----------------------------------------------------------------
 
 cond :: Int -> (a -> Bool) -> [a] -> [a]
-cond n p = take n . takeWhile p
+cond n p = take n . UtList.takeUntil p
 
 conditionEtaLoopItem ::
   (Ord a, Arith.Sum a) =>
@@ -377,10 +378,12 @@ conditionEtaLoopItem ::
   EtaLoopItem Node Sweep UV.Vector a z ->
   EtaLoopItem Node Sweep UV.Vector a z
 conditionEtaLoopItem optParams (EtaLoopItem sfi swp bl) =
-  EtaLoopItem sfi swp $ cond cnt p (map (cond maxBICnt bip) bl)
+--  EtaLoopItem sfi swp $ cond cnt p (map (cond maxBICnt bip) bl)
+  EtaLoopItem sfi swp $ take 1 (map (cond maxBICnt bip) bl)
   where
         One.MaxBalanceIterations maxBICnt = One.maxBalanceIterations optParams
-        bip = not . checkBalance optParams . balance 
+        --bip = not . checkBalance optParams . balance 
+        bip = checkBalance optParams . balance 
 
         cnt = 1
         p _ = True
@@ -392,7 +395,8 @@ condition ::
   [EtaLoopItem Node Sweep UV.Vector a z] ->
   [EtaLoopItem Node Sweep UV.Vector a z]
 condition optParams xs =
-  cond maxEICnt eip $ map (conditionEtaLoopItem optParams) xs
+--  cond maxEICnt eip $ map (conditionEtaLoopItem optParams) xs
+  take maxEICnt $ map (conditionEtaLoopItem optParams) xs
   where
         One.MaxEtaIterations maxEICnt = One.maxEtaIterations optParams
         eip _ = True
