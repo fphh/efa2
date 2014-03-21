@@ -2,7 +2,7 @@ import EFA.Signal.Map.Cube (Cube)
 import qualified EFA.Signal.Map.Cube as Cube
 
 import EFA.Signal.Map.Dimension (Dim2)
-import EFA.Utility (newCaller)
+import EFA.Utility (genCaller,ModuleName(..))
 import qualified EFA.Signal.Map.Dimension as Dim
 import qualified EFA.Signal.Map.Coordinate as Coord
 import qualified Data.Vector as V
@@ -15,7 +15,7 @@ interpFunction = Interp.dim1 "main" Interp.Linear Interp.ExtrapLinear
 
 main :: IO()
 main = do
-  let caller = newCaller "Main" "main" 
+  let caller = genCaller (ModuleName "Main") "main" 
   let x = V.fromList ["x1","x2"]
   let y = V.fromList ["y1","y2"]
   let z = V.fromList ["z11","z12","z21","z22"]

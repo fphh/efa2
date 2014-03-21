@@ -8,21 +8,24 @@ import Data.Traversable (Traversable, mapAccumL)
 import Data.Stream (Stream)
 import Data.Bool.HT (if')
 
-type Modul = String
-type Function = String
-newtype Caller = Caller [(Modul,Function)]
+newtype ModuleName = ModuleName String
+type FunctionName = String
+newtype Caller = Caller [(ModuleName,FunctionName)]
 
-newCaller :: Modul -> Function -> Caller
-newCaller m f = Caller [(m,f)] 
+genCaller :: ModuleName -> FunctionName -> Caller
+genCaller m f = Caller [(m,f)] 
+
+instance Show ModuleName where
+  show (ModuleName xs) = xs++"."
 
 instance Show Caller where
-  show (Caller xs) = init $ concat $ map (\(m,f)-> m++"."++f++">") xs 
+  show (Caller xs) = init $ concat $ map (\(m,f)-> show m++f++">") xs 
 
-(|>) :: Caller -> (Modul,Function) -> Caller 
-(|>) (Caller c) (m,f) = Caller $ c++[(m,f)]
+(|>) :: Caller -> Caller -> Caller 
+(|>) (Caller c) (Caller c1) = Caller $ c++c1
 
-merror :: Modul -> Function -> Caller -> String -> t
-merror m f c msg = error $ "Error in "++ m ++ "." ++ f ++ "called by" ++ show c ++ "-" ++ msg
+merror ::  Caller -> ModuleName -> FunctionName -> String -> t
+merror c m f msg = error $ "Error in "++ show m ++ f ++ "called by" ++ show c ++ "-" ++ msg
 
 checkJust :: String -> Maybe a -> a
 checkJust _ (Just x) = x

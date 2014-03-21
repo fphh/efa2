@@ -528,7 +528,7 @@ instance UV.Unbox d => LookupMaybe UV.Vector d where
 class UnsafeLookup vec d where
   unsafeLookup :: vec d -> Int -> d
 
-instance (UV.Unbox d) => UnsafeLookup UV.Vector d where
+instance UV.Unbox d => UnsafeLookup UV.Vector d where
   unsafeLookup xs idx = xs UV.! idx
 
 instance UnsafeLookup V.Vector d where

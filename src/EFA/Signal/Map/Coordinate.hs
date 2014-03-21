@@ -2,13 +2,16 @@
 
 module EFA.Signal.Map.Coordinate where
 
-import EFA.Utility(Caller,merror,(|>))
+import EFA.Utility(Caller,merror, ModuleName(..),(|>),FunctionName, genCaller)
 import qualified EFA.Signal.Vector as SV
 
 import qualified EFA.Signal.Map.Dimension as Dim 
 
-modul::String
-modul = "coordinate"
+m :: ModuleName
+m = ModuleName "Coordinate"
+
+nc :: FunctionName -> Caller
+nc = genCaller m
 
 -- | Datatype with monotonically rising values 
 newtype Axis vec a = Axis {getVec :: vec a} deriving (Show,Eq)
@@ -45,7 +48,7 @@ fromVec ::
   Caller -> vec a -> Axis vec a
 fromVec caller vec = 
   if isMonoton then Axis vec   
-  else merror modul "fromVec" caller "Vector of elements is not monotonically rising"   
+  else merror caller m "fromVec" "Vector of elements is not monotonically rising"   
     where isMonoton = SV.all (==True) $ SV.deltaMap (\ x1 x2 -> x2 > x1) vec
           
 createSystem :: 
@@ -56,9 +59,9 @@ createSystem ::
    SV.Storage vec Bool,
    SV.Singleton vec) =>
             Caller -> [vec a] -> System dim vec a
-createSystem caller xs = Dim.fromList nc $ map (fromVec nc) xs
-  where nc = caller |> (modul,"createSystem")                         
-
+createSystem caller xs = Dim.fromList newCaller 
+                         $ map (fromVec newCaller) xs
+  where newCaller = caller |> (nc "createSystem")
 
 findIndex :: 
   (SV.Storage vec a, SV.Find vec)=>

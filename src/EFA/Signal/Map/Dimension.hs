@@ -6,10 +6,10 @@
 
 module EFA.Signal.Map.Dimension where
 
-import EFA.Utility(Caller,merror)
+import EFA.Utility(Caller,merror,ModuleName(..))
 
-modul::String
-modul = "Dimension"
+m:: ModuleName
+m = ModuleName "Dimension"
 
 data Dim1
 data Succ a
@@ -44,7 +44,7 @@ fromList caller xs =
     dim = Data xs
   in if len dim == num dim
      then dim
-     else merror "Dimension" "fromList" caller  
+     else merror caller m "fromList"   
           "list length doesn't match dimension"
 
 class Dimensions dim where num :: Data dim a -> Int
@@ -62,12 +62,12 @@ instance Dimensions Dim10 where num _ = 10
 
 
 dropFirst :: Caller -> Data dim a -> Data (SubDim dim) a
-dropFirst caller (Data []) = merror modul "dropFirst" caller "no Dimension left"
-dropFirst caller (Data [_]) = merror modul "dropFirst" caller "no Dimension left"
+dropFirst caller (Data []) = merror caller m "dropFirst" "no Dimension left"
+dropFirst caller (Data [_]) = merror caller m "dropFirst" "no Dimension left"
 dropFirst _ (Data (_:xs)) = Data xs
 
 getFirst :: Caller -> Data dim a -> a
-getFirst caller (Data []) = merror modul "dropFirst" caller "no Dimension left"
+getFirst caller (Data []) = merror caller m "dropFirst" "no Dimension left"
 getFirst _ (Data (x:_)) = x
 
 
