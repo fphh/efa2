@@ -219,21 +219,9 @@ instance (SV.Walker v2, Map v1) => Map (v2 :> v1) where
    map f xd =
       nestedData
          (withNestedData (SV.map (getData . map f . subData xd)) xd)
-{-
-class IMap c where
-   imap :: (Storage c d1, Storage c d2) => (d1 -> d2) -> Data c d1 -> Data c d2
 
-instance IMap Nil where
-   imap f (Data x) = Data $ f x
-
-instance (SV.Walker v2, Map v1) => IMap (v2 :> v1) where
-   imap f xd =
-      nestedData
-         (withNestedData (SV.map (getData . map f . subData xd)) xd)
--}
 instance (Fold c, Equal c, Map c) => SV.Walker (Data c) where
    map f x = writeData (map f `readData` x)
---   imap f x = writeData (imap f `readData` x)
    foldr f b as = foldr f b `readData` as
    foldl f b as = foldl f b `readData` as
    equalBy f as bs = equalBy f `readData` as `readData` bs

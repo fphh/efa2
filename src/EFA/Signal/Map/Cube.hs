@@ -1,5 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE  TypeFamilies #-}
 
 module EFA.Signal.Map.Cube where
 
@@ -9,9 +12,13 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Map.Dimension as Dim
 import qualified EFA.Signal.Map.Coordinate as Coord
+import qualified EFA.Signal.Map.Axis as Axis
+import EFA.Signal.Map.Axis (Axis)
 import EFA.Signal.Map.Coordinate (System)
 import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.Data as Data
+import EFA.Signal.Data(Data(..),Nil,(:>))
+import qualified Data.Map as Map  
+
 
 import EFA.Signal.Interp as Interp
 
@@ -27,41 +34,36 @@ modul = ModuleName "Cube"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-data Cube dim vec a b = Cube {
-  getAxes :: System dim vec a, 
+data Cube dim label vec a b = Cube {
+  getAxes :: System dim label vec a, 
   getVector :: vec b } deriving Show
-
-newtype LinIdx = LinIdx {getInt:: Int} deriving Show
-
-toLinear :: 
- (SV.Storage vec a, SV.Length vec)=>  
-  System dim vec a -> Coord.DimIdx dim -> LinIdx
-toLinear (Dim.Data xs) (Dim.Data indices) = LinIdx $
-  P.foldl (+) (0) $ P.zipWith (*) 
-  (P.map Coord.getInt indices) dimensionMultiplicators
-  where dimensionMultiplicators = (init $ P.map Coord.len xs) ++ [1]
         
 lookupLin ::
   (SV.LookupMaybe vec b,
   Show (vec b)) =>  
-  Caller -> Cube dim vec a b -> LinIdx -> b
-lookupLin caller (Cube _ vec) (LinIdx idx) = fromMaybe e $ SV.lookupMaybe vec idx
+  Caller -> Cube dim label vec a b -> Coord.LinIdx -> b
+lookupLin caller (Cube _ vec) (Coord.LinIdx idx) = fromMaybe e $ SV.lookupMaybe vec idx
   where e = merror caller modul "lookupLinear" 
             $ "linear Index out of Bounds - Index : " ++ show idx ++"- Vector: "++ show vec  
+
+lookupLinUnsafe :: 
+  SV.LookupUnsafe vec b => 
+  Cube dim label vec a b -> Coord.LinIdx -> b
+lookupLinUnsafe (Cube _ vec) (Coord.LinIdx idx) = SV.lookupUnsafe vec idx
 
 lookUp :: 
   (SV.LookupMaybe vec b, 
    SV.Storage vec a,Show (vec b), 
    SV.Length vec) =>
-  Caller -> Coord.DimIdx dim -> Cube dim vec a b -> b 
-lookUp caller idx ortho@(Cube axes _) = lookupLin (caller |> (nc "lookUp")) ortho index
-  where index = toLinear axes idx
+  Caller -> Coord.DimIdx dim -> Cube dim label vec a b -> b 
+lookUp caller idx ortho@(Cube axes _) = lookupLin (caller |> nc "lookUp") ortho index
+  where index = Coord.toLinear axes idx
 
 checkVector :: 
   (SV.Storage vec b, SV.Length vec,SV.Storage vec a) =>
-  System dim vec a -> vec b -> Bool
+  System dim label vec a -> vec b -> Bool
 checkVector (Dim.Data axes) vec =  SV.length vec == numberElements
-  where numberElements = P.foldl (*) (1) (fmap Coord.len axes)
+  where numberElements = P.foldl (*) (1) (fmap Axis.len axes)
     
 
 create :: 
@@ -74,7 +76,7 @@ create ::
    SV.Length vec,
    Dim.Dimensions dim
   ) =>
-  Caller -> [vec a] -> vec b -> Cube dim vec a b
+  Caller -> [(label,vec a)] -> vec b -> Cube dim label vec a b
 create caller xs vec = 
   let axes = Coord.createSystem (caller |> (nc "genCube")) xs
   in if checkVector axes vec
@@ -82,50 +84,61 @@ create caller xs vec =
        else merror caller modul "create" 
             "Vector doesn't contain the right number of elements"
 
+
+generateWithCoordinates :: 
+  (SV.Walker vec,
+   SV.Storage vec b,
+   SV.Storage vec (Dim.Data dim a),
+   SV.Storage vec (vec [a]),
+   SV.Storage vec a,
+   SV.Storage vec [a],
+   SV.Singleton vec,
+   SV.FromList vec) =>
+   (Dim.Data dim a -> b) -> System dim label vec a -> Cube dim label vec a b
+generateWithCoordinates f axes =  Cube axes $ SV.map f (Coord.vector axes)
+
 map :: 
   (SV.Walker vec,
    SV.Storage vec c,
    SV.Storage vec b) => 
-  (b -> c) -> Cube dim vec a b -> Cube dim vec a c
+  (b -> c) -> Cube dim label vec a b -> Cube dim label vec a c
 map f (Cube axes vec) = (Cube axes $ SV.map f vec)
 
 
 mapWithCoordinates :: 
  (SV.Walker vec,
-  SV.Storage vec c,
+  SV.Storage vec c,SV.Storage vec (vec [a]), SV.FromList vec,
   SV.Zipper vec,
   SV.Storage vec b,
   SV.Storage vec (Dim.Data dim a),
-  SV.Walker (Coord.Axis vec),
-  SV.Storage (Coord.Axis vec) a,
-  SV.Storage (Coord.Axis vec) (vec [a]),
   SV.Storage vec a,
   SV.Storage vec [a],
   SV.Singleton vec,
-  SV.FromList (Coord.Axis vec),
   SV.Storage vec (Dim.Data dim a, b)) =>
- (Dim.Data dim a -> b -> c) -> Cube dim vec a b -> Cube dim vec a c
+ (Dim.Data dim a -> b -> c) -> Cube dim label vec a b -> Cube dim label vec a c
 mapWithCoordinates f (Cube axes vec)  = (Cube axes $ SV.map (\(x,y) -> f x y) $ 
                                   SV.zip (Coord.vector axes) vec)
 
 foldl ::(SV.Walker vec, SV.Storage vec b)=>
- (acc -> b -> acc) -> acc -> Cube dim vec a b -> acc
+ (acc -> b -> acc) -> acc -> Cube dim label vec a b -> acc
 foldl f acc (Cube _ vec) = SV.foldl f acc vec 
 
 foldlWithCoordinates :: 
   (SV.Walker vec,
+   SV.Storage vec (vec [a]), 
+   SV.FromList vec,
    SV.Zipper vec,
    SV.Storage vec b,
    SV.Storage vec (Dim.Data dim a),
    SV.Storage vec (Dim.Data dim a, b),
-   SV.Walker (Coord.Axis vec),
-   SV.Storage (Coord.Axis vec) a,
-   SV.Storage (Coord.Axis vec) (vec [a]),
+   SV.Walker (Axis label vec),
+   SV.Storage (Axis label vec) a,
+   SV.Storage (Axis label vec) (vec [a]),
    SV.Storage vec a,
    SV.Storage vec [a],
    SV.Singleton vec,
-   SV.FromList (Coord.Axis vec)) =>
-  (acc -> (Dim.Data dim a, b) -> acc) -> acc -> Cube dim vec a b -> acc
+   SV.FromList (Axis label vec)) =>
+  (acc -> (Dim.Data dim a, b) -> acc) -> acc -> Cube dim label vec a b -> acc
 foldlWithCoordinates f acc (Cube axes vec) = SV.foldl f acc $ SV.zip (Coord.vector axes) vec 
 
 zipWith :: 
@@ -133,39 +146,41 @@ zipWith ::
    SV.Storage vec d,
    SV.Storage vec c,
    SV.Storage vec b, 
-   Eq (System dim vec a)) =>
+   Eq (System dim label vec a)) =>
   Caller -> 
   (b -> c -> d) -> 
-  Cube dim vec a b -> 
-  Cube dim vec a c -> 
-  Cube dim vec a d
+  Cube dim label vec a b -> 
+  Cube dim label vec a c -> 
+  Cube dim label vec a d
 zipWith caller f (Cube axes vec) (Cube axes1 vec1) = 
   if axes == axes1 then Cube axes $ SV.zipWith f vec vec1 
                    else merror caller modul "zipWith" "Axes differ"    
 
+linearData :: Cube dim label vec a b -> vec b
+linearData (Cube _ vec) = vec 
 
 -- | Removes the first Dimension
 getSubCube ::  
   (SV.Storage vec b, SV.Slice vec, 
    SV.Storage vec a, SV.Length vec) =>
   Caller ->
-  Cube dim vec a b -> 
-  Coord.Idx -> Cube (Dim.SubDim dim) vec a b
-getSubCube caller (Cube axes vec) (Coord.Idx idx) = Cube (Dim.dropFirst (caller |> (nc "getSubCube")) axes) subVec
+  Cube dim label vec a b -> 
+  Axis.Idx -> Cube (Dim.SubDim dim) label vec a b
+getSubCube caller (Cube axes vec) (Axis.Idx idx) = Cube (Dim.dropFirst (caller |> nc "getSubCube") axes) subVec
   where subVec = SV.slice startIdx l vec
         startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
-        l = mytrace 0 "getSubCube" "l" $ Coord.len $ Dim.getFirst (caller |> (nc "getSubCube")) axes
+        l = mytrace 0 "getSubCube" "l" $ Axis.len $ Dim.getFirst (caller |> nc "getSubCube") axes
 
 interpolate :: 
   (Ord a,Arith.Constant b,Num b,SV.LookupMaybe vec b,
-   SV.UnsafeLookup vec a,Show (vec b),(Show (vec a)),
-   SV.Storage vec a,
+   SV.LookupUnsafe vec a,Show (vec b),(Show (vec a)),
+   SV.Storage vec a,Show label,
    SV.Length vec,
    SV.Find vec, 
    SV.Storage vec b, SV.Slice vec) =>
   Caller ->  
   ((a,a) -> (b,b) -> a -> Interp.Val b) -> 
-  Cube dim vec a b -> 
+  Cube dim label vec a b -> 
   (Dim.Data dim a) ->   
   Interp.Val b
 interpolate caller interpFunction ortho coordinates = Interp.combine3 y1 y2 y
@@ -175,57 +190,53 @@ interpolate caller interpFunction ortho coordinates = Interp.combine3 y1 y2 y
            getAxes $ mytrace 0 "interpolate" "ortho" $ ortho
     subCoordinates = Dim.dropFirst newCaller coordinates
     x = Dim.getFirst newCaller $ coordinates
-    ((idx1,idx2),(x1,x2)) = Coord.getSupportPoints axis x
+    ((idx1,idx2),(x1,x2)) = Axis.getSupportPoints axis x
     f idx = interpolate newCaller interpFunction (getSubCube newCaller ortho idx) subCoordinates
     (y1,y2) = if Dim.len coordinates >=2 then (f idx1, f idx2) 
               else (Interp.Inter $ lookUp newCaller (Dim.Data [idx1]) ortho,
                     Interp.Inter $ lookUp newCaller (Dim.Data [idx2]) ortho)
     y = interpFunction (x1,x2) (Interp.unpack y1,Interp.unpack y2) x
 
-{-    
-
-class ToSignal dim where
-  toSignal :: Cube dim vec a b -> TC Signal t (Data c) b
-  
-instance ToSignal Dim2 where  
-  toSignal (Cube axes vec) = 
--}    
+dimension :: Dim.Dimensions dim => Cube dim label vec a b -> Int     
+dimension (Cube axes _) = Dim.num axes
     
-dimension :: Dim.Dimensions dim => Cube dim vec a b -> Int     
-dimension (Cube axes vec) = Dim.num axes
-    
-{-    
--- | Removes the first Dimension
-makeNested ::  
-  (SV.Storage vec b, SV.Slice vec, 
-   SV.Storage vec a, SV.Length vec) =>
-  Caller ->
-  Cube dim vec a b -> 
-makeNested cube =  
-
-
-nest caller cube@(Cube axes vec) | dimension cube ==1 = vec
-nest caller cube@(Cube axes vec) = SV.imap f axis
-  where
-    axis = Dim.getFirst (nc "nest") $ axes
-    l = Coord.len axis
-    f (idx,_) = SV.slice startIdx l
-        where
-          startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
--}          
-        
-class ToSignal dim where
-  toSignal :: Cube dim vec a b -> Sig.TC Sig.Signal t (Data.Data c b)
-       
-instance 
-  (SV.Walker (Coord.Axis vec),
-  SV.Storage (Coord.Axis vec) (v0 d0 -> v0 d0),
-  SV.Storage (Coord.Axis vec) aToSignal (Dim.Succ Dim.Dim1)) where 
-  toSignal cube@(Cube axes vec) = Sig.TC $ Data.Data $ SV.imap f axis
+to2DSignal ::   
+    (SV.Walker vec, 
+     SV.Storage vec (vec b),
+     SV.Storage vec b, 
+     SV.Slice vec,     
+     SV.Storage vec a, 
+     SV.Length vec) =>
+    Caller -> 
+    Cube dim label vec a b -> 
+    Sig.TC Sig.Signal t (Data (vec :> vec :> Nil) b)
+to2DSignal caller (Cube axes vec) = Sig.TC $ Data $ SV.imap f $ Axis.getVec axis
       where 
-        axis = Dim.getFirst (nc "nest") $ axes
-        l = Coord.len axis
-        f idx _ = SV.slice startIdx l
+        axis = Dim.getFirst (caller |> nc "nest") $ axes
+        l = Axis.len axis
+        f idx _ = SV.slice startIdx l vec
           where
             startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
- 
+
+extract :: 
+  (SV.Walker vec,
+   SV.Storage vec a,
+   SV.Storage vec Axis.Idx,SV.LookupUnsafe vec b,
+   SV.FromList vec, 
+   SV.Storage vec b, SV.Storage vec Coord.LinIdx, 
+   SV.Storage vec (Dim.Data dim Axis.Idx),
+   SV.Storage vec [Axis.Idx],
+   SV.Storage vec (vec [Axis.Idx]),
+   SV.Length vec,
+   SV.Singleton vec) =>
+  Caller -> 
+  Cube dim label vec a b -> 
+  Dim.Data dim2 (Dim.Idx) -> 
+  Map.Map Dim.Idx Axis.Idx -> 
+  Cube dim2 label vec a b
+extract caller cube@(Cube axes _) dims2Keep dims2Drop = Cube newAxes newVec
+  where newAxes = Coord.extractSubSystem newCaller axes dims2Keep
+        newCaller =  caller |> nc "extractCube"
+        indexVec = Coord.reductionIndexVector axes dims2Drop
+        newVec = SV.map (lookupLinUnsafe cube) indexVec  
+    

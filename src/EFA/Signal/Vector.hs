@@ -529,17 +529,17 @@ instance UV.Unbox d => LookupMaybe UV.Vector d where
    lookupMaybe xs idx = xs UV.!? idx
    
 
-class UnsafeLookup vec d where
-  unsafeLookup :: vec d -> Int -> d
+class LookupUnsafe vec d where
+  lookupUnsafe :: vec d -> Int -> d
 
-instance UV.Unbox d => UnsafeLookup UV.Vector d where
-  unsafeLookup xs idx = xs UV.! idx
+instance UV.Unbox d => LookupUnsafe UV.Vector d where
+  lookupUnsafe xs idx = xs UV.! idx
 
-instance UnsafeLookup V.Vector d where
-  unsafeLookup xs idx = xs V.! idx
+instance LookupUnsafe V.Vector d where
+  lookupUnsafe xs idx = xs V.! idx
 
-instance UnsafeLookup [] d where
-  unsafeLookup xs idx = xs List.!! idx
+instance LookupUnsafe [] d where
+  lookupUnsafe xs idx = xs List.!! idx
 
 
 class Reverse v where

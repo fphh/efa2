@@ -2,10 +2,17 @@
 
 module EFA.Signal.Map.Coordinate where
 
-import EFA.Utility(Caller,merror, ModuleName(..),(|>),FunctionName, genCaller)
+--import qualified Prelude as P
+--import Prelude hiding (map)
+
+import EFA.Utility(Caller,ModuleName(..),(|>),FunctionName, genCaller)
 import qualified EFA.Signal.Vector as SV
 
 import qualified EFA.Signal.Map.Dimension as Dim 
+import qualified EFA.Signal.Map.Axis as Axis 
+import EFA.Signal.Map.Axis(Axis(..))
+
+import qualified Data.Map as Map
 
 m :: ModuleName
 m = ModuleName "Coordinate"
@@ -13,13 +20,9 @@ m = ModuleName "Coordinate"
 nc :: FunctionName -> Caller
 nc = genCaller m
 
--- | Datatype with monotonically rising values 
-newtype Axis vec a = Axis {getVec :: vec a} deriving (Show,Eq)
--- newtype Data vec a = Data (vec a) deriving Show
+-- newtype Idx = Idx {getInt :: Int} deriving Show
 
-newtype Idx = Idx {getInt :: Int} deriving Show
-
-type System dim vec a = Dim.Data dim (Axis vec a)
+type System dim label vec a = Dim.Data dim (Axis label vec a)
 data Point dim a = Point (Dim.Data dim a) deriving Show
 
 pointFromList :: [a] -> Point dim a
@@ -32,25 +35,29 @@ mapPoint :: (a -> b) -> Point dim a -> Point dim b
 mapPoint f (Point (Dim.Data xs)) = Point $ Dim.Data $ map f xs
 
 
-indexAdd :: Idx -> Int -> Idx
-indexAdd (Idx idx) num = Idx $ (idx+num) 
+type DimIdx dim = Dim.Data dim Axis.Idx
 
-type DimIdx dim = Dim.Data dim Idx
+newtype LinIdx = LinIdx {getInt:: Int} deriving Show
 
-len ::
-  (SV.Storage vec a, SV.Length vec)=>
-  Axis vec a -> Int
-len (Axis vec) = SV.length vec
+dimensionMultiplicators :: 
+  (SV.Storage vec a, SV.Length vec) => 
+  System dim label vec a -> Dim.Data dim Int
+dimensionMultiplicators (Dim.Data axes) = Dim.Data $ (init $ map Axis.len axes) ++ [1]
 
-fromVec :: 
-  (SV.Storage vec Bool, SV.Singleton vec, 
-   SV.Zipper vec, SV.Storage vec a,Ord a) =>
-  Caller -> vec a -> Axis vec a
-fromVec caller vec = 
-  if isMonoton then Axis vec   
-  else merror caller m "fromVec" "Vector of elements is not monotonically rising"   
-    where isMonoton = SV.all (==True) $ SV.deltaMap (\ x1 x2 -> x2 > x1) vec
-          
+toLinear :: 
+ (SV.Storage vec a, SV.Length vec)=>  
+  System dim label vec a -> DimIdx dim -> LinIdx
+toLinear axes (Dim.Data indices) = LinIdx $
+  foldl (+) (0) $ zipWith (*) 
+  (map Axis.getInt indices) (Dim.toList $ dimensionMultiplicators axes)
+        
+fromLinear :: 
+  (SV.Storage vec a, SV.Length vec) =>
+  System dim label vec a -> LinIdx -> DimIdx dim
+fromLinear axes (LinIdx idx) = Dim.Data $ (map Axis.Idx . snd) $ 
+                               foldl f (idx,[]) $ Dim.toList $ dimensionMultiplicators axes
+  where f (rest,list) x = (mod rest x,list++[div rest x])
+
 createSystem :: 
   (Dim.Dimensions dim,
    Ord a,
@@ -58,60 +65,59 @@ createSystem ::
    SV.Storage vec a,
    SV.Storage vec Bool,
    SV.Singleton vec) =>
-            Caller -> [vec a] -> System dim vec a
+            Caller -> [(label,vec a)] -> System dim label vec a
 createSystem caller xs = Dim.fromList newCaller 
-                         $ map (fromVec newCaller) xs
+                         $ map (\(label,vec) -> Axis.fromVec newCaller label vec) xs
   where newCaller = caller |> (nc "createSystem")
 
-findIndex :: 
-  (SV.Storage vec a, SV.Find vec)=>
-  (a -> Bool) -> Axis vec a -> Maybe Idx
-findIndex f (Axis vec) = fmap Idx $ SV.findIndex f vec
 
-
-unsafeLookup :: 
-  SV.UnsafeLookup vec a => 
-  Axis vec a -> Idx -> a
-unsafeLookup (Axis axis) (Idx idx) = SV.unsafeLookup axis idx 
-
-findRightInterpolationIndex :: 
-  (SV.Storage vec a, SV.Find vec, Ord a, SV.Length vec) =>
-  Axis vec a -> a -> Idx
-findRightInterpolationIndex axis x = rightIndex
-  where 
-    idx = findIndex (>x) axis
-    rightIndex = case idx of
-      Just (Idx ix) -> if ix==0 then Idx 1 else Idx ix 
-      Nothing   -> Idx $ (len axis)-1
-
-
-getSupportPoints :: 
-  (Ord a,
-   SV.Storage vec a,
-   SV.Length vec,
-   SV.Find vec,
-   SV.UnsafeLookup vec a) =>
-  Axis vec a ->  a -> ((Idx,Idx),(a,a))
-getSupportPoints axis x = ((leftIndex,rightIndex),
-                                 (unsafeLookup axis leftIndex, unsafeLookup axis rightIndex))
-  where rightIndex = findRightInterpolationIndex axis x
-        leftIndex = indexAdd rightIndex (-1)
-
+-- | generate a vector als linear listing of all coordinates in a coordinate system  
 vector:: 
-  (SV.Walker vec,SV.Storage vec (Dim.Data dim a),
+  (SV.Walker vec,
+   SV.Storage vec (Dim.Data dim a),
    SV.Singleton vec,
    SV.Storage vec [a],
    SV.Storage vec a, 
-   SV.Storage (Axis vec) (vec [a]),
-   SV.FromList (Axis vec), 
-   SV.Walker (Axis vec), 
-   SV.Storage (Axis vec) a) =>
-  System dim vec a -> 
+   SV.Storage vec (vec [a]), 
+   SV.FromList vec) => 
+  System dim label vec a -> 
   vec (Dim.Data dim a)
 vector axs = SV.map Dim.Data $ g axs   
   where   
-    g (Dim.Data [Axis axis]) = SV.map (\x -> [x]) $ axis
+    g (Dim.Data [Axis _ axis]) = SV.map (\x -> [x]) $ axis
     g (Dim.Data axes) = 
       SV.concat $ SV.toList $ SV.map (\x -> SV.map (\xs -> x:xs) vec) axis
-      where axis = head axes
+      where axis = getVec $ head axes
             vec = g $ (Dim.Data $ tail axes)
+
+-- | Get Sizes of alle Axes
+sizes :: 
+  (SV.Storage vec a, SV.Length vec) => 
+  System dim label vec a -> (Dim.Data dim Int)
+sizes (Dim.Data axes) = Dim.Data $ map Axis.len axes
+
+
+-- | Remove axes of specified dimensions 
+extractSubSystem ::
+  Caller ->
+  System dim label vec a -> 
+  Dim.Data dim2 Dim.Idx ->  
+  System dim2 label vec a
+extractSubSystem caller system dims = Dim.map f dims  
+  where f dim = Dim.lookup (caller |> nc "extractSubSystem") system dim
+        
+-- | Generate a complete index room, but restrain index for dimension to be reduced to the specified value 
+reductionIndexVector :: 
+  (SV.Walker vec,SV.Storage vec LinIdx,SV.Length vec,
+   SV.Storage vec (vec [Axis.Idx]),
+   SV.Storage vec [Axis.Idx],
+   SV.Storage vec (Dim.Data dim Axis.Idx),
+   SV.Singleton vec,
+   SV.Storage vec Axis.Idx,
+   SV.Storage vec a,
+   SV.FromList vec) => 
+  System dim label vec a -> Map.Map Dim.Idx Axis.Idx -> vec LinIdx
+reductionIndexVector axes dimensionsToReduce = SV.map (toLinear axes) $ vector $ Dim.imap f axes
+  where f dim axis@(Axis l _) = case Map.lookup dim dimensionsToReduce of  
+          Just index -> Axis l $ SV.fromList $ [index]
+          Nothing -> Axis.imap (\index _ -> index) axis

@@ -7,6 +7,8 @@
 module EFA.Signal.Map.Dimension where
 
 import EFA.Utility(Caller,merror,ModuleName(..))
+import Prelude hiding (map)
+import qualified Prelude as P
 
 m:: ModuleName
 m = ModuleName "Dimension"
@@ -34,6 +36,14 @@ data Data dim a = Data [a] deriving Show
 
 instance Functor (Data dim) where
   fmap f (Data xs) = Data (fmap f xs)
+  
+data Idx = Idx Int deriving (Show,Eq,Ord)  
+  
+map :: (a -> b) -> Data dim a -> Data dim b
+map f (Data xs) = Data (P.map f xs)
+
+imap :: (Idx -> a -> b) -> Data dim a -> Data dim b
+imap f (Data xs) = Data $ P.zipWith f (P.map Idx [0..]) xs
 
 len :: Data dim a -> Int
 len (Data xs) = length xs
@@ -72,4 +82,24 @@ getFirst _ (Data (x:_)) = x
 
 
 append :: a -> Data (SubDim dim) a -> Data dim a
-append x (Data xs) = Data $ x:xs 
+append x (Data xs) = Data $ x:xs
+
+toList :: Data dim a -> [a]
+toList (Data xs) = xs
+
+unsafeLookup :: Data dim a -> Idx -> a 
+unsafeLookup (Data xs) (Idx idx) = xs !! idx
+
+lookup :: Caller -> Data dim a -> Idx -> a 
+lookup caller (Data xs) (Idx idx) = 
+  if idx >= 0 && idx < length xs 
+     then xs !! idx
+     else merror caller m "lookup" $ "Index out of Bounds: " ++ show idx
+          
+          
+lookupMaybe :: Data dim a -> Idx -> Maybe a
+lookupMaybe (Data xs) (Idx idx) =  
+  if idx >= 0 && idx < length xs 
+     then Just $ xs !! idx
+          else Nothing
+                                      
