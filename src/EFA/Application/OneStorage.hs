@@ -1,5 +1,6 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE EmptyDataDecls #-}
 
 
 module EFA.Application.OneStorage where

@@ -67,12 +67,16 @@ type StoragePowerMap node (sweep :: (* -> *) -> * -> *) vec a = Map node (Maybe 
 
 -- | Sweep over one Position in Requirement Room
 data SweepPerReq node (sweep :: (* -> *) -> * -> *) vec a =
-   SweepPerReq {
+  SweepPerReq {
     etaSys :: Result (sweep vec a),
     condVec :: Result (sweep vec Bool),
     storagePowerMap :: StoragePowerMap node sweep vec a,
     envResult :: EnvResult node (sweep vec a) }
 
+
+instance Show (SweepPerReq node sweep vec a) where
+  show _ = "<SweepPerReq>"
+ 
 {-
 data Interpolation node vec a =
   Interpolation {
@@ -84,12 +88,12 @@ data Interpolation node vec a =
 type InterpolationOfAllStates node vec a = 
   Map Idx.State (InterpolationOfOneState node vec a)
 
-data InterpolationOfOneState node vec a = InterpolationOfOneState {
+data InterpolationOfOneState node vec a =
+  InterpolationOfOneState {
     controlMatricesOfState :: ControlMatrices node vec a,
     optObjectiveSignalOfState :: Sig.UTSignal vec a,
 --    tileChangeSignal :: vec [(a,a,a,a)],
     reqsAndDofsSignalsOfState :: Record.PowerRecord node vec a}
-  
 
 
 data Simulation node vec a =
@@ -103,8 +107,9 @@ data EnergyFlowAnalysis node vec a = EnergyFlowAnalysis {
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data (vec :> Nil) a)),
     stateFlowGraph :: EnvResult node (Data Nil a)}
 
-data SignalBasedOptimisation node  (sweep :: (* -> *) -> * -> *)
-     sweepVec a intVec b simVec c efaVec d = SignalBasedOptimisation {
+data SignalBasedOptimisation node (sweep :: (* -> *) -> * -> *)
+     sweepVec a intVec b simVec c efaVec d =
+  SignalBasedOptimisation {
     optimalSolutionPerState :: OptimalSolutionPerState node a,
     averageSolutionPerState :: AverageSolutionPerState node a,
     interpolationPerState :: InterpolationOfAllStates node intVec a,
@@ -112,4 +117,7 @@ data SignalBasedOptimisation node  (sweep :: (* -> *) -> * -> *)
     simulation :: Simulation node simVec a,
     analysis :: EnergyFlowAnalysis node efaVec d,
     stateFlowGraphSweep :: EnvResult node (sweep sweepVec a)}
-    
+
+
+instance Show (SignalBasedOptimisation node sweep sweepVec a intVec b simVec c efaVec d) where
+  show _ = "<SignalBasedOptimisation>"

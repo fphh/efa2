@@ -183,17 +183,19 @@ main1 = do
   let
     
       
-      ol = ModLoop.condition optParams
-           $ ModLoop.iterateEtaWhile
+      ol = -- ModLoop.condition optParams
+           take 5 $ ModLoop.iterateEtaWhile
                sysParams optParams simParams initEnv One.StateForcingOn
-           
-      initEnv2 = --ModLoop.stateFlowOut $ 
-                 Type.stateFlowGraphSweep $ ModLoop.bResult $ vlast "Main" $
-                 vlast "Main" $ (ModLoop.balanceLoop $ vlast "Main" ol)
-           
-      ol2 = ModLoop.condition optParams
-           $ ModLoop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff     
 
+      initEnv2 = -- ModLoop.stateFlowOut $ 
+                 Type.stateFlowGraphSweep $ ModLoop.bResult $ -- vlast "Main" $
+                 vlast "Main" $ (ModLoop.balanceLoop $ vlast "Main" ol)
+         
+      ol2 = ModLoop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff
+
+  -- print ol
+  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
+  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol2)
 
   -- let g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
@@ -209,16 +211,15 @@ main1 = do
 
 
 --  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
-  concurrentlyMany_ [
+  --concurrentlyMany_ [
     --ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
     --ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
     --ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
 --    ModLoop.checkRangeIO sysParams optParams simParams]
---    mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)]
-    sequence_ (ModLoop.printEtaLoop optParams ol)]
+    -- sequence_ (ModLoop.printEtaLoop optParams ol)]
 
 
-  concurrentlyMany_ [sequence_ (ModLoop.printEtaLoop optParams ol2)]
+--  concurrentlyMany_ [sequence_ (ModLoop.printEtaLoop optParams ol2)]
 
 {-
   concurrentlyMany_ [
@@ -234,4 +235,3 @@ main1 = do
 
 main :: IO ()
 main = main1
-

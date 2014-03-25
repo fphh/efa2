@@ -69,6 +69,8 @@ import Text.Printf (printf, PrintfArg) --,IsChar)
 
 import EFA.Utility.Trace (mytrace)
 
+import Debug.Trace
+
 type Counter = Int
 
 data BalanceLoopItem node a z =
@@ -76,14 +78,14 @@ data BalanceLoopItem node a z =
     bForcing :: One.BalanceForcing node a,
     bFStep :: One.BalanceForcingStep node a,
     balance :: One.Balance node a,
-    bResult :: z }
+    bResult :: z } deriving (Show)
 
 
 data EtaLoopItem node sweep vec a z =
   EtaLoopItem {
     stateFlowIn :: EnvResult node ((sweep :: (* -> *) -> * -> *) vec a),
     sweep :: Type.Sweep node sweep vec a,
-    balanceLoop :: [[BalanceLoopItem node a z]] }
+    balanceLoop :: [BalanceLoopItem node a z] } deriving (Show)
 
 
 data StateForceDemand =
@@ -124,6 +126,10 @@ balanceDeviation m =
   ~+ 
   Arith.abs (Map.foldl (~+) Arith.zero m)
 
+-----------------------------------------------------------------
+
+cond :: Int -> (a -> Bool) -> [a] -> [a]
+cond n p =  take n . UtList.takeUntil p
 
 -----------------------------------------------------------------
 
@@ -152,35 +158,45 @@ balanceIterationInit fsys accessf balForceIn balStepsIn =
   (balForceIn, balStepsIn, oioas)
   where oioas = oneIterationOfAllStorages fsys accessf balForceIn balStepsIn
 
-
-
 balanceIterationAlgorithm ::
   (Ord a, Ord node, Show node, Show a, Arith.Constant a) =>
   (One.BalanceForcing node a -> z) ->
   (z -> One.Balance node a) ->
-  (One.BalanceForcing node a, One.BalanceForcingStep node a, t2) ->
+  ( One.BalanceForcing node a,
+    One.BalanceForcingStep node a, 
+    [BalanceLoopItem node a z]) ->
   ( One.BalanceForcing node a,
     One.BalanceForcingStep node a,
     [BalanceLoopItem node a z] )
-balanceIterationAlgorithm fsys accessf (forcing, stepping, _) =
+balanceIterationAlgorithm fsys accessf (forcing, stepping, as) =
   (forcing1, stepping1, oioas)
-  where oioas = oneIterationOfAllStorages fsys accessf forcing stepping
+  where oioas = oneIterationOfAllStorages fsys accessf forcing1 stepping1
         forcing1 = bForcing lastElem
         stepping1 = bFStep lastElem
-        lastElem = ModUt.ifNull (error "balanceIteration: empty list") last oioas
+        lastElem = ModUt.ifNull (error "balanceIteration: empty list") last as
 
+balanceIterationCondition ::
+  One.OptimisationParams Node [] Sweep UV.Vector a ->
+  (u, v, [BalanceLoopItem node a z]) ->
+  (u, v, [BalanceLoopItem node a z])
+balanceIterationCondition optParams (u, v, xs) = (u, v, cond maxBICnt bip xs)
+  where maxBICnt = One.unMaxBalanceIterations $ One.maxBalanceIterations optParams
+        bip _ = False
 
 balanceIteration ::  
   (Ord a, Arith.Constant a,Ord node, Show node, Show a) =>
+  One.OptimisationParams Node [] Sweep UV.Vector a ->
   (One.BalanceForcing node a -> z) ->
   (z -> One.Balance node a)->
   One.BalanceForcing node a ->
   One.BalanceForcingStep node a ->
-  [[BalanceLoopItem node a z]]
-balanceIteration fsys accessf balForceIn balStepsIn =
-  map thd3 $ iterate go bii
-  where bii = balanceIterationInit fsys accessf balForceIn balStepsIn
-        go = balanceIterationAlgorithm fsys accessf
+  [BalanceLoopItem node a z]
+balanceIteration optParams fsys accessf balForceIn balStepsIn =
+  concat $ map thd3 $ iterate go bii
+  where bii = balanceIterationCondition optParams
+              $ balanceIterationInit fsys accessf balForceIn balStepsIn
+        go = balanceIterationCondition optParams
+             . balanceIterationAlgorithm fsys accessf
 
 
 -----------------------------------------------------------------
@@ -201,19 +217,18 @@ iterateOneStorageInit fsys accessf forcingIn steppingIn sto =
     initBestPair = (Nothing, Nothing)
 
     initStep = steppingIn
-{-      calculateNextBalanceStep
-        (accessf $ fsys $ One.addForcingStep forcingIn steppingIn sto)
-        initBestPair 
-        steppingIn
-        sto-}
 
 iterateOneStorageAlgorithm ::
   (Ord node, Ord a, Show node, Show a, Arith.Constant a) =>
   (One.BalanceForcing node a -> z) ->
   (z -> One.Balance node a) ->
   node ->
-  ((Maybe (One.SocDrive a, a), Maybe (One.SocDrive a, a)), BalanceLoopItem node a t) ->
-  ((Maybe (One.SocDrive a, a), Maybe (One.SocDrive a, a)), BalanceLoopItem node a z)
+  ( (Maybe (One.SocDrive a, a),
+    Maybe (One.SocDrive a, a)),
+    BalanceLoopItem node a t) ->
+  ( (Maybe (One.SocDrive a, a),
+    Maybe (One.SocDrive a, a)),
+    BalanceLoopItem node a z)
 iterateOneStorageAlgorithm fsys accessf sto
                            (bestPair, BalanceLoopItem force step _ _) =
   (bestPair1, BalanceLoopItem force1 step1 bal1 res1)
@@ -234,7 +249,7 @@ iterateOneStorage ::
 iterateOneStorage fsys accessf forcingIn steppingIn sto = 
   map snd $ iterate go iosi
   where iosi = iterateOneStorageInit fsys accessf forcingIn steppingIn sto
-        go = iterateOneStorageAlgorithm  fsys accessf sto
+        go = iterateOneStorageAlgorithm fsys accessf sto
 
 -----------------------------------------------------------------
 
@@ -278,11 +293,12 @@ iterateEtaWhileInit ::
   One.SimulationParams Node [] a ->
   EnvResult Node (Sweep UV.Vector a) ->
   One.StateForcing ->
-  (One.BalanceForcing Node a,
+  -- (One.BalanceForcing Node a,
          EtaLoopItem Node Sweep UV.Vector a
-           (Type.SignalBasedOptimisation Node Sweep UV.Vector a [] b [] c [] a))
+           (Type.SignalBasedOptimisation Node Sweep UV.Vector a [] b [] c [] a) -- )
 iterateEtaWhileInit sysParams optParams simParams sfgIn statForcing =
-  (initBalF, EtaLoopItem sfgIn initSwp initRes)
+  EtaLoopItem sfgIn initSwp initRes
+
   where initBalF = One.initialBattForcing optParams
         balStepsIn = One.initialBattForceStep optParams
    
@@ -302,7 +318,7 @@ iterateEtaWhileInit sysParams optParams simParams sfgIn statForcing =
 
 
         initSwp = Base.perStateSweep sysParams optParams sfgIn
-        initRes = balanceIteration initFsys accessf initBalF balStepsIn
+        initRes = balanceIteration optParams initFsys accessf initBalF balStepsIn
 
 iterateEtaWhileAlgorithm ::
   (RealFloat a, Show a, UV.Unbox a, Arith.ZeroTestable a, Arith.Constant a) =>
@@ -310,17 +326,15 @@ iterateEtaWhileAlgorithm ::
   One.OptimisationParams Node [] Sweep UV.Vector a ->
   One.SimulationParams Node [] a ->
   One.StateForcing ->
-  (One.BalanceForcing Node a,
-    EtaLoopItem Node Sweep UV.Vector a
-      (Type.SignalBasedOptimisation
-        Node Sweep UV.Vector a intVec b1 simVec c1 efaVec d)) ->
-  (One.BalanceForcing Node a,
-    EtaLoopItem Node Sweep UV.Vector a
-      (Type.SignalBasedOptimisation
-        Node Sweep UV.Vector a [] b [] c [] a))
+  EtaLoopItem Node Sweep UV.Vector a
+    (Type.SignalBasedOptimisation
+      Node Sweep UV.Vector a intVec b1 simVec c1 efaVec d) ->
+  EtaLoopItem Node Sweep UV.Vector a
+    (Type.SignalBasedOptimisation
+      Node Sweep UV.Vector a [] b [] c [] a)
 iterateEtaWhileAlgorithm sysParams optParams simParams stateForcing
-                         (bfIn, EtaLoopItem sfg _ res) =
-  (bfOut, EtaLoopItem sfg1 swp1 res1)
+                         (EtaLoopItem sfg _ res) =
+  EtaLoopItem sfg1 swp1 res1
   where sfg1 = Type.stateFlowGraphSweep (bResult lastElem)
         swp1 = Base.perStateSweep sysParams optParams sfg
 
@@ -331,26 +345,33 @@ iterateEtaWhileAlgorithm sysParams optParams simParams stateForcing
 
         idxConvMap = ModUt.indexConversionMap System.topology sfg
 
-        res1 = balanceIteration fsys accessf bfIn balStepsIn
+        res1 = balanceIteration optParams fsys accessf bfIn balStepsIn
 
         err str = error $
           "iterateEtaWhileAlgorithm: empty "
           ++ str ++ " balanceIteration\n"
           ++ "probable cause: Maybe your iteration condition is always false?"
 
-        lastElem =
-          ModUt.ifNull
-            (err "outer") 
-            (ModUt.ifNull (err "inner") last . last)
-            res
+        lastElem = ModUt.ifNull (err "outer") last res
 
-        bfOut = bForcing lastElem
+        bfIn = bForcing lastElem
 
         balStepsIn = One.initialBattForceStep optParams
         accessf x =
           StateEta.balanceFromRecord
             (One.storagePositions sysParams)
             (Type.signals (Type.simulation x))
+
+
+iterateEtaWhileCondition ::
+  (Ord a, Arith.Sum a) =>
+  One.OptimisationParams Node [] Sweep UV.Vector a ->
+  EtaLoopItem Node Sweep UV.Vector a z ->
+  EtaLoopItem Node Sweep UV.Vector a z
+iterateEtaWhileCondition optParams (EtaLoopItem u v res) =
+  EtaLoopItem u v (cond maxBICnt bip res)
+  where maxBICnt = One.unMaxBalanceIterations $ One.maxBalanceIterations optParams
+        bip = checkBalance optParams . balance
 
 iterateEtaWhile ::
   (Num a, Ord a, Show a, UV.Unbox a, Arith.ZeroTestable a,
@@ -363,43 +384,12 @@ iterateEtaWhile ::
   One.StateForcing ->
   [EtaLoopItem Node Sweep UV.Vector a z]
 iterateEtaWhile sysParams optParams simParams sfgIn statForcing =
-  map snd $ iterate go iewi
-  where iewi = iterateEtaWhileInit sysParams optParams simParams sfgIn statForcing
-        go = iterateEtaWhileAlgorithm sysParams optParams simParams statForcing
-
------------------------------------------------------------------
-
-cond :: Int -> (a -> Bool) -> [a] -> [a]
-cond n p = take n . UtList.takeUntil p
-
-conditionEtaLoopItem ::
-  (Ord a, Arith.Sum a) =>
-  One.OptimisationParams Node [] Sweep UV.Vector a ->
-  EtaLoopItem Node Sweep UV.Vector a z ->
-  EtaLoopItem Node Sweep UV.Vector a z
-conditionEtaLoopItem optParams (EtaLoopItem sfi swp bl) =
---  EtaLoopItem sfi swp $ cond cnt p (map (cond maxBICnt bip) bl)
-  EtaLoopItem sfi swp $ take 1 (map (cond maxBICnt bip) bl)
-  where
-        One.MaxBalanceIterations maxBICnt = One.maxBalanceIterations optParams
-        --bip = not . checkBalance optParams . balance 
-        bip = checkBalance optParams . balance 
-
-        cnt = 1
-        p _ = True
-
-
-condition ::
-  (Ord a, Arith.Sum a) =>
-  One.OptimisationParams Node [] Sweep UV.Vector a ->
-  [EtaLoopItem Node Sweep UV.Vector a z] ->
-  [EtaLoopItem Node Sweep UV.Vector a z]
-condition optParams xs =
---  cond maxEICnt eip $ map (conditionEtaLoopItem optParams) xs
-  take maxEICnt $ map (conditionEtaLoopItem optParams) xs
-  where
-        One.MaxEtaIterations maxEICnt = One.maxEtaIterations optParams
-        eip _ = True
+  take maxEICnt $ iterate go iewi
+  where maxEICnt = One.unMaxEtaIterations $ One.maxEtaIterations optParams
+        iewi = iterateEtaWhileCondition optParams
+               $ iterateEtaWhileInit sysParams optParams simParams sfgIn statForcing
+        go = iterateEtaWhileCondition optParams
+             . iterateEtaWhileAlgorithm sysParams optParams simParams statForcing
 
 -------------------------------- OutPut Below -----------------------------------
 
@@ -453,7 +443,7 @@ iterateLoops ::
 iterateLoops optParams elf blf etaLoop =
   concatMap g etaLoop
   where g x = elf optParams x
-              : map (blf optParams) (zip [0..] (concat $ balanceLoop (snd x)))
+              : map (blf optParams) (zip [0..] (balanceLoop (snd x)))
 
 showEtaLoopItem::
   One.OptimisationParams node [] Sweep UV.Vector a ->
@@ -508,9 +498,11 @@ printEtaLoopItem ::
    IO ()
 printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _res) = 
   do
-     putStrLn $ showEtaLoopItem _params _e
+     --putStrLn $ showEtaLoopItem _params _e
      let -- dir = printf "outer-loop-%6.6d" olcnt
-      _opt = vlast "printEtaLoopItem" (concat _res)
+      _opt = vlast "printEtaLoopItem" _res
+     putStrLn $ showEtaLoopItem _params _e
+
     --  stoPos = TopoIdx.Position System.Water System.Network
   --    gasPos = TopoIdx.Position System.Gas System.LocalNetwork
       --  _term = ModPlot.gpXTerm
@@ -522,7 +514,7 @@ printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _res) =
 --    ModPlot.sweepStackPerStateCondition term params  _sweep
 
 
-     concurrentlyMany_ [
+     --concurrentlyMany_ [
 --       ModPlot.simulationGraphs ModPlot.dotXTerm _opt,
 --       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 0 _sweep,
 --       ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 1 _sweep,
@@ -539,7 +531,7 @@ printEtaLoopItem _params _e@(_step, EtaLoopItem _sfgIn _sweep _res) =
 --        print $ Type.powerSequence $ Type.analysis $ bResult _opt,
 --        print $ Type.stateFlowGraph $ Type.analysis $ bResult _opt,
 --        ModPlot.drawSweepStateFlowGraph "sfgOut" 0 $ Type.stateFlowGraphSweep $ bResult _opt,
-        ModPlot.simulationGraphs ModPlot.dotXTerm $ bResult _opt]
+        --ModPlot.simulationGraphs ModPlot.dotXTerm $ bResult _opt]
  {-     ModPlot.simulationSignals term opt,
       ModPlot.maxPos stoPos term opt,
       ModPlot.maxPos gasPos term opt,
@@ -610,7 +602,7 @@ printBalanceLoopItem _optParams _b@(_bStp, BalanceLoopItem _bForcing _bFStep _ba
     -- ModPlot.maxStateContour (ModPlot.gpPNG dir bStep) opt
 
 
-
+{-
 checkRangeIO ::
   One.SystemParams Node Double -> 
   One.OptimisationParams Node [] Sweep UV.Vector Double ->
@@ -667,6 +659,7 @@ checkRangeIO sysParams optParams simParams sfg = do
     ModPlot.simulationSignals term opt,
     ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.3, 0.5] 0 swp
     ]
+-}
 
 
 {-
