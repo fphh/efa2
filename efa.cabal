@@ -92,6 +92,10 @@ Library
     EFA.Signal.Plot
     EFA.Signal.ConvertTable
     EFA.Signal.Interp
+    EFA.Data.Axis
+    EFA.Data.ND
+    EFA.Data.ND.Cube
+    EFA.Data.ND.Cube.Grid
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
@@ -185,6 +189,7 @@ Library
     EFA.Example.Topology.Tripod.State
     EFA.Example.Topology.FourLeaves
     EFA.Example.Record.SourceSinkMix
+
   Other-Modules:
     EFA.Equation.SystemRecord
     EFA.Flow.EquationSystem
@@ -676,6 +681,20 @@ Executable demo-arithmetic
       efa,
       containers,
       vector,
+      base
+  Else
+    Buildable: False
+
+Executable demo-cube
+  Main-Is: demo/cube/Main.hs
+  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      vector,
+--      containers,
+--      utility-ht,
+--      gnuplot,
       base
   Else
     Buildable: False

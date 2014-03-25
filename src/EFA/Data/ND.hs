@@ -1,17 +1,16 @@
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
-module EFA.Signal.Map.Dimension where
+module EFA.Data.ND where
 
 import EFA.Utility(Caller,merror,ModuleName(..))
 import Prelude hiding (map)
 import qualified Prelude as P
 
 m:: ModuleName
-m = ModuleName "Dimension"
+m = ModuleName "Space"
 
 data Dim1
 data Succ a
@@ -71,6 +70,7 @@ instance Dimensions Dim9 where num _ = 9
 instance Dimensions Dim10 where num _ = 10
 
 
+
 dropFirst :: Caller -> Data dim a -> Data (SubDim dim) a
 dropFirst caller (Data []) = merror caller m "dropFirst" "no Dimension left"
 dropFirst caller (Data [_]) = merror caller m "dropFirst" "no Dimension left"
@@ -103,3 +103,13 @@ lookupMaybe (Data xs) (Idx idx) =
      then Just $ xs !! idx
           else Nothing
                                       
+data Point dim a = Point (Data dim a) deriving Show
+
+pointFromList :: [a] -> Point dim a
+pointFromList xs = Point $ Data xs
+
+pointtoList :: Point dim a -> [a]
+pointtoList (Point (Data xs)) = xs
+
+mapPoint :: (a -> b) -> Point dim a -> Point dim b
+mapPoint f (Point (Data xs)) = Point $ Data $ P.map f xs
