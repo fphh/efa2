@@ -145,7 +145,7 @@ main1 = do
           One.points = ModSet.sweepPts,
           One.sweepLength = ModSet.sweepLength,
           One.etaToOptimise = Nothing,
-          One.maxEtaIterations = One.MaxEtaIterations 2,
+          One.maxEtaIterations = One.MaxEtaIterations 5,
           One.maxBalanceIterations = One.MaxBalanceIterations 100,
 
           One.initialBattForcing =

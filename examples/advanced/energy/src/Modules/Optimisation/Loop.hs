@@ -131,22 +131,14 @@ balanceDeviation m =
 cond :: Int -> (a -> Bool) -> [a] -> [a]
 cond n p =  take n . UtList.takeUntil p
 
+condEta :: Int -> (a -> Bool) -> [a] -> [a]
+condEta n p = take n . takeWhile (not . p)
+
 -----------------------------------------------------------------
-
-oneIterationOfAllStorages ::
-  (Ord a, Ord node, Show node, Show a, Arith.Constant a) =>
-  (One.BalanceForcing node a -> z) ->
-  (z -> One.Balance node a) ->
-  One.BalanceForcing node a ->
-  One.BalanceForcingStep node a ->
-  [BalanceLoopItem node a z]
-oneIterationOfAllStorages fsys accessf force steps =
-  Map.foldlWithKey f [] (One.unBalanceForcingMap force)
-  where f acc sto _ = acc ++ iterateOneStorage fsys accessf force steps sto
-
 
 balanceIterationInit ::
   (Ord a, Ord node, Show node, Show a, Arith.Constant a) =>
+  One.OptimisationParams Node [] Sweep UV.Vector a ->
   (One.BalanceForcing node a -> z) ->
   (z -> One.Balance node a) ->
   One.BalanceForcing node a ->
@@ -154,12 +146,13 @@ balanceIterationInit ::
   ( One.BalanceForcing node a,
     One.BalanceForcingStep node a,
     [BalanceLoopItem node a z] )
-balanceIterationInit fsys accessf balForceIn balStepsIn =
+balanceIterationInit optParams fsys accessf balForceIn balStepsIn =
   (balForceIn, balStepsIn, oioas)
-  where oioas = oneIterationOfAllStorages fsys accessf balForceIn balStepsIn
+  where oioas = oneIterationOfAllStorages optParams fsys accessf balForceIn balStepsIn
 
 balanceIterationAlgorithm ::
   (Ord a, Ord node, Show node, Show a, Arith.Constant a) =>
+  One.OptimisationParams Node [] Sweep UV.Vector a ->
   (One.BalanceForcing node a -> z) ->
   (z -> One.Balance node a) ->
   ( One.BalanceForcing node a,
@@ -168,9 +161,9 @@ balanceIterationAlgorithm ::
   ( One.BalanceForcing node a,
     One.BalanceForcingStep node a,
     [BalanceLoopItem node a z] )
-balanceIterationAlgorithm fsys accessf (forcing, stepping, as) =
+balanceIterationAlgorithm optParams  fsys accessf (forcing, stepping, as) =
   (forcing1, stepping1, oioas)
-  where oioas = oneIterationOfAllStorages fsys accessf forcing1 stepping1
+  where oioas = oneIterationOfAllStorages optParams fsys accessf forcing stepping
         forcing1 = bForcing lastElem
         stepping1 = bFStep lastElem
         lastElem = ModUt.ifNull (error "balanceIteration: empty list") last as
@@ -194,9 +187,9 @@ balanceIteration ::
 balanceIteration optParams fsys accessf balForceIn balStepsIn =
   concat $ map thd3 $ iterate go bii
   where bii = balanceIterationCondition optParams
-              $ balanceIterationInit fsys accessf balForceIn balStepsIn
+              $ balanceIterationInit optParams fsys accessf balForceIn balStepsIn
         go = balanceIterationCondition optParams
-             . balanceIterationAlgorithm fsys accessf
+             . balanceIterationAlgorithm optParams fsys accessf
 
 
 -----------------------------------------------------------------
@@ -238,18 +231,43 @@ iterateOneStorageAlgorithm fsys accessf sto
         bestPair1 = One.rememberBestBalanceForcing bestPair (force1, bal1) sto
         step1 = calculateNextBalanceStep bal1 bestPair1 step sto
 
+iterateOneStorageCondition ::
+  One.OptimisationParams Node [] Sweep UV.Vector a ->
+  [BalanceLoopItem node a z] ->
+  [BalanceLoopItem node a z]
+iterateOneStorageCondition optParams xs =
+  cond cnt p xs
+  where cnt = 100
+        p _ = False
+
 iterateOneStorage ::  
   (Ord a, Arith.Constant a,Ord node, Show node, Show a) =>
+  One.OptimisationParams Node [] Sweep UV.Vector a ->
   (One.BalanceForcing node a -> z) ->
   (z -> One.Balance node a)->
   One.BalanceForcing node a ->
   One.BalanceForcingStep node a ->
   node ->
   [BalanceLoopItem node a z]
-iterateOneStorage fsys accessf forcingIn steppingIn sto = 
-  map snd $ iterate go iosi
+iterateOneStorage optParams fsys accessf forcingIn steppingIn sto = 
+  iterateOneStorageCondition optParams $ map snd $ iterate go iosi
   where iosi = iterateOneStorageInit fsys accessf forcingIn steppingIn sto
         go = iterateOneStorageAlgorithm fsys accessf sto
+
+
+
+oneIterationOfAllStorages ::
+  (Ord a, Ord node, Show node, Show a, Arith.Constant a) =>
+  One.OptimisationParams Node [] Sweep UV.Vector a ->
+  (One.BalanceForcing node a -> z) ->
+  (z -> One.Balance node a) ->
+  One.BalanceForcing node a ->
+  One.BalanceForcingStep node a ->
+  [BalanceLoopItem node a z]
+oneIterationOfAllStorages optParams fsys accessf force steps =
+  Map.foldlWithKey f [] (One.unBalanceForcingMap force)
+  where f acc sto _ = iterateOneStorage optParams fsys accessf force steps sto ++ acc
+
 
 -----------------------------------------------------------------
 
@@ -369,7 +387,7 @@ iterateEtaWhileCondition ::
   EtaLoopItem Node Sweep UV.Vector a z ->
   EtaLoopItem Node Sweep UV.Vector a z
 iterateEtaWhileCondition optParams (EtaLoopItem u v res) =
-  EtaLoopItem u v (cond maxBICnt bip res)
+  EtaLoopItem u v (condEta maxBICnt bip res)
   where maxBICnt = One.unMaxBalanceIterations $ One.maxBalanceIterations optParams
         bip = checkBalance optParams . balance
 

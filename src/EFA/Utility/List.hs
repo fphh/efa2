@@ -14,6 +14,7 @@ vlast :: String -> [a] -> a
 vlast _ xs@(x:_) = last xs
 vlast caller _ = error $ "vlast, " ++ caller ++ ": empty list"
 
+
 -- | Example
 --
 -- >>> takeUntil (>5) [1..10]
