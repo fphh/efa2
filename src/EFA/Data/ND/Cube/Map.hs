@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE  TypeFamilies #-}
 
-module EFA.Data.ND.Cube where
+module EFA.Data.ND.Cube.Map where
 
 import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
 
@@ -19,7 +19,7 @@ import EFA.Signal.Data(Nil,(:>))
 import qualified EFA.Signal.Data as SD
 import qualified Data.Map as Map  
 
-import EFA.Signal.Interp as Interp
+import EFA.Data.Interpolation as Interp
 
 import qualified Prelude as P
 import Prelude hiding (zipWith, map, foldl)
@@ -28,7 +28,7 @@ import Data.Maybe(fromMaybe)
 import EFA.Utility.Trace(mytrace)
 
 modul :: ModuleName
-modul = ModuleName "Cube"
+modul = ModuleName "Cube.Map"
 
 nc :: FunctionName -> Caller
 nc = genCaller modul

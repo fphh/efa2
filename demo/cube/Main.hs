@@ -1,6 +1,5 @@
-import EFA.Data.ND.Cube (Cube)
-import qualified EFA.Data.ND.Cube as Cube
---import qualified EFA.Data.ND.Cube.Data as CubeData
+import EFA.Data.ND.Cube.Map (Cube)
+import qualified EFA.Data.ND.Cube.Map as Cube
 
 import EFA.Data.ND (Dim2)
 import EFA.Utility (genCaller,ModuleName(..))
@@ -21,7 +20,7 @@ import qualified EFA.Data.Type as Type
 import qualified EFA.Data.Record as Record
 
 
-import qualified EFA.Signal.Interp as Interp
+import qualified EFA.Data.Interpolation as Interp
 
 import qualified Data.Vector as V
 import qualified Data.Map as Map
@@ -68,7 +67,7 @@ main = do
   let cube = Cube.mapWithGrid (\c xx -> (c,xx)) o1    
   let genCube = Cube.generateWithGrid (id) sys1
   let subCube = Cube.extract caller cube (ND.Data [ND.Idx 0]) 
-                (Map.fromList [(ND.Idx 1,Axis.Idx 0)])  -- :: Cube Dim.Dim1 String V.Vector Double Double
+                (Map.fromList [(ND.Idx 1,Axis.Idx 0)])  
   
   print o
   print z11
