@@ -31,7 +31,7 @@ type Dim8 = Succ Dim7
 type Dim9 = Succ Dim8
 type Dim10 = Succ Dim9
 
-data Data dim a = Data [a] deriving Show
+data Data dim a = Data [a] deriving (Show,Eq)
 
 instance Functor (Data dim) where
   fmap f (Data xs) = Data (fmap f xs)
