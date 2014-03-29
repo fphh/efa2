@@ -132,7 +132,7 @@ cond :: Int -> (a -> Bool) -> [a] -> [a]
 cond n p =  take n . UtList.takeUntil p
 
 condEta :: Int -> (a -> Bool) -> [a] -> [a]
-condEta n p = take n . takeWhile (not . p)
+condEta n p = take n . UtList.takeUntil p -- takeWhile (not . p)
 
 -----------------------------------------------------------------
 
