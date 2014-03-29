@@ -7,7 +7,8 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as TopoIdx
-import qualified EFA.Application.OneStorage as One
+import qualified EFA.Application.Optimisation.Balance as Balance
+--import qualified EFA.Application.Optimisation.Params as Params
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
@@ -325,16 +326,16 @@ absoluteFlowStateGraph topo sfg = sfg {StateQty.states = Map.fromList $
 
 indexConversionMap ::
   (Node.C node) =>
-  Topo.Topology node -> StateQty.Graph node a v -> One.IndexConversionMap
+  Topo.Topology node -> StateQty.Graph node a v -> Balance.IndexConversionMap
 indexConversionMap topo =
   Bimap.fromList . Map.toList . Map.map (absoluteStateIndex topo . FlowTopo.topology) . StateQty.states
 
 state2absolute ::
-  Idx.State -> One.IndexConversionMap -> Maybe Idx.AbsoluteState
+  Idx.State -> Balance.IndexConversionMap -> Maybe Idx.AbsoluteState
 state2absolute = Bimap.lookup
 
 absolute2State ::
-  Idx.AbsoluteState -> One.IndexConversionMap -> Maybe Idx.State
+  Idx.AbsoluteState -> Balance.IndexConversionMap -> Maybe Idx.State
 absolute2State = Bimap.lookupR
 
 

@@ -155,7 +155,7 @@ Library
     EFA.Flow.State.Quantity
     EFA.Flow.State.EquationSystem
     EFA.Flow.State.Absolute
-    EFA.Flow.State.SystemEta
+--    EFA.Flow.State.SystemEta
     EFA.Flow.Cumulated.Index
     EFA.Flow.Cumulated.Variable
     EFA.Flow.Cumulated.Quantity
@@ -171,13 +171,15 @@ Library
     EFA.Application.Plot
     EFA.Application.Tree
     EFA.Application.Optimisation
-    EFA.Application.Sweep
-    EFA.Application.DoubleSweep
+    EFA.Application.Optimisation.Sweep
+    EFA.Application.Optimisation.DoubleSweep
     EFA.Application.Simulation
-    EFA.Application.OneStorage
+    EFA.Application.Optimisation.Params
+    EFA.Application.Optimisation.Balance
     EFA.Application.StateAnalysis
-    EFA.Application.ReqsAndDofs
+    EFA.Application.Optimisation.ReqsAndDofs
     EFA.Application.Type
+    EFA.Application.Flow.State.SystemEta
     EFA.Application.Optimisation.Optimisation
     EFA.Application.Optimisation.NonIO
     EFA.Application.Optimisation.Base

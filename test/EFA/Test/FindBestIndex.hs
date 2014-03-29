@@ -5,9 +5,9 @@
 module EFA.Test.FindBestIndex where
 
 
-import qualified EFA.Application.DoubleSweep as DoubleSweep
-import qualified EFA.Application.Sweep as Sweep
-import EFA.Application.Sweep (Sweep)
+import qualified EFA.Application.Optimisation.DoubleSweep as DoubleSweep
+import qualified EFA.Application.Optimisation.Sweep as Sweep
+import EFA.Application.Optimisation.Sweep (Sweep)
 
 import qualified EFA.Equation.Arithmetic as Arith
 

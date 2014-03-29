@@ -8,14 +8,16 @@
 module EFA.Application.Optimisation.NonIO where
 
 import qualified EFA.Application.Optimisation.Optimisation as Optimisation
+import qualified EFA.Application.Optimisation.Params as Params
+import qualified EFA.Application.Optimisation.Balance as Balance
 import qualified EFA.Application.Optimisation.Base as Base
 import EFA.Application.Optimisation.Optimisation (external)
 import qualified EFA.Application.Utility as AppUt
 
-import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
 import qualified EFA.Application.Type as Type
-import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.OneStorage as One
+import qualified EFA.Application.Optimisation.Sweep as Sweep
+--import qualified EFA.Application.Optimisation.Balance as Forcing
 import qualified EFA.Application.Simulation as AppSim
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -59,9 +61,9 @@ interpolateOptimalSolutionPerState ::
    SV.Len (vec1 a1), SV.FromList vec1,
    SV.Find vec1, SV.Convert vec1 vec1,
    Node.C node, Arith.Constant a1) =>
-  One.SystemParams node a1 -> 
-  One.OptimisationParams node list sweep vec a -> 
-  One.SimulationParams node vec1 a1 -> 
+  Params.System node a1 -> 
+  Params.Optimisation node list sweep vec a -> 
+  Params.Simulation node vec1 a1 -> 
   Type.OptimalSolutionPerState node a1 -> 
   Map.Map Idx.State (Type.InterpolationOfOneState node vec1 a1)
 interpolateOptimalSolutionPerState sysParams optParams simParams = 
@@ -78,19 +80,19 @@ interpolateOptimalSolutionForOneState ::
    SV.Len (vec1 a1), SV.FromList vec1,
    SV.Find vec1, SV.Convert vec1 vec1,
    Node.C node, Arith.Constant a1) =>
-  One.SystemParams node a1 -> 
-  One.OptimisationParams node list sweep vec a-> 
-  One.SimulationParams node vec1 a1 -> 
+  Params.System node a1 -> 
+  Params.Optimisation node list sweep vec a-> 
+  Params.Simulation node vec1 a1 -> 
   Idx.State ->
   Map.Map [a1] (Maybe (a1, a1, Int, Type.EnvResult node a1)) ->
   Type.InterpolationOfOneState node vec1 a1 
 interpolateOptimalSolutionForOneState sysParams optParams simParams state optimalSolutionOfOneState = 
   let (plocal,prest) =
-        case map (Record.getSig demandSignals) (ReqsAndDofs.unReqs $ One.reqsPos optParams) of
+        case map (Record.getSig demandSignals) (ReqsAndDofs.unReqs $ Params.reqsPos optParams) of
              [r, l] -> (r, l)
              _ -> error "NonIO.simulation: number of signals"
 
-      demandSignals = One.reqsRec simParams
+      demandSignals = Params.reqsRec simParams
       
       g _str x = x
       h m = Map.map (fmap (\(o,e,i,v) -> (o,e,state,i,v))) m 
@@ -100,16 +102,16 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
       
       optSignal = Sig.tzipWith (Sig.interp2WingProfile
                  ("interpolateOptimalSolutionForOneState - interpolate Signal - interpolate Index-Signal")
-                 (g "X:" $ One.varReqRoomPower1D simParams)
-                 (g "Y:" $ One.varReqRoomPower2D simParams)
+                 (g "X:" $ Params.varReqRoomPower1D simParams)
+                 (g "Y:" $ Params.varReqRoomPower2D simParams)
                  $ (g "Z:" $ optimalObjectiveMatrix))
                 (g "xSig:" plocal)
                 (g "ySig:" prest)
 
 {-      indexSignal = Sig.tzipWith (Sig.interp2WingProfile
                  ("interpolateOptimalSolutionForOneState - interpolate Signal - interpolate Index-Signal")
-                 (g "X:" $ One.varReqRoomPower1D simParams)
-                 (g "Y:" $ One.varReqRoomPower2D simParams)
+                 (g "X:" $ Params.varReqRoomPower1D simParams)
+                 (g "Y:" $ Params.varReqRoomPower2D simParams)
                  $ (g "Z:" $ Sig.convert indexMat))
                 (g "xSig:" plocal)
                 (g "ySig:" prest)-}
@@ -122,8 +124,8 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
                 Sig.tzipWith
                 (Sig.interp2WingProfile
                  ("interpolateOptimalSolutionForOneState - interpolate Signals" ++ show (g "Position: " key))
-                 (g "X:" $ One.varReqRoomPower1D simParams)
-                 (g "Y:" $ One.varReqRoomPower2D simParams)
+                 (g "X:" $ Params.varReqRoomPower1D simParams)
+                 (g "Y:" $ Params.varReqRoomPower2D simParams)
                  $ (g "Z:" $ Sig.convert mat))
                 (g "xSig:" plocal)
                 (g "ySig:" prest)
@@ -136,7 +138,7 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
         Map.map (Sig.map AppUt.nothing2Nan) $
           Base.signCorrectedOptimalPowerMatrices
             sysParams
-            (One.dofsPos optParams)
+            (Params.dofsPos optParams)
             (h optimalSolutionOfOneState)
 
       demandAndControlSignals = Record.addSignals (Map.toList dofsSignals) demandSignals
@@ -156,7 +158,7 @@ optimalSignalBasedSolution ::
    SV.Walker vec,
    SV.Storage vec a) =>
   Type.InterpolationOfAllStates node vec a -> 
-  One.StateForcing -> 
+  Balance.StateForcing -> 
   Record.PowerRecord node vec a
 optimalSignalBasedSolution interpolation statForcing = g "newRecord" $ Record.Record newTime (Map.mapWithKey f pMap)
   where -- (\x -> trace ("StateSignal: " ++ show x) x)
@@ -177,18 +179,18 @@ interpolateOptimalSolution ::
    SV.Singleton vec2, SV.Lookup vec2, SV.Len (vec2 b),
    SV.FromList vec2, SV.Find vec2, SV.Convert vec2 vec2,
    Node.C node, Arith.Constant b) =>
-  One.SystemParams node b->
-  One.OptimisationParams node list sweep vec a->
-  One.SimulationParams node vec2 b->
+  Params.System node b->
+  Params.Optimisation node list sweep vec a->
+  Params.Simulation node vec2 b->
   Type.OptimalSolution node b -> 
   Type.Interpolation node vec2 b
 interpolateOptimalSolution sysParams optParams simParams optimalSolution =
   let (plocal,prest) =
-        case map (Record.getSig demandSignals) (ReqsAndDofs.unReqs $ One.reqsPos optParams) of
+        case map (Record.getSig demandSignals) (ReqsAndDofs.unReqs $ Params.reqsPos optParams) of
              [r, l] -> (r, l)
              _ -> error "NonIO.simulation: number of signals"
 
-      demandSignals = One.reqsRec simParams
+      demandSignals = Params.reqsRec simParams
       
       g _str x = x -- trace (str ++": " ++ show x) x  
 
@@ -197,8 +199,8 @@ interpolateOptimalSolution sysParams optParams simParams optimalSolution =
                 Sig.tzipWith
                 (Sig.interp2WingProfile
                  ("simulation-interpolate Signals" ++ show (g "Position: " key))
-                 (g "X:" $ One.varReqRoomPower1D simParams)
-                 (g "Y:" $ One.varReqRoomPower2D simParams)
+                 (g "X:" $ Params.varReqRoomPower1D simParams)
+                 (g "Y:" $ Params.varReqRoomPower2D simParams)
                  $ (g "Z:" $ Sig.convert mat))
                 (g "xSig:" plocal)
                 (g "ySig:" prest)
@@ -208,7 +210,7 @@ interpolateOptimalSolution sysParams optParams simParams optimalSolution =
           Base.signCorrectedOptimalPowerMatrices
             sysParams
             optimalSolution
-            (One.dofsPos optParams)
+            (Params.dofsPos optParams)
 
       demandAndControlSignals = Record.addSignals (Map.toList dofsSignals) demandSignals
 
@@ -227,16 +229,16 @@ simulation ::
    Node.C node,
    Arith.ZeroTestable a,
    Arith.Constant a) =>
-  One.SystemParams node a ->
+  Params.System node a ->
   Record.PowerRecord node vec a ->
   Type.Simulation node vec a
 simulation sysParams givenSigs = Type.Simulation envSim rec
   where
       envSim =
         AppSim.solve
-          (One.systemTopology sysParams)
-          (One.etaAssignMap sysParams)
-          (One.etaMap sysParams)
+          (Params.systemTopology sysParams)
+          (Params.etaAssignMap sysParams)
+          (Params.etaMap sysParams)
           givenSigs
 
       rec = (Base.envToPowerRecord envSim)
@@ -253,8 +255,8 @@ energyFlowAnalysis ::
    Arith.ZeroTestable a,
    Show (vec a),
    Arith.Constant a) =>
-  One.SystemParams node a ->
-  One.SimulationParams node vec a ->
+  Params.System node a ->
+  Params.Simulation node vec a ->
   Record.PowerRecord node vec a ->
   Type.EnergyFlowAnalysis node vec a
 energyFlowAnalysis sysParams simParams powerRecord = 
@@ -267,8 +269,8 @@ energyFlowAnalysis sysParams simParams powerRecord =
                             Sequ.mapWithSection (\ _ r ->  Base.convertRecord r)
                             $ Chop.genSequ recZeroCross
 
-      thrT = One.sequFilterTime simParams
-      thrE = One.sequFilterEnergy simParams
+      thrT = Params.sequFilterTime simParams
+      thrE = Params.sequFilterEnergy simParams
 
       (_, sequenceFlowsFilt) =
         Sequ.unzip $
@@ -281,11 +283,11 @@ energyFlowAnalysis sysParams simParams powerRecord =
         SeqAbs.solveOpts
           (SeqAbs.independentInOutSums SeqAbs.optionsDefault)
           (SeqRec.flowGraphFromSequence $
-            fmap (TopoRecord.flowTopologyFromRecord (One.systemTopology sysParams)) $
+            fmap (TopoRecord.flowTopologyFromRecord (Params.systemTopology sysParams)) $
             sequenceFlowsFilt)
           (Map.foldWithKey
             (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
-            mempty (One.unInitStorageSeq $ One.initStorageSeq sysParams))
+            mempty (Params.unInitStorageSeq $ Params.initStorageSeq sysParams))
 
       stateFlowGraph =
         StateEqAbs.solveOpts
@@ -293,7 +295,7 @@ energyFlowAnalysis sysParams simParams powerRecord =
            (StateQty.graphFromCumResult $
            StateQty.fromSequenceFlowResult False $
            SeqQty.mapGraph id (fmap Arith.integrate) $
-           external (One.initStorageState sysParams) sequenceFlowGraph)
+           external (Params.initStorageState sysParams) sequenceFlowGraph)
           mempty
 
 {-
@@ -304,7 +306,7 @@ energyFlowAnalysis sysParams simParams powerRecord =
            StateQty.graphFromCumResult $
            StateQty.fromSequenceFlowResult False $
            SeqQty.mapGraph id (fmap Arith.integrate) $
-           external (One.initStorageState params) sequenceFlowGraphSim)
+           external (Params.initStorageState params) sequenceFlowGraphSim)
           mempty
 -}
 
@@ -313,11 +315,11 @@ energyFlowAnalysis sysParams simParams powerRecord =
 
 toSweep ::
   (Sweep.SweepClass sweep vec a, Arith.Constant a) =>
-  One.OptimisationParams node list sweep vec a ->
+  Params.Optimisation node list sweep vec a ->
   StateQty.Graph node (Result (Data Nil a)) (Result (Data Nil a)) ->
   StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a))
 toSweep params = StateQty.mapGraph f f
-  where one = Sweep.fromRational (One.sweepLength params) Arith.one
+  where one = Sweep.fromRational (Params.sweepLength params) Arith.one
         f (Determined (Data x)) = Determined $ Sweep.replicate one x
         f Undetermined = Undetermined
 optimiseAndSimulateSignalBased ::
@@ -336,13 +338,13 @@ optimiseAndSimulateSignalBased ::
    Sweep.SweepClass sweep UV.Vector d,
    Sweep.SweepClass sweep UV.Vector (d, d),
    Sweep.SweepClass sweep UV.Vector (d, Bool)) =>
-   One.SystemParams node a -> 
-   One.OptimisationParams node [] sweep UV.Vector a -> 
-   One.SimulationParams node intVec a -> 
-   One.BalanceForcing node a ->
-   One.StateForcing ->
+   Params.System node a -> 
+   Params.Optimisation node [] sweep UV.Vector a -> 
+   Params.Simulation node intVec a -> 
+   Balance.Forcing node a ->
+   Balance.StateForcing ->
    Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
-   One.IndexConversionMap -> 
+   Balance.IndexConversionMap -> 
    Type.SignalBasedOptimisation node sweep UV.Vector a intVec b simVec c efaVec d
 optimiseAndSimulateSignalBased sysParams optParams simParams balanceForcing statForcing perStateSweep _indexConversionMap =   
   let perStateOptimum  = Base.optimalObjectivePerState optParams balanceForcing perStateSweep

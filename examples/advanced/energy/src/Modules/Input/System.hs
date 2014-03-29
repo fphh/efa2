@@ -2,7 +2,7 @@ module Modules.Input.System where
 
 import qualified EFA.Application.Utility as AppUt
 
-import EFA.Application.OneStorage (EtaAssignMap, Name(Name))
+import EFA.Application.Optimisation.Params (EtaAssignMap, Name(Name))
 import EFA.Application.Utility (identifyFlowState, dirEdge, undirEdge)
 
 import qualified EFA.Flow.State.Quantity as StateQty

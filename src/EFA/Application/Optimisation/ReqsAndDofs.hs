@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-module EFA.Application.ReqsAndDofs where
+module EFA.Application.Optimisation.ReqsAndDofs where
 
 
-import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Optimisation.Sweep as Sweep
 
 import qualified Data.Traversable as Trav
 import Data.Traversable (Traversable, traverse)

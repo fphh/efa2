@@ -6,7 +6,7 @@
 
 module EFA.Test.Sweep where
 
-import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Optimisation.Sweep as Sweep
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 

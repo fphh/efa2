@@ -7,8 +7,8 @@ module EFA.Application.Simulation where
 
 
 import EFA.Application.Utility (quantityTopology)
-import qualified EFA.Application.Sweep as Sweep
-import EFA.Application.OneStorage (Name(Name))
+import qualified EFA.Application.Optimisation.Sweep as Sweep
+import EFA.Application.Optimisation.Params (Name(Name))
 
 import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo

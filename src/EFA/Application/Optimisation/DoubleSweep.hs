@@ -6,10 +6,10 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module EFA.Application.DoubleSweep where
+module EFA.Application.Optimisation.DoubleSweep where
 
-import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+import qualified EFA.Application.Optimisation.Sweep as Sweep
+import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
 import qualified EFA.Application.Type as Type
 
 import qualified EFA.Flow.State.Quantity as StateFlow

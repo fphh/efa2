@@ -4,10 +4,13 @@ module Modules.Input.Setting where
 
 import qualified Modules.Input.System as System
 
-import qualified EFA.Application.OneStorage as One
-import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Optimisation.Balance as Balance
+import qualified EFA.Application.Optimisation.Params as Params
+import EFA.Application.Optimisation.Params(Name)) 
 
-import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+import qualified EFA.Application.Optimisation.Sweep as Sweep
+
+import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
@@ -89,7 +92,7 @@ legend 1 = "Entladen"
 legend _ = "Undefined"
 
 
-scaleTableEta :: Map One.Name (Double, Double)
+scaleTableEta :: Map Name (Double, Double)
 scaleTableEta = Map.fromList $
   (System.storage,     (1, 0.9)) :
   (System.gas,         (1, 0.7)) :
@@ -104,9 +107,9 @@ restScale = 0.3
 localScale = 0.3
 
 forcingMap ::
-  Map System.Node (One.SocDrive Double)
+  Map System.Node (Balance.SocDrive Double)
 forcingMap = Map.fromList $
-  (System.Water, One.ChargeDrive (-0.12)) :
+  (System.Water, Balance.ChargeDrive (-0.12)) :
   []
 
 varRestPower', varLocalPower' :: [[Double]]
@@ -126,14 +129,14 @@ varLocalPower :: Sig.PSignal2 Vector UV.Vector Double
 varLocalPower = Sig.fromList2 $ varLocalPower'
 
 
-initStorageState :: (Arith.Constant a) => One.InitStorageState System.Node a
+initStorageState :: (Arith.Constant a) => Params.InitStorageState System.Node a
 initStorageState =
-  One.InitStorageState $ Map.fromList [(System.Water, Arith.fromRational $ 1000)] --0.7*3600*1000)]
+  Params.InitStorageState $ Map.fromList [(System.Water, Arith.fromRational $ 1000)] --0.7*3600*1000)]
 
 
-initStorageSeq :: (Arith.Constant a) => One.InitStorageSeq System.Node a
+initStorageSeq :: (Arith.Constant a) => Params.InitStorageSeq System.Node a
 initStorageSeq =
-  One.InitStorageSeq $ Map.fromList [(System.Water, Arith.fromRational 1000)]
+  Params.InitStorageSeq $ Map.fromList [(System.Water, Arith.fromRational 1000)]
 
 ------------------------------------------------------------------------
 

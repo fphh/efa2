@@ -13,11 +13,13 @@ import qualified EFA.Application.Optimisation.Loop as Loop
 
 import EFA.Application.Type (EnvResult)
 import qualified EFA.Application.Type as Type
-import qualified EFA.Application.OneStorage as One
-import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+import qualified EFA.Application.Optimisation.Balance as Balance
+import qualified EFA.Application.Optimisation.Params as Params
 
-import EFA.Application.Sweep (Sweep)
+import qualified EFA.Application.Optimisation.Sweep as Sweep
+import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
+
+import EFA.Application.Optimisation.Sweep (Sweep)
 
 import qualified EFA.Application.Optimisation as AppOpt
 
@@ -64,7 +66,7 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
    Sweep.SweepClass sweep vec a) =>
-  One.OptimisationParams Node list sweep vec a->
+  Params.Optimisation Node list sweep vec a->
   EnvResult Node (sweep vec a)
 initEnv params = AppOpt.initialEnv params System.stateFlowGraph
 -}
@@ -79,9 +81,9 @@ main1 = do
   --rndGen <- Random.getStdGen
 
   let etaMap =
-         Map.mapKeys One.Name $
+         Map.mapKeys Params.Name $
          CT.makeEtaFunctions2D
-            (Map.mapKeys One.unName ModSet.scaleTableEta)
+            (Map.mapKeys Params.unName ModSet.scaleTableEta)
             tabEta
 
   let
@@ -131,47 +133,47 @@ main1 = do
           (map (Sig.findSupportPoints. Sig.untype) 
                [ ModSet.varLocalPower1D, ModSet.varRestPower1D])
 
-      sysParams = One.SystemParams {
-         One.systemTopology = System.topology,
-         One.etaAssignMap = System.etaAssignMap,
-         One.etaMap = etaMap,
-         One.storagePositions = ([TopoIdx.ppos System.Water System.Network]),
-         One.initStorageState = ModSet.initStorageState,
-         One.initStorageSeq = ModSet.initStorageSeq }
+      sysParams = Params.System {
+         Params.systemTopology = System.topology,
+         Params.etaAssignMap = System.etaAssignMap,
+         Params.etaMap = etaMap,
+         Params.storagePositions = ([TopoIdx.ppos System.Water System.Network]),
+         Params.initStorageState = ModSet.initStorageState,
+         Params.initStorageSeq = ModSet.initStorageSeq }
 
-      optParams :: One.OptimisationParams Node [] Sweep UV.Vector Double
-      optParams = One.OptimisationParams {
---          One.stateFlowGraphOpt = ienv,
-          One.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs),
-          One.dofsPos = (ReqsAndDofs.dofsPos ModSet.dofs),
-          One.points = ModSet.sweepPts,
-          One.sweepLength = ModSet.sweepLength,
-          One.etaToOptimise = Nothing,
-          One.maxEtaIterations = One.MaxEtaIterations 5,
-          One.maxBalanceIterations = One.MaxBalanceIterations 100,
+      optParams :: Params.Optimisation Node [] Sweep UV.Vector Double
+      optParams = Params.Optimisation {
+--          Params.stateFlowGraphOpt = ienv,
+          Params.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs),
+          Params.dofsPos = (ReqsAndDofs.dofsPos ModSet.dofs),
+          Params.points = ModSet.sweepPts,
+          Params.sweepLength = ModSet.sweepLength,
+          Params.etaToOptimise = Nothing,
+          Params.maxEtaIterations = Params.MaxEtaIterations 5,
+          Params.maxBalanceIterations = Params.MaxBalanceIterations 100,
 
-          One.initialBattForcing =
-            One.BalanceForcingMap
-            $ Map.fromList [(System.Water, One.DischargeDrive 1)],
-          One.initialBattForceStep =
-            One.BalanceForcingMap
-            $ Map.fromList [(System.Water, One.ChargeDrive 0.1)],
-          One.etaThreshold = One.EtaThreshold 0.2,
-          One.balanceThreshold = One.BalanceThreshold 0.5,
-          One.balanceForcingSeed = One.ChargeDrive 0.01 }
+          Params.initialBattForcing =
+            Balance.ForcingMap
+            $ Map.fromList [(System.Water, Balance.DischargeDrive 1)],
+          Params.initialBattForceStep =
+            Balance.ForcingMap
+            $ Map.fromList [(System.Water, Balance.ChargeDrive 0.1)],
+          Params.etaThreshold = Params.EtaThreshold 0.2,
+          Params.balanceThreshold = Params.BalanceThreshold 0.5,
+          Params.balanceForcingSeed = Balance.ChargeDrive 0.01 }
 
-      simParams :: One.SimulationParams Node [] Double
-      simParams = One.SimulationParams {
-          One.varReqRoomPower1D = Sig.convert $ ModSet.varLocalPower1D,
-          One.varReqRoomPower2D = Sig.convert $ ModSet.varRestPower ,
-          One.reqsRec = Base.convertRecord reqsRecStep,
-          One.requirementGrid = [ Sig.convert $ ModSet.varLocalPower1D,
+      simParams :: Params.Simulation Node [] Double
+      simParams = Params.Simulation {
+          Params.varReqRoomPower1D = Sig.convert $ ModSet.varLocalPower1D,
+          Params.varReqRoomPower2D = Sig.convert $ ModSet.varRestPower ,
+          Params.reqsRec = Base.convertRecord reqsRecStep,
+          Params.requirementGrid = [ Sig.convert $ ModSet.varLocalPower1D,
                                   Sig.convert $ ModSet.varRestPower1D ],
-          One.activeSupportPoints =  supportPoints, 
-          One.sequFilterTime=0.01,
-          One.sequFilterEnergy=0 }
+          Params.activeSupportPoints =  supportPoints, 
+          Params.sequFilterTime=0.01,
+          Params.sequFilterEnergy=0 }
 
-  print $ map (AppUt.absoluteStateIndex (One.systemTopology sysParams)) System.flowStates
+  print $ map (AppUt.absoluteStateIndex (Params.systemTopology sysParams)) System.flowStates
 
 
 {-
@@ -187,13 +189,13 @@ main1 = do
       
       ol = -- Loop.condition optParams
            take 5 $ Loop.iterateEtaWhile
-               sysParams optParams simParams initEnv One.StateForcingOn
+               sysParams optParams simParams initEnv Balance.StateForcingOn
 
       initEnv2 = -- Loop.stateFlowOut $ 
                  Type.stateFlowGraphSweep $ Loop.bResult $ -- vlast "Main" $
                  vlast "Main" $ (Loop.balanceLoop $ vlast "Main" ol)
          
-      ol2 = Loop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff
+      ol2 = Loop.iterateEtaWhile sysParams optParams simParams initEnv2 Balance.StateForcingOff
 
   -- print ol
   mapM_ putStrLn (Loop.showEtaLoop optParams ol)

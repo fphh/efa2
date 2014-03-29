@@ -7,11 +7,12 @@ module EFA.Application.Optimisation.Base where
 
 import qualified EFA.Application.Optimisation.Optimisation as Optimisation
 
-import qualified EFA.Application.DoubleSweep as DoubleSweep
-import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+import qualified EFA.Application.Optimisation.DoubleSweep as DoubleSweep
+import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
 import qualified EFA.Application.Type as Type
-import qualified EFA.Application.OneStorage as One
-import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Optimisation.Balance as Balance
+import qualified EFA.Application.Optimisation.Params as Params
+import qualified EFA.Application.Optimisation.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.Utility as ModUt
 import EFA.Application.Type (EnvResult)
@@ -70,25 +71,25 @@ perStateSweep ::
    Monoid (sweep vec Bool),
    Sweep.SweepMap sweep vec a Bool,
    Sweep.SweepClass sweep vec Bool) =>
-  One.SystemParams node a ->
-  One.OptimisationParams node list sweep vec a ->
+  Params.System node a ->
+  Params.Optimisation node list sweep vec a ->
   StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
   Map Idx.State (Map (list a) (Type.SweepPerReq node sweep vec a))
 perStateSweep sysParams optParams stateFlowGraph  =
   Map.mapWithKey f states
   where states = StateQty.states stateFlowGraph
         reqsAndDofs = map TopoIdx.Power
-                      $ ReqsAndDofs.unReqs (One.reqsPos optParams)
-                        ++ ReqsAndDofs.unDofs (One.dofsPos optParams)
+                      $ ReqsAndDofs.unReqs (Params.reqsPos optParams)
+                        ++ ReqsAndDofs.unDofs (Params.dofsPos optParams)
 
-        f state _ = DoubleSweep.doubleSweep solveFunc (One.points optParams)
+        f state _ = DoubleSweep.doubleSweep solveFunc (Params.points optParams)
           where solveFunc =
                   Optimisation.solve
                     optParams
                     reqsAndDofs
                     (AppOpt.eraseXAndEtaFromState state stateFlowGraph)
-                    (One.etaAssignMap sysParams)
-                    (One.etaMap sysParams)
+                    (Params.etaAssignMap sysParams)
+                    (Params.etaMap sysParams)
                     state
 
 
@@ -99,20 +100,20 @@ balForcing ::
    Arith.Sum (sweep vec a),
    Sweep.SweepMap sweep vec a a,
    Arith.Constant a) =>
-  One.BalanceForcing node a ->
-  One.OptimisationParams node list sweep vec a ->
+  Balance.Forcing node a ->
+  Params.Optimisation node list sweep vec a ->
   Type.StoragePowerMap node sweep vec a ->
   Result (sweep vec a)
 balForcing balanceForcing params powerMap =
-  Map.foldWithKey f zero (One.unBalanceForcingMap balanceForcing)
+  Map.foldWithKey f zero (Balance.unForcingMap balanceForcing)
       where
-        zero = Determined $ Sweep.fromRational (One.sweepLength params) Arith.zero
+        zero = Determined $ Sweep.fromRational (Params.sweepLength params) Arith.zero
         f stoNode forcingFactor acc = g acc force
           where
             g (Determined ac) (Determined fo) = Determined $ ac ~+ fo
             g _ _ = Undetermined
 
-            force = fmap (Sweep.map (One.getSocDrive forcingFactor ~*)) stoPower
+            force = fmap (Sweep.map (Balance.getSocDrive forcingFactor ~*)) stoPower
 
             stoPower =
               fromMaybe (error $ "forcing failed, because node not found: " ++ show stoNode)
@@ -127,8 +128,8 @@ optStackPerState ::
    Arith.Sum (sweep UV.Vector a),
    Arith.Constant a,
    Sweep.SweepClass sweep UV.Vector (a, a)) =>
-  One.OptimisationParams node list sweep UV.Vector a ->
-  One.BalanceForcing node a ->
+  Params.Optimisation node list sweep UV.Vector a ->
+  Balance.Forcing node a ->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
   Type.OptStackPerState sweep UV.Vector a
 optStackPerState params balanceForcing =
@@ -148,8 +149,8 @@ optimalObjectivePerState ::
    Sweep.SweepVector UV.Vector  a,
    Sweep.SweepClass sweep UV.Vector  a,
    Sweep.SweepMap sweep UV.Vector  a a) =>
-  One.OptimisationParams node list sweep UV.Vector a ->
-  One.BalanceForcing node a ->
+  Params.Optimisation node list sweep UV.Vector a ->
+  Balance.Forcing node a ->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
   Type.OptimalSolutionPerState node a
 optimalObjectivePerState params balanceForcing =
@@ -172,11 +173,11 @@ expectedValuePerState =
 {-
 -- TODO: is this code is still neeed for Display purposes ? -- needs to work with new StateForcing -- does it make sense ?
 selectOptimalState ::
-  (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a,RealFloat a) =>
-  One.OptimisationParams node list sweep vec a ->
-  Map Idx.AbsoluteState (One.StateForcing a) ->
+  (Ord a,Arith.Sum a,Show (Params.StateForcing a), Show a,RealFloat a) =>
+  Params.Optimisation node list sweep vec a ->
+  Map Idx.AbsoluteState (Params.StateForcing a) ->
   Type.OptimalSolutionPerState node a ->
-  One.IndexConversionMap ->
+  Params.IndexConversionMap ->
   Type.OptimalSolution node a 
 selectOptimalState _params stateForcing stateMap indexConversionMap =
   let
@@ -190,7 +191,7 @@ selectOptimalState _params stateForcing stateMap indexConversionMap =
                       (\(objVal, eta, idx ,env) ->
                         (objVal Arith.~+
                          maybe (error "Base.selectOptimalState")
-                         One.unStateForcing
+                         Params.unStateForcing
                          (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
                          eta, st, idx, env))) m)
      $ Map.toList stateMap
@@ -256,11 +257,11 @@ consistentRecord (Record.Record _ m) =
 
 consistentSection ::
   (Ord t5, Show t5, Node.C node, Arith.Constant t5) =>
-  One.SystemParams node a ->
+  Params.System node a ->
   Sequ.Section (Record.Record t t3 t1 t4 (TopoIdx.Position node) [] t2 t5) ->
   Bool
 consistentSection sysParams (Sequ.Section _ _ rec) =
-  let recs = map f $ Graph.edges $ One.systemTopology sysParams
+  let recs = map f $ Graph.edges $ Params.systemTopology sysParams
       f (Graph.DirEdge fr to) =
         Record.extract [TopoIdx.ppos fr to, TopoIdx.ppos to fr] rec
   in all consistentRecord recs
@@ -268,7 +269,7 @@ consistentSection sysParams (Sequ.Section _ _ rec) =
 
 filterPowerRecordList ::
   (Ord a, Show a, Arith.Constant a, Node.C node) =>
-  One.SystemParams node a ->
+  Params.System node a ->
   Sequ.List (Record.PowerRecord node [] a) ->
   ( Sequ.List (Record.PowerRecord node [] a),
     Sequ.List (Record.PowerRecord node [] a) )
@@ -285,7 +286,7 @@ signCorrectedOptimalPowerMatrices ::
   (Ord a, Arith.Sum a, Arith.Constant a, Show node, Ord node,
    Vec.Storage varVec (Maybe (Result a)),
    Vec.FromList varVec) =>
-  One.SystemParams node a ->
+  Params.System node a ->
   ReqsAndDofs.Dofs (TopoIdx.Position node) ->
   Map [a] (Maybe (a, a, Idx.State, Int, EnvResult node a)) ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector varVec (Maybe (Result a)))
@@ -304,7 +305,7 @@ signCorrectedOptimalPowerMatrices systemParams (ReqsAndDofs.Dofs ppos) m =
 
 isFlowDirectionPositive ::
   (Ord node, Show node) =>
-  One.SystemParams node a ->
+  Params.System node a ->
   Idx.State ->
   TopoIdx.Position node ->
   EnvResult node a ->
@@ -324,7 +325,7 @@ isFlowDirectionPositive sysParams state (TopoIdx.Position f t) graph =
        _ -> error $ "More or less than exactly one edge between nodes "
                     ++ show f ++ " and " ++ show t ++ " in " ++ show es
   where flowTopoEs = fmap Graph.edgeSet $ ModUt.getFlowTopology state graph
-        topo = One.systemTopology sysParams
+        topo = Params.systemTopology sysParams
         es = Graph.adjacentEdges topo f
                `Set.intersection` Graph.adjacentEdges topo t
 
@@ -390,14 +391,14 @@ getOptimalControlMatricesOfOneState ::
    Vec.Storage varVec (Maybe (Result a)),
    Vec.FromList varVec,
    Arith.Sum a) =>
-  One.SystemParams node a -> 
-  One.OptimisationParams node list sweep vec a -> 
+  Params.System node a -> 
+  Params.Optimisation node list sweep vec a -> 
   Idx.State ->
   Type.OptimalSolutionOfOneState node a ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector varVec a)
 getOptimalControlMatricesOfOneState sysParams optParams state =
   Map.map (Sig.map ModUt.nothing2Nan)
-  . signCorrectedOptimalPowerMatrices sysParams (One.dofsPos optParams)
+  . signCorrectedOptimalPowerMatrices sysParams (Params.dofsPos optParams)
   . Map.map (fmap (\(o, e, i, v) -> (o, e, state, i, v)))
 
 
@@ -468,7 +469,7 @@ findOptimalObjectiveStates ::
    Arith.Sum a,
    Vec.Walker vec,
    Vec.Storage vec a) =>
-  One.StateForcing ->
+  Balance.StateForcing ->
   Type.InterpolationOfAllStates node vec a -> Map Idx.State (Sig.UTSignal vec Bool)
 findOptimalObjectiveStates statForcing interpolation =
   Map.map (g . f . Type.optObjectiveSignalOfState) interpolation
@@ -479,14 +480,14 @@ findOptimalObjectiveStates statForcing interpolation =
 forceOptimalStateSignal :: 
   (Vec.Walker vec, Arith.Sum a,Vec.Zipper vec, Show a,RealFloat a,
    Ord a, Vec.Storage vec a, Vec.Singleton vec) =>
-  One.StateForcing ->
+  Balance.StateForcing ->
   Sig.UTSignal vec a ->
   Sig.UTSignal vec a ->
   Sig.UTSignal vec a 
 forceOptimalStateSignal stateForcing overallOptimalSignal optimalSignalOfState =
   case stateForcing of
-       One.StateForcingOn -> Sig.offset minimalDifference optimalSignalOfState
-       One.StateForcingOff -> optimalSignalOfState
+       Balance.StateForcingOn -> Sig.offset minimalDifference optimalSignalOfState
+       Balance.StateForcingOff -> optimalSignalOfState
   where differenceSignal = overallOptimalSignal Sig..- optimalSignalOfState
         minimalDifference = Sig.fromScalar $ Sig.minimumWithNaN differenceSignal
 
@@ -499,7 +500,7 @@ genOptimalStatesSignal ::
    Vec.Walker vec,
    Vec.Storage vec a,RealFloat a,
    Vec.Storage vec Bool) =>
-  One.StateForcing ->
+  Balance.StateForcing ->
   Type.InterpolationOfAllStates node vec a ->
    Sig.UTSignal vec [Idx.State]
 genOptimalStatesSignal statForcing interpolation =
