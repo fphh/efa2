@@ -33,10 +33,10 @@ TODO
 module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
-import qualified Modules.Utility as ModUt
+import qualified EFA.Application.Utility as AppUt
 import qualified Modules.Setting as ModSet
-import qualified Modules.Optimisation.Base as Base
-import qualified Modules.Optimisation.NonIO as NonIO
+import qualified EFA.Application.Optimisation.Base as Base
+import qualified EFA.Application.Optimisation.NonIO as NonIO
 import qualified Modules.Plot as ModPlot
 import qualified Modules.Types as Types
 

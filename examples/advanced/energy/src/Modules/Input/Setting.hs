@@ -1,8 +1,8 @@
 {-# LANGUAGE KindSignatures #-}
 
-module Modules.Setting where
+module Modules.Input.Setting where
 
-import qualified Modules.System as System
+import qualified Modules.Input.System as System
 
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep

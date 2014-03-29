@@ -3,12 +3,13 @@
 
 module Main where
 
-import qualified Modules.System as System; import Modules.System (Node)
-import qualified Modules.Setting as ModSet
-import qualified Modules.Plot as ModPlot
-import qualified Modules.Utility as ModUt
-import qualified Modules.Optimisation.Base as Base
-import qualified Modules.Optimisation.Loop as ModLoop
+import qualified Modules.Input.System as System; 
+import Modules.Input.System (Node)
+import qualified Modules.Input.Setting as ModSet
+--import qualified Modules.Output.Plot as ModPlot
+import qualified EFA.Application.Utility as AppUt
+import qualified EFA.Application.Optimisation.Base as Base
+import qualified EFA.Application.Optimisation.Loop as Loop
 
 import EFA.Application.Type (EnvResult)
 import qualified EFA.Application.Type as Type
@@ -21,7 +22,7 @@ import EFA.Application.Sweep (Sweep)
 import qualified EFA.Application.Optimisation as AppOpt
 
 --import qualified EFA.Flow.Topology.Index as TopoIdx
-import qualified EFA.Flow.State.Quantity as StateQty
+--import qualified EFA.Flow.State.Quantity as StateQty
 
 --import qualified EFA.Graph.Topology as Topology
 --import qualified EFA.Graph as Graph
@@ -36,10 +37,10 @@ import qualified EFA.IO.TableParser as Table
 
 import qualified EFA.Equation.Arithmetic as Arith
 
-import qualified EFA.Flow.Draw as Draw
+--import qualified EFA.Flow.Draw as Draw
 
-import EFA.Utility.Async (concurrentlyMany_)
-import EFA.Utility.List (vhead,vlast)
+--import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility.List (vlast)
 
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
@@ -58,6 +59,7 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 
 --import qualified System.Random as Random
 
+{-
 
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
@@ -65,7 +67,7 @@ initEnv ::
   One.OptimisationParams Node list sweep vec a->
   EnvResult Node (sweep vec a)
 initEnv params = AppOpt.initialEnv params System.stateFlowGraph
-
+-}
 
 main1 :: IO()
 main1 = do
@@ -169,7 +171,7 @@ main1 = do
           One.sequFilterTime=0.01,
           One.sequFilterEnergy=0 }
 
-  print $ map (ModUt.absoluteStateIndex (One.systemTopology sysParams)) System.flowStates
+  print $ map (AppUt.absoluteStateIndex (One.systemTopology sysParams)) System.flowStates
 
 
 {-
@@ -183,19 +185,19 @@ main1 = do
   let
     
       
-      ol = -- ModLoop.condition optParams
-           take 5 $ ModLoop.iterateEtaWhile
+      ol = -- Loop.condition optParams
+           take 5 $ Loop.iterateEtaWhile
                sysParams optParams simParams initEnv One.StateForcingOn
 
-      initEnv2 = -- ModLoop.stateFlowOut $ 
-                 Type.stateFlowGraphSweep $ ModLoop.bResult $ -- vlast "Main" $
-                 vlast "Main" $ (ModLoop.balanceLoop $ vlast "Main" ol)
+      initEnv2 = -- Loop.stateFlowOut $ 
+                 Type.stateFlowGraphSweep $ Loop.bResult $ -- vlast "Main" $
+                 vlast "Main" $ (Loop.balanceLoop $ vlast "Main" ol)
          
-      ol2 = ModLoop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff
+      ol2 = Loop.iterateEtaWhile sysParams optParams simParams initEnv2 One.StateForcingOff
 
   -- print ol
-  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
-  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol2)
+  mapM_ putStrLn (Loop.showEtaLoop optParams ol)
+  mapM_ putStrLn (Loop.showEtaLoop optParams ol2)
 
   -- let g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
@@ -210,16 +212,16 @@ main1 = do
 --  print supportPoints
 
 
---  mapM_ putStrLn (ModLoop.showEtaLoop optParams ol)
+--  mapM_ putStrLn (Loop.showEtaLoop optParams ol)
   --concurrentlyMany_ [
     --ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
     --ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
     --ModPlot.reqsRec ModPlot.gpXTerm reqsRec,
---    ModLoop.checkRangeIO sysParams optParams simParams]
-    -- sequence_ (ModLoop.printEtaLoop optParams ol)]
+--    Loop.checkRangeIO sysParams optParams simParams]
+    -- sequence_ (Loop.printEtaLoop optParams ol)]
 
 
---  concurrentlyMany_ [sequence_ (ModLoop.printEtaLoop optParams ol2)]
+--  concurrentlyMany_ [sequence_ (Loop.printEtaLoop optParams ol2)]
 
 {-
   concurrentlyMany_ [

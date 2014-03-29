@@ -3,15 +3,13 @@
 
 module EFA.Utility.List where
 
-import Debug.Trace
-
 vhead :: String -> [a] -> a
 vhead _ (x:_) = x
 vhead caller _ = error $ "vhead, " ++ caller ++ ": empty list"
 
 
 vlast :: String -> [a] -> a
-vlast _ xs@(x:_) = last xs
+vlast _ xs@(_:_) = last xs
 vlast caller _ = error $ "vlast, " ++ caller ++ ": empty list"
 
 

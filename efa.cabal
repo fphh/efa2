@@ -178,6 +178,10 @@ Library
     EFA.Application.StateAnalysis
     EFA.Application.ReqsAndDofs
     EFA.Application.Type
+    EFA.Application.Optimisation.Optimisation
+    EFA.Application.Optimisation.NonIO
+    EFA.Application.Optimisation.Base
+    EFA.Application.Optimisation.Loop
     EFA.Example.Topology.LinearOne
     EFA.Example.Topology.LinearTwo
     EFA.Example.Topology.Tripod
@@ -280,14 +284,9 @@ Executable example-energy
   Hs-Source-Dirs: examples/advanced/energy/src
   Main-Is: Main.hs
   Other-Modules:
-      Modules.Setting
-      Modules.Optimisation
-      Modules.Optimisation.NonIO
-      Modules.Optimisation.Base
-      Modules.Optimisation.Loop
-      Modules.System
-      Modules.Plot
-      Modules.Utility
+      Modules.Input.Setting
+      Modules.Input.System
+      Modules.Output.Plot
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildExamples)
     Build-Depends:
@@ -647,16 +646,18 @@ Executable demo-state-flow
   Else
     Buildable: False
 
-Executable demo-distribution
-  Main-Is: demo/distribution/Main.hs
-  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
-  If flag(buildDemos)
-    Build-Depends:
-      efa,
-      containers,
-      base
-  Else
-    Buildable: False
+
+--Executable demo-distribution
+--  Main-Is: demo/distribution/Main.hs
+--  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
+--  If flag(buildDemos)
+--    Build-Depends:
+--      efa,
+--      containers,
+--      base
+--  Else
+--    Buildable: False
+
 
 Executable demo-mix
   Main-Is: demo/mix/Main.hs

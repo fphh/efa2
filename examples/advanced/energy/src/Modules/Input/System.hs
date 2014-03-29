@@ -1,4 +1,4 @@
-module Modules.System where
+module Modules.Input.System where
 
 import qualified EFA.Application.Utility as AppUt
 

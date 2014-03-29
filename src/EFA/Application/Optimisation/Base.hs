@@ -3,10 +3,9 @@
 {-# LANGUAGE KindSignatures #-}
 
 
-module Modules.Optimisation.Base where
+module EFA.Application.Optimisation.Base where
 
-import qualified Modules.Optimisation as Optimisation
-import qualified Modules.Utility as ModUt
+import qualified EFA.Application.Optimisation.Optimisation as Optimisation
 
 import qualified EFA.Application.DoubleSweep as DoubleSweep
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
@@ -14,7 +13,7 @@ import qualified EFA.Application.Type as Type
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
-import qualified EFA.Application.Utility as AppUt
+import qualified EFA.Application.Utility as ModUt
 import EFA.Application.Type (EnvResult)
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
@@ -230,7 +229,7 @@ envToPowerRecord ::
   Record.PowerRecord node v a
 envToPowerRecord =
   TopoRecord.sectionToPowerRecord
-  . TopoQty.mapSection (AppUt.checkDetermined "envToPowerRecord")
+  . TopoQty.mapSection (ModUt.checkDetermined "envToPowerRecord")
 
 
 convertRecord ::

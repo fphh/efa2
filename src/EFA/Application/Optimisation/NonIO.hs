@@ -5,12 +5,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Modules.Optimisation.NonIO where
+module EFA.Application.Optimisation.NonIO where
 
-import qualified Modules.Optimisation as Optimisation
-import qualified Modules.Optimisation.Base as Base
-import qualified Modules.Utility as ModUt
-import Modules.Optimisation (external)
+import qualified EFA.Application.Optimisation.Optimisation as Optimisation
+import qualified EFA.Application.Optimisation.Base as Base
+import EFA.Application.Optimisation.Optimisation (external)
+import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
 import qualified EFA.Application.Type as Type
@@ -96,7 +96,7 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
       h m = Map.map (fmap (\(o,e,i,v) -> (o,e,state,i,v))) m 
       
 -- TODO: Determined sauber auspacken 
-      j m = Map.map (fmap (Determined . ModUt.fst4)) m
+      j m = Map.map (fmap (Determined . AppUt.fst4)) m
       
       optSignal = Sig.tzipWith (Sig.interp2WingProfile
                  ("interpolateOptimalSolutionForOneState - interpolate Signal - interpolate Index-Signal")
@@ -114,8 +114,8 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
                 (g "xSig:" plocal)
                 (g "ySig:" prest)-}
                     
---      indexMat = ModUt.nothing2Nan $ ModUt.to2DMatrix 
---                 Map.map (fmap  ModUt.thd4) optimalSolutionOfOneState
+--      indexMat = AppUt.nothing2Nan $ AppUt.to2DMatrix 
+--                 Map.map (fmap  AppUt.thd4) optimalSolutionOfOneState
 
       dofsSignals =  Map.mapWithKey f optimalControlMatrices
         where f key mat =
@@ -128,12 +128,12 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
                 (g "xSig:" plocal)
                 (g "ySig:" prest)
 
-      optimalObjectiveMatrix = Sig.map ModUt.nothing2Nan $
-          ModUt.to2DMatrix $ j optimalSolutionOfOneState
+      optimalObjectiveMatrix = Sig.map AppUt.nothing2Nan $
+          AppUt.to2DMatrix $ j optimalSolutionOfOneState
 
 
       optimalControlMatrices =
-        Map.map (Sig.map ModUt.nothing2Nan) $
+        Map.map (Sig.map AppUt.nothing2Nan) $
           Base.signCorrectedOptimalPowerMatrices
             sysParams
             (One.dofsPos optParams)
@@ -204,7 +204,7 @@ interpolateOptimalSolution sysParams optParams simParams optimalSolution =
                 (g "ySig:" prest)
 
       optimalControlMatrices =
-        Map.map (Sig.map ModUt.nothing2Nan) $
+        Map.map (Sig.map AppUt.nothing2Nan) $
           Base.signCorrectedOptimalPowerMatrices
             sysParams
             optimalSolution
