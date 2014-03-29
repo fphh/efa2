@@ -146,7 +146,6 @@ Library
     EFA.Flow.Sequence.EquationSystem
     EFA.Flow.Sequence.AssignMap
     EFA.Flow.Sequence.Absolute
-    EFA.Flow.Sequence.SystemEta
     EFA.Flow.Sequence.Symbolic
     EFA.Flow.Sequence.Algorithm
     EFA.Flow.State
@@ -155,7 +154,6 @@ Library
     EFA.Flow.State.Quantity
     EFA.Flow.State.EquationSystem
     EFA.Flow.State.Absolute
---    EFA.Flow.State.SystemEta
     EFA.Flow.Cumulated.Index
     EFA.Flow.Cumulated.Variable
     EFA.Flow.Cumulated.Quantity
@@ -163,7 +161,6 @@ Library
     EFA.Flow.Cumulated.Absolute
     EFA.Flow.Cumulated.AssignMap
     EFA.Flow.Absolute
-    EFA.Flow.SystemEta
     EFA.Flow.Draw
     EFA.Application.Utility
     EFA.Application.NestedDelta
@@ -179,6 +176,8 @@ Library
     EFA.Application.StateAnalysis
     EFA.Application.Optimisation.ReqsAndDofs
     EFA.Application.Type
+    EFA.Application.Flow.SystemEta
+    EFA.Application.Flow.Sequence.SystemEta
     EFA.Application.Flow.State.SystemEta
     EFA.Application.Optimisation.Optimisation
     EFA.Application.Optimisation.NonIO

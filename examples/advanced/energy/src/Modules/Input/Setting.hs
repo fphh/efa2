@@ -6,7 +6,7 @@ import qualified Modules.Input.System as System
 
 import qualified EFA.Application.Optimisation.Balance as Balance
 import qualified EFA.Application.Optimisation.Params as Params
-import EFA.Application.Optimisation.Params(Name))
+import EFA.Application.Optimisation.Params(Name)
 
 import qualified EFA.Application.Optimisation.Sweep as Sweep
 

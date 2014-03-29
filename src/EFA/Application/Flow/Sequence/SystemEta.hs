@@ -1,10 +1,10 @@
 
-module EFA.Flow.Sequence.SystemEta where
+module EFA.Application.Flow.Sequence.SystemEta where
 
 import EFA.Application.Utility (checkDetermined)
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.SystemEta as SystemEta
+import qualified EFA.Application.Flow.SystemEta as SystemEta
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 
 import qualified EFA.Graph.Topology.Node as Node

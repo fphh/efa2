@@ -11,12 +11,12 @@ import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Application.Optimisation.Base as Base
 import qualified EFA.Application.Optimisation.Loop as Loop
 
-import EFA.Application.Type (EnvResult)
+--import EFA.Application.Type (EnvResult)
 import qualified EFA.Application.Type as Type
 import qualified EFA.Application.Optimisation.Balance as Balance
 import qualified EFA.Application.Optimisation.Params as Params
 
-import qualified EFA.Application.Optimisation.Sweep as Sweep
+--import qualified EFA.Application.Optimisation.Sweep as Sweep
 import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
 
 import EFA.Application.Optimisation.Sweep (Sweep)
@@ -37,7 +37,7 @@ import qualified EFA.IO.TableParser as Table
 
 --import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
-import qualified EFA.Equation.Arithmetic as Arith
+--import qualified EFA.Equation.Arithmetic as Arith
 
 --import qualified EFA.Flow.Draw as Draw
 

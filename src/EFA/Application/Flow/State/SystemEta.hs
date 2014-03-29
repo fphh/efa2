@@ -6,7 +6,7 @@ import EFA.Application.Utility (checkDetermined)
 import qualified EFA.Application.Optimisation.Sweep as Sweep
 
 import qualified EFA.Flow.State.Quantity as StateQty
-import qualified EFA.Flow.SystemEta as SystemEta
+import qualified EFA.Application.Flow.SystemEta as SystemEta
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Storage as Storage
 --import qualified EFA.Flow.Storage.Quantity as StoreQty

@@ -1,5 +1,5 @@
 
-module EFA.Flow.SystemEta where
+module EFA.Application.Flow.SystemEta where
 
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
