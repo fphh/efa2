@@ -18,6 +18,6 @@ vlast caller _ = error $ "vlast, " ++ caller ++ ": empty list"
 -- >>> takeUntil (>5) [1..10]
 -- [1,2,3,4,5,6]
 takeUntil :: (a -> Bool) -> [a] -> [a]
-takeUntil p = go 
+takeUntil p = go
   where go (x:xs) =  x : if not (p x) then go xs else []
         go [] = []

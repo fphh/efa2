@@ -178,7 +178,7 @@ selectOptimalState ::
   Map Idx.AbsoluteState (Params.StateForcing a) ->
   Type.OptimalSolutionPerState node a ->
   Params.IndexConversionMap ->
-  Type.OptimalSolution node a 
+  Type.OptimalSolution node a
 selectOptimalState _params stateForcing stateMap indexConversionMap =
   let
       g _ Nothing y = y
@@ -206,12 +206,12 @@ supportPoints ::
    Vec.Storage vec ([a]),
    Vec.FromList vec,
    Vec.Find vec,
-   Vec.Filter vec, 
+   Vec.Filter vec,
    Vec.Zipper vec,
    Vec.Walker vec,
    Vec.Storage vec a,
    Vec.Singleton vec,
-   Arith.Constant a, 
+   Arith.Constant a,
    Show a,
    Vec.Storage vec Bool,
    Vec.Lookup vec) =>
@@ -219,7 +219,7 @@ supportPoints ::
   Record.PowerRecord node vec a ->
   [(a -> [a])] ->
   Sig.UTDistr vec ([[a]], [Sig.SignalIdx])
-supportPoints idList rec functList = 
+supportPoints idList rec functList =
   Sig.getActiveSupportPointsND
   $ zip functList
   $ map (Sig.untype . Record.getSig rec) idList
@@ -384,15 +384,15 @@ stateFlowBalance = fmap (f . Storage.nodes) . StateQty.storages
 
 
 getOptimalControlMatricesOfOneState ::
-  (Vec.Walker varVec, Vec.Storage varVec a, 
+  (Vec.Walker varVec, Vec.Storage varVec a,
    Arith.Constant a, Ord node,
    Ord a,
    Show node,
    Vec.Storage varVec (Maybe (Result a)),
    Vec.FromList varVec,
    Arith.Sum a) =>
-  Params.System node a -> 
-  Params.Optimisation node list sweep vec a -> 
+  Params.System node a ->
+  Params.Optimisation node list sweep vec a ->
   Idx.State ->
   Type.OptimalSolutionOfOneState node a ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector varVec a)
@@ -404,7 +404,7 @@ getOptimalControlMatricesOfOneState sysParams optParams state =
 
 {-
 optimalMatrixOfOneState::
-  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a, 
+  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a,
    Ord a, Vec.Storage varVec (Maybe (Result a)), Vec.FromList varVec) =>
   Type.OptimalSolutionOfOneState node a ->
   Sig.PSignal2 Vector varVec a
@@ -427,7 +427,7 @@ optimalMatrixOfOneState f =
   . Map.map (fmap (Determined . f))
 
 optimalObjectiveMatrixOfOneState, optimalEtaMatrixOfOneState ::
-  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a, 
+  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a,
    Ord a, Vec.Storage varVec (Maybe (Result a)), Vec.FromList varVec) =>
   Type.OptimalSolutionOfOneState node a ->
   Sig.PSignal2 Vector varVec a
@@ -435,16 +435,16 @@ optimalObjectiveMatrixOfOneState = optimalMatrixOfOneState ModUt.fst4
 optimalEtaMatrixOfOneState = optimalMatrixOfOneState ModUt.snd4
 
 optimalIndexMatrixOfOneState::
-  (Vec.Storage varVec Int, Arith.Constant Int, 
+  (Vec.Storage varVec Int, Arith.Constant Int,
    Vec.Storage varVec (Maybe (Result Int))) =>
-  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a, 
+  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a,
    Ord a, Vec.Storage varVec (Maybe (Result a)), Vec.FromList varVec) =>
   Type.OptimalSolutionOfOneState node a ->
   Sig.PSignal2 Vector varVec Int
 optimalIndexMatrixOfOneState = optimalMatrixOfOneState ModUt.thd4
 
 
-genOptimalObjectiveSignal :: 
+genOptimalObjectiveSignal ::
   (Vec.Zipper vec,Ord a,Show (vec Bool),Show (vec a),RealFloat a,
    Vec.Walker vec, Vec.Storage vec a) =>
   Type.InterpolationOfAllStates node vec a -> Sig.UTSignal vec a
@@ -463,7 +463,7 @@ myTrace :: Show a => String -> a -> a
 myTrace _str x = x -- trace (str ++ ": " ++ show x) x
 
 
-findOptimalObjectiveStates :: 
+findOptimalObjectiveStates ::
   (Vec.Zipper vec,Ord a,Vec.Storage vec Bool,Show (vec Bool),
    Vec.Singleton vec,Show (vec a),RealFloat a,Show a,
    Arith.Sum a,
@@ -477,13 +477,13 @@ findOptimalObjectiveStates statForcing interpolation =
         f = forceOptimalStateSignal statForcing opt
         g = Sig.zipWith (==) opt
 
-forceOptimalStateSignal :: 
+forceOptimalStateSignal ::
   (Vec.Walker vec, Arith.Sum a,Vec.Zipper vec, Show a,RealFloat a,
    Ord a, Vec.Storage vec a, Vec.Singleton vec) =>
   Balance.StateForcing ->
   Sig.UTSignal vec a ->
   Sig.UTSignal vec a ->
-  Sig.UTSignal vec a 
+  Sig.UTSignal vec a
 forceOptimalStateSignal stateForcing overallOptimalSignal optimalSignalOfState =
   case stateForcing of
        Balance.StateForcingOn -> Sig.offset minimalDifference optimalSignalOfState
@@ -513,14 +513,14 @@ genOptimalStatesSignal statForcing interpolation =
                $ Type.reqsAndDofsSignalsOfState
                $ ModUt.findMinElem interpolation
 
-        emptyIndexSignal = Sig.untype $ Sig.map (const []) time  
+        emptyIndexSignal = Sig.untype $ Sig.map (const []) time
 
 
 -- TODO test bauen::
 -- TC (Data [0.0,0.3333333333333333,0.6666666666666666,1.0,1.25,1.5,1.75,2.0])
 -- genOptimalTime (Sig.fromList [[Idx.State 0],[Idx.State 1, Idx.State 1, Idx.State 1, Idx.State 0],[Idx.State 1]]) (Sig.fromList [0,1,2]) :: Sig.TSignal [] Double
 
-genOptimalSteppedTime  :: 
+genOptimalSteppedTime  ::
   (Vec.Zipper vec,Eq a,Show a,Show (vec a),
    Vec.Walker vec,
    Vec.Storage vec (a, a),
@@ -529,7 +529,7 @@ genOptimalSteppedTime  ::
    Vec.Storage vec a,
    Vec.Singleton vec,
    Vec.Storage vec [Idx.State]) =>
-  Sig.UTSignal vec [Idx.State] -> 
+  Sig.UTSignal vec [Idx.State] ->
   Sig.TSignal vec a -> Sig.TSignal vec a
 genOptimalSteppedTime indexSignal time =
   Sig.fromList $ concat $ zipWith f is ts
@@ -538,7 +538,7 @@ genOptimalSteppedTime indexSignal time =
              then []
              else concat $ zipWith (\x y -> [x, y]) leftTimes rightTimes
 
-          where 
+          where
                 leftTimes = map (g . convert) [0 .. len]
                 rightTimes =
                   case leftTimes of
@@ -552,16 +552,16 @@ genOptimalSteppedTime indexSignal time =
         is = Sig.toList indexSignal
         ts = Sig.toList $ Sig.deltaMap (,) time
 
-genOptimalSteppedSignal  :: 
+genOptimalSteppedSignal  ::
   (Vec.Storage vec [Idx.State], Eq a,Vec.Storage vec (a, a), Show (vec a),
    Vec.Singleton vec,Show a,
    Vec.Zipper vec, Vec.Walker vec,
-   Vec.Storage vec a, Vec.FromList vec, 
+   Vec.Storage vec a, Vec.FromList vec,
    Vec.Storage vec (Map Idx.State a)) =>
-  Sig.UTSignal vec [Idx.State] -> 
+  Sig.UTSignal vec [Idx.State] ->
   Sig.TSignal vec a ->
-  Map Idx.State (Sig.PSignal vec a) -> 
-  Sig.PSignal vec a 
+  Map Idx.State (Sig.PSignal vec a) ->
+  Sig.PSignal vec a
 genOptimalSteppedSignal indexSignal time signalMap =
   Sig.fromList $ concat $ zipWith3 g is ts signalOfMaps
   where

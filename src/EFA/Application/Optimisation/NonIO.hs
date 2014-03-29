@@ -42,7 +42,7 @@ import qualified EFA.Signal.Vector as SV
 import EFA.Utility.List (vhead)
 
 import EFA.Signal.Data (Data(Data), Nil)
-  
+
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
@@ -52,7 +52,7 @@ import Data.Monoid (Monoid, mempty, (<>))
 
 -- import Debug.Trace(trace)
 
-interpolateOptimalSolutionPerState :: 
+interpolateOptimalSolutionPerState ::
   (Eq (vec1 a1), Ord a1, Show a1, Show (vec1 a1),
    Show node, SV.Zipper vec1, SV.Walker vec1,
    SV.Storage vec1 Bool, SV.Storage vec1 a1,
@@ -61,12 +61,12 @@ interpolateOptimalSolutionPerState ::
    SV.Len (vec1 a1), SV.FromList vec1,
    SV.Find vec1, SV.Convert vec1 vec1,
    Node.C node, Arith.Constant a1) =>
-  Params.System node a1 -> 
-  Params.Optimisation node list sweep vec a -> 
-  Params.Simulation node vec1 a1 -> 
-  Type.OptimalSolutionPerState node a1 -> 
+  Params.System node a1 ->
+  Params.Optimisation node list sweep vec a ->
+  Params.Simulation node vec1 a1 ->
+  Type.OptimalSolutionPerState node a1 ->
   Map.Map Idx.State (Type.InterpolationOfOneState node vec1 a1)
-interpolateOptimalSolutionPerState sysParams optParams simParams = 
+interpolateOptimalSolutionPerState sysParams optParams simParams =
   Map.mapWithKey (interpolateOptimalSolutionForOneState sysParams optParams simParams)
 
 
@@ -80,26 +80,26 @@ interpolateOptimalSolutionForOneState ::
    SV.Len (vec1 a1), SV.FromList vec1,
    SV.Find vec1, SV.Convert vec1 vec1,
    Node.C node, Arith.Constant a1) =>
-  Params.System node a1 -> 
-  Params.Optimisation node list sweep vec a-> 
-  Params.Simulation node vec1 a1 -> 
+  Params.System node a1 ->
+  Params.Optimisation node list sweep vec a->
+  Params.Simulation node vec1 a1 ->
   Idx.State ->
   Map.Map [a1] (Maybe (a1, a1, Int, Type.EnvResult node a1)) ->
-  Type.InterpolationOfOneState node vec1 a1 
-interpolateOptimalSolutionForOneState sysParams optParams simParams state optimalSolutionOfOneState = 
+  Type.InterpolationOfOneState node vec1 a1
+interpolateOptimalSolutionForOneState sysParams optParams simParams state optimalSolutionOfOneState =
   let (plocal,prest) =
         case map (Record.getSig demandSignals) (ReqsAndDofs.unReqs $ Params.reqsPos optParams) of
              [r, l] -> (r, l)
              _ -> error "NonIO.simulation: number of signals"
 
       demandSignals = Params.reqsRec simParams
-      
+
       g _str x = x
-      h m = Map.map (fmap (\(o,e,i,v) -> (o,e,state,i,v))) m 
-      
--- TODO: Determined sauber auspacken 
+      h m = Map.map (fmap (\(o,e,i,v) -> (o,e,state,i,v))) m
+
+-- TODO: Determined sauber auspacken
       j m = Map.map (fmap (Determined . AppUt.fst4)) m
-      
+
       optSignal = Sig.tzipWith (Sig.interp2WingProfile
                  ("interpolateOptimalSolutionForOneState - interpolate Signal - interpolate Index-Signal")
                  (g "X:" $ Params.varReqRoomPower1D simParams)
@@ -115,8 +115,8 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
                  $ (g "Z:" $ Sig.convert indexMat))
                 (g "xSig:" plocal)
                 (g "ySig:" prest)-}
-                    
---      indexMat = AppUt.nothing2Nan $ AppUt.to2DMatrix 
+
+--      indexMat = AppUt.nothing2Nan $ AppUt.to2DMatrix
 --                 Map.map (fmap  AppUt.thd4) optimalSolutionOfOneState
 
       dofsSignals =  Map.mapWithKey f optimalControlMatrices
@@ -145,7 +145,7 @@ interpolateOptimalSolutionForOneState sysParams optParams simParams state optima
 
   in Type.InterpolationOfOneState optimalControlMatrices optSignal demandAndControlSignals
 
-optimalSignalBasedSolution :: 
+optimalSignalBasedSolution ::
   (Ord node, SV.Storage vec Bool, SV.Storage vec [Idx.State],SV.Storage vec (a, a),
    SV.Singleton vec,Show a,Show node,
    SV.FromList vec,
@@ -157,20 +157,20 @@ optimalSignalBasedSolution ::
    SV.Zipper vec,
    SV.Walker vec,
    SV.Storage vec a) =>
-  Type.InterpolationOfAllStates node vec a -> 
-  Balance.StateForcing -> 
+  Type.InterpolationOfAllStates node vec a ->
+  Balance.StateForcing ->
   Record.PowerRecord node vec a
 optimalSignalBasedSolution interpolation statForcing = g "newRecord" $ Record.Record newTime (Map.mapWithKey f pMap)
   where -- (\x -> trace ("StateSignal: " ++ show x) x)
     indexSignal = Base.genOptimalStatesSignal statForcing interpolation
     g _ x  = x -- trace (str ++ ": " ++ show x) x
     newTime =  Base.genOptimalSteppedTime indexSignal time
-    (Record.Record time pMap) =  g "firstStateRecord" $ Type.reqsAndDofsSignalsOfState $ 
+    (Record.Record time pMap) =  g "firstStateRecord" $ Type.reqsAndDofsSignalsOfState $
               vhead "optimalSignalBasedSolution" $ Map.elems interpolation
     f key _ = Base.genOptimalSteppedSignal indexSignal time (signalMap key)
     signalMap k = Map.map (\ x -> Record.getSig (Type.reqsAndDofsSignalsOfState x) k) interpolation
-  
-{- 
+
+{-
 interpolateOptimalSolution ::
   (Eq (vec2 b), Ord b, Show b, Show (vec2 b),
    Show node, SV.Zipper vec2, SV.Walker vec2,
@@ -182,7 +182,7 @@ interpolateOptimalSolution ::
   Params.System node b->
   Params.Optimisation node list sweep vec a->
   Params.Simulation node vec2 b->
-  Type.OptimalSolution node b -> 
+  Type.OptimalSolution node b ->
   Type.Interpolation node vec2 b
 interpolateOptimalSolution sysParams optParams simParams optimalSolution =
   let (plocal,prest) =
@@ -191,8 +191,8 @@ interpolateOptimalSolution sysParams optParams simParams optimalSolution =
              _ -> error "NonIO.simulation: number of signals"
 
       demandSignals = Params.reqsRec simParams
-      
-      g _str x = x -- trace (str ++": " ++ show x) x  
+
+      g _str x = x -- trace (str ++": " ++ show x) x
 
       dofsSignals =  Map.mapWithKey f optimalControlMatrices
         where f key mat =
@@ -259,13 +259,13 @@ energyFlowAnalysis ::
   Params.Simulation node vec a ->
   Record.PowerRecord node vec a ->
   Type.EnergyFlowAnalysis node vec a
-energyFlowAnalysis sysParams simParams powerRecord = 
+energyFlowAnalysis sysParams simParams powerRecord =
       -- Liefert nur delta-Zeiten und keinen Zeitvektor
       -- Deshalb wird der urspruenglichen Zeitvektor behalten
   let recZeroCross = --(\x -> trace ("recZeroCross" ++ show x) x) $
         Chop.addZeroCrossings $ Base.convertRecord powerRecord
 
-      sequencePowerRecord = --(\x -> trace ("sequencePowerRecord" ++ show x) x) $ 
+      sequencePowerRecord = --(\x -> trace ("sequencePowerRecord" ++ show x) x) $
                             Sequ.mapWithSection (\ _ r ->  Base.convertRecord r)
                             $ Chop.genSequ recZeroCross
 
@@ -326,7 +326,7 @@ optimiseAndSimulateSignalBased ::
   (efaVec ~ simVec,intVec ~ simVec,Show d,Arith.ZeroTestable d,
    Arith.Constant d,
    Sweep.SweepClass sweep UV.Vector Bool,
-   a ~ d,intVec ~ [], 
+   a ~ d,intVec ~ [],
    Ord (sweep UV.Vector d),
    RealFloat d,
    Show node,
@@ -338,15 +338,15 @@ optimiseAndSimulateSignalBased ::
    Sweep.SweepClass sweep UV.Vector d,
    Sweep.SweepClass sweep UV.Vector (d, d),
    Sweep.SweepClass sweep UV.Vector (d, Bool)) =>
-   Params.System node a -> 
-   Params.Optimisation node [] sweep UV.Vector a -> 
-   Params.Simulation node intVec a -> 
+   Params.System node a ->
+   Params.Optimisation node [] sweep UV.Vector a ->
+   Params.Simulation node intVec a ->
    Balance.Forcing node a ->
    Balance.StateForcing ->
    Map.Map Idx.State (Map.Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
-   Balance.IndexConversionMap -> 
+   Balance.IndexConversionMap ->
    Type.SignalBasedOptimisation node sweep UV.Vector a intVec b simVec c efaVec d
-optimiseAndSimulateSignalBased sysParams optParams simParams balanceForcing statForcing perStateSweep _indexConversionMap =   
+optimiseAndSimulateSignalBased sysParams optParams simParams balanceForcing statForcing perStateSweep _indexConversionMap =
   let perStateOptimum  = Base.optimalObjectivePerState optParams balanceForcing perStateSweep
       perStateAverage = Base.expectedValuePerState perStateSweep
       -- do we want optimal solution Maps for display ? - probably Yes

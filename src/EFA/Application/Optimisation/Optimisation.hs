@@ -130,7 +130,7 @@ solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
       ss = Sweep.unList (ReqsAndDofs.reqs pts)
            ++ Sweep.unList (ReqsAndDofs.dofs pts)
       res = StateAbs.solveOpts
-              (options params) 
+              (options params)
               (AppOpt.givenAverageWithoutState state
                 (Map.fromList (zip reqsAndDofs ss)) stateFlowGraph)
               ((StateAbs.withExpressionGraph $

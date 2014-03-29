@@ -112,19 +112,19 @@ type BestBalance node a = Map node (Maybe (SocDrive a, a), Maybe (SocDrive a, a)
 
 type StateDurations a = Map Idx.AbsoluteState a
 
-                        
-rememberBestBalanceForcing :: 
+
+rememberBestBalanceForcing ::
   (Arith.Constant a, Ord a, Ord node, Show node, Show a) =>
-   (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) -> 
-  (Forcing node a, Balance node a) -> 
+   (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
+  (Forcing node a, Balance node a) ->
   node ->
   (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
-rememberBestBalanceForcing (neg, pos) (forceMap, balMap) sto = 
+rememberBestBalanceForcing (neg, pos) (forceMap, balMap) sto =
   if bal >= Arith.zero then (neg, g pos) else (h neg, pos)
   where
     bal = getStorageBalance "rememberBestBalanceForcing" balMap sto
     force = getStorageForcing "rememberBestBalanceForcing" forceMap sto
-   
+
     -- TODO :: Fix is compensating for non-Monotonic behaviour of Forcing -> Balance
     -- Correct solution would be to work with an Balance Intervall
     -- Which is calculated by maximum duration charging states to max. duration discharging states
@@ -135,7 +135,7 @@ rememberBestBalanceForcing (neg, pos) (forceMap, balMap) sto =
          then Just (force, bal)
          else Just (f, b)
     g Nothing = Just (force, bal)
-   
+
     h (Just (f, b)) =
       if (Arith.abs bal <= Arith.abs b) || (getSocDrive force > getSocDrive f && bal < b)
          then Just (force, bal)
@@ -143,7 +143,7 @@ rememberBestBalanceForcing (neg, pos) (forceMap, balMap) sto =
     h Nothing = Just (force, bal)
 
 
-checkCrossingEverOccured :: 
+checkCrossingEverOccured ::
   (Maybe (SocDrive a,a), Maybe (SocDrive a, a)) -> Bool
 checkCrossingEverOccured (Just _, Just _) = True
 checkCrossingEverOccured _ = False
@@ -151,16 +151,16 @@ checkCrossingEverOccured _ = False
 getForcingIntervall ::  (Ord a, Arith.Constant a) =>
   (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
   Maybe (SocDrive a)
-getForcingIntervall (Just (n, _), Just (p, _)) = 
+getForcingIntervall (Just (n, _), Just (p, _)) =
   Just $ setSocDrive $ (Arith.abs $ getSocDrive n) ~+ getSocDrive p
 getForcingIntervall _ = Nothing
 
 
-addForcingStep :: 
+addForcingStep ::
   (Ord node, Ord a, Arith.Constant a, Show node) =>
-  Forcing node a -> 
-  ForcingStep node a -> 
-  node ->   
+  Forcing node a ->
+  ForcingStep node a ->
+  node ->
   Forcing node a
 addForcingStep forcing stepMap sto =
   fmap (Map.adjust f sto) forcing
@@ -176,9 +176,9 @@ updateForcingStep ::
 updateForcingStep forcing storage step =
   fmap (Map.adjust (const step) storage) forcing
 
-getStorageForcing :: 
+getStorageForcing ::
   (Ord node, Show node) =>
-  String ->  
+  String ->
   Forcing node a ->
   node ->
   SocDrive a
@@ -188,26 +188,26 @@ getStorageForcing caller forcing sto =
             ++ " - gStorage not in Map: " ++ show sto
 
 
-getStorageForcingStep :: 
+getStorageForcingStep ::
   (Ord node, Show node) =>
-  String ->  
+  String ->
   ForcingStep node a ->
   node ->
   SocDrive a
 getStorageForcingStep caller forcing sto =
   fromMaybe (error m) $ Map.lookup sto $ unForcingMap forcing
-  where m = "Error in getStorageForcing called by " ++ caller 
+  where m = "Error in getStorageForcing called by " ++ caller
             ++ " - gStorage not in Map: " ++ show sto
 
 
-getStorageBalance :: 
+getStorageBalance ::
   (Ord node, Show node) =>
   String ->  Balance node a ->
   node -> a
 getStorageBalance caller balance sto =
-  fromMaybe (error m) $ Map.lookup sto balance 
-  where m = "Error in getStorageBalance called by " ++ caller 
-            ++ " - gStorage not in Map: " ++ show sto  
+  fromMaybe (error m) $ Map.lookup sto balance
+  where m = "Error in getStorageBalance called by " ++ caller
+            ++ " - gStorage not in Map: " ++ show sto
 
 data StateForcing = StateForcingOn | StateForcingOff deriving (Show)
 

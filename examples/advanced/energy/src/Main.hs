@@ -3,7 +3,7 @@
 
 module Main where
 
-import qualified Modules.Input.System as System; 
+import qualified Modules.Input.System as System;
 import Modules.Input.System (Node)
 import qualified Modules.Input.Setting as ModSet
 --import qualified Modules.Output.Plot as ModPlot
@@ -124,13 +124,13 @@ main1 = do
   let
       initEnv = AppOpt.storageEdgeXFactors optParams 3 3
              $ AppOpt.initialEnv optParams System.stateFlowGraph
-               
+
       supportPoints =
         Base.supportPoints
           [ TopoIdx.ppos System.LocalRest System.LocalNetwork,
             TopoIdx.ppos System.Rest System.Network ]
           (Base.convertRecord reqsRecStep)
-          (map (Sig.findSupportPoints. Sig.untype) 
+          (map (Sig.findSupportPoints. Sig.untype)
                [ ModSet.varLocalPower1D, ModSet.varRestPower1D])
 
       sysParams = Params.System {
@@ -169,7 +169,7 @@ main1 = do
           Params.reqsRec = Base.convertRecord reqsRecStep,
           Params.requirementGrid = [ Sig.convert $ ModSet.varLocalPower1D,
                                   Sig.convert $ ModSet.varRestPower1D ],
-          Params.activeSupportPoints =  supportPoints, 
+          Params.activeSupportPoints =  supportPoints,
           Params.sequFilterTime=0.01,
           Params.sequFilterEnergy=0 }
 
@@ -185,16 +185,16 @@ main1 = do
 
 
   let
-    
-      
+
+
       ol = -- Loop.condition optParams
            take 5 $ Loop.iterateEtaWhile
                sysParams optParams simParams initEnv Balance.StateForcingOn
 
-      initEnv2 = -- Loop.stateFlowOut $ 
+      initEnv2 = -- Loop.stateFlowOut $
                  Type.stateFlowGraphSweep $ Loop.bResult $ -- vlast "Main" $
                  vlast "Main" $ (Loop.balanceLoop $ vlast "Main" ol)
-         
+
       ol2 = Loop.iterateEtaWhile sysParams optParams simParams initEnv2 Balance.StateForcingOff
 
   -- print ol
@@ -210,7 +210,7 @@ main1 = do
     $ StateQty.mapGraph g g ienv
 -}
 
---  print reqsRecStep 
+--  print reqsRecStep
 --  print supportPoints
 
 

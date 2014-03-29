@@ -314,7 +314,7 @@ defaultPlot terminal title xs = do
 {-
 withFuncToMatrix ::
   (Ord b, Arith.Constant b, a~b) =>
-  -- (Type.OptimalSolution node a -> a) ->   
+  -- (Type.OptimalSolution node a -> a) ->
   ((b, b, Idx.State, Int, Type.EnvResult node b) -> b) ->
   Type.SignalBasedOptimisation node sweep sweepVec a intVec b simVec c efaVec d ->
   Sig.PSignal2 Vector Vector b
@@ -336,7 +336,7 @@ plotMax term title func =
   defaultPlot term title
   . withFuncToMatrix func
 
--- TODO: g Nothing = Arith.zero is dangerous -- better solution ? 
+-- TODO: g Nothing = Arith.zero is dangerous -- better solution ?
 maxPos ::
   (Ord node, Show node, Filename node, Node.C node,Arith.Constant b,a ~ b,b ~ Double,
    Terminal.C term) =>
@@ -379,7 +379,7 @@ bestStateCurve =
 
 stateRange2 ::
   (Ord a, Terminal.C term, b ~ a) =>
-  ([Char] -> IO term) -> 
+  ([Char] -> IO term) ->
   Type.SignalBasedOptimisation node sweep vec a intVec b simVec c efaVec d ->
   IO ()
 stateRange2 term opt = do
@@ -627,8 +627,8 @@ sweepStackPerStatePowerPos terminal params pos@(TopoIdx.Position f t) =
 {-
 g $ StateQty.lookup (StateIdx.power st f t) env)
   where g (Just (Determined x)) = x
-        g _ = AppUt.nan     
--}     
+        g _ = AppUt.nan
+-}
 
 plotOptimal ::
   (Terminal.C term, Ord b, a~b) =>
@@ -649,7 +649,7 @@ plotOptimal terminal f title =
 optimalObjs, optimalEtas ::
   (Terminal.C term, a ~ Double,b~Double) =>
   (FilePath -> IO term) ->
-   Type.SignalBasedOptimisation node sweep vec a intVec b simVec c efaVec d -> 
+   Type.SignalBasedOptimisation node sweep vec a intVec b simVec c efaVec d ->
   IO ()
 optimalObjs terminal opt = do
   t <- terminal "optimalObjs"
@@ -742,7 +742,7 @@ requirements terminal plocal prest = do
     ( Opts.yLabel (showNode System.Rest) $
       Opts.xLabel (showNode System.LocalRest) $
       Plot.xyFrameAttr "Requirements" prest plocal)
-    ( (mconcat $ map f ts) 
+    ( (mconcat $ map f ts)
       <> Plot.xy sigStyle [prest] [AppPlot.label "" plocal])
 
 

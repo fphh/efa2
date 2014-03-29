@@ -86,7 +86,7 @@ prop_constOne sweep =
 
 
 prop_replicate :: Sweep -> Double -> Bool
-prop_replicate sweep x = 
+prop_replicate sweep x =
   sum (Sweep.toList (Sweep.replicate sweep x))
   ====
   (fromIntegral (Sweep.length sweep) * x)

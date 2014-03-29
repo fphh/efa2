@@ -102,7 +102,7 @@ interpolateSignal ::
   Y a
 interpolateSignal im (AscSignal xSig) (Signal ySig) (TC (Data x)) =
   signal $ case zs of
-       Just (a, b) -> Inter $ 
+       Just (a, b) -> Inter $
          case im of
               Interp.Nearest -> if x - xPt a < xPt b - x then yPt a else yPt b
               _              -> interpolate a b x
@@ -144,8 +144,8 @@ extrapolateSignal im em (AscSignal xSig) (Signal ySig) (TC (Data x)) =
 
        _ -> error $ "extrapolateSignal: not enough points in signal"
                     ++ show xSig ++ ", " ++ show ySig
- 
-  where 
+
+  where
         ptsL :: Maybe (Pt Double, Pt Double)
         ptsL = do
           (TC (Data x0), xtail) <- viewL xSig

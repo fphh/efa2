@@ -6,7 +6,7 @@ import qualified Modules.Input.System as System
 
 import qualified EFA.Application.Optimisation.Balance as Balance
 import qualified EFA.Application.Optimisation.Params as Params
-import EFA.Application.Optimisation.Params(Name)) 
+import EFA.Application.Optimisation.Params(Name))
 
 import qualified EFA.Application.Optimisation.Sweep as Sweep
 
@@ -45,11 +45,11 @@ gas =   [7,8]
 -}
 
 
---local = [0.1,0.3 .. 2.1] -- auch ResidualHV 
+--local = [0.1,0.3 .. 2.1] -- auch ResidualHV
 --rest = [0.1, 1 .. 6.1] -- auch ResidualLV
 
 local = [0.1,0.6 .. 6.2]
-rest = [0.1,0.3 .. 2.1] 
+rest = [0.1,0.3 .. 2.1]
 
 water = [0.1, 0.2 .. 0.8]
 gas =   [0.1, 0.2 .. 0.8]

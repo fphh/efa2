@@ -27,4 +27,4 @@ instance Show (Func a) where
   show _ = "Func <func>"
 
 instance (QC.Arbitrary a, QC.CoArbitrary a) => QC.Arbitrary (Func a) where
-  arbitrary = fmap Func QC.arbitrary    
+  arbitrary = fmap Func QC.arbitrary

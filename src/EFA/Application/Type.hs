@@ -76,7 +76,7 @@ data SweepPerReq node (sweep :: (* -> *) -> * -> *) vec a =
 
 instance Show (SweepPerReq node sweep vec a) where
   show _ = "<SweepPerReq>"
- 
+
 {-
 data Interpolation node vec a =
   Interpolation {
@@ -85,7 +85,7 @@ data Interpolation node vec a =
 -}
 
 
-type InterpolationOfAllStates node vec a = 
+type InterpolationOfAllStates node vec a =
   Map Idx.State (InterpolationOfOneState node vec a)
 
 data InterpolationOfOneState node vec a =
@@ -103,7 +103,7 @@ data Simulation node vec a =
 
 data EnergyFlowAnalysis node vec a = EnergyFlowAnalysis {
     powerSequence :: Sequ.List (Record.PowerRecord node vec a),
-    sequenceFlowGraph :: 
+    sequenceFlowGraph ::
       SeqQty.Graph node (Result (Data Nil a)) (Result (Data (vec :> Nil) a)),
     stateFlowGraph :: EnvResult node (Data Nil a)}
 
