@@ -30,7 +30,7 @@ TODO
 
 -}
 
-module Test where
+module Main where
 
 import qualified Modules.System as System; import Modules.System (Node)
 import qualified Modules.Utility as ModUt
@@ -38,7 +38,7 @@ import qualified Modules.Setting as ModSet
 import qualified Modules.Optimisation.Base as Base
 import qualified Modules.Optimisation.NonIO as NonIO
 import qualified Modules.Plot as ModPlot
-import qualified Modules.Types as Types
+--import qualified Modules.Types as Types
 
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
@@ -72,12 +72,34 @@ import qualified Data.Empty as Empty
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 
+import EFA.Utility.Filename((+++),FPath(..),DirPath(..),Abs,Rel,Directory(..),FileName(..),fromString,filename)
+import EFA.Utility(Caller(..),merror,(|>),ModuleName(..),FunctionName, genCaller)
+
+import qualified EFA.Reference.Base as Ref
+import qualified EFA.IO.Reference as RefIO
+
+import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import Control.Monad (void)
 
-test :: String
-test = "test"
+modul :: ModuleName
+modul = ModuleName "Examples.Advanced.Vehicle.Test"
 
+nc :: FunctionName -> Caller
+nc = genCaller modul
+
+group :: DirPath Rel
+group = DirPath $ map Directory ["Examples","Advanced","Energy"]
+
+testPath :: DirPath Rel
+testPath = DirPath [Directory "First"]
+
+
+test :: Ref.Test
+test =  Ref.Test testPath  
+        (Map.fromList [(FPath [] (FileName "Var1"), Ref.toData (2 ::Double))])
+
+{-
 iterateBalanceIO ::
   One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
@@ -123,13 +145,24 @@ writeOptParams params = do
   writeFile (test ++ "/dofsPos.txt") (show $ One.dofsPos params)
   writeFile (test ++ "/reqsPos.txt") (show $ One.reqsPos params)
   writeFile (test ++ "/sweepLength.txt") (show $ One.sweepLength params)
-
+-}
 
 
 
 main :: IO()
 main = do
-
+  
+  tmpFolder <- RefIO.getTmpFolder (nc "main")
+  ok <- RefIO.checkFolder tmpFolder
+  print tmpFolder
+  print ok
+  print test
+  RefIO.writeTest tmpFolder group test
+  ref <- RefIO.readTest (nc "main") tmpFolder group testPath
+  print $ Ref.diffTest (Ref.Ref ref) test
+  
+  
+ 
   tabEta <- Table.read "../maps/eta.txt"
   tabPower <- Table.read "../maps/power.txt.bak"
 
@@ -160,22 +193,27 @@ main = do
         Record.Record (Sig.convert time)
                       (Map.fromList (zip reqsPos [prest, plocal]))
 
-      optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
-      optParams =
-        One.OptimalEnvParams
-          System.topology
-          ModSet.initStorageState
-          ModSet.initStorageSeq
-          etaMap
-          System.etaAssignMap
-          ModSet.sweepPts
-          ModSet.forcingMap
-          (ReqsAndDofs.reqsPos ModSet.reqs)
-          (ReqsAndDofs.dofsPos ModSet.dofs)
-          ModSet.sweepLength
 
+      -- optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
+
+      sysParams = One.SystemParams {
+         One.systemTopology = System.topology,
+         One.etaAssignMap = System.etaAssignMap,
+         One.etaMap = etaMap,
+         One.storagePositions = ([TopoIdx.ppos System.Water System.Network]),
+         One.initStorageState = ModSet.initStorageState,
+         One.initStorageSeq = ModSet.initStorageSeq }
+
+          
+  print sysParams   
+
+{- -}
+
+{-
   writeOptParams optParams
 
   iterateBalanceIO optParams reqsRec
         ( AppOpt.storageEdgeXFactors optParams 3 3
           $ AppOpt.initialEnv optParams System.stateFlowGraph)
+-}
+

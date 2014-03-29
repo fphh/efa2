@@ -25,7 +25,7 @@ instance Show Caller where
 (|>) (Caller c) (Caller c1) = Caller $ c++c1
 
 merror ::  Caller -> ModuleName -> FunctionName -> String -> t
-merror c m f msg = error $ "Error in "++ show m ++ f ++ "called by" ++ show c ++ "-" ++ msg
+merror c m f msg = error $ "Error in "++ show m ++ f ++ " called by " ++ show c ++ "-" ++ msg
 
 checkJust :: String -> Maybe a -> a
 checkJust _ (Just x) = x
