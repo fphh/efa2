@@ -56,7 +56,8 @@ Library
     parsec >=3.1 && <3.2,
     filepath >=1.3 && <1.4,
     base >=4.5 && <4.7,
-    bimap >=0.2.4
+    bimap >=0.2.4,
+    split >=0.2.2
   Hs-Source-Dirs:      src
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
   Exposed-Modules:
@@ -92,10 +93,22 @@ Library
     EFA.Signal.Plot
     EFA.Signal.ConvertTable
     EFA.Signal.Interp
-    EFA.Data.Axis
+    EFA.Data.Axis.Mono
+    EFA.Data.Axis.Strict
     EFA.Data.ND
-    EFA.Data.ND.Cube
+    EFA.Data.ND.Cube.Map
     EFA.Data.ND.Cube.Grid
+    EFA.Data.Collection
+    EFA.Data.Interpolation
+    EFA.Data.Signal
+    EFA.Data.Vector
+    EFA.Data.Vector.Type
+    EFA.Data.Record
+    EFA.Data.Sweep
+    EFA.Data.OrdData
+    EFA.Data.Type
+    EFA.Data.Type.Physical
+    EFA.Data.Type.Efa
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
@@ -150,7 +163,6 @@ Library
     EFA.Flow.Sequence.EquationSystem
     EFA.Flow.Sequence.AssignMap
     EFA.Flow.Sequence.Absolute
-    EFA.Flow.Sequence.SystemEta
     EFA.Flow.Sequence.Symbolic
     EFA.Flow.Sequence.Algorithm
     EFA.Flow.State
@@ -159,7 +171,6 @@ Library
     EFA.Flow.State.Quantity
     EFA.Flow.State.EquationSystem
     EFA.Flow.State.Absolute
-    EFA.Flow.State.SystemEta
     EFA.Flow.Cumulated.Index
     EFA.Flow.Cumulated.Variable
     EFA.Flow.Cumulated.Quantity
@@ -167,7 +178,6 @@ Library
     EFA.Flow.Cumulated.Absolute
     EFA.Flow.Cumulated.AssignMap
     EFA.Flow.Absolute
-    EFA.Flow.SystemEta
     EFA.Flow.Draw
     EFA.Application.Utility
     EFA.Application.NestedDelta
@@ -175,13 +185,21 @@ Library
     EFA.Application.Plot
     EFA.Application.Tree
     EFA.Application.Optimisation
-    EFA.Application.Sweep
-    EFA.Application.DoubleSweep
+    EFA.Application.Optimisation.Sweep
+    EFA.Application.Optimisation.DoubleSweep
     EFA.Application.Simulation
-    EFA.Application.OneStorage
+    EFA.Application.Optimisation.Params
+    EFA.Application.Optimisation.Balance
     EFA.Application.StateAnalysis
-    EFA.Application.ReqsAndDofs
+    EFA.Application.Optimisation.ReqsAndDofs
     EFA.Application.Type
+    EFA.Application.Flow.SystemEta
+    EFA.Application.Flow.Sequence.SystemEta
+    EFA.Application.Flow.State.SystemEta
+    EFA.Application.Optimisation.Optimisation
+    EFA.Application.Optimisation.NonIO
+    EFA.Application.Optimisation.Base
+    EFA.Application.Optimisation.Loop
     EFA.Example.Topology.LinearOne
     EFA.Example.Topology.LinearTwo
     EFA.Example.Topology.Tripod
@@ -285,14 +303,9 @@ Executable example-energy
   Hs-Source-Dirs: examples/advanced/energy/src
   Main-Is: Main.hs
   Other-Modules:
-      Modules.Setting
-      Modules.Optimisation
-      Modules.Optimisation.NonIO
-      Modules.Optimisation.Base
-      Modules.Optimisation.Loop
-      Modules.System
-      Modules.Plot
-      Modules.Utility
+      Modules.Input.Setting
+      Modules.Input.System
+      Modules.Output.Plot
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildExamples)
     Build-Depends:
@@ -652,16 +665,18 @@ Executable demo-state-flow
   Else
     Buildable: False
 
-Executable demo-distribution
-  Main-Is: demo/distribution/Main.hs
-  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
-  If flag(buildDemos)
-    Build-Depends:
-      efa,
-      containers,
-      base
-  Else
-    Buildable: False
+
+--Executable demo-distribution
+--  Main-Is: demo/distribution/Main.hs
+--  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
+--  If flag(buildDemos)
+--    Build-Depends:
+--      efa,
+--      containers,
+--      base
+--  Else
+--    Buildable: False
+
 
 Executable demo-mix
   Main-Is: demo/mix/Main.hs
@@ -692,7 +707,8 @@ Executable demo-cube
     Build-Depends:
       efa,
       vector,
---      containers,
+      containers,
+      non-empty,
 --      utility-ht,
 --      gnuplot,
       base

@@ -1,4 +1,4 @@
-module EFA.Data.Vector.Sweep where
+module EFA.Data.Sweep where
 
 
 newtype Sweep a = Sweep a

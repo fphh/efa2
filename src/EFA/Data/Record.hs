@@ -5,18 +5,18 @@
 
 module EFA.Data.Record where
 
-import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
+--import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
 
 import Prelude hiding ((++))
 
 import qualified EFA.Data.Vector as DV
 import qualified EFA.Data.OrdData as Ord
 
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as UV
+--import qualified Data.Vector as V
+--import qualified Data.Vector.Unboxed as UV
 import qualified Data.NonEmpty as NonEmpty
 
-import qualified EFA.Equation.Arithmetic as Arith((~/),(~*),(~+),(~-))
+--import qualified EFA.Equation.Arithmetic as Arith((~/),(~*),(~+),(~-))
 
 
 --newtype Record vec vec1 a = Record (NE (NE vec) (DataRow vec1 a))

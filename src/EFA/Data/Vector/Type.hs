@@ -1,11 +1,10 @@
--- | Phanton Type to distinguish between Edge Vectors and Mid Vector
--- | A Timesignal is an Edge Vector a Flow Signal a Mid Vector
+{-# LANGUAGE EmptyDataDecls #-}
+
 module EFA.Data.Vector.Type where
 
-import qualified Data.NonEmpty as NonEmpty
-import qualified EFA.Data.Vector as DV
+-- | Phanton Type to distinguish between Edge Vectors and Mid Vector
+-- | A Timesignal is an Edge Vector a Flow Signal a Mid Vector
 
-import qualified Data.Vector as V
 
 data Edge
 data Mid

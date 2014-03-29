@@ -1,12 +1,12 @@
 
 
-module EFA.Flow.State.SystemEta where
+module EFA.Application.Flow.State.SystemEta where
 
 import EFA.Application.Utility (checkDetermined)
-import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Optimisation.Sweep as Sweep
 
 import qualified EFA.Flow.State.Quantity as StateQty
-import qualified EFA.Flow.SystemEta as SystemEta
+import qualified EFA.Application.Flow.SystemEta as SystemEta
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Storage as Storage
 --import qualified EFA.Flow.Storage.Quantity as StoreQty
@@ -59,7 +59,7 @@ etaSys2 sq =
        x = Map.elems $ fmap (PartMap.init . Storage.nodes) (StateQty.storages sq)
        y = Map.elems $ fmap (PartMap.exit . Storage.nodes) (StateQty.storages sq)
 
-       err str = error ("EFA.Flow.State.SystemEta.etaSys2: " ++ str)
+       err str = error ("EFA.Application.Flow.State.SystemEta.etaSys2: " ++ str)
 
        (s, t) = case zipWith (liftA2 (Arith.~-)) x y of
                      [] -> err "empty list"

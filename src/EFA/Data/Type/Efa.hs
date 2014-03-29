@@ -1,6 +1,6 @@
-module EFA.Data.Type.Efa where
+{-# LANGUAGE EmptyDataDecls #-}
 
-import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
+module EFA.Data.Type.Efa where
 
 
 data Trans

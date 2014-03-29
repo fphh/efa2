@@ -3,7 +3,7 @@
 
 module EFA.Data.Collection where
 
-import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
+import EFA.Utility(Caller,merror,ModuleName(..),FunctionName, genCaller)
 import qualified Data.Map as Map
 import qualified Prelude as P
 import Prelude hiding (map)
@@ -51,7 +51,7 @@ toList (Collection o m) = P.map (\(x,y)-> (x, pack (o,y))) $ Map.toList m
 
 ordFromList :: Eq a => Caller -> [a] -> a        
 ordFromList caller [] = merror caller modul "getOrdFromList" "empty List"
-ordFromList caller [o] = o
+ordFromList _ [o] = o
 ordFromList caller (x:xs) = 
   if all (==x) xs then x 
   else merror caller modul "getOrdFromList" "OrdData differs"

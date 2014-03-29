@@ -524,16 +524,16 @@ _minimum =
    fromMaybe (error "Data.minimum: empty data") .
    foldlMap (liftOrd P.min) Nothing Just
 
-_minimumWithNaN :: (P.RealFloat d, Storage c d, Fold c, Ord d) => Data c d -> d   
-_minimumWithNaN =    
+_minimumWithNaN :: (P.RealFloat d, Storage c d, Fold c, Ord d) => Data c d -> d
+_minimumWithNaN =
    fromMaybe (error "Data.minimumWithNaN: empty data") .
    foldlMap (liftOrd minWithNaN) Nothing Just
-   
-minWithNaN :: (Ord a, P.RealFloat a) => a -> a -> a 
-minWithNaN x y = case (P.isNaN x, P.isNaN y) of  
-  (P.True,P.True) -> x  
-  (P.False,P.True) -> x 
-  (P.True,P.False) -> y 
+
+minWithNaN :: (Ord a, P.RealFloat a) => a -> a -> a
+minWithNaN x y = case (P.isNaN x, P.isNaN y) of
+  (P.True,P.True) -> x
+  (P.False,P.True) -> x
+  (P.True,P.False) -> y
   (P.False,P.False) -> P.min x y
 
 class Maximum c where

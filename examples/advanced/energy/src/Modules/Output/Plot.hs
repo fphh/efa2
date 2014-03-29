@@ -3,13 +3,13 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Modules.Plot where
+module Modules.Output.Plot where
 
-import Modules.Setting (varRestPower, varLocalPower)
-import qualified Modules.Utility as ModUt
-import qualified Modules.Setting as ModSet
-import qualified Modules.System as System
-import qualified Modules.Optimisation.Base as Base
+import Modules.Input.Setting (varRestPower, varLocalPower)
+import qualified EFA.Application.Utility as AppUt
+import qualified Modules.Input.Setting as ModSet
+import qualified Modules.Input.System as System
+import qualified EFA.Application.Optimisation.Base as Base
 
 import qualified EFA.Application.Plot as AppPlot
 import qualified EFA.Application.Sweep as Sweep
@@ -174,7 +174,7 @@ plotMapOfMaps ::
 plotMapOfMaps terminal =
   concurrentlyMany_
   . Map.elems
-  . Map.mapWithKey (plotMaps terminal (Sig.map ModUt.nothing2Nan) . show)
+  . Map.mapWithKey (plotMaps terminal (Sig.map AppUt.nothing2Nan) . show)
 
 plotGraphMaps ::
   (FormatValue.FormatValue a, Show a, Filename [a], Node.C node) =>
@@ -296,10 +296,10 @@ givenSignals terminal opt = do
 -}
 
 to2DMatrix :: (Ord b) => Map [b] a -> Sig.PSignal2 Vector Vector a
-to2DMatrix = ModUt.to2DMatrix
+to2DMatrix = AppUt.to2DMatrix
 
 m2n :: (Arith.Constant a) => Maybe a -> a
-m2n Nothing = ModUt.nan
+m2n Nothing = AppUt.nan
 m2n (Just x) = x
 
 defaultPlot ::
@@ -314,13 +314,13 @@ defaultPlot terminal title xs = do
 {-
 withFuncToMatrix ::
   (Ord b, Arith.Constant b, a~b) =>
-  -- (Type.OptimalSolution node a -> a) ->   
+  -- (Type.OptimalSolution node a -> a) ->
   ((b, b, Idx.State, Int, Type.EnvResult node b) -> b) ->
   Type.SignalBasedOptimisation node sweep sweepVec a intVec b simVec c efaVec d ->
   Sig.PSignal2 Vector Vector b
 withFuncToMatrix func =
   to2DMatrix
-  . Map.map (maybe ModUt.nan func)
+  . Map.map (maybe AppUt.nan func)
   . Type.optimalSolution
 
 
@@ -336,7 +336,7 @@ plotMax term title func =
   defaultPlot term title
   . withFuncToMatrix func
 
--- TODO: g Nothing = Arith.zero is dangerous -- better solution ? 
+-- TODO: g Nothing = Arith.zero is dangerous -- better solution ?
 maxPos ::
   (Ord node, Show node, Filename node, Node.C node,Arith.Constant b,a ~ b,b ~ Double,
    Terminal.C term) =>
@@ -350,7 +350,7 @@ maxPos pos@(TopoIdx.Position f t) terminal =
           (\(_, _, st, _, env) -> g $ StateQty.lookup (StateIdx.power st f t) env)
   where g (Just (Determined x)) = x
         g Nothing = Arith.zero -- show Power of inactive Edges
-        g (Just (Undetermined)) = ModUt.nan
+        g (Just (Undetermined)) = AppUt.nan
 
 maxEta ::
   (Terminal.C term, a ~ b,b ~ Double) =>
@@ -359,7 +359,7 @@ maxEta ::
   IO ()
 maxEta term =
   plotMax (term "maxEta") "Maximal Eta of All States"
-    ModUt.snd5
+    AppUt.snd5
 
 maxObj ::
   (Terminal.C term, a ~ b,b ~ Double) =>
@@ -367,19 +367,19 @@ maxObj ::
   Type.SignalBasedOptimisation node sweep sweepVec a intVec b simVec c efaVec d ->
   IO ()
 maxObj term =
-  plotMax (term "maxObj") "Maximal Objective of All States" ModUt.fst5
+  plotMax (term "maxObj") "Maximal Objective of All States" AppUt.fst5
 
 bestStateCurve ::
   (Ord b, Arith.Constant a, Num a, a ~ b) =>
   Type.SignalBasedOptimisation node sweep sweepVec a intVec b simVec c efaVec d ->
   Sig.PSignal2 Vector Vector a
 bestStateCurve =
-  withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . ModUt.thd5)
+  withFuncToMatrix ((\(Idx.State state) -> fromIntegral state) . AppUt.thd5)
 -}
 
 stateRange2 ::
   (Ord a, Terminal.C term, b ~ a) =>
-  ([Char] -> IO term) -> 
+  ([Char] -> IO term) ->
   Type.SignalBasedOptimisation node sweep vec a intVec b simVec c efaVec d ->
   IO ()
 stateRange2 term opt = do
@@ -449,13 +449,13 @@ maxObjPerState, maxEtaPerState,maxIndexPerState ::
    Type.SignalBasedOptimisation node sweep vec a intVec b simVec c efaVec d ->
    IO ()
 maxObjPerState terminal =
-  maxPerState terminal "Maximal Objective Per State" ModUt.getMaxObj
+  maxPerState terminal "Maximal Objective Per State" AppUt.getMaxObj
 
 maxEtaPerState terminal =
-  maxPerState terminal "Chosen Eta Per State" ModUt.getMaxEta
+  maxPerState terminal "Chosen Eta Per State" AppUt.getMaxEta
 
 maxIndexPerState terminal =
-  maxPerState terminal "Chosen Index Per State" ModUt.getMaxIndex
+  maxPerState terminal "Chosen Index Per State" AppUt.getMaxIndex
 
 expectedEtaPerState ::
   (Terminal.C term, a ~ Double) =>
@@ -477,7 +477,7 @@ expectedEtaDifferencePerState terminal opt =
   $ Map.map to2DMatrix mat
   where ev = Map.map (Map.map m2n) $
              Type.averageSolutionPerState opt
-        eta = ModUt.getMaxEta
+        eta = AppUt.getMaxEta
               $ Type.optimalSolutionPerState opt
         mat = Map.intersectionWith (Map.intersectionWith (Arith.~-)) eta ev
 
@@ -493,7 +493,7 @@ maxPosPerState terminal pos =
   maxPerState
     terminal
     ("Maximal Position " ++ show pos ++ " per state")
-    (ModUt.getMaxPos pos)
+    (AppUt.getMaxPos pos)
 
 
 matrix2ListOfMatrices ::
@@ -508,7 +508,7 @@ sweepResultTo2DMatrix ::
   Map [b] (Result (sweep vec a)) -> Sig.PSignal2 Vector Vector (sweep vec a)
 sweepResultTo2DMatrix len = Sig.map f . to2DMatrix
   where f (Determined x) = x
-        f _ = Sweep.fromRational len ModUt.nan
+        f _ = Sweep.fromRational len AppUt.nan
 
 sweepStackPerStateEta ::
   (Show (vec Double),a ~ Double,
@@ -627,8 +627,8 @@ sweepStackPerStatePowerPos terminal params pos@(TopoIdx.Position f t) =
 {-
 g $ StateQty.lookup (StateIdx.power st f t) env)
   where g (Just (Determined x)) = x
-        g _ = ModUt.nan     
--}     
+        g _ = AppUt.nan
+-}
 
 plotOptimal ::
   (Terminal.C term, Ord b, a~b) =>
@@ -649,15 +649,15 @@ plotOptimal terminal f title =
 optimalObjs, optimalEtas ::
   (Terminal.C term, a ~ Double,b~Double) =>
   (FilePath -> IO term) ->
-   Type.SignalBasedOptimisation node sweep vec a intVec b simVec c efaVec d -> 
+   Type.SignalBasedOptimisation node sweep vec a intVec b simVec c efaVec d ->
   IO ()
 optimalObjs terminal opt = do
   t <- terminal "optimalObjs"
-  plotOptimal t (const ModUt.fst4) "Maximal Objective Function Surfaces" opt
+  plotOptimal t (const AppUt.fst4) "Maximal Objective Function Surfaces" opt
 
 optimalEtas terminal opt = do
   t <- terminal "optimalEtas"
-  plotOptimal t (const ModUt.snd4) "Maximal Eta Surfaces" opt
+  plotOptimal t (const AppUt.snd4) "Maximal Eta Surfaces" opt
 
 optimalPos ::
   (Node.C node, Filename node, Terminal.C term, a ~ Double, b ~ Double) =>
@@ -668,9 +668,9 @@ optimalPos ::
 optimalPos pos@(TopoIdx.Position f t) terminal opt = do
   term <- terminal $ filename ("optimalPos", pos)
   let str = "Optimal " ++ showEdge pos
-  plotOptimal term (\st -> (g . StateQty.lookup (StateIdx.power st f t) . ModUt.frth4)) str opt
+  plotOptimal term (\st -> (g . StateQty.lookup (StateIdx.power st f t) . AppUt.frth4)) str opt
   where g (Just (Determined x)) = x
-        g _ = ModUt.nan
+        g _ = AppUt.nan
 
 findTile :: (Ord t, Show t) => [t] -> [t] -> t -> t -> [(t, t)]
 findTile xs ys x y =
@@ -742,7 +742,7 @@ requirements terminal plocal prest = do
     ( Opts.yLabel (showNode System.Rest) $
       Opts.xLabel (showNode System.LocalRest) $
       Plot.xyFrameAttr "Requirements" prest plocal)
-    ( (mconcat $ map f ts) 
+    ( (mconcat $ map f ts)
       <> Plot.xy sigStyle [prest] [AppPlot.label "" plocal])
 
 

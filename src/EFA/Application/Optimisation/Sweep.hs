@@ -6,7 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module EFA.Application.Sweep where
+module EFA.Application.Optimisation.Sweep where
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
@@ -32,14 +32,14 @@ instance (UV.Unbox a, Eq a) => Eq (Sweep UV.Vector a) where
 
 instance (UV.Unbox a, Eq a, Ord a) => Ord (Sweep UV.Vector a) where
 --  compare (Sweep xs) (Sweep ys) = compare xs ys
-  compare _ _ = error $ "EFA.Application.Sweep: Ord undefined: probable cause: "
+  compare _ _ = error $ "EFA.Application.Optimisation.Sweep: Ord undefined: probable cause: "
                         ++ " use of more than one storage forcing"
 
 
 
 instance Monoid (Sweep UV.Vector Bool) where
   mappend x y = toSweep $ UV.zipWith (&&) (fromSweep x) (fromSweep y)
-  mempty = error $ "EFA.Application.DoubleSweep: "
+  mempty = error $ "EFA.Application.Optimisation.DoubleSweep: "
                    ++ "yeah, this monoid isn't fully defined. Sorry!"
 
 

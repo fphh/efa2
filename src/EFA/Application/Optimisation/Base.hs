@@ -3,18 +3,18 @@
 {-# LANGUAGE KindSignatures #-}
 
 
-module Modules.Optimisation.Base where
+module EFA.Application.Optimisation.Base where
 
-import qualified Modules.Optimisation as Optimisation
-import qualified Modules.Utility as ModUt
+import qualified EFA.Application.Optimisation.Optimisation as Optimisation
 
-import qualified EFA.Application.DoubleSweep as DoubleSweep
-import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+import qualified EFA.Application.Optimisation.DoubleSweep as DoubleSweep
+import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
 import qualified EFA.Application.Type as Type
-import qualified EFA.Application.OneStorage as One
-import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Optimisation.Balance as Balance
+import qualified EFA.Application.Optimisation.Params as Params
+import qualified EFA.Application.Optimisation.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
-import qualified EFA.Application.Utility as AppUt
+import qualified EFA.Application.Utility as ModUt
 import EFA.Application.Type (EnvResult)
 
 import qualified EFA.Flow.Topology.Record as TopoRecord
@@ -56,12 +56,11 @@ import qualified Data.Vector.Unboxed as UV
 import Data.Vector (Vector)
 import Data.Monoid (Monoid)
 import Data.Maybe (fromMaybe)
-import EFA.Utility.List (vhead,vlast) 
 
 import Control.Monad (join)
 import Control.Applicative (liftA2)
 
-import Debug.Trace (trace)
+-- import Debug.Trace (trace)
 
 perStateSweep ::
   (Node.C node, Show node,RealFloat a,
@@ -72,25 +71,25 @@ perStateSweep ::
    Monoid (sweep vec Bool),
    Sweep.SweepMap sweep vec a Bool,
    Sweep.SweepClass sweep vec Bool) =>
-  One.SystemParams node a ->
-  One.OptimisationParams node list sweep vec a ->
+  Params.System node a ->
+  Params.Optimisation node list sweep vec a ->
   StateQty.Graph node (Result (sweep vec a)) (Result (sweep vec a)) ->
   Map Idx.State (Map (list a) (Type.SweepPerReq node sweep vec a))
 perStateSweep sysParams optParams stateFlowGraph  =
   Map.mapWithKey f states
   where states = StateQty.states stateFlowGraph
         reqsAndDofs = map TopoIdx.Power
-                      $ ReqsAndDofs.unReqs (One.reqsPos optParams)
-                        ++ ReqsAndDofs.unDofs (One.dofsPos optParams)
+                      $ ReqsAndDofs.unReqs (Params.reqsPos optParams)
+                        ++ ReqsAndDofs.unDofs (Params.dofsPos optParams)
 
-        f state _ = DoubleSweep.doubleSweep solveFunc (One.points optParams)
+        f state _ = DoubleSweep.doubleSweep solveFunc (Params.points optParams)
           where solveFunc =
                   Optimisation.solve
                     optParams
                     reqsAndDofs
                     (AppOpt.eraseXAndEtaFromState state stateFlowGraph)
-                    (One.etaAssignMap sysParams)
-                    (One.etaMap sysParams)
+                    (Params.etaAssignMap sysParams)
+                    (Params.etaMap sysParams)
                     state
 
 
@@ -101,20 +100,20 @@ balForcing ::
    Arith.Sum (sweep vec a),
    Sweep.SweepMap sweep vec a a,
    Arith.Constant a) =>
-  One.BalanceForcing node a ->
-  One.OptimisationParams node list sweep vec a ->
+  Balance.Forcing node a ->
+  Params.Optimisation node list sweep vec a ->
   Type.StoragePowerMap node sweep vec a ->
   Result (sweep vec a)
 balForcing balanceForcing params powerMap =
-  Map.foldWithKey f zero (One.unBalanceForcingMap balanceForcing)
+  Map.foldWithKey f zero (Balance.unForcingMap balanceForcing)
       where
-        zero = Determined $ Sweep.fromRational (One.sweepLength params) Arith.zero
+        zero = Determined $ Sweep.fromRational (Params.sweepLength params) Arith.zero
         f stoNode forcingFactor acc = g acc force
           where
             g (Determined ac) (Determined fo) = Determined $ ac ~+ fo
             g _ _ = Undetermined
 
-            force = fmap (Sweep.map (One.getSocDrive forcingFactor ~*)) stoPower
+            force = fmap (Sweep.map (Balance.getSocDrive forcingFactor ~*)) stoPower
 
             stoPower =
               fromMaybe (error $ "forcing failed, because node not found: " ++ show stoNode)
@@ -129,8 +128,8 @@ optStackPerState ::
    Arith.Sum (sweep UV.Vector a),
    Arith.Constant a,
    Sweep.SweepClass sweep UV.Vector (a, a)) =>
-  One.OptimisationParams node list sweep UV.Vector a ->
-  One.BalanceForcing node a ->
+  Params.Optimisation node list sweep UV.Vector a ->
+  Balance.Forcing node a ->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
   Type.OptStackPerState sweep UV.Vector a
 optStackPerState params balanceForcing =
@@ -150,8 +149,8 @@ optimalObjectivePerState ::
    Sweep.SweepVector UV.Vector  a,
    Sweep.SweepClass sweep UV.Vector  a,
    Sweep.SweepMap sweep UV.Vector  a a) =>
-  One.OptimisationParams node list sweep UV.Vector a ->
-  One.BalanceForcing node a ->
+  Params.Optimisation node list sweep UV.Vector a ->
+  Balance.Forcing node a ->
   Map Idx.State (Map [a] (Type.SweepPerReq node sweep UV.Vector a)) ->
   Type.OptimalSolutionPerState node a
 optimalObjectivePerState params balanceForcing =
@@ -170,18 +169,16 @@ expectedValuePerState ::
 expectedValuePerState =
   Map.map (Map.map DoubleSweep.expectedValue)
 
+
 {-
-<<<<<<< HEAD
-=======
-{-
--- TODO: is this code is still neeed for Display purposes ? -- needs to work with new StatForcing -- does it make sense ?
+-- TODO: is this code is still neeed for Display purposes ? -- needs to work with new StateForcing -- does it make sense ?
 selectOptimalState ::
-  (Ord a,Arith.Sum a,Show (One.StateForcing a), Show a,RealFloat a) =>
-  One.OptimisationParams node list sweep vec a ->
-  Map Idx.AbsoluteState (One.StateForcing a) ->
+  (Ord a,Arith.Sum a,Show (Params.StateForcing a), Show a,RealFloat a) =>
+  Params.Optimisation node list sweep vec a ->
+  Map Idx.AbsoluteState (Params.StateForcing a) ->
   Type.OptimalSolutionPerState node a ->
-  One.IndexConversionMap ->
-  Type.OptimalSolution node a 
+  Params.IndexConversionMap ->
+  Type.OptimalSolution node a
 selectOptimalState _params stateForcing stateMap indexConversionMap =
   let
       g _ Nothing y = y
@@ -194,14 +191,11 @@ selectOptimalState _params stateForcing stateMap indexConversionMap =
                       (\(objVal, eta, idx ,env) ->
                         (objVal Arith.~+
                          maybe (error "Base.selectOptimalState")
-                         One.unStateForcing
+                         Params.unStateForcing
                          (ModUt.state2absolute st indexConversionMap >>= flip Map.lookup stateForcing),
                          eta, st, idx, env))) m)
      $ Map.toList stateMap
 -}
->>>>>>> stateForcing
--}
-
 
 supportPoints ::
   (Ord a,Show (vec a),Vec.Len (vec a),Node.C node,
@@ -212,12 +206,12 @@ supportPoints ::
    Vec.Storage vec ([a]),
    Vec.FromList vec,
    Vec.Find vec,
-   Vec.Filter vec, 
+   Vec.Filter vec,
    Vec.Zipper vec,
    Vec.Walker vec,
    Vec.Storage vec a,
    Vec.Singleton vec,
-   Arith.Constant a, 
+   Arith.Constant a,
    Show a,
    Vec.Storage vec Bool,
    Vec.Lookup vec) =>
@@ -225,7 +219,7 @@ supportPoints ::
   Record.PowerRecord node vec a ->
   [(a -> [a])] ->
   Sig.UTDistr vec ([[a]], [Sig.SignalIdx])
-supportPoints idList rec functList = 
+supportPoints idList rec functList =
   Sig.getActiveSupportPointsND
   $ zip functList
   $ map (Sig.untype . Record.getSig rec) idList
@@ -236,7 +230,7 @@ envToPowerRecord ::
   Record.PowerRecord node v a
 envToPowerRecord =
   TopoRecord.sectionToPowerRecord
-  . TopoQty.mapSection (AppUt.checkDetermined "envToPowerRecord")
+  . TopoQty.mapSection (ModUt.checkDetermined "envToPowerRecord")
 
 
 convertRecord ::
@@ -263,11 +257,11 @@ consistentRecord (Record.Record _ m) =
 
 consistentSection ::
   (Ord t5, Show t5, Node.C node, Arith.Constant t5) =>
-  One.SystemParams node a ->
+  Params.System node a ->
   Sequ.Section (Record.Record t t3 t1 t4 (TopoIdx.Position node) [] t2 t5) ->
   Bool
 consistentSection sysParams (Sequ.Section _ _ rec) =
-  let recs = map f $ Graph.edges $ One.systemTopology sysParams
+  let recs = map f $ Graph.edges $ Params.systemTopology sysParams
       f (Graph.DirEdge fr to) =
         Record.extract [TopoIdx.ppos fr to, TopoIdx.ppos to fr] rec
   in all consistentRecord recs
@@ -275,7 +269,7 @@ consistentSection sysParams (Sequ.Section _ _ rec) =
 
 filterPowerRecordList ::
   (Ord a, Show a, Arith.Constant a, Node.C node) =>
-  One.SystemParams node a ->
+  Params.System node a ->
   Sequ.List (Record.PowerRecord node [] a) ->
   ( Sequ.List (Record.PowerRecord node [] a),
     Sequ.List (Record.PowerRecord node [] a) )
@@ -292,7 +286,7 @@ signCorrectedOptimalPowerMatrices ::
   (Ord a, Arith.Sum a, Arith.Constant a, Show node, Ord node,
    Vec.Storage varVec (Maybe (Result a)),
    Vec.FromList varVec) =>
-  One.SystemParams node a ->
+  Params.System node a ->
   ReqsAndDofs.Dofs (TopoIdx.Position node) ->
   Map [a] (Maybe (a, a, Idx.State, Int, EnvResult node a)) ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector varVec (Maybe (Result a)))
@@ -311,7 +305,7 @@ signCorrectedOptimalPowerMatrices systemParams (ReqsAndDofs.Dofs ppos) m =
 
 isFlowDirectionPositive ::
   (Ord node, Show node) =>
-  One.SystemParams node a ->
+  Params.System node a ->
   Idx.State ->
   TopoIdx.Position node ->
   EnvResult node a ->
@@ -331,7 +325,7 @@ isFlowDirectionPositive sysParams state (TopoIdx.Position f t) graph =
        _ -> error $ "More or less than exactly one edge between nodes "
                     ++ show f ++ " and " ++ show t ++ " in " ++ show es
   where flowTopoEs = fmap Graph.edgeSet $ ModUt.getFlowTopology state graph
-        topo = One.systemTopology sysParams
+        topo = Params.systemTopology sysParams
         es = Graph.adjacentEdges topo f
                `Set.intersection` Graph.adjacentEdges topo t
 
@@ -390,27 +384,27 @@ stateFlowBalance = fmap (f . Storage.nodes) . StateQty.storages
 
 
 getOptimalControlMatricesOfOneState ::
-  (Vec.Walker varVec, Vec.Storage varVec a, 
+  (Vec.Walker varVec, Vec.Storage varVec a,
    Arith.Constant a, Ord node,
    Ord a,
    Show node,
    Vec.Storage varVec (Maybe (Result a)),
    Vec.FromList varVec,
    Arith.Sum a) =>
-  One.SystemParams node a -> 
-  One.OptimisationParams node list sweep vec a -> 
+  Params.System node a ->
+  Params.Optimisation node list sweep vec a ->
   Idx.State ->
   Type.OptimalSolutionOfOneState node a ->
   Map (TopoIdx.Position node) (Sig.PSignal2 Vector varVec a)
 getOptimalControlMatricesOfOneState sysParams optParams state =
   Map.map (Sig.map ModUt.nothing2Nan)
-  . signCorrectedOptimalPowerMatrices sysParams (One.dofsPos optParams)
+  . signCorrectedOptimalPowerMatrices sysParams (Params.dofsPos optParams)
   . Map.map (fmap (\(o, e, i, v) -> (o, e, state, i, v)))
 
 
 {-
 optimalMatrixOfOneState::
-  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a, 
+  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a,
    Ord a, Vec.Storage varVec (Maybe (Result a)), Vec.FromList varVec) =>
   Type.OptimalSolutionOfOneState node a ->
   Sig.PSignal2 Vector varVec a
@@ -433,7 +427,7 @@ optimalMatrixOfOneState f =
   . Map.map (fmap (Determined . f))
 
 optimalObjectiveMatrixOfOneState, optimalEtaMatrixOfOneState ::
-  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a, 
+  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a,
    Ord a, Vec.Storage varVec (Maybe (Result a)), Vec.FromList varVec) =>
   Type.OptimalSolutionOfOneState node a ->
   Sig.PSignal2 Vector varVec a
@@ -441,16 +435,16 @@ optimalObjectiveMatrixOfOneState = optimalMatrixOfOneState ModUt.fst4
 optimalEtaMatrixOfOneState = optimalMatrixOfOneState ModUt.snd4
 
 optimalIndexMatrixOfOneState::
-  (Vec.Storage varVec Int, Arith.Constant Int, 
+  (Vec.Storage varVec Int, Arith.Constant Int,
    Vec.Storage varVec (Maybe (Result Int))) =>
-  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a, 
+  (Vec.Walker varVec, Vec.Storage varVec a, Arith.Constant a,
    Ord a, Vec.Storage varVec (Maybe (Result a)), Vec.FromList varVec) =>
   Type.OptimalSolutionOfOneState node a ->
   Sig.PSignal2 Vector varVec Int
 optimalIndexMatrixOfOneState = optimalMatrixOfOneState ModUt.thd4
 
 
-genOptimalObjectiveSignal :: 
+genOptimalObjectiveSignal ::
   (Vec.Zipper vec,Ord a,Show (vec Bool),Show (vec a),RealFloat a,
    Vec.Walker vec, Vec.Storage vec a) =>
   Type.InterpolationOfAllStates node vec a -> Sig.UTSignal vec a
@@ -469,13 +463,13 @@ myTrace :: Show a => String -> a -> a
 myTrace _str x = x -- trace (str ++ ": " ++ show x) x
 
 
-findOptimalObjectiveStates :: 
+findOptimalObjectiveStates ::
   (Vec.Zipper vec,Ord a,Vec.Storage vec Bool,Show (vec Bool),
    Vec.Singleton vec,Show (vec a),RealFloat a,Show a,
    Arith.Sum a,
    Vec.Walker vec,
    Vec.Storage vec a) =>
-  One.StatForcing ->
+  Balance.StateForcing ->
   Type.InterpolationOfAllStates node vec a -> Map Idx.State (Sig.UTSignal vec Bool)
 findOptimalObjectiveStates statForcing interpolation =
   Map.map (g . f . Type.optObjectiveSignalOfState) interpolation
@@ -483,17 +477,17 @@ findOptimalObjectiveStates statForcing interpolation =
         f = forceOptimalStateSignal statForcing opt
         g = Sig.zipWith (==) opt
 
-forceOptimalStateSignal :: 
+forceOptimalStateSignal ::
   (Vec.Walker vec, Arith.Sum a,Vec.Zipper vec, Show a,RealFloat a,
    Ord a, Vec.Storage vec a, Vec.Singleton vec) =>
-  One.StatForcing ->
+  Balance.StateForcing ->
   Sig.UTSignal vec a ->
   Sig.UTSignal vec a ->
-  Sig.UTSignal vec a 
+  Sig.UTSignal vec a
 forceOptimalStateSignal stateForcing overallOptimalSignal optimalSignalOfState =
   case stateForcing of
-       One.StateForcingOn -> Sig.offset minimalDifference optimalSignalOfState
-       One.StateForcingOff -> optimalSignalOfState
+       Balance.StateForcingOn -> Sig.offset minimalDifference optimalSignalOfState
+       Balance.StateForcingOff -> optimalSignalOfState
   where differenceSignal = overallOptimalSignal Sig..- optimalSignalOfState
         minimalDifference = Sig.fromScalar $ Sig.minimumWithNaN differenceSignal
 
@@ -506,7 +500,7 @@ genOptimalStatesSignal ::
    Vec.Walker vec,
    Vec.Storage vec a,RealFloat a,
    Vec.Storage vec Bool) =>
-  One.StatForcing ->
+  Balance.StateForcing ->
   Type.InterpolationOfAllStates node vec a ->
    Sig.UTSignal vec [Idx.State]
 genOptimalStatesSignal statForcing interpolation =
@@ -519,24 +513,15 @@ genOptimalStatesSignal statForcing interpolation =
                $ Type.reqsAndDofsSignalsOfState
                $ ModUt.findMinElem interpolation
 
-        emptyIndexSignal = Sig.untype $ Sig.map (const []) time  
+        emptyIndexSignal = Sig.untype $ Sig.map (const []) time
 
 
 -- TODO test bauen::
 -- TC (Data [0.0,0.3333333333333333,0.6666666666666666,1.0,1.25,1.5,1.75,2.0])
 -- genOptimalTime (Sig.fromList [[Idx.State 0],[Idx.State 1, Idx.State 1, Idx.State 1, Idx.State 0],[Idx.State 1]]) (Sig.fromList [0,1,2]) :: Sig.TSignal [] Double
 
-{-- <<<<<<< HEAD
-
-
-
-genOptimalTime  :: 
-  (Vec.Zipper vec,
-======= -}
-
-genOptimalSteppedTime  :: 
+genOptimalSteppedTime  ::
   (Vec.Zipper vec,Eq a,Show a,Show (vec a),
--- >>>>>>> stateForcing
    Vec.Walker vec,
    Vec.Storage vec (a, a),
    Arith.Constant a,
@@ -544,88 +529,67 @@ genOptimalSteppedTime  ::
    Vec.Storage vec a,
    Vec.Singleton vec,
    Vec.Storage vec [Idx.State]) =>
-  Sig.UTSignal vec [Idx.State] -> 
+  Sig.UTSignal vec [Idx.State] ->
   Sig.TSignal vec a -> Sig.TSignal vec a
-{- <<<<<<< HEAD
-genOptimalTime indexSignal time =
-  Sig.fromList (t0 : concat xs)
-  where xs = zipWith f (map length $ Sig.toList indexSignal)
-                       (Sig.toList $ Sig.deltaMap (,) time)
+genOptimalSteppedTime indexSignal time =
+  Sig.fromList $ concat $ zipWith f is ts
+  where f states (t1, t2) =
+          if t1 == t2
+             then []
+             else concat $ zipWith (\x y -> [x, y]) leftTimes rightTimes
 
-        t0 = case Sig.viewL time of
-                  Just (Sig.TC (Data x), _) -> x
-                  Nothing -> error "genOptimalTime: empty time signal"
+          where
+                leftTimes = map (g . convert) [0 .. len]
+                rightTimes =
+                  case leftTimes of
+                       (_:xs) -> xs
+                       _ -> error "genOptimalSteppedTime: empty time list"
 
-        f numSt (t1, t2) =
-          map (g . Arith.fromRational . fromIntegral) [1 .. numSt]
-          where g cnt = t1 ~+ (cnt ~* ((t2 ~- t1) ~/ convert numSt))
+                len = length states
                 convert = Arith.fromRational . fromIntegral
+                g cnt = t1 ~+ (cnt ~* (t2 ~- t1) ~/ convert len)
 
+        is = Sig.toList indexSignal
+        ts = Sig.toList $ Sig.deltaMap (,) time
 
-genOptimalSignal  :: 
-  (Vec.Storage vec [Idx.State], Show a,
-======= -}
-genOptimalSteppedTime indexSignal time = Sig.fromList (
-  (concat $ zipWith f (Sig.toList indexSignal) 
-  (Sig.toList $ Sig.deltaMap ((,)) time)))
-  where
-    f states (t1,t2) =
-      if t1 == t2 then []
-      else concat $ zipWith (\ x y -> [x]++[y]) leftTimes rightTimes
-        where rightTimes = map (\cnt -> t1 Arith.~+ (cnt Arith.~* (t2 Arith.~-t1) 
-                         Arith.~/ (Arith.fromRational $ fromIntegral $ length states)) )
-                                  $ map (Arith.fromRational . fromIntegral) [1..(length states)] 
-              leftTimes = map (\cnt -> t1 Arith.~+ (cnt Arith.~* (t2 Arith.~-t1) 
-                         Arith.~/ (Arith.fromRational $ fromIntegral $ length states)) )
-                                  $ map (Arith.fromRational . fromIntegral) [0..((length states)-1)]              
-                           
-                           
-    -- t0 = vhead "genOptimalTime" $ Sig.toList time
-
-genOptimalSteppedSignal  :: 
+genOptimalSteppedSignal  ::
   (Vec.Storage vec [Idx.State], Eq a,Vec.Storage vec (a, a), Show (vec a),
    Vec.Singleton vec,Show a,
--- >>>>>>> stateForcing
    Vec.Zipper vec, Vec.Walker vec,
-   Vec.Storage vec a, Vec.FromList vec, 
+   Vec.Storage vec a, Vec.FromList vec,
    Vec.Storage vec (Map Idx.State a)) =>
-  Sig.UTSignal vec [Idx.State] -> 
+  Sig.UTSignal vec [Idx.State] ->
   Sig.TSignal vec a ->
-  Map Idx.State (Sig.PSignal vec a) -> 
-  Sig.PSignal vec a 
-{- <<<<<<< HEAD
-genOptimalSignal indexSignal signalMap =
-  Sig.fromList $ (x0 : concat (zipWith g (Sig.toList indexSignal) signalOfMaps))
+  Map Idx.State (Sig.PSignal vec a) ->
+  Sig.PSignal vec a
+genOptimalSteppedSignal indexSignal time signalMap =
+  Sig.fromList $ concat $ zipWith3 g is ts signalOfMaps
   where
-    g states m =
-      map (\st -> fromMaybe (error $ err st m) (Map.lookup st m)) states
+    g states (t1, t2) m
+      = if t1 == t2 then [] else concatMap (h m) states
 
-    err x m = "genOptimalSignal: Element " ++ show x ++ " not found in " ++ show m
+    h m st = let x = fromMaybe (error $ err st m) (Map.lookup st m) in [x, x]
 
+    err x m = "genOptimalSteppedSignal: Element "
+              ++ show x ++ " not found in " ++ show m
 
-    x0 = case (signalOfMaps, Sig.toList indexSignal) of
-              (m:_, (x:_):_) -> fromMaybe (error $ err x m) (Map.lookup x m)
-              _ -> error "genOptimalSignal: empty list"
+{-
+    wofür ist das denn da?
+
+    xlast =
+      case (signalOfMaps, is) of
+           (m:_, xs@(x:_):_) ->
+             let x = last xs in fromMaybe (error $ err x m) (Map.lookup x m)
+           _ -> error "genOptimalSteppedSignal: empty list"
+-}
 
     signalOfMaps = Sig.toList $
       Map.foldrWithKey' (Sig.zipWith . Map.insert) emptySig signalMap
 
+    is = Sig.toList indexSignal
+    ts = Sig.toList $ Sig.deltaMap (,) time
+
     emptySig = Sig.map (const Map.empty) $ snd $ Map.findMin signalMap
 
-======= -}
-genOptimalSteppedSignal indexSignal time signalMap =
-  Sig.fromList $ (concat $ zipWith g (zip (Sig.toList indexSignal) 
-                                      (Sig.toList $ Sig.deltaMap ((,)) time)) signalOfMaps)
-  where
-    g (states,(t1,t2)) m = if t1 == t2 
-                         then []
-                         else duplicate $ map (m Map.! ) states
-    xlast = (vhead "genOptimalSignal" $ signalOfMaps) 
-         Map.! (vlast "genOptimalSignal" $ vhead "genOptimalSignal" $ Sig.toList indexSignal) 
-    signalOfMaps = Sig.toList $ foldl (\acc (state,sig) -> 
-                                            Sig.zipWith (\a x -> Map.insert state x a) acc sig) 
-                   emptySig $ Map.toList signalMap
-    emptySig = Sig.map (\_ -> Map.empty) $ vhead "genOptimalSignal" $ Map.elems signalMap
-    duplicate xs =  concat $ map (\x -> [x,x]) xs 
+
  
--- >>>>>>> stateForcing

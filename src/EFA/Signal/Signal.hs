@@ -1853,18 +1853,18 @@ newtype ClassIdx = ClassIdx Int deriving (Show,Ord,Eq)
 classifyEven :: (P.RealFrac d) => d -> d -> d -> Class d
 classifyEven interval offs x = Class (P.fromIntegral((P.round ((x P.+ offs) P./ interval))::P.Integer) P.* interval P.- offs)
 
-findSupportPoints :: 
+findSupportPoints ::
   (SV.Lookup v,
    SV.Len (v d),
-   SV.Storage v d, 
+   SV.Storage v d,
    SV.Find v,
    SV.Zipper v,
    SV.Walker v,
    SV.Storage v Bool,Show d,Eq d,
    SV.Singleton v,Ord d) =>
    UTSignal v d -> d -> [d]
-findSupportPoints midVector x = 
-  let 
+findSupportPoints midVector x =
+  let
     v idx = fromSample $ getSample midVector (SignalIdx idx)
     maxIdx = (len midVector) P.- 1
     index = findIndex (>x) midVector
@@ -1872,17 +1872,17 @@ findSupportPoints midVector x =
   in if maxIdx P.< 1  || (not $ isMonoton)
      then error ("ClassificationVector to short or not monoton" ++ show x)
      else case index of
-       (Just (SignalIdx idx)) -> if idx==0 then if x==(v 0) then [v 0] 
+       (Just (SignalIdx idx)) -> if idx==0 then if x==(v 0) then [v 0]
                                                 else (error $ "classifyWithMidVector - Value out of Range: " ++ show x)
                                             else if x == v (idx-1) then [v (idx-1)]
                                                  else if x == v idx then  [v idx]
-                                                        else  [v (idx-1),v idx]         
-       Nothing -> if x == v maxIdx then [v maxIdx] 
-                  else error ("Value outside classification area: " ++ show x)                                      
+                                                        else  [v (idx-1),v idx]
+       Nothing -> if x == v maxIdx then [v maxIdx]
+                  else error ("Value outside classification area: " ++ show x)
 
 
 -- | Get active inpolation support points
-getActiveSupportPoints1D :: 
+getActiveSupportPoints1D ::
   (SV.Unique v [d],
    SV.Storage v [d],
    SV.Storage v ([[d]], [SignalIdx]),
@@ -1898,15 +1898,15 @@ getActiveSupportPoints1D ::
    SV.Storage v Int,
    SV.Storage v SignalIdx,
    SV.Find v) =>
-  (d -> [d]) -> 
-  UTSignal v d -> 
+  (d -> [d]) ->
+  UTSignal v d ->
   UTDistr v ([[d]], [SignalIdx])
 getActiveSupportPoints1D f sig = changeSignalType $ map count $ unique classSig
   where classSig = map f sig
         count cl = ([cl], toList $ findIndices (cl P.==) classSig)
 
 -- | Calculate a 1-d distribution -- collect signal Indices in classes
-genDistribution1D :: 
+genDistribution1D ::
   (SV.Unique v (Class d),
    SV.Storage v (Class d),
    SV.Storage v ([Class d], [SignalIdx]),
@@ -1917,7 +1917,7 @@ genDistribution1D ::
    SV.Storage v Int,
    SV.Storage v SignalIdx,
    SV.Find v) =>
-  (d -> Class d) -> UTFSignal v d -> 
+  (d -> Class d) -> UTFSignal v d ->
   UTDistr v ([Class d], [SignalIdx])
 genDistribution1D classify sig = changeSignalType $ map count $ unique classSig
   where classSig = map classify sig
@@ -1933,23 +1933,23 @@ genDistributionND classify =
    P.flip List.zip (fmap Set.singleton [SignalIdx 0 ..]) .
    List.transpose . fmap (toList . map classify)
 -}
-getActiveSupportPointsND :: 
+getActiveSupportPointsND ::
   (Show d,
    SV.Zipper v,
    SV.Storage v Bool,
    SV.Singleton v,
    SV.Lookup v,
-   SV.Len (v d), 
-   Ord d, SV.Walker v, 
+   SV.Len (v d),
+   Ord d, SV.Walker v,
    SV.Unique v [d], SV.Storage v d,
    SV.Storage v [d], SV.Storage v Int,
-   SV.Storage v SignalIdx, 
+   SV.Storage v SignalIdx,
    SV.Storage v ([[d]], [SignalIdx]),
    SV.FromList v, SV.Find v, SV.Filter v) =>
   [(d->[d], UTSignal v d)]->
   UTDistr v ([[d]], [SignalIdx])
 
-getActiveSupportPointsND xs = combineSupportPoints $ P.map f xs 
+getActiveSupportPointsND xs = combineSupportPoints $ P.map f xs
   where f (g,x) = getActiveSupportPoints1D g x
 
 
@@ -1968,7 +1968,7 @@ combineWith :: (SV.Storage v d3,
                 SV.FromList v,
                 SV.Storage v d1,
                 SV.Storage v d2) =>
-               (d1 -> d2 -> d3) -> TC s t (Data (v :> Nil) d1) -> 
+               (d1 -> d2 -> d3) -> TC s t (Data (v :> Nil) d1) ->
                TC s t (Data (v :> Nil) d2) ->  TC s t (Data (v :> Nil) d3)
 combineWith f xs ys =
   fromList $ liftA2 f (toList xs) (toList ys)

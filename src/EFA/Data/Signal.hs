@@ -1,6 +1,6 @@
 module EFA.Data.Signal where
 
-import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
+import EFA.Utility(Caller,merror,ModuleName(..),FunctionName, genCaller)
 
 import qualified EFA.Data.Axis.Mono as Mono
 
@@ -17,15 +17,15 @@ import qualified EFA.Signal.Data as SD
 import qualified Data.Map as Map  
 -}
 
-import EFA.Signal.Interp as Interp
+--import EFA.Signal.Interp as Interp
 import EFA.Data.Vector as DV
-import qualified EFA.Data.Axis.Mono as Mono
+
 
 import qualified Prelude as P
 import Prelude hiding (zipWith, map, foldl)
-import Data.Maybe(fromMaybe) 
+--import Data.Maybe(fromMaybe) 
 
-import EFA.Utility.Trace(mytrace)
+--import EFA.Utility.Trace(mytrace)
 
 modul :: ModuleName
 modul = ModuleName "Data.Signal"

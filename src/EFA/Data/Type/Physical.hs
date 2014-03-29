@@ -1,7 +1,6 @@
+{-# LANGUAGE EmptyDataDecls #-}
+
 module EFA.Data.Type.Physical where
-
-import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
-
 
 data Power
 data Energy

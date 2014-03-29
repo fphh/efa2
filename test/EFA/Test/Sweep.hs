@@ -6,7 +6,7 @@
 
 module EFA.Test.Sweep where
 
-import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Optimisation.Sweep as Sweep
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 
@@ -86,7 +86,7 @@ prop_constOne sweep =
 
 
 prop_replicate :: Sweep -> Double -> Bool
-prop_replicate sweep x = 
+prop_replicate sweep x =
   sum (Sweep.toList (Sweep.replicate sweep x))
   ====
   (fromIntegral (Sweep.length sweep) * x)

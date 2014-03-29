@@ -2,7 +2,7 @@ import EFA.Data.ND.Cube.Map (Cube)
 import qualified EFA.Data.ND.Cube.Map as Cube
 
 import EFA.Data.ND (Dim2)
-import EFA.Utility (genCaller,ModuleName(..))
+import EFA.Utility (genCaller,ModuleName(ModuleName))
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Data.Axis.Strict as Axis
 import qualified EFA.Data.ND as ND
@@ -10,14 +10,14 @@ import qualified EFA.Data.ND.Cube.Grid as Grid
 import EFA.Data.ND.Cube.Grid(Grid)
 --import qualified EFA.Data.Vector.Sweep as Sweep
 --import EFA.Data.Vector.Sweep (Sweep)
-import EFA.Data.Vector.Type (Edge,Mid)
-import qualified Data.NonEmpty as NonEmpty
-import qualified EFA.Data.Collection as Collection
-import qualified EFA.Data.Signal as Signal
-import qualified EFA.Data.Type.Physical as Phys
-import qualified EFA.Data.Type.Efa as Efa
-import qualified EFA.Data.Type as Type
-import qualified EFA.Data.Record as Record
+import EFA.Data.Vector.Type (Edge)
+--import qualified Data.NonEmpty as NonEmpty
+--import qualified EFA.Data.Collection as Collection
+--import qualified EFA.Data.Signal as Signal
+--import qualified EFA.Data.Type.Physical as Phys
+--import qualified EFA.Data.Type.Efa as Efa
+--import qualified EFA.Data.Type as Type
+--import qualified EFA.Data.Record as Record
 
 
 import qualified EFA.Data.Interpolation as Interp

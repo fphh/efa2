@@ -1,10 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE EmptyDataDecls #-}
 
 module EFA.Utility.Filename where
 
-import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
+import EFA.Utility(Caller,merror,ModuleName(..),FunctionName, genCaller)
 
 import EFA.Flow.Part.Index (State)
 import qualified EFA.Flow.Topology.Index as TopoIdx

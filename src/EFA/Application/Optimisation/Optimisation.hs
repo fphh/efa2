@@ -2,21 +2,21 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Modules.Optimisation where
+module EFA.Application.Optimisation.Optimisation where
 
-import qualified Modules.Setting as ModSet
-import qualified Modules.Utility as ModUt
+--import qualified Modules.Setting as ModSet
+import qualified EFA.Application.Utility as AppUt
 
 
-import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
+import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
 import qualified EFA.Application.Optimisation as AppOpt
-import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.DoubleSweep as DoubleSweep
+import qualified EFA.Application.Optimisation.Sweep as Sweep
+import qualified EFA.Application.Optimisation.DoubleSweep as DoubleSweep
 import qualified EFA.Application.Type as Type
-
-import EFA.Application.OneStorage
+import qualified EFA.Application.Optimisation.Params as Params
+import EFA.Application.Optimisation.Params
   (EtaAssignMap, Name, InitStorageState(InitStorageState))
-import qualified EFA.Application.OneStorage as One
+--import qualified EFA.Application.Optimisation.Balance as Forcing
 
 import EFA.Application.Simulation (makeEtaFuncGiven2)
 
@@ -25,7 +25,7 @@ import qualified EFA.Flow.State.Absolute as StateAbs
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.State.Index as StateIdx
 
-import qualified EFA.Flow.State.SystemEta as StateEta
+import qualified EFA.Application.Flow.State.SystemEta as StateEta
 
 import qualified EFA.Flow.Sequence.Absolute as SeqAbs
 import qualified EFA.Flow.Sequence.Quantity as SeqQty
@@ -73,11 +73,12 @@ options ::
    Sweep.SweepClass sweep vec a,
    Arith.Sum (sweep vec a),
    Verify.LocalVar mode (sweep vec a)) =>
+  Params.Optimisation node list sweep vec a ->
   StateAbs.Options mode rec (sweep vec a) (sweep vec a)
-options =
+options params =
   StateAbs.optionsBase
     SeqStateEqSys.equalStInOutSums
-    (StorageEqSys.customOne (Sweep.fromRational ModSet.sweepLength Arith.one))
+    (StorageEqSys.customOne (Sweep.fromRational (Params.sweepLength params) Arith.one))
 
 
 toPowerMap ::
@@ -100,7 +101,7 @@ toPowerMap graph state = Map.mapWithKey g  $ State.storages graph
                 h (Graph.EDirEdge (Graph.DirEdge from to)) =
                   (if stoNode == from
                       then look
-                      else (fmap $ fmap Arith.negate) . look . ModUt.flipPower)
+                      else (fmap $ fmap Arith.negate) . look . AppUt.flipPower)
                       (StateIdx.power state from to)
                 h _ = error "toPowerMap: undir edge"
 
@@ -116,7 +117,7 @@ solve ::
    Monoid (sweep vec Bool),
    Sweep.SweepMap sweep vec a Bool,
    Sweep.SweepClass sweep vec Bool) =>
-  One.OptimisationParams node list sweep vec a ->
+  Params.Optimisation node list sweep vec a ->
   [TopoIdx.Power node] ->
   Type.EnvResult node (sweep vec a) ->
   EtaAssignMap node ->
@@ -129,15 +130,15 @@ solve params reqsAndDofs stateFlowGraph etaAssign etaFunc state pts =
       ss = Sweep.unList (ReqsAndDofs.reqs pts)
            ++ Sweep.unList (ReqsAndDofs.dofs pts)
       res = StateAbs.solveOpts
-              options
+              (options params)
               (AppOpt.givenAverageWithoutState state
                 (Map.fromList (zip reqsAndDofs ss)) stateFlowGraph)
               ((StateAbs.withExpressionGraph $
                 Fold.foldMap (makeEtaFuncGiven2 etaAssign etaFunc) .
                 Map.lookup state . StateQty.states)
-                <>  commonGiven state stateFlowGraph)
+                <>  commonGiven params state stateFlowGraph)
 
-      eta = case One.etaToOptimise params of
+      eta = case Params.etaToOptimise params of
                  Nothing -> StateEta.etaSys res
                  Just (TopoIdx.Position from to) ->
                       case StateQty.lookup
@@ -161,13 +162,14 @@ commonGiven ::
    Arith.Constant a, UV.Unbox a,
    Sweep.SweepVector vec a,
    Sweep.SweepClass sweep vec a) =>
+  Params.Optimisation node list sweep vec a ->
   Idx.State ->
   Type.EnvResult node (sweep vec a) ->
   Type.EqSystem node (sweep vec a)
-commonGiven state stateFlowGraph =
+commonGiven params state stateFlowGraph =
   case Map.lookup state $ State.states stateFlowGraph of
        Just _ -> StateIdx.dTime state StateAbs..=
-                   Sweep.fromRational ModSet.sweepLength Arith.one
+                   Sweep.fromRational (Params.sweepLength params) Arith.one
        _ -> mempty
 
 external ::
