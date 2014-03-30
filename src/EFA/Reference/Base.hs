@@ -11,6 +11,9 @@ import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
 import qualified Data.Map as Map
 import qualified Data.Ratio as Ratio
 import qualified Data.List as List
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+
 
 modul :: ModuleName
 modul = ModuleName "Test.Reference.Base"
@@ -46,15 +49,38 @@ class ToData a where
 instance ToData Double where
   toData x = NumData "Double" x 
 
+instance ToData Int where
+  toData x = StringData "Int" $ show x 
+
+instance ToData Integer where
+  toData x = StringData "Integer" $ show x 
+
+instance (ToData a, ToData b) => ToData (a,b) where
+  toData (x,y) = DataMap "(,)" $ list2Map [toData x,toData y]
+
+instance (ToData a, ToData b, ToData c) => ToData (a,b,c) where
+  toData (x,y,z) = DataMap "(,,)" $ list2Map [toData x,toData y,toData z]
+
 instance ToData [Char] where
   toData x = StringData "String" x 
 
 instance ToData (Ratio.Ratio Integer) where
   toData x = StringData "Ratio" (show x) 
   
-instance (ToData a) => ToData [a] where  
-  toData xs = DataMap "List" (Map.fromList $ zip (map show [0..]) $ map toData xs)
+--list2Map :: toData a => [a] -> Map String (  
+list2Map xs = (Map.fromList $ zip (map show [0..]) xs)
   
+instance (ToData a) => ToData [a] where  
+  toData xs = DataMap "List" $ list2Map $ map toData xs
+  
+instance (Show a, ToData b) => ToData (Map.Map a b) where  
+  toData m = DataMap "Data.Map" $ Map.mapKeys show $ Map.map toData m
+  
+instance (ToData a) => ToData (V.Vector a) where  
+  toData vec = DataMap "Data.Vector" $ list2Map $ map toData $ V.toList vec
+  
+instance (ToData a,UV.Unbox a) => ToData (UV.Vector a) where  
+  toData vec =  DataMap "Data.Vector.Unboxed" $ list2Map $ map toData $ UV.toList vec
 
 checkVersusRef (Ref x)  x1 = x==x1
 

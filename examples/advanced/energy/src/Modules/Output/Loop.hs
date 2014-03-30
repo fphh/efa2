@@ -1,9 +1,22 @@
 module Modules.Output.Loop where
 
-import qualified Modules.System as System
-import Modules.System (Node)
-import qualified Modules.Plot as ModPlot
+import qualified Modules.Input.System as System
+import Modules.Input.System (Node)
+import qualified Modules.Output.Plot as ModPlot
+import qualified EFA.Signal.Vector as SV
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+import qualified EFA.Report.FormatValue as FormatValue
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Application.Type as Type
+import EFA.Application.Optimisation.Sweep (Sweep)
+import qualified  EFA.Application.Optimisation.Params as Params
+import qualified  EFA.Application.Optimisation.Loop as Loop
 
+import Text.Printf (printf, PrintfArg) --,IsChar)
+import qualified EFA.Equation.Arithmetic as Arith
+
+{-
 printEtaLoop::
   (SV.Walker efaVec,UV.Unbox b,b~Double,
    SV.Storage efaVec Double,
@@ -18,13 +31,13 @@ printEtaLoop::
          node sweep vec Double intVec b simVec c efaVec d,Show (efaVec Double),
    Show a, Show node, PrintfArg a, Arith.Constant a, a ~ Double, d ~ Double, vec ~ UV.Vector,
    sweep ~ Sweep) =>
-  One.OptimisationParams node [] Sweep UV.Vector a ->
-  [EtaLoopItem node Sweep UV.Vector a z] ->
+  Params.Optimisation node [] Sweep UV.Vector a ->
+  [Loop.EtaLoopItem node Sweep UV.Vector a z] ->
   [IO ()]
 printEtaLoop optParams ol =
   iterateLoops optParams printEtaLoopItem printBalanceLoopItem (zip [0..] ol)
-
-
+-}
+{-
 printEtaLoopItem ::
   (z ~ Type.SignalBasedOptimisation
        node Sweep UV.Vector a intVec b simVec c vec d,

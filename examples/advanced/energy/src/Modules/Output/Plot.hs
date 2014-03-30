@@ -12,9 +12,10 @@ import qualified Modules.Input.System as System
 import qualified EFA.Application.Optimisation.Base as Base
 
 import qualified EFA.Application.Plot as AppPlot
-import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Optimisation.Sweep as Sweep
 import qualified EFA.Application.Type as Type
-import qualified EFA.Application.OneStorage as One
+import qualified EFA.Application.Optimisation.Params as Params
+import qualified EFA.Application.Optimisation.Balance as Balance
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Plot as Plot
@@ -219,11 +220,11 @@ perEdge ::
    Terminal.C term,
    Node.C node, Show node, Filename node) =>
   (FilePath -> IO term) ->
-  One.SystemParams node a ->
+  Params.System node a ->
   Record.PowerRecord node l a ->
   IO ()
 perEdge terminal sysParams rec =
-  let recs = map f $ Graph.edges $ One.systemTopology sysParams
+  let recs = map f $ Graph.edges $ Params.systemTopology sysParams
       f (Graph.DirEdge fr to) =
         Record.extract [TopoIdx.ppos fr to, TopoIdx.ppos to fr] rec
       g r = do
@@ -241,7 +242,7 @@ simulationSignalsPerEdge ::
    Vector.Storage simVec a,
    Vector.FromList simVec) =>
   (FilePath -> IO term) ->
-  One.SystemParams node a ->
+  Params.System node a ->
   Type.SignalBasedOptimisation node sweep vec a intVec b simVec c efaVec d ->
   IO ()
 simulationSignalsPerEdge terminal sysParams =
@@ -518,11 +519,11 @@ sweepStackPerStateEta ::
    Sweep.SweepClass sweep vec a,
    Terminal.C term) =>
   (FilePath -> IO term) ->
-  One.OptimisationParams node f sweep vec a ->
+  Params.Optimisation node f sweep vec a ->
   Type.Sweep node sweep vec a ->
   IO ()
 sweepStackPerStateEta terminal params =
-  let len = One.sweepLength params
+  let len = Params.sweepLength params
   in plotSweeps terminal id "Per State Sweep -- Eta"
      . Map.map (matrix2ListOfMatrices len
                 . Sig.map Sweep.toList
@@ -538,12 +539,12 @@ sweepStackPerStateStoragePower ::
    Sweep.SweepClass sweep vec a,
    Terminal.C term) =>
   (FilePath -> IO term) ->
-  One.OptimisationParams node f sweep vec a ->
+  Params.Optimisation node f sweep vec a ->
   node ->
   Type.Sweep node sweep vec a ->
   IO ()
 sweepStackPerStateStoragePower terminal params node =
-  let len = One.sweepLength params
+  let len = Params.sweepLength params
       f m = Map.lookup node m
       g (Just (Just x)) = x
       g _ = error ("Error in sweepStackPerStateStoragePower - no StoragePower found for node: " ++ show node)
@@ -562,12 +563,12 @@ sweepStackPerStateOpt ::
    Sweep.SweepClass sweep vec a,
    Terminal.C term) =>
   (FilePath -> IO term) ->
-  One.OptimisationParams node f sweep vec a ->
-  One.BalanceForcing node a ->
+  Params.Optimisation node f sweep vec a ->
+  Balance.Forcing node a ->
   Type.Sweep node sweep vec a ->
   IO ()
 sweepStackPerStateOpt terminal params balanceForcing =
-  let len = One.sweepLength params
+  let len = Params.sweepLength params
 
   in plotSweeps terminal id "Per State Sweep -- Opt"
      . Map.map (matrix2ListOfMatrices len
@@ -583,11 +584,11 @@ sweepStackPerStateCondition ::
    Sweep.SweepClass sweep vec a,
    Terminal.C term) =>
   (FilePath -> IO term) ->
-  One.OptimisationParams node f sweep vec a ->
+  Params.Optimisation node f sweep vec a ->
   Type.Sweep node sweep vec a ->
   IO ()
 sweepStackPerStateCondition terminal params =
-  let len = One.sweepLength params
+  let len = Params.sweepLength params
       f (Determined (Sweep.Sweep vec)) = Determined $ Sweep.Sweep $ UV.imap g vec
       f _ = error "Error in sweepStackPerStateCondition - undetermined Condition"
       g idx True = fromIntegral idx
@@ -608,12 +609,12 @@ sweepStackPerStatePowerPos ::
    Sweep.SweepClass sweep vec a,
    Terminal.C term) =>
   (FilePath -> IO term) ->
-  One.OptimisationParams node f sweep vec a ->
+  Params.Optimisation node f sweep vec a ->
   TopoIdx.Position node ->
   Type.Sweep node sweep vec a ->
   IO ()
 sweepStackPerStatePowerPos terminal params pos@(TopoIdx.Position f t) =
-  let len = One.sweepLength params
+  let len = Params.sweepLength params
       g (Just (Just x)) = x
       g _ = error ("Error in sweepStackPerStateStoragePower - no Power found for Position: " ++ show pos)
 
@@ -759,7 +760,7 @@ simulationGraphs ::
   Type.SignalBasedOptimisation node sweep sweepVec a intVec b simVec c efaVec d ->
   IO ()
 simulationGraphs terminal (Type.SignalBasedOptimisation _ _ _ _ efa _) = do
-  let g = id -- fmap (vhead "simulationGraphs" . Sweep.toList)
+  let g = id
 
   terminal "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2

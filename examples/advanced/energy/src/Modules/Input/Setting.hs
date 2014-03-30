@@ -3,11 +3,15 @@
 module Modules.Input.Setting where
 
 import qualified Modules.Input.System as System
+import Modules.Input.System(Node)
 
 import qualified EFA.Application.Optimisation.Balance as Balance
+import qualified EFA.Application.Optimisation as AppOpt
+
 import qualified EFA.Application.Optimisation.Params as Params
 import EFA.Application.Optimisation.Params(Name)
 
+import EFA.Application.Optimisation.Sweep(Sweep)
 import qualified EFA.Application.Optimisation.Sweep as Sweep
 
 import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
@@ -23,9 +27,15 @@ import qualified Data.Map as Map; import Data.Map (Map)
 import Data.Vector (Vector)
 import qualified Data.Vector.Unboxed as UV
 --import Data.List (transpose)
+import qualified EFA.Signal.Record as Record
 
-
-
+import qualified EFA.Signal.ConvertTable as CT
+import qualified EFA.IO.TableParser as Table
+import qualified EFA.IO.TableParserTypes as TPT
+import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
+import qualified Data.Empty as Empty                                                                 
+import qualified EFA.Application.Optimisation.Base as Base
+                                           
 local, rest, water, gas :: [Double]
 
 {-
@@ -138,5 +148,90 @@ initStorageSeq :: (Arith.Constant a) => Params.InitStorageSeq System.Node a
 initStorageSeq =
   Params.InitStorageSeq $ Map.fromList [(System.Water, Arith.fromRational 1000)]
 
+initEnv = AppOpt.storageEdgeXFactors optParams 3 3
+          $ AppOpt.initialEnv optParams System.stateFlowGraph
+
+etaMap tabEta = Map.map Params.EtaFunction $ 
+         Map.mapKeys Params.Name $
+         CT.makeEtaFunctions2D
+            (Map.mapKeys Params.unName scaleTableEta)
+            tabEta
+            
+
+reqsRec tabPower = 
+  let (time,
+       NonEmpty.Cons local
+          (NonEmpty.Cons rest Empty.Cons)) =
+        CT.getPowerSignalsWithSameTime tabPower
+          ("rest" !: "local" !: Empty.Cons)
+
+      ctime = Sig.convert time
+
+      pLocal = Sig.offset 0.1 . Sig.scale 3 $ Sig.convert $ local
+      pRest = Sig.offset 0.2 . Sig.scale 1.3 $ Sig.convert $  rest
+
+      reqsRec :: Record.PowerRecord Node UV.Vector Double
+      reqsRec = Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
+--      reqsRec = Record.scatterRnd rndGen 10 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
+      
+      reqsRecStep :: Record.PowerRecord Node UV.Vector Double
+      reqsRecStep = Record.makeStepped reqsRec
+  in Record.makeStepped $ Base.convertRecord reqsRecStep
+      
+
+reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos reqs
+      
+{-
+supportPoints =
+        Base.supportPoints
+          [ TopoIdx.ppos System.LocalRest System.LocalNetwork,
+            TopoIdx.ppos System.Rest System.Network ]
+          (Base.convertRecord reqsRecStep)
+          (map (Sig.findSupportPoints. Sig.untype)
+               [ ModSet.varLocalPower1D, ModSet.varRestPower1D])
+-}
+
 ------------------------------------------------------------------------
+
+sysParams ::  TPT.Map Double -> Params.System Node Double          
+sysParams tabEta = Params.System {
+  Params.systemTopology = System.topology,
+  Params.etaTable = tabEta,
+  Params.etaAssignMap = System.etaAssignMap,
+  Params.etaMap =etaMap tabEta,
+  Params.scaleTableEta = scaleTableEta,
+  Params.storagePositions = ([TopoIdx.ppos System.Water System.Network]),
+  Params.initStorageState = initStorageState,
+  Params.initStorageSeq = initStorageSeq }
+
+optParams :: Params.Optimisation Node [] Sweep UV.Vector Double
+optParams = Params.Optimisation {
+  Params.reqsPos = (ReqsAndDofs.reqsPos reqs),
+  Params.dofsPos = (ReqsAndDofs.dofsPos dofs),
+  Params.points = sweepPts,
+  Params.sweepLength = sweepLength,
+  Params.etaToOptimise = Nothing,
+  Params.maxEtaIterations = Params.MaxEtaIterations 5,
+  Params.maxBalanceIterations = Params.MaxBalanceIterations 100,
+  Params.initialBattForcing =
+    Balance.ForcingMap
+    $ Map.fromList [(System.Water, Balance.DischargeDrive 1)],
+  Params.initialBattForceStep =
+    Balance.ForcingMap
+    $ Map.fromList [(System.Water, Balance.ChargeDrive 0.1)],
+  Params.etaThreshold = Params.EtaThreshold 0.2,
+  Params.balanceThreshold = Params.BalanceThreshold 0.5,
+  Params.balanceForcingSeed = Balance.ChargeDrive 0.01 }
+
+simParams :: Record.PowerRecord Node [] Double -> Params.Simulation Node [] Double
+simParams reqsRec = Params.Simulation {
+  Params.varReqRoomPower1D = Sig.convert $ varLocalPower1D,
+  Params.varReqRoomPower2D = Sig.convert $ varRestPower ,
+  Params.reqsRec = reqsRec, -- Base.convertRecord reqsRecStep,
+  Params.requirementGrid = [ Sig.convert $ varLocalPower1D,
+                             Sig.convert $ varRestPower1D ],
+--  Params.activeSupportPoints =  supportPoints,
+  Params.sequFilterTime=0.01,
+  Params.sequFilterEnergy=0 }
+
 

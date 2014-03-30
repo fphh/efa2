@@ -22,7 +22,7 @@ import EFA.Application.Optimisation.Sweep (Sweep)
 import qualified EFA.Utility.List as UtList
 --import qualified EFA.Graph as Graph
 --import EFA.Graph (Graph)
---import qualified EFA.Flow.Draw as Draw
+--import qualified EFA.Flow.Draw as Draws
 
 --import qualified EFA.Graph.Topology as Topology
 import qualified EFA.Graph.Topology.Node as Node

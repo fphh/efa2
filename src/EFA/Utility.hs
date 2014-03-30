@@ -8,18 +8,15 @@ import Data.Traversable (Traversable, mapAccumL)
 import Data.Stream (Stream)
 import Data.Bool.HT (if')
 
-newtype ModuleName = ModuleName String
+newtype ModuleName = ModuleName String deriving (Eq,Show,Read)
 type FunctionName = String
 newtype Caller = Caller [(ModuleName,FunctionName)]
 
 genCaller :: ModuleName -> FunctionName -> Caller
 genCaller m f = Caller [(m,f)] 
 
-instance Show ModuleName where
-  show (ModuleName xs) = xs++"."
-
 instance Show Caller where
-  show (Caller xs) = init $ concat $ map (\(m,f)-> show m++f++">") xs 
+  show (Caller xs) = init $ concat $ map (\(m,f)-> show m++"."++f++">") xs 
 
 (|>) :: Caller -> Caller -> Caller 
 (|>) (Caller c) (Caller c1) = Caller $ c++c1

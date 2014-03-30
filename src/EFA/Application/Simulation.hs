@@ -9,6 +9,7 @@ module EFA.Application.Simulation where
 import EFA.Application.Utility (quantityTopology)
 import qualified EFA.Application.Optimisation.Sweep as Sweep
 import EFA.Application.Optimisation.Params (Name(Name))
+import qualified EFA.Application.Optimisation.Params as Params
 
 import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -46,7 +47,7 @@ solve ::
    SV.FromList t) =>
   Topo.Topology node ->
   Map (XIdx.Position node) (Name, Name) ->
-  Map Name (c -> c) ->
+  Map Name (Params.EtaFunction c c) ->
   Record.Record s s1 typ t1 (XIdx.Position node) t d c ->
   FlowTopo.Section node (EFA.Equation.Result.Result (Data (t :> Nil) c))
 solve topology etaAssign etaFunc powerRecord =
@@ -61,7 +62,7 @@ givenSimulate ::
    SV.Zipper t, SV.Walker t, SV.Storage t c, SV.Len (t d),
    SV.FromList t) =>
   Map (XIdx.Position node) (Name, Name) ->
-  Map Name (c -> c) ->
+  Map Name (Params.EtaFunction c c) ->
   Record.Record s1 s2 typ t1 (XIdx.Position node) t d c ->
   EqSys.EquationSystem mode node s (Data (t :> Nil) c)
 givenSimulate etaAssign etaFunc (Record.Record t xs) =
@@ -80,7 +81,7 @@ makeEtaFuncGiven ::
    ULSystem.Value mode (Data c d1),
    Arith.Constant d1, Data.ZipWith c, Data.Storage c d1) =>
   Map (XIdx.Position node) (Name, Name) ->
-  Map Name (d1 -> d1) ->
+  Map Name (Params.EtaFunction d1 d1) ->
   FlowTopo.Section node (EqAbs.Expression mode vars s (Data c d1)) ->
   EqAbs.VariableSystem mode vars s
 makeEtaFuncGiven etaAssign etaFunc topo =
@@ -106,7 +107,7 @@ makeEtaFuncGiven2 ::
    Arith.Sum (sweep vec a), Arith.Constant a,
    Sweep.SweepMap sweep vec a a) =>
   Map (XIdx.Position node) (Name, Name) ->
-  Map Name (a -> a) ->
+  Map Name (Params.EtaFunction a a) ->
   FlowTopo.Section node (EqAbs.Expression mode vars s (sweep vec a)) ->
   EqAbs.VariableSystem mode vars s
 makeEtaFuncGiven2 etaAssign etaFunc topo =
@@ -126,10 +127,10 @@ makeEtaFuncGiven2 etaAssign etaFunc topo =
 
 absEtaFunction ::
    (Ord a, Show a, Arith.Constant a, Arith.Product b) =>
-   Name -> Name -> Map Name (a -> b) -> a -> b
+   Name -> Name -> Map Name (Params.EtaFunction a b) -> a -> b
 absEtaFunction strP strN etaFunc =
-   let fpos = check strP id $ Map.lookup strP etaFunc
-       fneg = check strN rev $ Map.lookup strN etaFunc
+   let fpos = check strP id $ Map.lookup strP $ Map.map Params.func etaFunc
+       fneg = check strN rev $ Map.lookup strN $ Map.map Params.func etaFunc
        rev h = Arith.recip . h . Arith.negate
        check (Name str) =
           maybe (\x -> error ("not defined: '" ++ str ++ "' for " ++ show x))

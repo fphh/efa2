@@ -1,52 +1,25 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 
-{-
-
-TODO
-
-* Generisches Forcing für Speicherkanten.
-
-* Maybes sollen mit defaultwert in plot geplottet werden.
-
-* powerrecord aus eingelesenen Signalen bauen.
-
-* interpolation in kombination mit nan prüfen
-
-* addZeroCrossings funktioniert mit Listen
-
-* Funktion um Section zu plotten.
-
-* inaktive Kanten schon in extractOptimalPowerMatricesPerState erkennen
-  sollen 0 Leistung liefern
-
-* findZeroCrossing verstehen
-
-* fromSequenceFlow Wirkung von allStEdges ???
-
-* wiki-Artikel wg forall verbessern
-
-* to2DMatrix, head entfernen
-
--}
-
 module Main where
 
-import qualified Modules.System as System; import Modules.System (Node)
+import qualified Modules.Input.System as System; import Modules.Input.System (Node)
 import qualified EFA.Application.Utility as AppUt
-import qualified Modules.Setting as ModSet
-import qualified EFA.Application.Optimisation.Base as Base
-import qualified EFA.Application.Optimisation.NonIO as NonIO
-import qualified Modules.Plot as ModPlot
+import qualified Modules.Input.Setting as ModSet
+--import qualified EFA.Application.Optimisation.Base as Base
+--import qualified EFA.Application.Optimisation.NonIO as NonIO
+--import qualified Modules.Output.Plot as ModPlot
 --import qualified Modules.Types as Types
 
-import qualified EFA.Application.OneStorage as One
-import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.ReqsAndDofs as ReqsAndDofs
-import EFA.Application.Sweep (Sweep)
+import qualified EFA.Application.Optimisation.Params as Params
+import qualified EFA.Application.Optimisation.Balance as Balance
+
+import qualified EFA.Application.Optimisation.Sweep as Sweep
+import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
+import EFA.Application.Optimisation.Sweep (Sweep)
 
 import qualified EFA.Application.Optimisation as AppOpt
-import EFA.Application.OneStorage (Name(Name))
+import EFA.Application.Optimisation.Params (Name(Name))
 
 import qualified EFA.Flow.Draw as Draw
 
@@ -101,7 +74,7 @@ test =  Ref.Test testPath
 
 {-
 iterateBalanceIO ::
-  One.OptimalEnvParams Node [] Sweep UV.Vector Double ->
+  Params.OptimalEnvParams Node [] Sweep UV.Vector Double ->
   Record.PowerRecord Node Vector Double ->
   Types.EnvResult Node (Sweep UV.Vector Double) ->
   IO ()
@@ -129,22 +102,22 @@ iterateBalanceIO params reqsRec stateFlowGraphOpt = do
 initEnv ::
   (Arith.Constant a, Sweep.SweepMap sweep vec a a,
    Sweep.SweepClass sweep vec a) =>
-  One.OptimalEnvParams Node list sweep vec a->
+  Params.OptimalEnvParams Node list sweep vec a->
   Types.EnvResult Node (sweep vec a)
 initEnv params = AppOpt.initialEnv params System.stateFlowGraph
 
 
-writeOptParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double -> IO ()
+writeOptParams :: Params.OptimalEnvParams Node [] Sweep UV.Vector Double -> IO ()
 writeOptParams params = do
 
   Draw.dot (test ++ "/systemTopology.dot")
-           $ Draw.topology (One.systemTopology params)
+           $ Draw.topology (Params.systemTopology params)
 
-  writeFile (test ++ "/etaAssignMap.txt") (show $ One.etaAssignMap params)
-  -- writeFile (test ++ "/points.txt") (show $ One.points params)
-  writeFile (test ++ "/dofsPos.txt") (show $ One.dofsPos params)
-  writeFile (test ++ "/reqsPos.txt") (show $ One.reqsPos params)
-  writeFile (test ++ "/sweepLength.txt") (show $ One.sweepLength params)
+  writeFile (test ++ "/etaAssignMap.txt") (show $ Params.etaAssignMap params)
+  -- writeFile (test ++ "/points.txt") (show $ Params.points params)
+  writeFile (test ++ "/dofsPos.txt") (show $ Params.dofsPos params)
+  writeFile (test ++ "/reqsPos.txt") (show $ Params.reqsPos params)
+  writeFile (test ++ "/sweepLength.txt") (show $ Params.sweepLength params)
 -}
 
 
@@ -171,7 +144,7 @@ main = do
          CT.makeEtaFunctions2D
             (Map.mapKeys (\(Name str) -> str) ModSet.scaleTableEta)
             tabEta
-
+{-
       (time,
        NonEmpty.Cons r
           (NonEmpty.Cons l Empty.Cons)) =
@@ -194,18 +167,39 @@ main = do
                       (Map.fromList (zip reqsPos [prest, plocal]))
 
 
-      -- optParams :: One.OptimalEnvParams Node [] Sweep UV.Vector Double
+      -- optParams :: Params.OptimalEnvParams Node [] Sweep UV.Vector Double
+-}
+  let {- sysParams = Params.System {
+         Params.systemTopology = System.topology,
+         Params.etaAssignMap = System.etaAssignMap,
+  --       Params.etaMap = etaMap,
+         Params.storagePositions = ([TopoIdx.ppos System.Water System.Network]),
+         Params.initStorageState = ModSet.initStorageState,
+         Params.initStorageSeq = ModSet.initStorageSeq } -}
+      
+      optParams :: Params.Optimisation Node [] Sweep UV.Vector Double
+      optParams = Params.Optimisation {
+--          Params.stateFlowGraphOpt = ienv,
+          Params.reqsPos = (ReqsAndDofs.reqsPos ModSet.reqs),
+          Params.dofsPos = (ReqsAndDofs.dofsPos ModSet.dofs),
+          Params.points = ModSet.sweepPts,
+          Params.sweepLength = ModSet.sweepLength,
+          Params.etaToOptimise = Nothing,
+          Params.maxEtaIterations = Params.MaxEtaIterations 5,
+          Params.maxBalanceIterations = Params.MaxBalanceIterations 100,
 
-      sysParams = One.SystemParams {
-         One.systemTopology = System.topology,
-         One.etaAssignMap = System.etaAssignMap,
-         One.etaMap = etaMap,
-         One.storagePositions = ([TopoIdx.ppos System.Water System.Network]),
-         One.initStorageState = ModSet.initStorageState,
-         One.initStorageSeq = ModSet.initStorageSeq }
+          Params.initialBattForcing =
+            Balance.ForcingMap
+            $ Map.fromList [(System.Water, Balance.DischargeDrive 1)],
+          Params.initialBattForceStep =
+            Balance.ForcingMap
+            $ Map.fromList [(System.Water, Balance.ChargeDrive 0.1)],
+          Params.etaThreshold = Params.EtaThreshold 0.2,
+          Params.balanceThreshold = Params.BalanceThreshold 0.5,
+          Params.balanceForcingSeed = Balance.ChargeDrive 0.01 }
 
           
-  print sysParams   
+  print optParams   
 
 {- -}
 

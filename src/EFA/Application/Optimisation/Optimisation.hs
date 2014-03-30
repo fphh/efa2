@@ -121,7 +121,7 @@ solve ::
   [TopoIdx.Power node] ->
   Type.EnvResult node (sweep vec a) ->
   EtaAssignMap node ->
-  Map Name (a -> a) ->
+  Map Name (Params.EtaFunction a a) ->
   Idx.State ->
   ReqsAndDofs.Pair (Sweep.List sweep vec) (Sweep.List sweep vec) a ->
   Type.SweepPerReq node sweep vec a

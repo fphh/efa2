@@ -36,10 +36,15 @@ nc = genCaller modul
 data Cube typ dim label vec a b = Cube {
   getGrid :: Grid typ dim label vec a, 
   getData :: Data typ dim vec b } deriving (Show,Eq)
-        
+                                           
+instance Ref.ToData Cube where                                            
+  toData (Data vec) = Ref.Data modul "Cube" $ toData vec 
+
 data Data typ dim vec a = Data { getVector :: vec a} deriving (Show,Eq)
                                 
-                                
+instance Ref.ToData Data where                                            
+  toData (Data vec) = Ref.Data modul "Data" toData vec 
+                               
 lookupLin ::
   (DV.LookupMaybe vec b,
   Show (vec b)) =>  

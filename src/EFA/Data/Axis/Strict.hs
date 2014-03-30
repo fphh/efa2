@@ -17,8 +17,12 @@ nc = genCaller m
 data Axis typ label vec a = Axis {
   getLabel :: label,
   getVec :: vec a} deriving (Show,Eq)
+                            
+instance Ref.ToData Axis where                            
+  toData (Axis label vec) = Ref.Data modul "Axis" (toData label, toData vec)
 
 newtype Idx = Idx {getInt :: Int} deriving Show
+  toData (Idx x) = Ref.Data modul "Idx" (toData x)
 
 imap :: 
   (DV.Walker vec,
