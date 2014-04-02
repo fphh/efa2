@@ -55,6 +55,7 @@ type OptimalEtaWithEnv node list v =
 
 data System node a = System {
   systemTopology :: Topology.Topology node,
+  labeledTopology :: Topology.LabeledTopology node,
   etaAssignMap :: EtaAssignMap node,
   etaMap :: Map Name (EtaFunction a a),
   etaTable :: TPT.Map a,

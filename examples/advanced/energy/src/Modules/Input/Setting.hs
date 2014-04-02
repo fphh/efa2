@@ -196,6 +196,7 @@ supportPoints =
 sysParams ::  TPT.Map Double -> Params.System Node Double          
 sysParams tabEta = Params.System {
   Params.systemTopology = System.topology,
+  Params.labeledTopology = System.labeledTopology,
   Params.etaTable = tabEta,
   Params.etaAssignMap = System.etaAssignMap,
   Params.etaMap =etaMap tabEta,
