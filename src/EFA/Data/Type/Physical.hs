@@ -9,10 +9,10 @@ data X
 data Y
 type Power2 = Power
 
-data Type = 
+data Type =
   Power |
   Energy |
   Eta |
   X
-  
+
 

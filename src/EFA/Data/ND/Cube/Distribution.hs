@@ -3,11 +3,11 @@ module EFA.Data.ND.Distribution where
 
 newtype Class typ dim a = ND.Data dim a
 
--- A Distribution is often sparsely populated 
--- A Data.Map is the best datatype 
+-- A Distribution is often sparsely populated
+-- A Data.Map is the best datatype
 
--- | Module for randomly spaced ND-data of a Map 
-data Distribution typ dim a b = Distribution (Grid label typ dim a) Map (Class typ dim a) b  
+-- | Module for randomly spaced ND-data of a Map
+data Distribution typ dim a b = Distribution (Grid label typ dim a) Map (Class typ dim a) b
 
 
 -- TODO:: Methods to create clever grids and convert between mid and edge

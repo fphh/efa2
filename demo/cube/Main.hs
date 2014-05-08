@@ -26,14 +26,14 @@ import qualified Data.Vector as V
 import qualified Data.Map as Map
 
 
-interpFunction :: 
-  (Double, Double) -> (Double, Double) -> 
+interpFunction ::
+  (Double, Double) -> (Double, Double) ->
   Double -> Interp.Val Double
 interpFunction = Interp.dim1 "main" Interp.Linear Interp.ExtrapLinear
 
 main :: IO()
 main = do
-  let caller = genCaller (ModuleName "Main") "main" 
+  let caller = genCaller (ModuleName "Main") "main"
   let x =  V.fromList ["x1", "x2"] :: (V.Vector String)
   let y =  V.fromList ["y1","y2"]:: (V.Vector String)
   let z =  V.fromList ["z11","z12","z21","z22"]
@@ -50,7 +50,7 @@ main = do
   let x1 = V.fromList [1,2]
   let y1 = V.fromList [3,4]
   let z1 = V.fromList [11,12,21,22]
-  let sys1 = Grid.create caller [("x",x1),("y",y1)] :: Grid Edge Dim2 String V.Vector Double  
+  let sys1 = Grid.create caller [("x",x1),("y",y1)] :: Grid Edge Dim2 String V.Vector Double
   let o1 = Cube.create caller [("x",x1),("y",y1)] z1 :: Cube Edge Dim2 String V.Vector Double Double
   let zInt = Cube.interpolate caller interpFunction o1 (ND.Data [1,3])
   let zInt2 = Cube.interpolate caller interpFunction o1 (ND.Data [1,4])
@@ -61,14 +61,14 @@ main = do
   let zInt7 = Cube.interpolate caller interpFunction o1 (ND.Data [1,3.5])
   let zInt8 = Cube.interpolate caller interpFunction o1 (ND.Data [2,3.5])
   let zInt9 = Cube.interpolate caller interpFunction o1 (ND.Data [1.5,3.5])
- 
+
   let sig = Cube.to2DSignal caller o1 :: Sig.UTSignal2 V.Vector V.Vector Double
-  let vec = Cube.getData o1   
-  let cube = Cube.mapWithGrid (\c xx -> (c,xx)) o1    
+  let vec = Cube.getData o1
+  let cube = Cube.mapWithGrid (\c xx -> (c,xx)) o1
   let genCube = Cube.generateWithGrid (id) sys1
-  let subCube = Cube.extract caller cube (ND.Data [ND.Idx 0]) 
-                (Map.fromList [(ND.Idx 1,Axis.Idx 0)])  
-  
+  let subCube = Cube.extract caller cube (ND.Data [ND.Idx 0])
+                (Map.fromList [(ND.Idx 1,Axis.Idx 0)])
+
   print o
   print z11
   print z12
@@ -89,7 +89,7 @@ main = do
   print zInt7
   print zInt8
   print zInt9
-  
+
   print sig
   print vec
   print cube

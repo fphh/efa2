@@ -6,10 +6,10 @@ module EFA.Data.Type where
 --import EFA.Data.Type.Physical
 --import EFA.Data.Type.Efa
 
-newtype TC p f e a = TC a 
+newtype TC p f e a = TC a
 
 instance Functor (TC p f e) where
-  fmap f (TC x) = TC $ f x  
+  fmap f (TC x) = TC $ f x
 
 {-
 data Wrap a = WrapPower (TC Power Time Edge a) |
@@ -23,6 +23,6 @@ instance WrapIt Energy Flow Edge where wrap x = WrapFlow x
 
 class UnWrap p f e where unwrap :: Wrap a -> TC p f e a
 instance UnWrap Power Time Edge where unwrap (WrapPower x) = x
-instance UnWrap Energy Flow Edge where unwrap (WrapFlow x) = x 
+instance UnWrap Energy Flow Edge where unwrap (WrapFlow x) = x
 
 -}

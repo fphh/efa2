@@ -33,9 +33,9 @@ import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.IO.TableParser as Table
 import qualified EFA.IO.TableParserTypes as TPT
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
-import qualified Data.Empty as Empty                                                                 
+import qualified Data.Empty as Empty
 import qualified EFA.Application.Optimisation.Base as Base
-                                           
+
 local, rest, water, gas :: [Double]
 
 {-
@@ -151,14 +151,14 @@ initStorageSeq =
 initEnv = AppOpt.storageEdgeXFactors optParams 3 3
           $ AppOpt.initialEnv optParams System.stateFlowGraph
 
-etaMap tabEta = Map.map Params.EtaFunction $ 
+etaMap tabEta = Map.map Params.EtaFunction $
          Map.mapKeys Params.Name $
          CT.makeEtaFunctions2D
             (Map.mapKeys Params.unName scaleTableEta)
             tabEta
-            
 
-reqsRec tabPower = 
+
+reqsRec tabPower =
   let (time,
        NonEmpty.Cons local
           (NonEmpty.Cons rest Empty.Cons)) =
@@ -173,14 +173,14 @@ reqsRec tabPower =
       reqsRec :: Record.PowerRecord Node UV.Vector Double
       reqsRec = Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
 --      reqsRec = Record.scatterRnd rndGen 10 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
-      
+
       reqsRecStep :: Record.PowerRecord Node UV.Vector Double
       reqsRecStep = Record.makeStepped reqsRec
   in Record.makeStepped $ Base.convertRecord reqsRecStep
-      
+
 
 reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos reqs
-      
+
 {-
 supportPoints =
         Base.supportPoints
@@ -193,7 +193,7 @@ supportPoints =
 
 ------------------------------------------------------------------------
 
-sysParams ::  TPT.Map Double -> Params.System Node Double          
+sysParams ::  TPT.Map Double -> Params.System Node Double
 sysParams tabEta = Params.System {
   Params.systemTopology = System.topology,
   Params.labeledTopology = System.labeledTopology,

@@ -63,9 +63,9 @@ data System node a = System {
   storagePositions:: [TopoIdx.Position node],
   initStorageState :: InitStorageState node a,
   initStorageSeq :: InitStorageSeq node a } deriving Show
-                     
+
 {-
-instance Ref.Data (System node a) where                      
+instance Ref.Data (System node a) where
   toData x = StringData "Params.System" (show x)
 -}
 

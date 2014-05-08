@@ -109,7 +109,7 @@ data ExtrapMethod a =
   deriving (Show)
 
 linear :: (Product a, Sum a) => (a, a) -> (a, a) -> a  -> a
-linear (x0, x1) (y0, y1) x = 
+linear (x0, x1) (y0, y1) x =
   y0 ~* (x1 ~- x) ~/ (x1 ~- x0) ~+ y1 ~* (x ~- x0) ~/ (x1 ~- x0)
 
 nearest :: (Ord a, Sum a,Product a) => (a, a) -> (a, a) -> a  -> a

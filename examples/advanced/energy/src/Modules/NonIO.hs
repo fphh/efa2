@@ -1,4 +1,4 @@
-module Modules.NonIO where      
+module Modules.NonIO where
 
 import qualified EFA.Application.Optimisation.Loop as Loop
 import qualified EFA.Application.Optimisation.Balance as Balance
@@ -37,13 +37,13 @@ checkRange sysParams optParams simParams sfg = (0, vhead "checkRangeIO"
         (0, vhead "checkRangeIO"
             $ concat $ balanceIteration fsys accessf initBalF initialBalSteps)-}
 
---checkRange = iterationWithAllStates 
+--checkRange = iterationWithAllStates
 
 iterationWithAllStates sysParams optParams simParams stateFlow = -- Loop.condition optParams
            take 5 $ Loop.iterateEtaWhile
                sysParams optParams simParams stateFlow Balance.StateForcingOn
 
-getLastStateFlow xs = Type.stateFlowGraphSweep $ Loop.bResult $ 
+getLastStateFlow xs = Type.stateFlowGraphSweep $ Loop.bResult $
                  vlast "Main" $ (Loop.balanceLoop $ vlast "Main" xs)
 
 iterationWithBestStates sysParams optParams simParams initEnv = Loop.iterateEtaWhile sysParams optParams simParams initEnv Balance.StateForcingOff

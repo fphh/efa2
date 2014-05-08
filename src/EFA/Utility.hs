@@ -13,12 +13,12 @@ type FunctionName = String
 newtype Caller = Caller [(ModuleName,FunctionName)]
 
 genCaller :: ModuleName -> FunctionName -> Caller
-genCaller m f = Caller [(m,f)] 
+genCaller m f = Caller [(m,f)]
 
 instance Show Caller where
-  show (Caller xs) = init $ concat $ map (\(m,f)-> show m++"."++f++">") xs 
+  show (Caller xs) = init $ concat $ map (\(m,f)-> show m++"."++f++">") xs
 
-(|>) :: Caller -> Caller -> Caller 
+(|>) :: Caller -> Caller -> Caller
 (|>) (Caller c) (Caller c1) = Caller $ c++c1
 
 merror ::  Caller -> ModuleName -> FunctionName -> String -> t

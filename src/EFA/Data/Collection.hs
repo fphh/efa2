@@ -20,7 +20,7 @@ nc :: FunctionName -> Caller
 nc = genCaller modul
 
 mapData :: (a -> a) -> Collection label a -> Collection label a
-mapData f (Collection o m) = Collection o $ Map.map f m  
+mapData f (Collection o m) = Collection o $ Map.map f m
 
 mapDataWithOrd :: (OrdData a -> a -> a) -> Collection label a -> Collection label a
 mapDataWithOrd f (Collection o m) = Collection o $ Map.map (f o) m
@@ -29,13 +29,13 @@ map :: (Unpack a) => (Container a -> Container a) -> Collection label a -> Colle
 map f (Collection o m) = Collection o $ Map.map (snd . unpack . f . pack . (,) o) m
 
 getOrdData :: Collection label a -> OrdData a
-getOrdData  (Collection o _) = o 
+getOrdData  (Collection o _) = o
 
 class Unpack a where
   unpack :: Container a -> (OrdData a,a)
   pack :: (OrdData a,a) -> Container a
 
-fromList :: 
+fromList ::
   (Unpack a,Ord label, Eq (OrdData a)) => Caller ->
   [(label, Container a)] -> Collection label a
 fromList caller xs = Collection o $ Map.fromList datList
@@ -43,21 +43,21 @@ fromList caller xs = Collection o $ Map.fromList datList
          datList = P.map (\(x,y) -> (x, snd $ y)) xs'
          o = ordFromList caller $ P.map fst $ P.map snd xs'
 
-toList :: 
+toList ::
   (Unpack a,Ord label, Eq (OrdData a)) =>
   Collection label a -> [(label, Container a)]
 toList (Collection o m) = P.map (\(x,y)-> (x, pack (o,y))) $ Map.toList m
 
 
-ordFromList :: Eq a => Caller -> [a] -> a        
+ordFromList :: Eq a => Caller -> [a] -> a
 ordFromList caller [] = merror caller modul "getOrdFromList" "empty List"
 ordFromList _ [o] = o
-ordFromList caller (x:xs) = 
-  if all (==x) xs then x 
+ordFromList caller (x:xs) =
+  if all (==x) xs then x
   else merror caller modul "getOrdFromList" "OrdData differs"
 
-lookup :: 
-  (Ord label, Unpack a) => 
+lookup ::
+  (Ord label, Unpack a) =>
   label -> Collection label a -> Maybe (Container a)
 lookup label (Collection o m) = case Map.lookup label m of
   Just d -> Just $ pack(o,d)

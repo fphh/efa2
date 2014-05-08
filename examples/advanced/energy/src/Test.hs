@@ -69,7 +69,7 @@ testPath = DirPath [Directory "First"]
 
 
 test :: Ref.Test
-test =  Ref.Test testPath  
+test =  Ref.Test testPath
         (Map.fromList [(FPath [] (FileName "Var1"), Ref.toData (2 ::Double))])
 
 {-
@@ -124,7 +124,7 @@ writeOptParams params = do
 
 main :: IO()
 main = do
-  
+
   tmpFolder <- RefIO.getTmpFolder (nc "main")
   ok <- RefIO.checkFolder tmpFolder
   print tmpFolder
@@ -133,9 +133,9 @@ main = do
   RefIO.writeTest tmpFolder group test
   ref <- RefIO.readTest (nc "main") tmpFolder group testPath
   print $ Ref.diffTest (Ref.Ref ref) test
-  
-  
- 
+
+
+
   tabEta <- Table.read "../maps/eta.txt"
   tabPower <- Table.read "../maps/power.txt.bak"
 
@@ -176,7 +176,7 @@ main = do
          Params.storagePositions = ([TopoIdx.ppos System.Water System.Network]),
          Params.initStorageState = ModSet.initStorageState,
          Params.initStorageSeq = ModSet.initStorageSeq } -}
-      
+
       optParams :: Params.Optimisation Node [] Sweep UV.Vector Double
       optParams = Params.Optimisation {
 --          Params.stateFlowGraphOpt = ienv,
@@ -198,8 +198,8 @@ main = do
           Params.balanceThreshold = Params.BalanceThreshold 0.5,
           Params.balanceForcingSeed = Balance.ChargeDrive 0.01 }
 
-          
-  print optParams   
+
+  print optParams
 
 {- -}
 

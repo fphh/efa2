@@ -35,9 +35,9 @@ data Data dim a = Data [a] deriving (Show,Eq)
 
 instance Functor (Data dim) where
   fmap f (Data xs) = Data (fmap f xs)
-  
-data Idx = Idx Int deriving (Show,Eq,Ord)  
-  
+
+data Idx = Idx Int deriving (Show,Eq,Ord)
+
 map :: (a -> b) -> Data dim a -> Data dim b
 map f (Data xs) = Data (P.map f xs)
 
@@ -53,7 +53,7 @@ fromList caller xs =
     dim = Data xs
   in if len dim == num dim
      then dim
-     else merror caller m "fromList"   
+     else merror caller m "fromList"
           "list length doesn't match dimension"
 
 class Dimensions dim where num :: Data dim a -> Int
@@ -87,22 +87,22 @@ append x (Data xs) = Data $ x:xs
 toList :: Data dim a -> [a]
 toList (Data xs) = xs
 
-unsafeLookup :: Data dim a -> Idx -> a 
+unsafeLookup :: Data dim a -> Idx -> a
 unsafeLookup (Data xs) (Idx idx) = xs !! idx
 
-lookup :: Caller -> Data dim a -> Idx -> a 
-lookup caller (Data xs) (Idx idx) = 
-  if idx >= 0 && idx < length xs 
+lookup :: Caller -> Data dim a -> Idx -> a
+lookup caller (Data xs) (Idx idx) =
+  if idx >= 0 && idx < length xs
      then xs !! idx
      else merror caller m "lookup" $ "Index out of Bounds: " ++ show idx
-          
-          
+
+
 lookupMaybe :: Data dim a -> Idx -> Maybe a
-lookupMaybe (Data xs) (Idx idx) =  
-  if idx >= 0 && idx < length xs 
+lookupMaybe (Data xs) (Idx idx) =
+  if idx >= 0 && idx < length xs
      then Just $ xs !! idx
           else Nothing
-                                      
+
 data Point dim a = Point (Data dim a) deriving Show
 
 pointFromList :: [a] -> Point dim a

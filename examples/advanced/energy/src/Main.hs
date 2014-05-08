@@ -88,7 +88,7 @@ printBalanceLoopItem _optParams _b = concurrentlyMany_ [
   Output.maxPerState _term  _b,
   Output.simulation _dotTerm _b
   ]
- -}     
+ -}
 printBalanceLoopItem ::
   (UV.Unbox b,
    SV.Walker efaVec,
@@ -98,7 +98,7 @@ printBalanceLoopItem ::
    Arith.Constant d,
    FormatValue.FormatValue b,
    FormatValue.FormatValue d,
-   Show node, Show a, PrintfArg a, Arith.Constant a, 
+   Show node, Show a, PrintfArg a, Arith.Constant a,
    Show (intVec Double),Show (simVec Double),
    SV.Walker simVec,
    SV.Storage simVec Double,
@@ -123,7 +123,7 @@ printBalanceLoopItem _optParams _b@(_bStp, Loop.BalanceLoopItem _bForcing _bFSte
 --      Output.maxPerState _term  _b,
       Output.simulation _dotTerm _b]
 
-          
+
 printEtaLoopItem _params _loopItem = concurrentlyMany_ [
   putStrLn $ Loop.showEtaLoopItem _params _loopItem
   ]
@@ -134,8 +134,8 @@ main = do
 
   tabEta <- Table.read "../maps/eta.txt"
   tabPower <- Table.read "../maps/power.txt.bak"
-  
-  let 
+
+  let
     sysParams = ModSet.sysParams tabEta
     optParams = ModSet.optParams
     demandedCycle = ModSet.reqsRec tabPower
@@ -147,9 +147,9 @@ main = do
       stateFlow = ModNonIO.getLastStateFlow loop1
       loop2 = ModNonIO.iterationWithBestStates sysParams optParams simParams stateFlow
 
-      
+
   Output.iterationLoop optParams loop1
 --  Output.loopResults optParams printEtaLoopItem printBalanceLoopItem loop1
-  
+
   Output.iterationLoop optParams loop2
 --  Output.loopResults optParams printEtaLoopItem printBalanceLoopItem loop2

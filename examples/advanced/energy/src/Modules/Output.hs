@@ -28,19 +28,19 @@ dir (_n, BalanceLoopItem _bForcing _bFStep _bal _opt) = printf "outer-loop-%6.6d
 topologyWithStates term params = concurrentlyMany_ [
   term $ Draw.labeledTopology $ Params.labeledTopology params,
   term $ Draw.flowTopologies $ StateAnalysis.advanced $ Params.systemTopology params ]
-                         
+
 initialStateFlow sfg = Draw.xterm
     $ Draw.title "Initial State Flow Graph for Optimisation"
     $ Draw.stateFlowGraph Draw.optionsDefault
     $ StateQty.mapGraph g g sfg
     where g = fmap (vhead "simulationGraphs" . Sweep.toList)
 
-requirement reqsRec = 
+requirement reqsRec =
   concurrentlyMany_ [
     ModPlot.record ModPlot.gpXTerm "Requirement Signals" reqsRec,
 --    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
     ModPlot.reqsRec ModPlot.gpXTerm reqsRec]
- 
+
 sweepStack term params _sweep balanceForcing = concurrentlyMany_ [
   ModPlot.sweepStackPerStateEta term params _sweep,
   ModPlot.sweepStackPerStateStoragePower term params System.Water _sweep,
@@ -54,14 +54,14 @@ sweepStackGraphs sweep = concurrentlyMany_ [
   ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 2 sweep,
   ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 3 sweep
   ]
-  
-maxPerState _term (_n, BalanceLoopItem _bForcing _bFStep _bal _opt) = 
+
+maxPerState _term (_n, BalanceLoopItem _bForcing _bFStep _bal _opt) =
   concurrentlyMany_ [
   ModPlot.maxIndexPerState (_term _n) _opt,
   ModPlot.maxEtaPerState (_term _n) _opt,
   ModPlot.maxPosPerState (_term _n) (StateIdx.power (Idx.State 0) System.Water System.Network) _opt]
 
-simulation _term (_n, BalanceLoopItem _bForcing _bFStep _bal _opt)= 
+simulation _term (_n, BalanceLoopItem _bForcing _bFStep _bal _opt)=
   concurrentlyMany_ [
  --   ModPlot.givenSignals (_term _n) _opt,
 --    ModPlot.simulationSignals _term _opt,
@@ -72,7 +72,7 @@ simulation _term (_n, BalanceLoopItem _bForcing _bFStep _bal _opt)=
     -- pro parzelle (Achtung, ziemlich viel!!!)
     -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG dir bStep) opt
  --    ModPlot.simulationSignals term opt2
- 
+
 iterationLoop optParams xs = mapM_ putStrLn (Loop.showEtaLoop optParams xs)
 
 
@@ -81,7 +81,7 @@ plotOptEtavsAvg opt =  concurrentlyMany_ [
   ModPlot.expectedEtaPerState ModPlot.gpXTerm opt,
   ModPlot.expectedEtaDifferencePerState ModPlot.gpXTerm opt ]
 
-plotRangeResults optParams simParams swp loop = 
+plotRangeResults optParams simParams swp loop =
   do
    let b@(_, Loop.BalanceLoopItem _bForcing _bFStep _bal opt) = vhead "plotRangeResults" $ loop
        term = ModPlot.gpXTerm
@@ -90,7 +90,7 @@ plotRangeResults optParams simParams swp loop =
        _posWater = TopoIdx.Position System.Network System.Water
        _posGas = TopoIdx.Position System.LocalNetwork System.Gas
        _posTrafo = TopoIdx.Position System.LocalNetwork System.Network
-  
+
    concurrentlyMany_ [
 --        putStrLn $ showBalanceLoopItem optParams b,
         ModPlot.reqsRec term $ Params.reqsRec simParams,
@@ -108,10 +108,10 @@ plotRangeResults optParams simParams swp loop =
         ModPlot.simulationSignals term opt,
         ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.3, 0.5] 0 swp
         ]
-     
+
 
 -- plotLoopResults optParams loop =  sequence_ (ModLoop.printEtaLoop optParams loop)
-loopResults :: 
+loopResults ::
   Monad m =>
   Params.Optimisation
   node [] Sweep UV.Vector a1
@@ -129,10 +129,10 @@ loopResults ::
   -> m ()
 loopResults optParams printEtaLoopItem printBalanceLoopItem loop
   = sequence_ $ Loop.iterateLoops optParams printEtaLoopItem printBalanceLoopItem (zip [0..] loop)
- 
+
 
 {-     do
         let _opt = vlast "printEtaLoopItem" _res
             balanceForcing = ilBForcOut $ vlast "printEtaLoopItem" res
--}            
+-}
  

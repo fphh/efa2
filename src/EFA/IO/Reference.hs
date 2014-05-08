@@ -32,7 +32,7 @@ checkFolder path@(DirPath xs) = doesDirectoryExist (toString path)
 
 cleanTmp :: DirPath Abs -> IO()
 cleanTmp path = void $ runCommand "cd path || ls *"
-            
+
 createDir :: Caller -> DirPath Abs -> IO()
 createDir caller path  = createDirectoryIfMissing True (toString path)
 
@@ -41,21 +41,21 @@ writeTest root group (Ref.Test p m) = do
   let path = root +++ group +++ p
   createDir (nc " writeTest") path
   mapM_ (\ (name,x) -> writeRef (path +++ name) x)  $ Map.toList m
-        
+
 writeRef :: FPath Abs -> Ref.Data -> IO()
 writeRef path x = writeFile (toString path) (show x)
 
 readRef :: DirPath Abs -> FPath Rel -> IO (Ref.Data)
 readRef path filePath = fmap read $ readFile (toString (path +++ filePath))
 
-readTest :: Caller -> DirPath Abs -> DirPath Rel -> DirPath Rel -> IO(Ref.Test)          
-readTest caller base group test = do 
-  let f n = fromString (caller |> nc "readTest") $ n 
+readTest :: Caller -> DirPath Abs -> DirPath Rel -> DirPath Rel -> IO(Ref.Test)
+readTest caller base group test = do
+  let f n = fromString (caller |> nc "readTest") $ n
       path = base+++group+++test
   xs <- getDirectoryContents (toString $ path)
   let files = map f $   filter (\x -> x /="." && x /="..") xs
   refs <- mapM (readRef path) files
-  return $ Ref.Test test $ 
+  return $ Ref.Test test $
     Map.fromList $ zip files refs
-         
+
   

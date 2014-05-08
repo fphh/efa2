@@ -518,8 +518,8 @@ class LookupMaybe vec d where
    lookupMaybe :: vec d -> Int -> Maybe d
 
 instance LookupMaybe [] d where
-   lookupMaybe xs idx = if idx >=0 && idx <= (length xs) 
-                        then Just $ xs List.!! idx 
+   lookupMaybe xs idx = if idx >=0 && idx <= (length xs)
+                        then Just $ xs List.!! idx
                              else Nothing
 
 instance LookupMaybe V.Vector d where
@@ -527,7 +527,7 @@ instance LookupMaybe V.Vector d where
 
 instance UV.Unbox d => LookupMaybe UV.Vector d where
    lookupMaybe xs idx = xs UV.!? idx
-   
+
 
 class LookupUnsafe vec d where
   lookupUnsafe :: vec d -> Int -> d
