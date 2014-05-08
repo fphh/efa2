@@ -1,11 +1,14 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module EFA.Data.Axis.Strict where
 
 import EFA.Utility(Caller,merror, ModuleName(..),FunctionName, genCaller)
 import qualified EFA.Data.Vector as DV
 
+import qualified EFA.Reference.Base as Ref
 
+import qualified Data.Map as Map
 
 m :: ModuleName
 m = ModuleName "Axis.Axis"
@@ -18,11 +21,14 @@ data Axis typ label vec a = Axis {
   getLabel :: label,
   getVec :: vec a} deriving (Show,Eq)
                             
-instance Ref.ToData Axis where                            
-  toData (Axis label vec) = Ref.Data modul "Axis" (toData label, toData vec)
+instance (Show label,Ref.ToData (vec a)) => 
+         Ref.ToData (Axis typ label vec a) where                            
+  toData (Axis label vec) = Ref.DataMap "Axis" $ Map.fromList [(show label, Ref.toData vec)]
 
 newtype Idx = Idx {getInt :: Int} deriving Show
-  toData (Idx x) = Ref.Data modul "Idx" (toData x)
+
+instance Ref.ToData Idx where    
+  toData (Idx x) = Ref.StringData "Idx" (show x)
 
 imap :: 
   (DV.Walker vec,

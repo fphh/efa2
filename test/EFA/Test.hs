@@ -13,6 +13,7 @@ import qualified EFA.Test.Cumulated as Cumulated
 import qualified EFA.Test.EquationSystem as EqSys
 import qualified EFA.Test.Tree as Tree
 import qualified EFA.Test.FindBestIndex as FindBestIndex
+import qualified EFA.Test.Cube as Cube
 
 
 import Control.Functor.HT (void)
@@ -28,6 +29,7 @@ main = do
    void $ Sig.runTests
    void $ Sweep.runTests
    void $ FindBestIndex.runTests
+   void $ Cube.runTests
    EqSys.runTests
    Cumulated.runTests
    Mix.runTests

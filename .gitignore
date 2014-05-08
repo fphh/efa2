@@ -1,5 +1,7 @@
 dist
 *.o
 *.hi
-*.hs~
-
+*~
+Main
+*.tar.gz
+*.bak
