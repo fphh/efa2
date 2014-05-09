@@ -6,8 +6,12 @@
 module EFA.Data.ND where
 
 import EFA.Utility(Caller,merror,ModuleName(..))
+import qualified EFA.Reference.Base as Ref
+
 import Prelude hiding (map)
 import qualified Prelude as P
+
+import qualified Data.Map as Map
 
 m:: ModuleName
 m = ModuleName "Space"
@@ -32,6 +36,10 @@ type Dim9 = Succ Dim8
 type Dim10 = Succ Dim9
 
 data Data dim a = Data [a] deriving (Show,Eq)
+
+instance Ref.ToData a => Ref.ToData (Data dim a) where
+  toData (Data xs) = Ref.DataMap "Dim.Data" $ Map.fromList $ 
+                     P.zip (P.map show [(0::Integer)..]) $ P.map Ref.toData xs 
 
 instance Functor (Data dim) where
   fmap f (Data xs) = Data (fmap f xs)

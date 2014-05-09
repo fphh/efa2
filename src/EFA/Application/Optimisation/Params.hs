@@ -15,7 +15,7 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Signal.Signal as Sig
 
-import qualified EFA.IO.TableParser as Table
+--import qualified EFA.IO.TableParser as Table
 
 import qualified EFA.Graph.Topology as Topology
 

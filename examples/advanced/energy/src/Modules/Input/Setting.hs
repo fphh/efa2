@@ -1,4 +1,5 @@
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Modules.Input.Setting where
 
@@ -17,8 +18,10 @@ import qualified EFA.Application.Optimisation.Sweep as Sweep
 import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Flow.State.Quantity as StateQty
 
 import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.ConvertTable as CT
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -29,12 +32,13 @@ import qualified Data.Vector.Unboxed as UV
 --import Data.List (transpose)
 import qualified EFA.Signal.Record as Record
 
-import qualified EFA.Signal.ConvertTable as CT
-import qualified EFA.IO.TableParser as Table
+--import qualified EFA.Signal.ConvertTable as CT
+--import qualified EFA.IO.TableParser as Table
 import qualified EFA.IO.TableParserTypes as TPT
 import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
 import qualified Data.Empty as Empty
 import qualified EFA.Application.Optimisation.Base as Base
+import qualified EFA.Equation.Result as Result
 
 local, rest, water, gas :: [Double]
 
@@ -148,8 +152,14 @@ initStorageSeq :: (Arith.Constant a) => Params.InitStorageSeq System.Node a
 initStorageSeq =
   Params.InitStorageSeq $ Map.fromList [(System.Water, Arith.fromRational 1000)]
 
+initEnv :: StateQty.Graph Node
+           (Result.Result (Sweep UV.Vector Double))
+           (Result.Result (Sweep UV.Vector Double))
 initEnv = AppOpt.storageEdgeXFactors optParams 3 3
           $ AppOpt.initialEnv optParams System.stateFlowGraph
+
+etaMap :: TPT.Map Double -> 
+          Map Name (Params.EtaFunction Double Double)
 
 etaMap tabEta = Map.map Params.EtaFunction $
          Map.mapKeys Params.Name $
@@ -157,28 +167,31 @@ etaMap tabEta = Map.map Params.EtaFunction $
             (Map.mapKeys Params.unName scaleTableEta)
             tabEta
 
+reqsRec :: (SV.FromList v, SV.Storage v Double,
+            SV.Convert UV.Vector v) =>
+           Map String (TPT.T Double) -> Record.PowerRecord Node v Double
 
 reqsRec tabPower =
   let (time,
-       NonEmpty.Cons local
-          (NonEmpty.Cons rest Empty.Cons)) =
+       NonEmpty.Cons l
+          (NonEmpty.Cons r Empty.Cons)) =
         CT.getPowerSignalsWithSameTime tabPower
           ("rest" !: "local" !: Empty.Cons)
 
       ctime = Sig.convert time
 
-      pLocal = Sig.offset 0.1 . Sig.scale 3 $ Sig.convert $ local
-      pRest = Sig.offset 0.2 . Sig.scale 1.3 $ Sig.convert $  rest
+      pLocal = Sig.offset 0.1 . Sig.scale 3 $ Sig.convert $ l
+      pRest = Sig.offset 0.2 . Sig.scale 1.3 $ Sig.convert $  r
 
-      reqsRec :: Record.PowerRecord Node UV.Vector Double
-      reqsRec = Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
+      rRec :: Record.PowerRecord Node UV.Vector Double
+      rRec = Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
 --      reqsRec = Record.scatterRnd rndGen 10 0.3 $ Record.Record ctime (Map.fromList (zip reqsPos [pLocal,pRest]))
 
-      reqsRecStep :: Record.PowerRecord Node UV.Vector Double
-      reqsRecStep = Record.makeStepped reqsRec
-  in Record.makeStepped $ Base.convertRecord reqsRecStep
+      rRecStep :: Record.PowerRecord Node UV.Vector Double
+      rRecStep = Record.makeStepped rRec
+  in Record.makeStepped $ Base.convertRecord rRecStep
 
-
+reqsPos :: [TopoIdx.Position Node]
 reqsPos = ReqsAndDofs.unReqs $ ReqsAndDofs.reqsPos reqs
 
 {-
@@ -225,10 +238,10 @@ optParams = Params.Optimisation {
   Params.balanceForcingSeed = Balance.ChargeDrive 0.01 }
 
 simParams :: Record.PowerRecord Node [] Double -> Params.Simulation Node [] Double
-simParams reqsRec = Params.Simulation {
+simParams rRec = Params.Simulation {
   Params.varReqRoomPower1D = Sig.convert $ varLocalPower1D,
   Params.varReqRoomPower2D = Sig.convert $ varRestPower ,
-  Params.reqsRec = reqsRec, -- Base.convertRecord reqsRecStep,
+  Params.reqsRec = rRec, -- Base.convertRecord reqsRecStep,
   Params.requirementGrid = [ Sig.convert $ varLocalPower1D,
                              Sig.convert $ varRestPower1D ],
 --  Params.activeSupportPoints =  supportPoints,

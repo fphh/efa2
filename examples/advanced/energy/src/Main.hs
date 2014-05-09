@@ -7,56 +7,39 @@ import qualified Modules.Input.Setting as ModSet
 import qualified Modules.Output as Output
 import qualified Modules.Input.System as System;
 import qualified EFA.Flow.Topology.Index as TopoIdx
-import Modules.Output.Plot as ModPlot
+import qualified Modules.Output.Plot as ModPlot
 import EFA.Utility.Async (concurrentlyMany_)
-import EFA.Utility.List (vlast, vhead)
+
 import Text.Printf (printf)
 import qualified  EFA.Application.Optimisation.Loop as Loop
 import qualified EFA.Application.Optimisation.Params as Params
 import qualified EFA.Application.Type as Type
-import Text.Printf (printf, PrintfArg)
-{-
+import Text.Printf (--printf, 
+                    PrintfArg)
+  
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+import qualified Data.GraphViz.Types.Canonical as Canonical
 
-import qualified Modules.Input.System as System;
-import Modules.Input.System (Node)
-import qualified Modules.Input.Setting as ModSet
-
-import qualified EFA.Application.Utility as AppUt
-import qualified EFA.Application.Optimisation.Base as Base
-import qualified EFA.Application.Optimisation.Loop as Loop
-import qualified EFA.Application.Type as Type
-import qualified EFA.Application.Optimisation.Balance as Balance
-import qualified EFA.Application.Optimisation.Params as Params
-import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
-import EFA.Application.Optimisation.Sweep (Sweep)
-import qualified EFA.Application.Optimisation as AppOpt
-import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.ConvertTable as CT
-
-
-import qualified EFA.IO.TableParser as Table
-import EFA.Utility.List (vlast)
-
-import qualified Data.Map as Map
-import qualified Data.NonEmpty as NonEmpty; import Data.NonEmpty ((!:))
-import qualified Data.Empty as Empty
-import qualified Data.Vector.Unboxed as UV
-
-import qualified EFA.Flow.Topology.Index as TopoIdx
--}
 import qualified EFA.Report.FormatValue as FormatValue
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Application.Optimisation.Sweep (Sweep)
 import qualified Data.Vector.Unboxed as UV
 import qualified EFA.IO.TableParser as Table
 import qualified EFA.Signal.Vector as SV
-import Modules.Input.System (Node)
+import qualified Data.Text.Lazy as LazyText
 
+_term :: t -> b -> IO DefaultTerm.T
 _term _ = ModPlot.gpXTerm
+
+_dotTerm:: b -> Canonical.DotGraph LazyText.Text -> IO ()
 _dotTerm dir = ModPlot.dotXTerm dir
+
+_stoPos :: TopoIdx.Position System.Node
 _stoPos = TopoIdx.Position System.Water System.Network
+
+_gasPos :: TopoIdx.Position System.Node
 _gasPos = TopoIdx.Position System.Gas System.LocalNetwork
+
 {-
 printBalanceLoopItem ::
   (Show node,UV.Unbox b,
@@ -123,7 +106,8 @@ printBalanceLoopItem _optParams _b@(_bStp, Loop.BalanceLoopItem _bForcing _bFSte
 --      Output.maxPerState _term  _b,
       Output.simulation _dotTerm _b]
 
-
+printEtaLoopItem :: Params.Optimisation node [] Sweep UV.Vector a -> 
+                    (Loop.Counter, Loop.EtaLoopItem node Sweep UV.Vector a z)-> IO ()
 printEtaLoopItem _params _loopItem = concurrentlyMany_ [
   putStrLn $ Loop.showEtaLoopItem _params _loopItem
   ]

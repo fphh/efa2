@@ -7,6 +7,7 @@ module EFA.Data.ND.Cube.Grid where
 
 import EFA.Utility(Caller,ModuleName(..),(|>),FunctionName, genCaller)
 import qualified EFA.Data.Vector as DV
+--import qualified EFA.Reference.Base as Ref
 
 import qualified EFA.Data.ND as ND
 import qualified EFA.Data.Axis.Strict as Axis
@@ -24,6 +25,8 @@ nc = genCaller m
 
 type Grid typ dim label vec a = ND.Data dim (Axis.Axis typ label vec a)
 
+--instance Ref.ToData Grid where
+--  toData (Grid vec) = Ref.SingleData "Grid" $ toData vec
 
 type DimIdx dim = ND.Data dim Axis.Idx
 
