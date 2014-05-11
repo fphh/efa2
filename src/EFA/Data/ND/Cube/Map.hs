@@ -21,7 +21,7 @@ import qualified EFA.Reference.Base as Ref
 import qualified Data.Map as Map
 
 
-import EFA.Data.Interpolation as Interp
+import EFA.Data.Interpolation as DataInterp
 
 import qualified Prelude as P
 import Prelude hiding (zipWith, map, foldl)
@@ -180,7 +180,7 @@ getSubCube ::
 getSubCube caller (Cube grid (Data vec)) (Strict.Idx idx) = Cube (ND.dropFirst (caller |> nc "getSubCube") grid) $ Data subVec
   where subVec = DV.slice startIdx l vec
         startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
-        l = mytrace 0 "getSubCube" "l" $ Strict.len $ ND.getFirst (caller |> nc "getSubCube") grid
+        l = mytrace 0 "getSubCube" "l" $ P.foldl (*) 1 $ P.map Strict.len $ ND.toList $ ND.dropFirst (caller |> nc "getSubCube") grid
 
 interpolate ::
   (Ord a,Arith.Constant b,Num b,DV.LookupMaybe vec b,
@@ -190,11 +190,11 @@ interpolate ::
    DV.Find vec,
    DV.Storage vec b, DV.Slice vec) =>
   Caller ->
-  ((a,a) -> (b,b) -> a -> Interp.Val b) ->
+  ((a,a) -> (b,b) -> a -> DataInterp.Val b) ->
   Cube typ dim label vec a b ->
   (ND.Data dim a) ->
-  Interp.Val b
-interpolate caller interpFunction cube coordinates = Interp.combine3 y1 y2 y
+  DataInterp.Val b
+interpolate caller interpFunction cube coordinates = DataInterp.combine3 y1 y2 y
   where
     newCaller = (caller |> (nc "interpolate"))
     axis = mytrace 0 "interpolate" "axis" $ ND.getFirst newCaller $
@@ -204,9 +204,9 @@ interpolate caller interpFunction cube coordinates = Interp.combine3 y1 y2 y
     ((idx1,idx2),(x1,x2)) = Strict.getSupportPoints axis x
     f idx = interpolate newCaller interpFunction (getSubCube newCaller cube idx) subCoordinates
     (y1,y2) = if ND.len coordinates >=2 then (f idx1, f idx2)
-              else (Interp.Inter $ lookUp newCaller (ND.Data [idx1]) cube,
-                    Interp.Inter $ lookUp newCaller (ND.Data [idx2]) cube)
-    y = interpFunction (x1,x2) (Interp.unpack y1,Interp.unpack y2) x
+              else (DataInterp.Inter $ lookUp newCaller (ND.Data [idx1]) cube,
+                    DataInterp.Inter $ lookUp newCaller (ND.Data [idx2]) cube)
+    y = interpFunction (x1,x2) (DataInterp.unpack y1,DataInterp.unpack y2) x
 
 dimension :: ND.Dimensions dim => Cube typ dim label vec a b -> Int
 dimension (Cube grid _) = ND.num grid
