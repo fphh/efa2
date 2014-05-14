@@ -167,9 +167,6 @@ zipWith caller f (Cube grid (Data vec)) (Cube grid1 (Data vec1)) =
   if grid == grid1 then Cube grid $ Data $ DV.zipWith f vec vec1
                    else merror caller modul "zipWith" "Grid differ"
 
---getData :: Cube typ dim label vec a b -> vec b
---getData (Cube _ dat) = dat
-
 -- | Removes the first Dimension
 getSubCube ::
   (DV.Storage vec b, DV.Slice vec,
@@ -181,6 +178,17 @@ getSubCube caller (Cube grid (Data vec)) (Strict.Idx idx) = Cube (ND.dropFirst (
   where subVec = DV.slice startIdx l vec
         startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
         l = mytrace 0 "getSubCube" "l" $ P.foldl (*) 1 $ P.map Strict.len $ ND.toList $ ND.dropFirst (caller |> nc "getSubCube") grid
+
+getSubCubes  :: 
+  (DV.Storage vec a,DV.FromList vec,
+   DV.Storage vec b,
+   DV.Slice vec,
+   DV.Length vec)=>
+  Caller ->
+  Cube typ dim label vec a b -> [(a,Cube typ (ND.SubDim dim) label vec a b)]
+getSubCubes caller cube = P.zip vals $ P.map (getSubCube caller cube) $ indexes
+  where indexes = P.map Strict.Idx [0..((Strict.len $ ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube)-1)]
+        vals = DV.toList $ Strict.getVec $ ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube
 
 interpolate ::
   (Ord a,Arith.Constant b,Num b,DV.LookupMaybe vec b,
@@ -251,3 +259,26 @@ extract caller cube@(Cube grid _) dims2Keep dims2Drop = Cube newGrid (Data newVe
         indexVec = Grid.reductionIndexVector grid dims2Drop
         newVec = DV.map (lookupLinUnsafe cube) indexVec
 
+
+tupleVec :: 
+  (DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec [a],
+   DV.Storage vec a,
+   DV.Storage vec (ND.Data dim a),
+   DV.Storage vec b,
+   DV.Storage vec (vec [a]),
+   DV.Storage vec (ND.Data dim a, b),
+   DV.Singleton vec,
+   DV.FromList vec) =>
+  Cube typ dim label vec a b -> vec (ND.Data dim a, b)
+tupleVec cube = getVector $ getData $ mapWithGrid (\ coordinate x -> (coordinate, x)) cube
+
+
+valueRange :: 
+  (Ord b, DV.Storage vec b, 
+   DV.Singleton vec)=>
+  Cube typ dim label vec a b -> (b,b)
+valueRange cube = DV.minmax $ getVector $ getData cube
+  
+  

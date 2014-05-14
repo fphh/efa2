@@ -18,18 +18,33 @@ import EFA.Data.Vector.Type (Edge)
 --import qualified EFA.Data.Type.Efa as Efa
 --import qualified EFA.Data.Type as Type
 --import qualified EFA.Data.Record as Record
-
-
+import qualified EFA.Data.Plot as DataPlot
+import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
 import qualified EFA.Data.Interpolation as Interp
-
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Data.Vector as V
 import qualified Data.Map as Map
+import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
+import Data.Foldable as Foldable
+import Data.List as List
 
+modul::ModuleName
+modul=ModuleName "Demo.Cube"
+
+nc = genCaller modul 
 
 interpFunction ::
   (Double, Double) -> (Double, Double) ->
   Double -> Interp.Val Double
 interpFunction = Interp.dim1 "main" Interp.Linear Interp.ExtrapLinear
+
+plot :: [(DataPlot.CutInfo ND.Dim2 String Double,
+          DataPlot.PlotInfo Double Double Double,
+          Plot3D.T Double Double Double)]
+plot = DataPlot.surface (nc "plot") id cube3D
+
+cube3D :: EFA.Data.ND.Cube.Map.Cube typ ND.Dim2 String [] Double Double
+cube3D = Cube.create (nc "cube") [("x",[1,2]),("y",[3,4])] [10,30,12,32]
 
 main :: IO()
 main = do
@@ -69,7 +84,7 @@ main = do
   let subCube = Cube.extract caller cube (ND.Data [ND.Idx 0])
                 (Map.fromList [(ND.Idx 1,Axis.Idx 0)])
 
-  print o
+{-  print o
   print z11
   print z12
   print z21
@@ -94,7 +109,10 @@ main = do
   print vec
   print cube
   print genCube
-  print subCube
+  print subCube -}
+
+  print $ Cube.getVector $ Cube.getData $ cube3D
+  DataPlot.run DefaultTerm.cons (DataPlot.blankFrameAttr "Hello") $ Foldable.fold $ map (\(x,y,z) -> z) plot
 
 
   
