@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE  TypeFamilies #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module EFA.Data.ND.Cube.Map where
 
@@ -19,9 +19,9 @@ import EFA.Signal.Data(Nil,(:>))
 import qualified EFA.Signal.Data as SD
 import qualified EFA.Reference.Base as Ref
 import qualified Data.Map as Map
+import qualified EFA.Data.OrdData as OrdData
 
-
-import EFA.Data.Interpolation as DataInterp
+import qualified EFA.Data.Interpolation as DataInterp
 
 import qualified Prelude as P
 import Prelude hiding (zipWith, map, foldl)

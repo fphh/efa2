@@ -17,6 +17,8 @@ nc :: FunctionName -> Caller
 nc = genCaller m
 
 -- | Datatype with strict monotonically rising values
+-- | typ can be edge oder mid and relates to whether data is related to an intervall or an edge
+
 data Axis typ label vec a = Axis {
   getLabel :: label,
   getVec :: vec a} deriving (Show,Eq)

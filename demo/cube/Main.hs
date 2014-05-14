@@ -10,7 +10,7 @@ import qualified EFA.Data.ND.Cube.Grid as Grid
 import EFA.Data.ND.Cube.Grid(Grid)
 --import qualified EFA.Data.Vector.Sweep as Sweep
 --import EFA.Data.Vector.Sweep (Sweep)
-import EFA.Data.Vector.Type (Edge)
+import EFA.Data.OrdData (Edge)
 --import qualified Data.NonEmpty as NonEmpty
 --import qualified EFA.Data.Collection as Collection
 --import qualified EFA.Data.Signal as Signal
@@ -46,13 +46,15 @@ plot = DataPlot.surface (nc "plot") id cube3D
 cube3D :: EFA.Data.ND.Cube.Map.Cube typ ND.Dim2 String [] Double Double
 cube3D = Cube.create (nc "cube") [("x",[1,2]),("y",[3,4])] [10,30,12,32]
 
+data Grid1
+
 main :: IO()
 main = do
   let caller = genCaller (ModuleName "Main") "main"
   let x =  V.fromList ["x1", "x2"] :: (V.Vector String)
   let y =  V.fromList ["y1","y2"]:: (V.Vector String)
   let z =  V.fromList ["z11","z12","z21","z22"]
-  let o = Cube.create caller [("x",x),("y",y)] z :: Cube Edge Dim2 String (V.Vector) String String
+  let o = Cube.create caller [("x",x),("y",y)] z :: Cube (Edge Grid1) Dim2 String (V.Vector) String String
   let z11 = Cube.lookupLin caller o (Grid.LinIdx 0)
   let z12 = Cube.lookupLin caller o (Grid.LinIdx 1)
   let z21 = Cube.lookupLin caller o (Grid.LinIdx 2)
@@ -65,8 +67,8 @@ main = do
   let x1 = V.fromList [1,2]
   let y1 = V.fromList [3,4]
   let z1 = V.fromList [11,12,21,22]
-  let sys1 = Grid.create caller [("x",x1),("y",y1)] :: Grid Edge Dim2 String V.Vector Double
-  let o1 = Cube.create caller [("x",x1),("y",y1)] z1 :: Cube Edge Dim2 String V.Vector Double Double
+  let sys1 = Grid.create caller [("x",x1),("y",y1)] :: Grid (Edge Grid1) Dim2 String V.Vector Double
+  let o1 = Cube.create caller [("x",x1),("y",y1)] z1 :: Cube (Edge Grid1) Dim2 String V.Vector Double Double
   let zInt = Cube.interpolate caller interpFunction o1 (ND.Data [1,3])
   let zInt2 = Cube.interpolate caller interpFunction o1 (ND.Data [1,4])
   let zInt3 = Cube.interpolate caller interpFunction o1 (ND.Data [2,3])
