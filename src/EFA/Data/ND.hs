@@ -2,9 +2,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
-
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module EFA.Data.ND where
 
+import qualified EFA.Value as Value
 import EFA.Utility(Caller,merror,ModuleName(..))
 import qualified EFA.Reference.Base as Ref
 
@@ -121,3 +123,9 @@ pointtoList (Point (Data xs)) = xs
 
 mapPoint :: (a -> b) -> Point dim a -> Point dim b
 mapPoint f (Point (Data xs)) = Point $ Data $ P.map f xs
+
+
+class GetValueRange d3data vec b where 
+  getValueRange :: 
+    (d3data :: * -> * -> * -> (* -> *) -> * -> * -> *) typ dim label vec a b -> 
+    Value.Range b 

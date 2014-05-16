@@ -39,13 +39,15 @@ module EFA.Data.Plot {-(
 import qualified EFA.Data.ND.Cube.Map as CubeMap
 import qualified EFA.Data.ND as ND
 
-
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Data.Vector as DV
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Colour as Colour
+
+import qualified EFA.Value.Type as ValueType
+import qualified EFA.Value as Value
 
 import EFA.Signal.Record (Record(Record))
 import EFA.Signal.Signal (TC, toSigList, getDisplayType)
@@ -88,6 +90,7 @@ import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
 import qualified EFA.Data.Axis.Strict as Strict
+import qualified EFA.Data.Axis as Axis
 
 import qualified Data.Map as Map
 import qualified Data.List as List
@@ -99,10 +102,11 @@ import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 
 import EFA.Utility.Trace(mytrace)
-
+import qualified EFA.Value.Type as Type
 import Prelude hiding (sequence)
 
 import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
+
 
 modul :: ModuleName
 modul = ModuleName "Data.Plot"
@@ -110,6 +114,94 @@ modul = ModuleName "Data.Plot"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
+{-
+data TicsInfo label = TicsInfo (Maybe label) [Double] ValueType.Dynamic
+                
+getTicsInfo ::
+  (Show label, Ord a,
+   DV.Storage vec a, 
+   DV.FromList vec, 
+   ValueType.GetDynamicType a, 
+   DV.Singleton vec, 
+   Value.ToDouble a) =>  
+  Strict.Axis typ label vec a -> TicsInfo label
+getTicsInfo axis = TicsInfo 
+  (Just $ Axis.getLabel axis) 
+  (map Value.toDouble $ DV.toList $ Axis.getVector axis) 
+  (Axis.getType axis)
+
+data RangeInfo = RangeInfo (Value.Range Double) (ValueType.Dynamic)
+
+getRangeInfo :: 
+  (Value.ToDouble a, 
+   Type.GetDynamicType a, 
+   Ord a, 
+   DV.Storage vec a, 
+   DV.Singleton vec) =>
+  vec a -> RangeInfo
+getRangeInfo dataVec = RangeInfo (fmap Value.toDouble range) 
+                      (ValueType.getDynamicType range)
+     where range = (\(x,y) -> Value.Range x y) $ DV.minmax dataVec                     
+
+data AxisInfo label = Tics (TicsInfo label) | Range RangeInfo
+-}
+
+data AxisInfo2 label = AxisInfo2 [Maybe label] (Value.Range Double) Tics2  [ValueType.Dynamic] deriving Show
+data Tics2 = NoTics2 | Tics2 [Double]  deriving Show
+
+fromAxis :: 
+  (DV.Storage vec a, Axis.GetInfo axis vec a,
+   DV.FromList vec,
+   Value.ToDouble a) => 
+  (axis:: * -> * -> (* -> *) -> * -> *) typ label vec a -> AxisInfo2 label
+fromAxis axis = 
+  AxisInfo2 [Just $ Axis.getLabel axis]  
+            (fmap Value.toDouble $ Axis.getRange axis)
+            (Tics2 $ map Value.toDouble $ DV.toList $ Axis.getVector axis)
+            [Axis.getType axis]
+  where
+  ax = (map Value.toDouble $ DV.toList $ Axis.getVector axis)
+
+fromRange :: 
+  (Value.ToDouble a, Ord a, 
+   DV.Storage vec a, DV.Singleton vec,
+   Type.GetDynamicType a) => 
+  vec a -> AxisInfo2 label
+fromRange dataVec = 
+  AxisInfo2 
+  [Nothing] 
+  (fmap Value.toDouble range)
+  NoTics2
+  [ValueType.getDynamicType range]
+     where range = (\(x,y) -> Value.Range x y) $ DV.minmax dataVec                     
+
+
+-- TODO: Tics better with set datatype ?
+combineTics :: Tics2 -> Tics2 -> Tics2
+combineTics NoTics2 NoTics2 = NoTics2
+combineTics (Tics2 xs) NoTics2 = Tics2 xs
+combineTics NoTics2 (Tics2 xs) = Tics2 xs
+combineTics (Tics2 xs) (Tics2 xs1) = Tics2 $ List.sort $ xs ++ xs1
+
+
+combineList :: [AxisInfo2 label] -> AxisInfo2 label
+combineList (x:xs) = foldl combine x xs 
+
+combine :: 
+  AxisInfo2 label -> 
+  AxisInfo2 label -> 
+  AxisInfo2 label  
+combine (AxisInfo2 label range tic typ) (AxisInfo2 label1 range1 tic1 typ1) =
+          (AxisInfo2 (label++label1) 
+           (Value.combineRange range range1) 
+           (combineTics tic tic1) 
+           (typ++typ1))
+
+makeAxisLabel :: Show label => AxisInfo2 label -> String
+makeAxisLabel (AxisInfo2 labels range tic types) = concat $ zipWith f labels types
+  where f (Just l) t = (show l) ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "], " 
+        f (Nothing) t = "-" ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "], "
+--Type.showUnit $ Type.getDisplayUnit
 
 -- | Generic IO Commands ---------------------------------------------------------------
 run ::
@@ -118,21 +210,6 @@ run ::
 run terminal frameAttr plt =
    void $ Plot.plotSync terminal $ Frame.cons frameAttr plt
 
-data RangeInfo a = NoData | PlotRange (a,a) | PlotAxis [a]
-type AxisInfo a = (Maybe String, RangeInfo a)
-data CutInfo dim label a = NoCut | Cut (ND.Data dim (label,a))
-
-data PlotInfo a b c = NoInfo | PlotInfo (AxisInfo a) (AxisInfo b) (RangeInfo c)
-
--- TODO -- check if show on Label is right or is FormatValue correct ?
-getAxisInfo ::
-  (Show label, 
-   DV.Storage vec a, 
-   DV.FromList vec) =>  
-  Strict.Axis typ label vec a -> AxisInfo a
-getAxisInfo axis = 
-  (Just $ show $ Strict.getLabel axis, 
-   PlotAxis $ DV.toList $ Strict.getVec axis)
 
 
 {-
@@ -185,121 +262,3 @@ lineColour :: Colour.Name -> LineSpec.T -> LineSpec.T
 lineColour = LineSpec.lineColor . ColourSpec.name . Colour.unpackName
 
 
--- | Plotting Surfaces -------------------------------------------------------------------------
-
-
-surfaceLineSpec :: LineSpec.T
-surfaceLineSpec =
-   LineSpec.pointSize 0.1 $
-   LineSpec.pointType 7 $
-   LineSpec.lineWidth 1 $
-   LineSpec.deflt
-
-surfFrameAttr ::
-   (AxisLabel tcX, AxisLabel tcY, Graph.C graph) =>
-   String -> tcX -> tcY -> Opts.T graph
-surfFrameAttr ti x y =
-   Opts.title ti $
-   Opts.add (Opt.custom "hidden3d" "") ["back offset 1 trianglepattern 3 undefined 1 altdiagonal bentover"] $
-   Opts.xLabel (genAxLabel x) $
-   Opts.yLabel (genAxLabel y) $
-   Opts.grid True $
-   Opts.deflt
-   
-blankFrameAttr ti =    
-   Opts.title ti $
-   Opts.add (Opt.custom "hidden3d" "") ["back offset 1 trianglepattern 3 undefined 1 altdiagonal bentover"] $
-   Opts.grid True $
-   Opts.deflt
-  
-
-surfaceBasic ::
-  (Atom.C b, Show a, Show b,Show label,
-   Atom.C a, Ord b,
-   Tuple.C b, Tuple.C a, 
-   DV.Storage vec (ND.Data ND.Dim1 a, b),
-   DV.Storage vec (ND.Data ND.Dim1 a),DV.Slice vec, 
-   DV.Length vec,
-   DV.FromList vec,
-   DV.Zipper vec,
-   DV.Walker vec,
-   DV.Storage vec (vec [a]),
-   DV.Storage vec b,
-   DV.Storage vec (ND.Data ND.Dim2 a),
-   DV.Storage vec a,
-   DV.Storage vec [a],
-   DV.Singleton vec)=>
-   Caller ->
-   CubeMap.Cube typ ND.Dim2 label vec a b ->
-   (PlotInfo a a b, Plot3D.T a a b)
-surfaceBasic caller cube@(CubeMap.Cube grid _)= 
-  (plotInfo, Plot3D.mesh $ map formatData $ subCubes)
-   where
-     plotInfo = PlotInfo (head axesInfo) (head $ tail axesInfo) (PlotRange $ CubeMap.valueRange cube)
-     subCubes = CubeMap.getSubCubes (caller |> nc "getSubCube") cube
-     formatData (x,subCube) = map (\ (dimData,z) -> (x,ND.unsafeLookup dimData $ ND.Idx 0, 
-                                        z)) $ DV.toList $ CubeMap.tupleVec subCube
-     axesInfo = map getAxisInfo $ ND.toList grid
-
-
--- TODO: Erweiterung auf ND
--- TODO: Labels generieren
-     
-class Surface dim label vec a b where
-  surface :: Caller ->
-             (LineSpec.T -> LineSpec.T) ->
-             CubeMap.Cube typ dim label vec a b ->
-             [(CutInfo dim label a, PlotInfo a a b,Plot3D.T a a b)]
-
-instance 
-  (Show b,
-   Show a,Ord b, Show label,
-   DV.Zipper vec,
-   DV.Walker vec,
-   DV.Storage vec [a],
-   DV.Storage vec a,
-   DV.Storage vec (ND.Data ND.Dim2 a),
-   DV.Storage vec b,
-   DV.Storage vec (vec [a]),
-   DV.Storage vec (ND.Data ND.Dim1 a),
-   DV.Storage vec (ND.Data ND.Dim1 a, b),
-   DV.Slice vec,
-   DV.Singleton vec,
-   DV.Length vec,
-   DV.FromList vec,
-   Tuple.C a,
-   Tuple.C b,
-   Atom.C a,
-   Atom.C b) =>
-      Surface ND.Dim2 label vec a b where
-   surface caller opts cube = [(NoCut,plotInfo,plot)]
-     where (plotInfo, plot) = surfaceBasic caller cube
-       
-
-{-
-instance 
-  (Show b,Format.Format [Char], FormatValue a,
-   Show a,Ord b, Show label,
-   DV.Zipper vec,
-   DV.Walker vec,
-   DV.Storage vec [a],
-   DV.Storage vec (ND.Data ND.Dim2 a),
-   DV.Storage vec (vec [a]),
-   DV.Storage vec (ND.Data ND.Dim1 a),
-   DV.Storage vec (ND.Data ND.Dim1 a, b),
-   DV.Singleton vec,
-   Tuple.C a,
-   Tuple.C b,
-   Atom.C a,
-   Atom.C b, 
-   DV.Storage vec a,
-   DV.Storage vec b,
-   DV.Slice vec,
-   DV.Length vec,
-   DV.FromList vec)=>
-       Surface ND.Dim3 label vec a b where
-   surface caller opts cube = map f $ CubeMap.getSubCubes caller cube 
-     where f (xVal , subCube) = (DimInfo (Dim.Data , surfaceBasic caller subCube)
-           where g PlotInfo 
-
--}

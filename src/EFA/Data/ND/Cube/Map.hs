@@ -8,6 +8,10 @@ module EFA.Data.ND.Cube.Map where
 
 import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
 
+import qualified EFA.Value as Value 
+import qualified EFA.Value.Type as Type 
+import qualified EFA.Data.ND as ND 
+
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Data.Vector as DV
 import qualified EFA.Data.ND as ND
@@ -35,23 +39,28 @@ modul = ModuleName "Cube.Map"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-data Cube typ dim label vec a b = Cube {
-  getGrid :: Grid typ dim label vec a,
-  getData :: Data typ dim vec b } deriving (Show,Eq)
+data Cube inst dim label vec a b = Cube {
+  getGrid :: Grid inst dim label vec a,
+  getData :: Data inst dim vec b } deriving (Show,Eq)
 
 instance (Show label, Ref.ToData (vec a), Ref.ToData (vec b)) =>
-         Ref.ToData (Cube typ dim label vec a b) where
+         Ref.ToData (Cube inst dim label vec a b) where
   toData (Cube grid dat) = Ref.DoubleType "Cube" (Ref.toData grid) (Ref.toData dat)
 
-data Data typ dim vec a = Data { getVector :: vec a} deriving (Show,Eq)
+data Data inst dim vec a = Data { getVector :: vec a} deriving (Show,Eq)
 
-instance (Ref.ToData (vec a)) => Ref.ToData (Data typ dim vec a) where
+instance (Ref.ToData (vec a)) => Ref.ToData (Data inst dim vec a) where
   toData (Data vec) = Ref.SingleType "Cube.Data" $ Ref.toData vec
+
+instance (Ord b, DV.Storage vec b, DV.Singleton vec) => 
+         ND.GetValueRange  Cube vec b where
+  getValueRange = (\(x,y) -> Value.Range x y) . DV.minmax . getVector . getData 
+
 
 lookupLin ::
   (DV.LookupMaybe vec b,
   Show (vec b)) =>
-  Caller -> Cube typ dim label vec a b -> Grid.LinIdx -> b
+  Caller -> Cube inst dim label vec a b -> Grid.LinIdx -> b
 lookupLin caller (Cube _ (Data vec)) (Grid.LinIdx idx) =
   fromMaybe e $ DV.lookupMaybe vec idx
   where e = merror caller modul "lookupLinear"
@@ -59,20 +68,20 @@ lookupLin caller (Cube _ (Data vec)) (Grid.LinIdx idx) =
 
 lookupLinUnsafe ::
   DV.LookupUnsafe vec b =>
-  Cube typ dim label vec a b -> Grid.LinIdx -> b
+  Cube inst dim label vec a b -> Grid.LinIdx -> b
 lookupLinUnsafe (Cube _ (Data vec)) (Grid.LinIdx idx) = DV.lookupUnsafe vec idx
 
 lookUp ::
   (DV.LookupMaybe vec b,
    DV.Storage vec a,Show (vec b),
    DV.Length vec) =>
-  Caller -> Grid.DimIdx dim -> Cube typ dim label vec a b -> b
+  Caller -> Grid.DimIdx dim -> Cube inst dim label vec a b -> b
 lookUp caller idx cube@(Cube grid _) = lookupLin (caller |> nc "lookUp") cube index
   where index = Grid.toLinear grid idx
 
 checkVector ::
   (DV.Storage vec b, DV.Length vec,DV.Storage vec a) =>
-  Grid typ dim label vec a -> vec b -> Bool
+  Grid inst dim label vec a -> vec b -> Bool
 checkVector (ND.Data grid) vec =  DV.length vec == numberElements
   where numberElements = P.foldl (*) (1) (fmap Strict.len grid)
 
@@ -87,7 +96,7 @@ create ::
    DV.Length vec,
    ND.Dimensions dim
   ) =>
-  Caller -> [(label,vec a)] -> vec b -> Cube typ dim label vec a b
+  Caller -> [(label,Type.Dynamic,vec a)] -> vec b -> Cube inst dim label vec a b
 create caller xs vec =
   let grid = Grid.create (caller |> (nc "create")) xs
   in if checkVector grid vec
@@ -105,14 +114,14 @@ generateWithGrid ::
    DV.Storage vec [a],
    DV.Singleton vec,
    DV.FromList vec) =>
-   (ND.Data dim a -> b) -> Grid typ dim label vec a -> Cube typ dim label vec a b
+   (ND.Data dim a -> b) -> Grid inst dim label vec a -> Cube inst dim label vec a b
 generateWithGrid f grid =  Cube grid $ Data $ DV.map f (Grid.toVector grid)
 
 map ::
   (DV.Walker vec,
    DV.Storage vec c,
    DV.Storage vec b) =>
-  (b -> c) -> Cube typ dim label vec a b -> Cube typ dim label vec a c
+  (b -> c) -> Cube inst dim label vec a b -> Cube inst dim label vec a c
 map f (Cube grid (Data vec)) = (Cube grid $ Data $ DV.map f vec)
 
 
@@ -126,12 +135,12 @@ mapWithGrid ::
   DV.Storage vec [a],
   DV.Singleton vec,
   DV.Storage vec (ND.Data dim a, b)) =>
- (ND.Data dim a -> b -> c) -> Cube typ dim label vec a b -> Cube typ dim label vec a c
+ (ND.Data dim a -> b -> c) -> Cube inst dim label vec a b -> Cube inst dim label vec a c
 mapWithGrid f (Cube grid (Data vec))  = (Cube grid $ Data $ DV.map (\(x,y) -> f x y) $
                                   DV.zip (Grid.toVector grid) $ vec)
 
 foldl ::(DV.Walker vec, DV.Storage vec b)=>
- (acc -> b -> acc) -> acc -> Cube typ dim label vec a b -> acc
+ (acc -> b -> acc) -> acc -> Cube inst dim label vec a b -> acc
 foldl f acc (Cube _ (Data vec)) = DV.foldl f acc vec
 
 foldlWithGrid ::
@@ -142,14 +151,14 @@ foldlWithGrid ::
    DV.Storage vec b,
    DV.Storage vec (ND.Data dim a),
    DV.Storage vec (ND.Data dim a, b),
-   DV.Walker (Strict.Axis typ label vec),
-   DV.Storage (Strict.Axis typ label vec) a,
-   DV.Storage (Strict.Axis typ label vec) (vec [a]),
+   DV.Walker (Strict.Axis inst label vec),
+   DV.Storage (Strict.Axis inst label vec) a,
+   DV.Storage (Strict.Axis inst label vec) (vec [a]),
    DV.Storage vec a,
    DV.Storage vec [a],
    DV.Singleton vec,
-   DV.FromList (Strict.Axis typ label vec)) =>
-  (acc -> (ND.Data dim a, b) -> acc) -> acc -> Cube typ dim label vec a b -> acc
+   DV.FromList (Strict.Axis inst label vec)) =>
+  (acc -> (ND.Data dim a, b) -> acc) -> acc -> Cube inst dim label vec a b -> acc
 foldlWithGrid f acc (Cube grid (Data vec)) = DV.foldl f acc $ DV.zip (Grid.toVector grid) vec
 
 zipWith ::
@@ -157,12 +166,12 @@ zipWith ::
    DV.Storage vec d,
    DV.Storage vec c,
    DV.Storage vec b,
-   Eq (Grid typ dim label vec a)) =>
+   Eq (Grid inst dim label vec a)) =>
   Caller ->
   (b -> c -> d) ->
-  Cube typ dim label vec a b ->
-  Cube typ dim label vec a c ->
-  Cube typ dim label vec a d
+  Cube inst dim label vec a b ->
+  Cube inst dim label vec a c ->
+  Cube inst dim label vec a d
 zipWith caller f (Cube grid (Data vec)) (Cube grid1 (Data vec1)) =
   if grid == grid1 then Cube grid $ Data $ DV.zipWith f vec vec1
                    else merror caller modul "zipWith" "Grid differ"
@@ -172,8 +181,8 @@ getSubCube ::
   (DV.Storage vec b, DV.Slice vec,
    DV.Storage vec a, DV.Length vec) =>
   Caller ->
-  Cube typ dim label vec a b ->
-  Strict.Idx -> Cube typ (ND.SubDim dim) label vec a b
+  Cube inst dim label vec a b ->
+  Strict.Idx -> Cube inst (ND.SubDim dim) label vec a b
 getSubCube caller (Cube grid (Data vec)) (Strict.Idx idx) = Cube (ND.dropFirst (caller |> nc "getSubCube") grid) $ Data subVec
   where subVec = DV.slice startIdx l vec
         startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
@@ -181,14 +190,15 @@ getSubCube caller (Cube grid (Data vec)) (Strict.Idx idx) = Cube (ND.dropFirst (
 
 getSubCubes  :: 
   (DV.Storage vec a,DV.FromList vec,
-   DV.Storage vec b,
+   DV.Storage vec b, -- DV.Storage vec (label, a),
    DV.Slice vec,
    DV.Length vec)=>
   Caller ->
-  Cube typ dim label vec a b -> [(a,Cube typ (ND.SubDim dim) label vec a b)]
+  Cube inst dim label vec a b -> [((label,a), Cube inst (ND.SubDim dim) label vec a b)]
 getSubCubes caller cube = P.zip vals $ P.map (getSubCube caller cube) $ indexes
   where indexes = P.map Strict.Idx [0..((Strict.len $ ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube)-1)]
-        vals = DV.toList $ Strict.getVec $ ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube
+        vals = P.map (\x -> (label,x)) $ DV.toList $ Strict.getVec $ ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube
+        label =  Strict.getLabel $ ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube
 
 interpolate ::
   (Ord a,Arith.Constant b,Num b,DV.LookupMaybe vec b,
@@ -199,7 +209,7 @@ interpolate ::
    DV.Storage vec b, DV.Slice vec) =>
   Caller ->
   ((a,a) -> (b,b) -> a -> DataInterp.Val b) ->
-  Cube typ dim label vec a b ->
+  Cube inst dim label vec a b ->
   (ND.Data dim a) ->
   DataInterp.Val b
 interpolate caller interpFunction cube coordinates = DataInterp.combine3 y1 y2 y
@@ -216,7 +226,7 @@ interpolate caller interpFunction cube coordinates = DataInterp.combine3 y1 y2 y
                     DataInterp.Inter $ lookUp newCaller (ND.Data [idx2]) cube)
     y = interpFunction (x1,x2) (DataInterp.unpack y1,DataInterp.unpack y2) x
 
-dimension :: ND.Dimensions dim => Cube typ dim label vec a b -> Int
+dimension :: ND.Dimensions dim => Cube inst dim label vec a b -> Int
 dimension (Cube grid _) = ND.num grid
 
 to2DSignal ::
@@ -227,7 +237,7 @@ to2DSignal ::
      DV.Storage vec a,
      DV.Length vec) =>
     Caller ->
-    Cube typ dim label vec a b ->
+    Cube inst dim label vec a b ->
     Sig.TC Sig.Signal t (SD.Data (vec :> vec :> Nil) b)
 to2DSignal caller (Cube grid (Data vec)) = Sig.TC $ SD.Data $ DV.imap f $ Strict.getVec axis
       where
@@ -249,10 +259,10 @@ extract ::
    DV.Length vec,
    DV.Singleton vec) =>
   Caller ->
-  Cube typ dim label vec a b ->
+  Cube inst dim label vec a b ->
   ND.Data dim2 (ND.Idx) ->
   Map.Map ND.Idx Strict.Idx ->
-  Cube typ dim2 label vec a b
+  Cube inst dim2 label vec a b
 extract caller cube@(Cube grid _) dims2Keep dims2Drop = Cube newGrid (Data newVec)
   where newGrid = Grid.extract newCaller grid dims2Keep
         newCaller =  caller |> nc "extractCube"
@@ -271,14 +281,14 @@ tupleVec ::
    DV.Storage vec (ND.Data dim a, b),
    DV.Singleton vec,
    DV.FromList vec) =>
-  Cube typ dim label vec a b -> vec (ND.Data dim a, b)
+  Cube inst dim label vec a b -> vec (ND.Data dim a, b)
 tupleVec cube = getVector $ getData $ mapWithGrid (\ coordinate x -> (coordinate, x)) cube
 
 
 valueRange :: 
   (Ord b, DV.Storage vec b, 
    DV.Singleton vec)=>
-  Cube typ dim label vec a b -> (b,b)
+  Cube inst dim label vec a b -> (b,b)
 valueRange cube = DV.minmax $ getVector $ getData cube
   
   
