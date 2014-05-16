@@ -262,3 +262,4 @@ lineColour :: Colour.Name -> LineSpec.T -> LineSpec.T
 lineColour = LineSpec.lineColor . ColourSpec.name . Colour.unpackName
 
 
+data PlotInfo id a = PlotInfo (Maybe id) (Maybe a)

@@ -6,6 +6,8 @@ import qualified EFA.Data.Plot.D3 as PlotD3
 
 import qualified EFA.Value as Value
 import qualified EFA.Value.Type as Type
+import qualified EFA.Value.Type.Efa as E
+import qualified EFA.Value.Type.Physical as P
 
 import EFA.Data.ND (Dim2)
 import EFA.Utility (genCaller,ModuleName(ModuleName))
@@ -56,8 +58,8 @@ interpFunction = Interp.dim1 "main" Interp.Linear Interp.ExtrapLinear
 --cube3D :: EFA.Data.ND.Cube.Map.Cube typ ND.Dim2 String [] Double Double
 --cube3D = Cube.create (nc "cube") [("x",Type.P,[1,2]),("y",Type.UT,[3,4])] [10,30,12,32]
 
-cube4D :: EFA.Data.ND.Cube.Map.Cube typ ND.Dim3 String [] Double Double
-cube4D = Cube.create (nc "cube") [("x",Type.P,[1,2]),("y",Type.P,[3,4]),("z",Type.P,[7,8])] [10,30,12,32,13,33,10,30]
+cube4D :: EFA.Data.ND.Cube.Map.Cube typ ND.Dim3 String [] Double (Type.TC E.F P.E Double)
+cube4D = Cube.create (nc "cube") [("x",Type.P,[1,2]),("y",Type.P,[3,4]),("z",Type.P,[7,8])] $ map Type.TC [10,30,12,32,13,33,10,30]
 
 
 data Grid1
@@ -131,7 +133,10 @@ main = do
  -- PlotD3.allInOneIO DefaultTerm.cons (PlotD3.blankFrame "Hallo") PlotD3.blankStyle $ PlotCube.toPlotData (nc "plot") (Just "Test") cube3D
   print cube4D
   print $  map (\(PlotD3.PlotData _ r _) -> r) $  PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
-  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.blankFrame2 "Hallo") PlotD3.blankStyle $ PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.blankFrame2 "Hallo") 
+    --PlotD3.blankStyle $ 
+    PlotD3.plotInfo3lineTitles $
+    PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
 
 
   

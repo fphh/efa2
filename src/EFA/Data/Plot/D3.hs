@@ -114,11 +114,16 @@ modul = ModuleName "Data.Plot"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-data CutInfo id label = NoCut (Maybe id) | Cut (Maybe id) [(label, Double, Type.Dynamic)] deriving Show
+--data Cut id label = NoCut (Maybe id) | Cut (Maybe id) [(label, Double, Type.Dynamic)] deriving Show
+data Cut label = Cut [(label, Double, Type.Dynamic)] deriving Show
+
+showCut :: Show label => Cut label -> String
+showCut  (Cut xs) = "Cut" ++ (concat $ map f xs) 
+  where f (label, x, typ) =  show label ++ " " ++ show x ++ " " ++ show typ 
 
 -- | Datatype extracting r
 data PlotData id label a b = 
-  PlotData (CutInfo id label) (D3RangeInfo label) (Plot3D.T a a b)
+  PlotData (DataPlot.PlotInfo id (Cut label)) (D3RangeInfo label) (Plot3D.T a a b)
                            
 data D3RangeInfo label = D3RangeInfo 
   (DataPlot.AxisInfo2 label)  
@@ -160,6 +165,17 @@ blankFrame ::
   (Opts.T (Graph3D.T a a b))
 blankFrame title _ = Opts.title title $ defaultFrameAttr
 
+plotInfo2lineTitle :: (Show id, Show label) => DataPlot.PlotInfo id (Cut label) -> (LineSpec.T -> LineSpec.T)
+plotInfo2lineTitle (DataPlot.PlotInfo (Just ident) (Just cut))  = LineSpec.title $ show ident ++ " " ++ show cut
+plotInfo2lineTitle (DataPlot.PlotInfo Nothing (Just cut))  =  LineSpec.title $ show cut
+plotInfo2lineTitle (DataPlot.PlotInfo (Just ident) Nothing)  =  LineSpec.title $ show ident
+plotInfo2lineTitle (DataPlot.PlotInfo Nothing Nothing)  =  LineSpec.title ""
+
+
+plotInfo3lineTitles :: (Show label, Show id) => Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)
+plotInfo3lineTitles idx (PlotData info _ _) = plotInfo2lineTitle info
+
+        
 {-blankFrame :: 
   (Atom.C a, Atom.C b) => 
   String -> 
@@ -190,12 +206,12 @@ blankFrame2 title xs =
 allInOneIO ::(Terminal.C terminal, Atom.C a, Atom.C b)=> 
   terminal ->
   ([PlotData id label a b] ->  Opts.T (Graph3D.T a a b)) -> 
-  (Int -> PlotData id label a b -> (Plot3D.T a a b -> Plot3D.T a a b)) -> 
+  (Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)) ->
   [PlotData id label a b] -> 
   IO()
 allInOneIO terminal makeFrameStyle setGraphStyle xs = 
   DataPlot.run terminal (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
-  where g (idx,plotData@(PlotData _ _ plot)) = setGraphStyle idx plotData $ plot
+  where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
 
 
 eachIO :: (Terminal.C terminal, Atom.C a, Atom.C b)=> 

@@ -22,3 +22,6 @@ instance (GetDynamicType a) => Type.GetDynamicType (Range a) where
   
 combineRange :: Ord a => Range a -> Range a -> Range a  
 combineRange (Range mi ma) (Range mi1 ma1) = Range (min mi mi1) (max ma ma1) 
+
+instance (ToDouble a) => ToDouble (Type.TC efa phy a) where 
+  toDouble (TC x) = toDouble x

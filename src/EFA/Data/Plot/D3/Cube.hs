@@ -183,10 +183,12 @@ basic ::
    DV.Storage vec [a],
    DV.Singleton vec)=>
    Caller ->
-   PlotD3.CutInfo id label ->
+   Maybe id ->
+   Maybe (PlotD3.Cut label) ->
    CubeMap.Cube typ ND.Dim2 label vec a b ->
    PlotD3.PlotData id label a b
-basic caller cut cube@(CubeMap.Cube grid _) = PlotD3.PlotData cut (getD3RangeInfo cube) plot
+basic caller ident cut cube@(CubeMap.Cube grid _) = 
+  PlotD3.PlotData (DataPlot.PlotInfo ident cut) (getD3RangeInfo cube) plot
    where
      subCubes = CubeMap.getSubCubes (caller |> nc "getSubCube") cube
      plot = Plot3D.mesh $ map (\((_,x),subCube) -> map (\(ND.Data [y],z) -> (x,y,z)) $ 
@@ -224,7 +226,7 @@ instance
    Atom.C a,
    Atom.C b) =>
       Surface ND.Dim2 label vec a b where
-   toPlotData caller id cube = [basic caller (PlotD3.NoCut id) cube]
+   toPlotData caller ident cube = [basic caller ident Nothing cube]
        
 instance 
   (Ord b, Ord a,
@@ -254,6 +256,6 @@ instance
    Tuple.C b)=>
         Surface ND.Dim3 label vec a b where
    toPlotData caller ident cube = map f $ CubeMap.getSubCubes caller cube 
-     where f ((label,x) , subCube) = basic caller (PlotD3.Cut ident [(label, Value.toDouble x, Type.getDynamicType x)]) subCube
+     where f ((label,x) , subCube) = basic caller ident (Just $ PlotD3.Cut [(label, Value.toDouble x, Type.getDynamicType x)]) subCube
 
 

@@ -1,16 +1,31 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module EFA.Value.Type where
 
 import EFA.Value.Type.Physical as P
 import EFA.Value.Type.Efa as E
+-- import EFA.Value as Value
+import Graphics.Gnuplot.Value.Tuple as Tuple
+import Graphics.Gnuplot.Value.Atom as Atom
 
-newtype TC efa phy a = TC a deriving Show
+
+newtype TC efa phy a = TC a deriving (Show,Eq,Ord)
+
+instance Tuple.C a => Tuple.C (TC efa phy a) where
+  text (TC x) = text x
+
+instance Atom.C (TC efa phy a) where
+
+
 
 class GetDynamicType a where
   getDynamicType :: a -> Dynamic
 
 instance GetDynamicType Double where getDynamicType _ = UT
+instance GetDynamicType (TC E.T P.P a) where getDynamicType _ = P                                     
+instance GetDynamicType (TC E.F P.E a) where getDynamicType _ = E                                     
+                                    
 
 data Dynamic = 
   P
