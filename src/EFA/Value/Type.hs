@@ -41,7 +41,6 @@ class Wrap e p where
   wrap :: TC e p a -> Wrapper a
   
 instance Wrap E.T P.P where wrap x = Wrap_P x
-  
                     
 class UnWrap e p where                    
   unWrap :: Wrapper a -> TC e p a
@@ -67,3 +66,17 @@ getDisplayUnit P = Unit_kW
 getDisplayUnit E = Unit_kWh
 getDisplayUnit UT = Unit_UT
 getDisplayUnit x = (error $ "Error EFA.Value.Type, getDisplayUnit - not implemented yet: " ++ show x)
+
+newtype UnitScale = UnitScale Rational
+
+-- | get display scale per Unit
+getUnitScale :: DisplayUnit -> UnitScale
+getUnitScale Unit_kWh = UnitScale (1/1000/3600)
+getUnitScale Unit_Joule = UnitScale 1
+getUnitScale Unit_kJoule = UnitScale (1/1000)
+getUnitScale Unit_None = UnitScale 1
+getUnitScale Unit_Percent = UnitScale 100
+getUnitScale Unit_Sec = UnitScale 1
+getUnitScale Unit_kW = UnitScale (1/1000)
+getUnitScale Unit_UT = UnitScale 1
+getUnitScale Unit_W = UnitScale 1

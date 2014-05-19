@@ -133,7 +133,11 @@ main = do
  -- PlotD3.allInOneIO DefaultTerm.cons (PlotD3.blankFrame "Hallo") PlotD3.blankStyle $ PlotCube.toPlotData (nc "plot") (Just "Test") cube3D
   print cube4D
   print $  map (\(PlotD3.PlotData _ r _) -> r) $  PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
-  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.blankFrame2 "Hallo") 
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") 
+    --PlotD3.blankStyle $ 
+    PlotD3.plotInfo3lineTitles $
+    PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
+  PlotD3.eachIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") 
     --PlotD3.blankStyle $ 
     PlotD3.plotInfo3lineTitles $
     PlotCube.toPlotData (nc "plot") (Just "Test") cube4D

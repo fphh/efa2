@@ -107,6 +107,7 @@ import EFA.Utility.Trace(mytrace)
 import Prelude hiding (sequence)
 
 import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
+import qualified Data.List as List
 
 modul :: ModuleName
 modul = ModuleName "Data.Plot"
@@ -117,6 +118,7 @@ nc = genCaller modul
 --data Cut id label = NoCut (Maybe id) | Cut (Maybe id) [(label, Double, Type.Dynamic)] deriving Show
 data Cut label = Cut [(label, Double, Type.Dynamic)] deriving Show
 
+-- TODO showCut, dispCut -- wie eigene show functionen benennen ?
 showCut :: Show label => Cut label -> String
 showCut  (Cut xs) = "Cut" ++ (concat $ map f xs) 
   where f (label, x, typ) =  show label ++ " " ++ show x ++ " " ++ show typ 
@@ -126,22 +128,27 @@ data PlotData id label a b =
   PlotData (DataPlot.PlotInfo id (Cut label)) (D3RangeInfo label) (Plot3D.T a a b)
                            
 data D3RangeInfo label = D3RangeInfo 
-  (DataPlot.AxisInfo2 label)  
-  (DataPlot.AxisInfo2 label) 
-  (DataPlot.AxisInfo2 label) deriving Show
+  (DataPlot.AxisInfo label)  
+  (DataPlot.AxisInfo label) 
+  (DataPlot.AxisInfo label) deriving Show
 
-combine :: 
+collectPlotIds ::  (Show id) => [PlotData id label a b] -> [Maybe id]
+collectPlotIds xs = map f xs
+  where   f (PlotData (DataPlot.PlotInfo x _) _ _) = x
+
+
+combineRange :: 
   D3RangeInfo label -> 
   D3RangeInfo label -> 
   D3RangeInfo label
-combine (D3RangeInfo x y z) (D3RangeInfo x1 y1 z1) = 
+combineRange (D3RangeInfo x y z) (D3RangeInfo x1 y1 z1) = 
   D3RangeInfo 
   (DataPlot.combine x x1)
   (DataPlot.combine y y1)
   (DataPlot.combine z z1)
     
-combineList :: [D3RangeInfo label] -> D3RangeInfo label
-combineList (x:xs) = foldl combine x xs
+combineRangeList :: [D3RangeInfo label] -> D3RangeInfo label
+combineRangeList (x:xs) = foldl combineRange x xs
 
 class GetD3RangeInfo d3data where
   getD3RangeInfo :: 
@@ -166,11 +173,8 @@ blankFrame ::
 blankFrame title _ = Opts.title title $ defaultFrameAttr
 
 plotInfo2lineTitle :: (Show id, Show label) => DataPlot.PlotInfo id (Cut label) -> (LineSpec.T -> LineSpec.T)
-plotInfo2lineTitle (DataPlot.PlotInfo (Just ident) (Just cut))  = LineSpec.title $ show ident ++ " " ++ show cut
-plotInfo2lineTitle (DataPlot.PlotInfo Nothing (Just cut))  =  LineSpec.title $ show cut
-plotInfo2lineTitle (DataPlot.PlotInfo (Just ident) Nothing)  =  LineSpec.title $ show ident
-plotInfo2lineTitle (DataPlot.PlotInfo Nothing Nothing)  =  LineSpec.title ""
-
+plotInfo2lineTitle (DataPlot.PlotInfo _ (Just cut))  = LineSpec.title $ show cut
+plotInfo2lineTitle (DataPlot.PlotInfo _ Nothing)  =  LineSpec.title $ ""
 
 plotInfo3lineTitles :: (Show label, Show id) => Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)
 plotInfo3lineTitles idx (PlotData info _ _) = plotInfo2lineTitle info
@@ -191,15 +195,16 @@ blankFrame title xs = Opts.title title $ defaultFrameAttr
   [PlotData id label a b] -> 
   (Opts.T graph -> Opts.T graph) -}
 
-blankFrame2 title xs = 
+labledFrame title xs = 
   Opts.xLabel (DataPlot.makeAxisLabel ax1) $
   Opts.yLabel (DataPlot.makeAxisLabel ax2) $
-  Opts.zLabel (DataPlot.makeAxisLabel ax3) $ 
+  Opts.zLabel (DataPlot.makeAxisLabelWithIds plotIds ax3) $ 
   Opts.title title $ defaultFrameAttr
   where 
-    D3RangeInfo ax1 ax2 ax3 = combineList rs
+    D3RangeInfo ax1 ax2 ax3 = combineRangeList rs
     rs = map f xs
     f (PlotData _ rangeInfo _) = rangeInfo
+    plotIds = collectPlotIds xs
 
 
 
@@ -217,10 +222,10 @@ allInOneIO terminal makeFrameStyle setGraphStyle xs =
 eachIO :: (Terminal.C terminal, Atom.C a, Atom.C b)=> 
   terminal ->
   ([PlotData id label a b] ->  Opts.T (Graph3D.T a a b)) -> 
-  (Int -> PlotData id label a b -> (Plot3D.T a a b -> Plot3D.T a a b)) -> 
+  (Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)) -> 
   [PlotData id label a b] -> 
   IO()  
 eachIO terminal makeFrameStyle setGraphStyle xs = 
   mapM_ (DataPlot.run terminal (makeFrameStyle xs)) $ map g $ zip [0..] xs
-  where g (idx,plotData@(PlotData _ _ plot)) = setGraphStyle idx plotData $ plot
+  where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData $ LineSpec.deflt) plot
 

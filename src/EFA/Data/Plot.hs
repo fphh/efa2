@@ -106,7 +106,7 @@ import qualified EFA.Value.Type as Type
 import Prelude hiding (sequence)
 
 import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
-
+import Data.List as List
 
 modul :: ModuleName
 modul = ModuleName "Data.Plot"
@@ -146,16 +146,16 @@ getRangeInfo dataVec = RangeInfo (fmap Value.toDouble range)
 data AxisInfo label = Tics (TicsInfo label) | Range RangeInfo
 -}
 
-data AxisInfo2 label = AxisInfo2 [Maybe label] (Value.Range Double) Tics2  [ValueType.Dynamic] deriving Show
+data AxisInfo label = AxisInfo [Maybe label] (Value.Range Double) Tics2  [ValueType.Dynamic] deriving Show
 data Tics2 = NoTics2 | Tics2 [Double]  deriving Show
 
 fromAxis :: 
   (DV.Storage vec a, Axis.GetInfo axis vec a,
    DV.FromList vec,
    Value.ToDouble a) => 
-  (axis:: * -> * -> (* -> *) -> * -> *) typ label vec a -> AxisInfo2 label
+  (axis:: * -> * -> (* -> *) -> * -> *) typ label vec a -> AxisInfo label
 fromAxis axis = 
-  AxisInfo2 [Just $ Axis.getLabel axis]  
+  AxisInfo [Just $ Axis.getLabel axis]  
             (fmap Value.toDouble $ Axis.getRange axis)
             (Tics2 $ map Value.toDouble $ DV.toList $ Axis.getVector axis)
             [Axis.getType axis]
@@ -166,9 +166,9 @@ fromRange ::
   (Value.ToDouble a, Ord a, 
    DV.Storage vec a, DV.Singleton vec,
    Type.GetDynamicType a) => 
-  vec a -> AxisInfo2 label
+  vec a -> AxisInfo label
 fromRange dataVec = 
-  AxisInfo2 
+  AxisInfo 
   [Nothing] 
   (fmap Value.toDouble range)
   NoTics2
@@ -184,23 +184,53 @@ combineTics NoTics2 (Tics2 xs) = Tics2 xs
 combineTics (Tics2 xs) (Tics2 xs1) = Tics2 $ List.sort $ xs ++ xs1
 
 
-combineList :: [AxisInfo2 label] -> AxisInfo2 label
+combineList :: [AxisInfo label] -> AxisInfo label
 combineList (x:xs) = foldl combine x xs 
 
 combine :: 
-  AxisInfo2 label -> 
-  AxisInfo2 label -> 
-  AxisInfo2 label  
-combine (AxisInfo2 label range tic typ) (AxisInfo2 label1 range1 tic1 typ1) =
-          (AxisInfo2 (label++label1) 
+  AxisInfo label -> 
+  AxisInfo label -> 
+  AxisInfo label  
+combine (AxisInfo label range tic typ) (AxisInfo label1 range1 tic1 typ1) =
+          (AxisInfo (label++label1) 
            (Value.combineRange range range1) 
            (combineTics tic tic1) 
            (typ++typ1))
+{-          
+combineWithId :: 
+  (AxisInfo label, PlotInfo id a) ->         
+  (AxisInfo label, PlotInfo id a) -> 
+  AxisInfo label
+combine 
+  (AxisInfo label range tic typ, PlotInfo ident) 
+  (AxisInfo label1 range1 tic1 typ1, PlotInfo ident1) =
+          (AxisInfo (label++label1) 
+           (Value.combineRange range range1) 
+           (combineTics tic tic1) 
+           (typ++typ1))
+-}  
+  
 
-makeAxisLabel :: Show label => AxisInfo2 label -> String
-makeAxisLabel (AxisInfo2 labels range tic types) = concat $ zipWith f labels types
-  where f (Just l) t = (show l) ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "], " 
-        f (Nothing) t = "-" ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "], "
+makeAxisLabel :: Show label => AxisInfo label -> String
+makeAxisLabel (AxisInfo labels range tic types) = 
+  if all (== head labelList) labelList 
+  then head labelList 
+  else  List.intercalate "," labelList 
+  where f (Just l) t = (show l) ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] " 
+        f (Nothing) t = "-" ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] "
+        labelList = zipWith f labels types
+
+makeAxisLabelWithIds  :: Show id => [Maybe id] -> AxisInfo label -> String
+makeAxisLabelWithIds xs (AxisInfo labels range tic types) = 
+  if all (== head labelList) labelList 
+  then head labelList 
+  else  List.intercalate "," labelList 
+    where f (Just l) t = (show l) ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] " 
+          f (Nothing) t = "-" ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] "
+          labelList = zipWith f xs types
+
+
+
 --Type.showUnit $ Type.getDisplayUnit
 
 -- | Generic IO Commands ---------------------------------------------------------------
