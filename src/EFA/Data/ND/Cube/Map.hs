@@ -194,11 +194,13 @@ getSubCubes  ::
    DV.Slice vec,
    DV.Length vec)=>
   Caller ->
-  Cube inst dim label vec a b -> [((label,a), Cube inst (ND.SubDim dim) label vec a b)]
+  Cube inst dim label vec a b -> [((label,Type.Dynamic,a), Cube inst (ND.SubDim dim) label vec a b)]
 getSubCubes caller cube = P.zip vals $ P.map (getSubCube caller cube) $ indexes
   where indexes = P.map Strict.Idx [0..((Strict.len $ ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube)-1)]
-        vals = P.map (\x -> (label,x)) $ DV.toList $ Strict.getVec $ ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube
+        vals = P.map (\x -> (label,typ,x)) $ DV.toList $ Strict.getVec $ axis
         label =  Strict.getLabel $ ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube
+        axis = ND.getFirst (caller |> nc "getSubCubes") $ getGrid cube
+        typ = Strict.getType axis
 
 interpolate ::
   (Ord a,Arith.Constant b,Num b,DV.LookupMaybe vec b,
@@ -247,27 +249,6 @@ to2DSignal caller (Cube grid (Data vec)) = Sig.TC $ SD.Data $ DV.imap f $ Strict
           where
             startIdx = mytrace 0 "getSubCube" "startIdx" $ idx*l
 
-extract ::
-  (DV.Walker vec,
-   DV.Storage vec a,
-   DV.Storage vec Strict.Idx,DV.LookupUnsafe vec b,
-   DV.FromList vec,
-   DV.Storage vec b, DV.Storage vec Grid.LinIdx,
-   DV.Storage vec (ND.Data dim Strict.Idx),
-   DV.Storage vec [Strict.Idx],
-   DV.Storage vec (vec [Strict.Idx]),
-   DV.Length vec,
-   DV.Singleton vec) =>
-  Caller ->
-  Cube inst dim label vec a b ->
-  ND.Data dim2 (ND.Idx) ->
-  Map.Map ND.Idx Strict.Idx ->
-  Cube inst dim2 label vec a b
-extract caller cube@(Cube grid _) dims2Keep dims2Drop = Cube newGrid (Data newVec)
-  where newGrid = Grid.extract newCaller grid dims2Keep
-        newCaller =  caller |> nc "extractCube"
-        indexVec = Grid.reductionIndexVector grid dims2Drop
-        newVec = DV.map (lookupLinUnsafe cube) indexVec
 
 
 tupleVec :: 
@@ -291,4 +272,62 @@ valueRange ::
   Cube inst dim label vec a b -> (b,b)
 valueRange cube = DV.minmax $ getVector $ getData cube
   
-  
+-- | Extract a subcube (dims2keep) at a given location
+-- TODO -- make sure subCubeDimensions and location match each other
+extract ::
+  (DV.Walker vec,
+   DV.Storage vec a,
+   DV.Storage vec Strict.Idx,DV.LookupUnsafe vec b,
+   DV.FromList vec,
+   DV.Storage vec b, DV.Storage vec Grid.LinIdx,
+   DV.Storage vec (ND.Data dim Strict.Idx),
+   DV.Storage vec [Strict.Idx],
+   DV.Storage vec (vec [Strict.Idx]),
+   Show (vec Grid.LinIdx),
+   Show (vec Strict.Idx),
+   Show label,
+   Show (vec (ND.Data dim Strict.Idx)),
+   DV.Length vec,
+   DV.Singleton vec) =>
+  Caller ->
+  Cube inst dim label vec a b ->
+  ND.Data dim2 ND.Idx ->
+  Map.Map ND.Idx Strict.Idx ->
+  Cube inst2 dim2 label vec a b
+extract caller cube@(Cube grid _) subCubeDimensions location = Cube newGrid (Data newVec)
+  where newGrid = Grid.extract newCaller grid subCubeDimensions
+        newCaller =  caller |> nc "extractCube"
+        indexVec = Grid.reductionIndexVector grid location
+        newVec = DV.map (lookupLinUnsafe cube) indexVec
+
+extractAll ::  
+  (DV.Walker vec,
+   DV.Storage vec (vec [Strict.Idx]),
+   DV.LookupUnsafe vec a,
+   DV.Storage vec [Strict.Idx],
+   DV.Storage vec (ND.Data dim Strict.Idx),
+   DV.Storage vec Grid.LinIdx,
+   DV.Storage vec b,
+   DV.Storage vec Strict.Idx,
+   DV.Storage vec a,
+   DV.Singleton vec,
+   DV.LookupUnsafe vec b,
+   DV.Length vec,
+   DV.FromList vec, 
+   Show (vec (ND.Data dim Strict.Idx)),
+   Show label,
+   Show (vec Strict.Idx),
+   Show (vec Grid.LinIdx),
+   ND.Dimensions dim) =>
+  Caller ->
+  Cube inst dim label vec a b ->
+  ND.Data dim2 (ND.Idx) ->
+  [(Map.Map ND.Idx (label,Type.Dynamic,a),Cube inst2 dim2 label vec a b)] 
+extractAll caller cube@(Cube grid _) dims2Keep = P.map f extractList
+  where
+    extractList = Grid.genExtractList (caller |> nc "extractCube2D") grid dims2Keep
+    f location = (Map.mapWithKey g location, 
+                  extract (caller |> nc "extractCube2D") cube dims2Keep location)
+    g dimIdx axIdx = (Strict.getLabel axis, Strict.getType axis, Strict.lookupUnsafe axis axIdx)    
+      where axis = Grid.getAxis (caller |> nc "extractCube2D") grid dimIdx  
+

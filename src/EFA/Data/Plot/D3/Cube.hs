@@ -37,6 +37,8 @@ module EFA.Data.Plot.D3.Cube {-(
        where
 
 import qualified EFA.Data.ND.Cube.Map as CubeMap
+import qualified EFA.Data.ND.Cube.Grid as CubeGrid
+
 import qualified EFA.Data.ND as ND
 import qualified EFA.Value.Type as Type
 
@@ -143,18 +145,16 @@ blankFrameAttr ti =
 -- TODO:: CUBE Dim2 == Dim3 korrigieren
 
 getD3RangeInfo :: 
-  (Show label, Ord a,
+  (Show label, Ord a, Constant a, Constant b,
    Type.GetDynamicType a,
-   Value.ToDouble a,
    DV.Storage vec a,
    DV.FromList vec, 
    Ord b,
    Type.GetDynamicType b,
-   Value.ToDouble b,
    DV.Storage vec b,
    DV.Singleton vec) => 
   CubeMap.Cube typ ND.Dim2 label vec a b ->
-  PlotD3.D3RangeInfo label
+  PlotD3.D3RangeInfo label a b
 getD3RangeInfo cube@(CubeMap.Cube grid dat) = PlotD3.D3RangeInfo 
                                             (head axesInfo)
                                             (head $ tail axesInfo)
@@ -164,12 +164,14 @@ getD3RangeInfo cube@(CubeMap.Cube grid dat) = PlotD3.D3RangeInfo
     rangeInfo = DataPlot.fromRange $ (CubeMap.getVector $ CubeMap.getData cube)
 
 
-basic ::
-  (Atom.C b, Show a, Show b,Show label,Type.GetDynamicType a,
-                      Value.ToDouble a,
+-- TODO: ist es unsauber die b mit UniScale zu multiplizieren ?
+
+basic ::(
+   Atom.C b, Show a, Show b,Show label,Type.GetDynamicType a,
+   Constant a, Constant b,Value.ToDisplayUnit b,
    Atom.C a, Ord b,Ord a,
    Tuple.C b, Tuple.C a, 
-   Type.GetDynamicType b, Value.ToDouble b,
+   Type.GetDynamicType b, 
    DV.Storage vec (ND.Data ND.Dim1 a, b),
    DV.Storage vec (ND.Data ND.Dim1 a),DV.Slice vec, 
    DV.Length vec,
@@ -184,15 +186,18 @@ basic ::
    DV.Singleton vec)=>
    Caller ->
    Maybe id ->
-   Maybe (PlotD3.Cut label) ->
+   Maybe (PlotD3.Cut label a) ->
    CubeMap.Cube typ ND.Dim2 label vec a b ->
    PlotD3.PlotData id label a b
-basic caller ident cut cube@(CubeMap.Cube grid _) = 
-  PlotD3.PlotData (DataPlot.PlotInfo ident cut) (getD3RangeInfo cube) plot
+basic caller ident cut cube@(CubeMap.Cube (grid) _) = 
+  PlotD3.PlotData (DataPlot.PlotInfo ident cut) (getD3RangeInfo cube) $ Plot3D.mesh plotData
    where
      subCubes = CubeMap.getSubCubes (caller |> nc "getSubCube") cube
-     plot = Plot3D.mesh $ map (\((_,x),subCube) -> map (\(ND.Data [y],z) -> (x,y,z)) $ 
+     plotData = map (\((_,_,x),subCube) -> map (\(ND.Data [y],z) -> (Value.toDisplayUnit' typx x,
+                                                                     Value.toDisplayUnit' typy y,
+                                                                     Value.toDisplayUnit z)) $ 
                                                DV.toList $ CubeMap.tupleVec subCube) subCubes
+     [typx,typy] = map Strict.getType $ ND.toList grid           
 
 
 -- TODO: Erweiterung auf ND
@@ -205,8 +210,9 @@ class Surface dim label vec a b where
              [PlotD3.PlotData id label a b]
 
 instance 
-  (Show b, Type.GetDynamicType a, 
-   Value.ToDouble a, Ord a,
+ 
+   (Show b, Type.GetDynamicType a, Constant b, Constant a,Value.ToDisplayUnit b,
+   Ord a,
    Show a,Ord b, Show label,
    DV.Zipper vec,
    DV.Walker vec,
@@ -217,7 +223,7 @@ instance
    DV.Storage vec (vec [a]),
    DV.Storage vec (ND.Data ND.Dim1 a),
    DV.Storage vec (ND.Data ND.Dim1 a, b),
-   DV.Slice vec,Type.GetDynamicType b, Value.ToDouble b,
+   DV.Slice vec,Type.GetDynamicType b, 
    DV.Singleton vec,
    DV.Length vec,
    DV.FromList vec,
@@ -227,13 +233,13 @@ instance
    Atom.C b) =>
       Surface ND.Dim2 label vec a b where
    toPlotData caller ident cube = [basic caller ident Nothing cube]
-       
+      
 instance 
   (Ord b, Ord a,
    Show label,
    Show b,
    Show a,
-   Type.GetDynamicType b,
+   Type.GetDynamicType b,Constant b, Constant a, Value.ToDisplayUnit b,
    Type.GetDynamicType a,
    DV.Zipper vec,
    DV.Walker vec,
@@ -248,14 +254,13 @@ instance
    DV.Singleton vec,
    DV.Length vec,
    DV.FromList vec,
-   Value.ToDouble b,
-   Value.ToDouble a,
    Atom.C a,
    Atom.C b,
    Tuple.C a,
    Tuple.C b)=>
         Surface ND.Dim3 label vec a b where
    toPlotData caller ident cube = map f $ CubeMap.getSubCubes caller cube 
-     where f ((label,x) , subCube) = basic caller ident (Just $ PlotD3.Cut [(label, Value.toDouble x, Type.getDynamicType x)]) subCube
+     where f ((label,typ,x) , subCube) = basic caller ident (Just $ PlotD3.Cut [(label, Value.toDisplayUnit' typ x, typ)]) subCube
+
 
 

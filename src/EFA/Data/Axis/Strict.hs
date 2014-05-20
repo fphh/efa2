@@ -29,6 +29,9 @@ data Axis inst label vec a = Axis {
   getType :: Type.Dynamic,
   getVec :: vec a} deriving (Show,Eq)
 
+newInstance :: Axis inst label vec a -> Axis inst2 label vec a
+newInstance (Axis label vec a) = Axis label vec a
+
 instance (Show label,Ref.ToData (vec a)) =>
          Ref.ToData (Axis inst label vec a) where
   toData (Axis label typ vec) = Ref.TripleType "Axis" 
@@ -108,4 +111,4 @@ getSupportPoints ::
 getSupportPoints axis x = ((leftIndex,rightIndex),
                                  (lookupUnsafe axis leftIndex, lookupUnsafe axis rightIndex))
   where rightIndex = findRightInterpolationIndex axis x
-        leftIndex = indexAdd rightIndex (-1)  
+        leftIndex = indexAdd rightIndex (-1)

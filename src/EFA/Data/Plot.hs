@@ -146,51 +146,52 @@ getRangeInfo dataVec = RangeInfo (fmap Value.toDouble range)
 data AxisInfo label = Tics (TicsInfo label) | Range RangeInfo
 -}
 
-data AxisInfo label = AxisInfo [Maybe label] (Value.Range Double) Tics2  [ValueType.Dynamic] deriving Show
-data Tics2 = NoTics2 | Tics2 [Double]  deriving Show
+data AxisInfo label a = AxisInfo [Maybe label] (Value.Range a) (Tics2  a) [ValueType.Dynamic] deriving Show
+data Tics2 a = NoTics2 | Tics2 [a]  deriving Show
 
 fromAxis :: 
-  (DV.Storage vec a, Axis.GetInfo axis vec a,
-   DV.FromList vec,
-   Value.ToDouble a) => 
-  (axis:: * -> * -> (* -> *) -> * -> *) typ label vec a -> AxisInfo label
+  (Constant a, DV.Storage vec a, Axis.GetInfo axis vec a,
+   DV.FromList vec) => 
+  (axis:: * -> * -> (* -> *) -> * -> *) typ label vec a -> AxisInfo label a
 fromAxis axis = 
   AxisInfo [Just $ Axis.getLabel axis]  
-            (fmap Value.toDouble $ Axis.getRange axis)
-            (Tics2 $ map Value.toDouble $ DV.toList $ Axis.getVector axis)
-            [Axis.getType axis]
+            (fmap (Value.toDisplayUnit' typ) $ Axis.getRange axis)
+            (Tics2 $ map (Value.toDisplayUnit' typ) $ DV.toList $ Axis.getVector axis)
+            [typ]
   where
-  ax = (map Value.toDouble $ DV.toList $ Axis.getVector axis)
+  ax = (DV.toList $ Axis.getVector axis)
+  typ = Axis.getType axis
 
 fromRange :: 
-  (Value.ToDouble a, Ord a, 
+  (Ord a, Constant a,
    DV.Storage vec a, DV.Singleton vec,
    Type.GetDynamicType a) => 
-  vec a -> AxisInfo label
+  vec a -> AxisInfo label a
 fromRange dataVec = 
   AxisInfo 
   [Nothing] 
-  (fmap Value.toDouble range)
+  (fmap (Value.toDisplayUnit' typ) range)
   NoTics2
-  [ValueType.getDynamicType range]
-     where range = (\(x,y) -> Value.Range x y) $ DV.minmax dataVec                     
+  [typ]
+     where range = (\(x,y) -> Value.Range x y) $ DV.minmax dataVec                  
+           typ = ValueType.getDynamicType range
 
 
 -- TODO: Tics better with set datatype ?
-combineTics :: Tics2 -> Tics2 -> Tics2
+combineTics :: Ord a => Tics2 a -> Tics2  a -> Tics2 a
 combineTics NoTics2 NoTics2 = NoTics2
 combineTics (Tics2 xs) NoTics2 = Tics2 xs
 combineTics NoTics2 (Tics2 xs) = Tics2 xs
 combineTics (Tics2 xs) (Tics2 xs1) = Tics2 $ List.sort $ xs ++ xs1
 
 
-combineList :: [AxisInfo label] -> AxisInfo label
+combineList :: Ord a => [AxisInfo label a] -> AxisInfo label a
 combineList (x:xs) = foldl combine x xs 
 
-combine :: 
-  AxisInfo label -> 
-  AxisInfo label -> 
-  AxisInfo label  
+combine :: Ord a => 
+  AxisInfo label a -> 
+  AxisInfo label a -> 
+  AxisInfo label a 
 combine (AxisInfo label range tic typ) (AxisInfo label1 range1 tic1 typ1) =
           (AxisInfo (label++label1) 
            (Value.combineRange range range1) 
@@ -211,7 +212,7 @@ combine
 -}  
   
 
-makeAxisLabel :: Show label => AxisInfo label -> String
+makeAxisLabel :: Show label => AxisInfo label a -> String
 makeAxisLabel (AxisInfo labels range tic types) = 
   if all (== head labelList) labelList 
   then head labelList 
@@ -220,7 +221,7 @@ makeAxisLabel (AxisInfo labels range tic types) =
         f (Nothing) t = "-" ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] "
         labelList = zipWith f labels types
 
-makeAxisLabelWithIds  :: Show id => [Maybe id] -> AxisInfo label -> String
+makeAxisLabelWithIds  :: Show id => [Maybe id] -> AxisInfo label a -> String
 makeAxisLabelWithIds xs (AxisInfo labels range tic types) = 
   if all (== head labelList) labelList 
   then head labelList 

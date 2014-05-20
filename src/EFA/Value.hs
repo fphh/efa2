@@ -8,7 +8,7 @@ module EFA.Value where
 
 import EFA.Value.Type as Type
 import EFA.Equation.Arithmetic as Arith
-
+{-
 -- | Conversion to Double
 class ToDouble a where 
   toDouble :: a -> Double  
@@ -22,15 +22,40 @@ instance ToDouble Rational where
 
 instance (Constant a, GetDynamicType (TC efa phy a),ToDouble a) => ToDouble (TC efa phy a) where 
   toDouble (TC x) = toDouble x
-  
-{-
-class ToDisplayData efa phy a where  
-  toDisplayUnit :: TC efa phy a -> a
-  
-instance (Constant a, GetDynamicType (TC efa phy a)) => ToDisplayData efa phy a where 
-  toDisplayUnit tx@(TC x) = (Arith.fromRational scale) Arith.~* x
-    where (UnitScale scale) =  Type.getUnitScale $ Type.getDisplayUnit $ Type.getDynamicType tx
+-}  
+
+toDisplayUnit' :: (Constant a) => Type.Dynamic -> a -> a
+toDisplayUnit' typ x = (Arith.fromRational scale) Arith.~* x
+  where (UnitScale scale) = Type.getUnitScale $ Type.getDisplayUnit typ
+
+instance (Constant a,Product (TC efa phy a)) => Arith.Constant (TC efa phy a) where
+  zero = TC $ Arith.zero 
+  fromRational = TC . Arith.fromRational
+  fromInteger = TC . Arith.fromInteger
+
+instance (Product a, Sum (TC efa phy a)) => Arith.Product (TC efa phy a) where
+  (~*) (TC x) (TC y) = TC $ x Arith.~* y
+  (~/) (TC x) (TC y) = TC $ x Arith.~/ y
+  recip (TC x) = Arith.recip (TC x)
+  constOne (TC x) = TC (Arith.constOne x)
+
+instance Sum a => Arith.Sum (TC efa phy a) where
+  (~+) (TC x) (TC y) = TC $ x Arith.~+ y
+  (~-) (TC x) (TC y) = TC $ x Arith.~- y
+  negate (TC x) = Arith.negate (TC x)
+
+
+
+class ToDisplayUnit a where  
+--  toDisplayUnit :: TC efa phy a -> TC efa phy a
+  toDisplayUnit :: a -> a
+{-  
+instance (Constant a, GetDynamicType (TC efa phy a)) => ToDisplayUnit efa phy a where 
+  toDisplayUnit tx@(TC x) = TC $ toDisplayUnit' (Type.getDynamicType tx) x
 -}
+
+instance (Constant a, GetDynamicType (TC efa phy a)) => ToDisplayUnit (TC efa phy a) where 
+  toDisplayUnit tx@(TC x) = TC $ toDisplayUnit' (Type.getDynamicType tx) x
 
 -- | DataType to provide Min and Max Value  
 data Range a = Range {getMin :: a, 

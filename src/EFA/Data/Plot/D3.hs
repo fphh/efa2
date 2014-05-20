@@ -116,44 +116,44 @@ nc :: FunctionName -> Caller
 nc = genCaller modul
 
 --data Cut id label = NoCut (Maybe id) | Cut (Maybe id) [(label, Double, Type.Dynamic)] deriving Show
-data Cut label = Cut [(label, Double, Type.Dynamic)] deriving Show
+data Cut label a = Cut [(label, a, Type.Dynamic)] deriving Show
 
 -- TODO showCut, dispCut -- wie eigene show functionen benennen ?
-showCut :: Show label => Cut label -> String
+showCut :: (Show label, Show a) => Cut label a -> String
 showCut  (Cut xs) = "Cut" ++ (concat $ map f xs) 
   where f (label, x, typ) =  show label ++ " " ++ show x ++ " " ++ show typ 
 
 -- | Datatype extracting r
 data PlotData id label a b = 
-  PlotData (DataPlot.PlotInfo id (Cut label)) (D3RangeInfo label) (Plot3D.T a a b)
+  PlotData (DataPlot.PlotInfo id (Cut label a)) (D3RangeInfo label a b) (Plot3D.T a a b)
                            
-data D3RangeInfo label = D3RangeInfo 
-  (DataPlot.AxisInfo label)  
-  (DataPlot.AxisInfo label) 
-  (DataPlot.AxisInfo label) deriving Show
+data D3RangeInfo label a b = D3RangeInfo 
+  (DataPlot.AxisInfo label a)  
+  (DataPlot.AxisInfo label a) 
+  (DataPlot.AxisInfo label b) deriving Show
 
 collectPlotIds ::  (Show id) => [PlotData id label a b] -> [Maybe id]
 collectPlotIds xs = map f xs
   where   f (PlotData (DataPlot.PlotInfo x _) _ _) = x
 
 
-combineRange :: 
-  D3RangeInfo label -> 
-  D3RangeInfo label -> 
-  D3RangeInfo label
+combineRange :: (Ord a, Ord b) =>
+  D3RangeInfo label a b -> 
+  D3RangeInfo label a b -> 
+  D3RangeInfo label a b
 combineRange (D3RangeInfo x y z) (D3RangeInfo x1 y1 z1) = 
   D3RangeInfo 
   (DataPlot.combine x x1)
   (DataPlot.combine y y1)
   (DataPlot.combine z z1)
     
-combineRangeList :: [D3RangeInfo label] -> D3RangeInfo label
+combineRangeList :: (Ord b, Ord a) => [D3RangeInfo label a b] -> D3RangeInfo label a b
 combineRangeList (x:xs) = foldl combineRange x xs
 
 class GetD3RangeInfo d3data where
   getD3RangeInfo :: 
     (d3data :: * -> * -> * -> (* -> *) -> * -> * -> *) typ dim label vec a b 
-    -> D3RangeInfo label
+    -> D3RangeInfo label a b
 
 
 defaultFrameAttr :: (Atom.C a, Atom.C b) => Opts.T (Graph3D.T a a b)
@@ -172,11 +172,11 @@ blankFrame ::
   (Opts.T (Graph3D.T a a b))
 blankFrame title _ = Opts.title title $ defaultFrameAttr
 
-plotInfo2lineTitle :: (Show id, Show label) => DataPlot.PlotInfo id (Cut label) -> (LineSpec.T -> LineSpec.T)
+plotInfo2lineTitle :: (Show id, Show a, Show label) => DataPlot.PlotInfo id (Cut label a) -> (LineSpec.T -> LineSpec.T)
 plotInfo2lineTitle (DataPlot.PlotInfo _ (Just cut))  = LineSpec.title $ show cut
 plotInfo2lineTitle (DataPlot.PlotInfo _ Nothing)  =  LineSpec.title $ ""
 
-plotInfo3lineTitles :: (Show label, Show id) => Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)
+plotInfo3lineTitles :: (Show label, Show id,Show a) => Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)
 plotInfo3lineTitles idx (PlotData info _ _) = plotInfo2lineTitle info
 
         

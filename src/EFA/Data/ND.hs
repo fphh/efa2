@@ -14,9 +14,11 @@ import Prelude hiding (map)
 import qualified Prelude as P
 
 import qualified Data.Map as Map
+import qualified Data.List as List
+
 
 m:: ModuleName
-m = ModuleName "Space"
+m = ModuleName "ND"
 
 data Dim1
 data Succ a
@@ -129,3 +131,8 @@ class GetValueRange d3data vec b where
   getValueRange :: 
     (d3data :: * -> * -> * -> (* -> *) -> * -> * -> *) typ dim label vec a b -> 
     Value.Range b 
+    
+
+getDims2Drop:: Dimensions dim => Data dim a -> Data dim1 Idx -> [Idx]
+getDims2Drop ndData dims2Keep = allDims List.\\ (toList dims2Keep)
+  where allDims = P.map Idx [0 .. (num ndData)-1]
