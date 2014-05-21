@@ -24,7 +24,9 @@ nc = genCaller modul
 
 newtype TC efa phy a = TC a deriving (Show,Eq,Ord)
 
-instance (Arith.Constant a,Arith.Product (TC efa phy a)) => Arith.Constant (TC efa phy a) where
+
+-- TODO .. Arith Klasse darf nur für UT gelten !!
+instance (Arith.Constant a,Arith.Product (TC efa P.UT a)) => Arith.Constant (TC efa phy a) where
   zero = TC $ Arith.zero
   fromRational = TC . Arith.fromRational
   fromInteger = TC . Arith.fromInteger

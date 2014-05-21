@@ -106,6 +106,7 @@ class Singleton vec where
    viewR :: (Storage vec d) => vec d -> Maybe (vec d, d)
    all :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
    any :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
+   replicate :: (Storage vec d) => Int -> d -> vec d
 
 
 _minmaxSemiStrict :: (Ord d) => (d, d) -> d -> (d, d)
@@ -150,6 +151,7 @@ instance Singleton V.Vector where
    viewR xs = toMaybe (not $ V.null xs) (V.init xs, V.last xs)
    all = V.all
    any = V.any
+   replicate = V.replicate
 
 instance Singleton UV.Vector where
    maximum x = readUnbox UV.maximum x
@@ -173,6 +175,7 @@ instance Singleton UV.Vector where
    viewR = readUnbox (\xs -> toMaybe (not $ UV.null xs) (UV.init xs, UV.last xs))
    all f = readUnbox (UV.all f)
    any f = readUnbox (UV.any f)
+   replicate leng x = writeUnbox (UV.replicate leng x)
 
 instance Singleton [] where
    maximum x = List.maximum x
@@ -191,6 +194,7 @@ instance Singleton [] where
    viewR = ListHT.viewR
    all = List.all
    any = List.any
+   replicate = List.replicate
 
 
 ------------------------------------------------------------

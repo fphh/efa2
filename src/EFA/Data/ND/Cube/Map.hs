@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module EFA.Data.ND.Cube.Map where
 
@@ -24,8 +25,11 @@ import qualified EFA.Signal.Data as SD
 import qualified EFA.Reference.Base as Ref
 import qualified Data.Map as Map
 --import qualified EFA.Data.OrdData as OrdData
+import qualified EFA.Report.FormatValue as FormatValue
 
 import qualified EFA.Data.Interpolation as DataInterp
+
+import qualified Test.QuickCheck as QC
 
 import qualified Prelude as P
 import Prelude hiding (zipWith, map, foldl)
@@ -43,11 +47,143 @@ data Cube inst dim label vec a b = Cube {
   getGrid :: Grid inst dim label vec a,
   getData :: Data inst dim vec b } deriving (Show,Eq)
 
+instance 
+  (DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec b,
+   Arith.Sum b) => 
+  Arith.Sum (Cube inst dim label vec a b) where
+  (Cube g x) ~+ (Cube _ y) = Cube g $ (Arith.~+) x y
+  {-# INLINE (~+) #-}
+
+  (Cube g x) ~- (Cube _ y) = Cube g $ (Arith.~-) x y
+  {-# INLINE (~-) #-}
+
+  negate (Cube g x) = Cube g $ Arith.negate x
+  {-# INLINE negate #-}
+
+instance 
+  (DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec b,
+   Arith.Sum b, 
+   DV.Singleton vec,
+   DV.Length vec,
+   Arith.Constant b) =>
+  Arith.Product (Cube inst dim label vec a b) where
+  (Cube g x) ~* (Cube _ y) = Cube g $(Arith.~*) x y
+  {-# INLINE (~*) #-}
+
+  (Cube g x) ~/ (Cube _ y) = Cube g $ (Arith.~/) x y
+  {-# INLINE (~/) #-}
+
+  recip (Cube g x) = Cube g $ Arith.recip x
+  {-# INLINE recip #-}
+
+  constOne (Cube g x) = Cube g $ Arith.constOne x
+  {-# INLINE constOne #-}
+
+instance 
+  (DV.Walker (Data inst dim vec),
+   DV.Storage (Data inst dim vec) b,
+   Arith.Constant b) =>
+  Arith.Integrate (Cube inst dim label vec a b) where
+  type Scalar (Cube inst dim label vec a b) = b
+  integrate (Cube _ d) = Arith.integrate d
+  {-# INLINE integrate #-}
+
 instance (Show label, Ref.ToData (vec a), Ref.ToData (vec b)) =>
          Ref.ToData (Cube inst dim label vec a b) where
   toData (Cube grid dat) = Ref.DoubleType "Cube" (Ref.toData grid) (Ref.toData dat)
 
 data Data inst dim vec a = Data { getVector :: vec a} deriving (Show,Eq)
+
+instance (Arith.Sum a, 
+          DV.Zipper vec, 
+          DV.Storage vec a, 
+          DV.Walker vec) => 
+         Arith.Sum (Data inst dim vec a) where
+  (Data x) ~+ (Data y) = Data $ DV.zipWith (Arith.~+) x y
+  {-# INLINE (~+) #-}
+
+  (Data x) ~- (Data y) = Data $ DV.zipWith (Arith.~-) x y
+  {-# INLINE (~-) #-}
+
+  negate (Data x) = Data $ DV.map Arith.negate x
+  {-# INLINE negate #-}
+
+
+instance 
+  (Arith.Product a, 
+   Arith.Constant a, 
+   DV.Zipper vec, 
+   DV.Walker vec, 
+   DV.Storage vec a, 
+   DV.Singleton vec, 
+   DV.Length vec) =>
+         Arith.Product (Data inst dim vec a) where
+  (Data x) ~* (Data y) = Data $ DV.zipWith (Arith.~*) x y
+  {-# INLINE (~*) #-}
+
+  (Data x) ~/ (Data y) = Data $ DV.zipWith (Arith.~/) x y
+  {-# INLINE (~/) #-}
+
+  recip (Data x) = Data $ DV.map Arith.recip x
+  {-# INLINE recip #-}
+
+  constOne (Data x) = Data $ DV.replicate (DV.length x) Arith.one
+  {-# INLINE constOne #-}
+
+instance 
+  (DV.Walker (Data inst dim vec),
+   Arith.Sum a, Arith.Constant a,
+   DV.Storage (Data inst dim vec) a) => 
+  Arith.Integrate (Data inst dim vec a) where
+  type Scalar (Data inst dim vec a) = a
+  integrate = DV.foldl (Arith.~+) Arith.zero
+  {-# INLINE integrate #-}
+
+{-
+instance Arith.Integrate (Data inst dim vec a) where
+  type Scalar (Data vec a) = (Data vec a)
+  integrate = id
+  {-# INLINE integrate #-}
+-}
+
+
+
+instance (
+  DV.Storage vec a, 
+  DV.Singleton vec, 
+  Arith.Constant a, 
+  Eq a, 
+  DV.Zipper vec, 
+  DV.Storage vec Bool) => 
+         Arith.ZeroTestable (Data inst dim vec a) where
+  allZeros (Data vec) = DV.all (Arith.zero ==) vec
+  {-# INLINE allZeros #-}
+
+  coincidingZeros (Data x) (Data y) =
+    DV.any (==True) $ DV.zipWith (\a b -> a == Arith.zero && b == Arith.zero) x y
+
+
+instance 
+  (DV.Storage (Data inst dim vec) a,
+   DV.FromList (Data inst dim vec),
+   FormatValue.FormatValue a) =>
+  FormatValue.FormatValue (Data inst dim vec a) where
+  formatValue = FormatValue.formatValue . DV.toList
+
+
+-- = Only testing
+instance (
+  QC.Arbitrary a, 
+  DV.Storage (Data inst dim vec) a,
+  DV.FromList (Data inst dim vec)) =>
+ QC.Arbitrary (Data inst dim vec a) where
+  arbitrary = fmap DV.fromList QC.arbitrary
+
+
 
 instance (Ref.ToData (vec a)) => Ref.ToData (Data inst dim vec a) where
   toData (Data vec) = Ref.SingleType "Cube.Data" $ Ref.toData vec

@@ -30,6 +30,9 @@ import EFA.Data.OrdData (Edge)
 --import qualified EFA.Data.Type as Type
 --import qualified EFA.Data.Record as Record
 import qualified EFA.Data.Plot as DataPlot
+import qualified EFA.Data.Sweep as Sweep
+
+
 import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
 import qualified Graphics.Gnuplot.Advanced as Plot
 
