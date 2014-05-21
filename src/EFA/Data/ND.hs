@@ -42,8 +42,8 @@ type Dim10 = Succ Dim9
 data Data dim a = Data [a] deriving (Show,Eq)
 
 instance Ref.ToData a => Ref.ToData (Data dim a) where
-  toData (Data xs) = Ref.DataMap "Dim.Data" $ Map.fromList $ 
-                     P.zip (P.map show [(0::Integer)..]) $ P.map Ref.toData xs 
+  toData (Data xs) = Ref.DataMap "Dim.Data" $ Map.fromList $
+                     P.zip (P.map show [(0::Integer)..]) $ P.map Ref.toData xs
 
 instance Functor (Data dim) where
   fmap f (Data xs) = Data (fmap f xs)
@@ -127,11 +127,11 @@ mapPoint :: (a -> b) -> Point dim a -> Point dim b
 mapPoint f (Point (Data xs)) = Point $ Data $ P.map f xs
 
 
-class GetValueRange d3data vec b where 
-  getValueRange :: 
-    (d3data :: * -> * -> * -> (* -> *) -> * -> * -> *) typ dim label vec a b -> 
-    Value.Range b 
-    
+class GetValueRange d3data vec b where
+  getValueRange ::
+    (d3data :: * -> * -> * -> (* -> *) -> * -> * -> *) typ dim label vec a b ->
+    Value.Range b
+
 
 getDims2Drop:: Dimensions dim => Data dim a -> Data dim1 Idx -> [Idx]
 getDims2Drop ndData dims2Keep = allDims List.\\ (toList dims2Keep)

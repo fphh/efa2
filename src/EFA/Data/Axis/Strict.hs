@@ -9,11 +9,11 @@ import qualified EFA.Data.Vector as DV
 
 import qualified EFA.Data.Axis as Axis
 import qualified EFA.Value.Type as Type
-import qualified EFA.Value as Value 
+import qualified EFA.Value as Value
 
 import qualified EFA.Reference.Base as Ref
 
-import qualified Data.Map as Map
+--import qualified Data.Map as Map
 
 m :: ModuleName
 m = ModuleName "Axis.Axis"
@@ -34,9 +34,9 @@ newInstance (Axis label vec a) = Axis label vec a
 
 instance (Show label,Ref.ToData (vec a)) =>
          Ref.ToData (Axis inst label vec a) where
-  toData (Axis label typ vec) = Ref.TripleType "Axis" 
-                                (Ref.StringData "Label" (show label)) 
-                                (Ref.StringData "Typ" (show typ)) 
+  toData (Axis label typ vec) = Ref.TripleType "Axis"
+                                (Ref.StringData "Label" (show label))
+                                (Ref.StringData "Typ" (show typ))
                                 (Ref.toData vec)
 
 newtype Idx = Idx {getInt :: Int} deriving Show
@@ -44,10 +44,10 @@ newtype Idx = Idx {getInt :: Int} deriving Show
 instance Ref.ToData Idx where
   toData (Idx x) = Ref.StringData "Idx" (show x)
 
-instance 
+instance
   (Ord a,Type.GetDynamicType a,
-   DV.Storage vec a, 
-   DV.Singleton vec) 
+   DV.Storage vec a,
+   DV.Singleton vec)
   => Axis.GetInfo Axis vec a where
   getLabel axis = getLabel axis
   getVector axis = getVec axis

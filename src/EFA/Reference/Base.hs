@@ -47,8 +47,8 @@ data Test = Test (DirPath Rel) (Map.Map (FPath Rel) Data) deriving (Eq,Show)
 
 data Data = DataMap Type (Map.Map String Data)
             | StringData Type String
-            | SingleType Type Data  
-            | DoubleType Type Data Data  
+            | SingleType Type Data
+            | DoubleType Type Data Data
             | TripleType Type Data Data  Data
             | QuadrupleType Type Data  Data  Data Data
             | NumData Type Double deriving (Eq,Show,Read)

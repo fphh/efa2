@@ -8,11 +8,11 @@ module EFA.Test.Cube where
 
 import EFA.Signal.Signal
   (TC(TC),UTSignal,UTSignal2,--UTSignal3, viewL, viewR,
-   --interp1LinValid, 
+   --interp1LinValid,
    interp2WingProfileValid)
    --interp3WingProfileValid)
-  
-import qualified EFA.Value.Type as Type  
+
+import qualified EFA.Value.Type as Type
 import qualified EFA.Signal.Signal as Signal
 
 import EFA.Signal.Data (Data(Data), Nil) --, Apply)
@@ -21,13 +21,13 @@ import qualified EFA.Signal.Interp as Interp
 import EFA.Data.Interpolation
    (Val(Inter, Extra, Invalid),
    Method(Linear), --, Nearest),
-   ExtrapMethod(ExtrapLinear, 
-                ExtrapNone, 
+   ExtrapMethod(ExtrapLinear,
+                ExtrapNone,
                 ExtrapLast,
-                ExtrapVal, 
+                ExtrapVal,
                 ExtrapError
                ))
-  
+
 import qualified Test.QuickCheck as QC
 
 import qualified EFA.Data.Axis.Strict as Strict
@@ -79,7 +79,7 @@ cube3D = Cube.create (nc "cube") [("x",Type.P,[1,2]),("y",Type.P,[3,4]),("z",Typ
 
 valCheck :: Double -> Double -> Bool
 valCheck x1 x2 = abs (x1 - x2) < 10^^(-12 :: Integer)
-    
+
 -- | test 2D-Interpolation with selected points
 prop_interp2D_TestPoints :: Bool
 prop_interp2D_TestPoints = and tests
@@ -93,7 +93,7 @@ prop_interp2D_TestPoints = and tests
       (Cube.interpolate call f cube (ND.Data [2,3])  `check` Inter (20)),
       (Cube.interpolate call f cube (ND.Data [1,4])  `check` Inter (30)),
       (Cube.interpolate call f cube (ND.Data [2,4]) `check` Inter (40)),
-      
+
       (Cube.interpolate call f cube (ND.Data [1.5,3]) `check` Inter (15)),
       (Cube.interpolate call f cube (ND.Data [1.5,4]) `check` Inter (35)),
       (Cube.interpolate call f cube (ND.Data [1,3.5]) `check` Inter (20)),
@@ -123,7 +123,7 @@ prop_ExtrapLinear2D_TestPoints = and tests
 
 prop_ExtrapNone_TestPoints :: Bool
 prop_ExtrapNone_TestPoints = and tests
-  where 
+  where
     call=nc "prop_ExtrapNone_TestPoints"
     f = DataInterp.dim1 "prop_ExtrapNone_TestPoints" Linear ExtrapNone
     tests = [
@@ -148,16 +148,16 @@ prop_Interp3D_TestPoints = and tests --(foldl (+) 0 $ map (\ x -> if True then 1
     call=nc "prop_Interp3D_TestPoints"
     f = DataInterp.dim1 "prop_Interp3D_TestPoints" Linear ExtrapNone
     tests = [
-      Cube.interpolate call f cube3D (ND.Data [1,3,5]) `check` Inter 10, 
-      Cube.interpolate call f cube3D (ND.Data [2,3,5]) `check` Inter 20, 
-      Cube.interpolate call f cube3D (ND.Data [1,4,5]) `check` Inter 12, 
-      
-      Cube.interpolate call f cube3D (ND.Data [1,3,6]) `check` Inter 30, 
-      Cube.interpolate call f cube3D (ND.Data [1,3,5.5]) `check` Inter 20, 
-      Cube.interpolate call f cube3D (ND.Data [1,3.5,5]) `check` Inter 11, 
-            
-      Cube.interpolate call f cube3D (ND.Data [1.5,3,5]) `check` Inter 15, 
-      Cube.interpolate call f cube3D (ND.Data [0,3,5]) `check` Invalid] 
+      Cube.interpolate call f cube3D (ND.Data [1,3,5]) `check` Inter 10,
+      Cube.interpolate call f cube3D (ND.Data [2,3,5]) `check` Inter 20,
+      Cube.interpolate call f cube3D (ND.Data [1,4,5]) `check` Inter 12,
+
+      Cube.interpolate call f cube3D (ND.Data [1,3,6]) `check` Inter 30,
+      Cube.interpolate call f cube3D (ND.Data [1,3,5.5]) `check` Inter 20,
+      Cube.interpolate call f cube3D (ND.Data [1,3.5,5]) `check` Inter 11,
+
+      Cube.interpolate call f cube3D (ND.Data [1.5,3,5]) `check` Inter 15,
+      Cube.interpolate call f cube3D (ND.Data [0,3,5]) `check` Invalid]
 
 
 prop_lookUp :: Bool
@@ -165,19 +165,19 @@ prop_lookUp = and tests
   where
     cube4D = Cube.create (nc "cube") [("x",Type.P,[1,2]),
                                       ("y",Type.E,[3,4]),
-                                      ("z",Type.P,[7,8])] $ 
+                                      ("z",Type.P,[7,8])] $
              [10,30,11,31,12,32,13,33::Int] :: Cube.Cube typ ND.Dim3 String [] Double Int
     caller =nc "prop_Interp3D_TestPoints"
     tests = [
       Cube.lookUp caller  (ND.Data $ map Strict.Idx [0,0,0]) cube4D == 10,
-      Cube.lookUp caller  (ND.Data $ map Strict.Idx [0,0,1]) cube4D == 30,  
-      Cube.lookUp caller  (ND.Data $ map Strict.Idx [0,1,0]) cube4D == 11, 
-      Cube.lookUp caller  (ND.Data $ map Strict.Idx [0,1,1]) cube4D == 31, 
-      Cube.lookUp caller  (ND.Data $ map Strict.Idx [1,0,0]) cube4D == 12,  
-      Cube.lookUp caller  (ND.Data $ map Strict.Idx [1,0,1]) cube4D == 32,  
-      Cube.lookUp caller  (ND.Data $ map Strict.Idx [1,1,0]) cube4D == 13,  
-      Cube.lookUp caller  (ND.Data $ map Strict.Idx [1,1,1]) cube4D == 33]  
-      
+      Cube.lookUp caller  (ND.Data $ map Strict.Idx [0,0,1]) cube4D == 30,
+      Cube.lookUp caller  (ND.Data $ map Strict.Idx [0,1,0]) cube4D == 11,
+      Cube.lookUp caller  (ND.Data $ map Strict.Idx [0,1,1]) cube4D == 31,
+      Cube.lookUp caller  (ND.Data $ map Strict.Idx [1,0,0]) cube4D == 12,
+      Cube.lookUp caller  (ND.Data $ map Strict.Idx [1,0,1]) cube4D == 32,
+      Cube.lookUp caller  (ND.Data $ map Strict.Idx [1,1,0]) cube4D == 13,
+      Cube.lookUp caller  (ND.Data $ map Strict.Idx [1,1,1]) cube4D == 33]
+
 
 prop_extract :: Bool
 prop_extract = and tests
@@ -185,7 +185,7 @@ prop_extract = and tests
     f x y z = (Cube.getVector $ Cube.getData $ Cube.extract (nc "Demo.Cube.Main") cube4D x y) == z
     cube4D = Cube.create (nc "cube") [("x",Type.P,[1,2]),
                                       ("y",Type.E,[3,4]),
-                                      ("z",Type.P,[7,8])] $ 
+                                      ("z",Type.P,[7,8])] $
              [10,30,11,31,12,32,13,33::Int] :: Cube.Cube typ ND.Dim3 String [] Double Int
     caller = nc "prop_Interp3D_TestPoints"
     tests = [
@@ -375,8 +375,8 @@ prop_checkAscSignal ::
 prop_checkAscSignal (AscSignal sig) =
   and $ zipWith (<) xs (tail xs)
   where xs = Signal.toList sig
--}            
-    
+-}
+
 runTests :: IO Bool
 runTests = $quickCheckAll
 

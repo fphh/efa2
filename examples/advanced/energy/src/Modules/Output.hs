@@ -36,12 +36,12 @@ import qualified Data.Map as Map
 --import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
-dir :: 
+dir ::
   (PrintfArg t1, PrintfType t) =>
   (t1, BalanceLoopItem t2 t3 t4) -> t
 dir (_n, BalanceLoopItem _bForcing _bFStep _bal _opt) = printf "outer-loop-%6.6d" _n
 
-topologyWithStates :: 
+topologyWithStates ::
   Node.C node =>
   (Canonical.DotGraph
    LazyText.Text -> IO ())
@@ -50,7 +50,7 @@ topologyWithStates term params = concurrentlyMany_ [
   term $ Draw.labeledTopology $ Params.labeledTopology params,
   term $ Draw.flowTopologies $ StateAnalysis.advanced $ Params.systemTopology params ]
 
-initialStateFlow :: 
+initialStateFlow ::
   (Functor f, Node.C node,
    FormatValue.FormatValue (f b),
    Sweep.SweepVector vec b, Sweep.SweepClass sweep vec b) =>
@@ -71,11 +71,11 @@ requirement reqsRec =
 --    ModPlot.record ModPlot.gpXTerm "Requirement Signals Stepped" reqsRecStep,
     ModPlot.reqsRec ModPlot.gpXTerm reqsRec]
 
-sweepStack :: 
+sweepStack ::
   Terminal.C term =>
-  (FilePath -> IO term) -> 
-  Params.Optimisation System.Node f Sweep UV.Vector Double -> 
-  Type.Sweep System.Node Sweep UV.Vector Double -> 
+  (FilePath -> IO term) ->
+  Params.Optimisation System.Node f Sweep UV.Vector Double ->
+  Type.Sweep System.Node Sweep UV.Vector Double ->
   Balance.Forcing System.Node Double -> IO ()
 sweepStack term params _sweep balanceForcing = concurrentlyMany_ [
   ModPlot.sweepStackPerStateEta term params _sweep,
@@ -83,7 +83,7 @@ sweepStack term params _sweep balanceForcing = concurrentlyMany_ [
   ModPlot.sweepStackPerStateOpt term params balanceForcing _sweep,
   ModPlot.sweepStackPerStateCondition term params  _sweep
   ]
-sweepStackGraphs ::                                    
+sweepStackGraphs ::
   (Fractional a, Ord a, Show a, Node.C node,
    Sweep.SweepClass sweep vec b, Sweep.SweepVector vec b,
    FormatValue.FormatValue b) =>
@@ -96,7 +96,7 @@ sweepStackGraphs sweep = concurrentlyMany_ [
   ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 2 sweep,
   ModPlot.drawSweepStackStateFlowGraph (Idx.State 0) [0.1,0.1] 3 sweep
   ]
-maxPerState ::                              
+maxPerState ::
   Terminal.C term =>
   (t -> FilePath -> IO term) -> (t, BalanceLoopItem t1 t2 (Type.SignalBasedOptimisation System.Node sweep vec Double intVec b simVec c efaVec d))
   -> IO ()
@@ -106,12 +106,12 @@ maxPerState _term (_n, BalanceLoopItem _bForcing _bFStep _bal _opt) =
   ModPlot.maxEtaPerState (_term _n) _opt,
   ModPlot.maxPosPerState (_term _n) (StateIdx.power (Idx.State 0) System.Water System.Network) _opt]
 
-simulation ::                            
+simulation ::
   (Node.C node, SV.FromList efaVec, SV.Storage efaVec d,
    Arith.Constant d, SV.Walker efaVec, UV.Unbox b,
    Arith.ZeroTestable d, FormatValue.FormatValue d,
    FormatValue.FormatValue b) =>
-  (String -> Canonical.DotGraph LazyText.Text -> IO ()) -> 
+  (String -> Canonical.DotGraph LazyText.Text -> IO ()) ->
   (t, BalanceLoopItem t1 t2 (Type.SignalBasedOptimisation
        node sweep sweepVec a intVec b simVec c efaVec d))
   -> IO ()
@@ -127,14 +127,14 @@ simulation _term (_n, BalanceLoopItem _bForcing _bFStep _bal _opt)=
     -- pro parzelle (Achtung, ziemlich viel!!!)
     -- ModPlot.optimalObjectivePerState (ModPlot.dotPNG dir bStep) opt
  --    ModPlot.simulationSignals term opt2
-iterationLoop :: 
+iterationLoop ::
   (Show a, Show node, Arith.Constant a,
    PrintfArg a) =>
-  Params.Optimisation node [] Sweep UV.Vector a -> 
+  Params.Optimisation node [] Sweep UV.Vector a ->
   [Loop.EtaLoopItem node Sweep UV.Vector a z] -> IO ()
 iterationLoop optParams xs = mapM_ putStrLn (Loop.showEtaLoop optParams xs)
 
-plotOptEtavsAvg :: 
+plotOptEtavsAvg ::
   Type.SignalBasedOptimisation node sweep vec Double intVec b simVec c efaVec d
   -> IO ()
 plotOptEtavsAvg opt =  concurrentlyMany_ [
@@ -149,9 +149,9 @@ plotRangeResults ::
    Arith.Constant b, SV.Walker simVec,
    SV.Walker v, Atom.C b,
    Tuple.C b) =>
-  Params.Optimisation node2 f Sweep UV.Vector Double -> 
-  Params.Simulation node v Double  -> 
-  Type.Sweep node2 Sweep UV.Vector Double -> 
+  Params.Optimisation node2 f Sweep UV.Vector Double ->
+  Params.Simulation node v Double  ->
+  Type.Sweep node2 Sweep UV.Vector Double ->
   [(t, BalanceLoopItem t1 t2
        (Type.SignalBasedOptimisation node1 sweep vec b intVec b simVec c efaVec d))]
   -> IO ()
@@ -187,7 +187,7 @@ plotRangeResults optParams simParams swp loop =
 -- plotLoopResults optParams loop =  sequence_ (ModLoop.printEtaLoop optParams loop)
 loopResults ::
   Monad m =>
-  Params.Optimisation 
+  Params.Optimisation
   node [] Sweep UV.Vector a1
   -> (Params.Optimisation
       node [] Sweep UV.Vector a1

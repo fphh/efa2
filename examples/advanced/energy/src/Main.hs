@@ -14,9 +14,9 @@ import Text.Printf (printf)
 import qualified  EFA.Application.Optimisation.Loop as Loop
 import qualified EFA.Application.Optimisation.Params as Params
 import qualified EFA.Application.Type as Type
-import Text.Printf (--printf, 
+import Text.Printf (--printf,
                     PrintfArg)
-  
+
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Data.GraphViz.Types.Canonical as Canonical
 
@@ -106,7 +106,7 @@ printBalanceLoopItem _optParams _b@(_bStp, Loop.BalanceLoopItem _bForcing _bFSte
 --      Output.maxPerState _term  _b,
       Output.simulation _dotTerm _b]
 
-printEtaLoopItem :: Params.Optimisation node [] Sweep UV.Vector a -> 
+printEtaLoopItem :: Params.Optimisation node [] Sweep UV.Vector a ->
                     (Loop.Counter, Loop.EtaLoopItem node Sweep UV.Vector a z)-> IO ()
 printEtaLoopItem _params _loopItem = concurrentlyMany_ [
   putStrLn $ Loop.showEtaLoopItem _params _loopItem

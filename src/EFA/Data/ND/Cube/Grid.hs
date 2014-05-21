@@ -124,12 +124,12 @@ reductionIndexVector ::
    DV.Storage vec a,
    Show (vec LinIdx),
    DV.FromList vec) =>
-  Grid inst dim label vec a -> 
-  Map.Map ND.Idx Strict.Idx -> 
+  Grid inst dim label vec a ->
+  Map.Map ND.Idx Strict.Idx ->
   vec LinIdx
 reductionIndexVector grid location = linearIndexVector
   where
-  -- | convert the dimensional indexing to linear indexing, related to the original cube 
+  -- | convert the dimensional indexing to linear indexing, related to the original cube
     linearIndexVector =  DV.map (toLinear grid) $ reducedIndexGridLinear
     -- | create a Grid with selected indices for the chosen dimensions, which are reduced == location and
     -- | convert it to a linear Vector
@@ -137,27 +137,27 @@ reductionIndexVector grid location = linearIndexVector
     f dim axis@(Strict.Axis label typ _) = case Map.lookup dim location of
           Just index -> Strict.Axis label typ $ DV.fromList $ [index]
           Nothing -> Strict.imap (\index _ -> index) axis
-          
-          
-genExtractList:: 
-  (ND.Dimensions dim, 
-   DV.Storage vec Strict.Idx, 
-   DV.Walker vec, 
+
+
+genExtractList::
+  (ND.Dimensions dim,
+   DV.Storage vec Strict.Idx,
+   DV.Walker vec,
    DV.Storage vec a,
    DV.FromList vec) =>
-  Caller -> 
-  Grid inst dim label vec a  -> 
+  Caller ->
+  Grid inst dim label vec a  ->
   ND.Data dim2 (ND.Idx) ->
   [Map.Map ND.Idx Strict.Idx]
-genExtractList caller grid dims2Keep = map Map.fromList $ permute xs
-  where 
+genExtractList caller grid dims2Keep = mytrace 1 "grid" "genExtractList" $ map Map.fromList $ permute xs
+  where
     xs = map f $ ND.getDims2Drop grid dims2Keep
-    f dimIdx = (dimIdx, DV.toList $ Strict.getVec $ 
-                            Strict.imap (\ i _ -> i) $ 
+    f dimIdx = (dimIdx, DV.toList $ Strict.getVec $
+                            Strict.imap (\ i _ -> i) $
                             getAxis (caller |> nc "genExtractList") grid dimIdx)
 
 
 permute:: [(ND.Idx,[Strict.Idx])] -> [[(ND.Idx,Strict.Idx)]]
-permute xs = mytrace 1 "grid" "permute" $ foldl f [] xs
- where f [] (dimIdx, axIndices) = [zip (repeat dimIdx) axIndices]
+permute xss = mytrace 1 "grid" "permute" $ foldl f [] xss
+ where f [] (dimIdx, axIndices) = map (:[]) $ zip (repeat dimIdx) axIndices
        f xs (dimIdx, axIndices) = concat $ map (\ newItem -> map (++ [newItem]) xs) $ zip (repeat dimIdx) axIndices

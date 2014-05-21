@@ -4,7 +4,7 @@ import qualified EFA.Data.ND.Cube.Map as Cube
 import qualified EFA.Data.Plot.D3.Cube as PlotCube
 import qualified EFA.Data.Plot.D3 as PlotD3
 
-import qualified EFA.Value as Value
+--import qualified EFA.Value as Value
 import qualified EFA.Value.Type as Type
 import qualified EFA.Value.Type.Efa as E
 import qualified EFA.Value.Type.Physical as P
@@ -47,7 +47,7 @@ import Control.Functor.HT (void)
 modul::ModuleName
 modul=ModuleName "Demo.Cube"
 
-nc = genCaller modul 
+nc = genCaller modul
 
 interpFunction ::
   (Double, Double) -> (Double, Double) ->
@@ -56,8 +56,8 @@ interpFunction = Interp.dim1 "main" Interp.Linear Interp.ExtrapLinear
 
 --plot = PlotCube.toPlotData (nc "plot") id cube3D
 
---cube3D :: EFA.Data.ND.Cube.Map.Cube typ ND.Dim2 String [] Double Double
---cube3D = Cube.create (nc "cube") [("x",Type.P,[1,2]),("y",Type.UT,[3,4])] [10,30,12,32]
+cube3D :: EFA.Data.ND.Cube.Map.Cube typ ND.Dim2 String [] Double Double
+cube3D = Cube.create (nc "cube") [("x",Type.P,[1,2]),("y",Type.UT,[3,4])] [10,30,12,32]
 
 cube4D :: EFA.Data.ND.Cube.Map.Cube typ ND.Dim3 String [] Double (Type.TC E.F P.E Double)
 cube4D = Cube.create (nc "cube") [("x",Type.P,[1,2]),("y",Type.E,[3,4]),("z",Type.P,[7,8])] $ map Type.TC [10,30,11,31,12,32,13,33]
@@ -102,7 +102,7 @@ main = do
   let genCube = Cube.generateWithGrid (id) sys1
   let subCube = Cube.extract caller cube (ND.Data [ND.Idx 0])
                 (Map.fromList [(ND.Idx 1,Strict.Idx 0)])
-  
+
 {-  print o
   print z11
   print z12
@@ -131,46 +131,35 @@ main = do
   print subCube -}
 
 --  print $ Cube.getVector $ Cube.getData $ cube3D
- -- PlotD3.allInOneIO DefaultTerm.cons (PlotD3.blankFrame "Hallo") PlotD3.blankStyle $ PlotCube.toPlotData (nc "plot") (Just "Test") cube3D
---  print cube4D 
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") PlotD3.plotInfo3lineTitles $ PlotCube.toPlotData (nc "plot") (Just "Test") cube3D
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.blankFrame "Hallo") PlotD3.plotInfo3lineTitles $ PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
+  PlotD3.eachIO DefaultTerm.cons (PlotD3.blankFrame "Hallo") PlotD3.plotInfo3lineTitles $ PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
+--  print cube4D
 --  print $ Cube.extract (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [1,2]) (Map.fromList [(ND.Idx 0, Strict.Idx 0)])
 --  print $ Cube.extract (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [1,2]) (Map.fromList [(ND.Idx 0, Strict.Idx 1)])
 --  print $ Cube.extract (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [0,2]) (Map.fromList [(ND.Idx 1, Strict.Idx 0)])
 --  print $ Cube.extract (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [0,2]) (Map.fromList [(ND.Idx 1, Strict.Idx 1)])
-  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [1,2])
-  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [0,2])
-  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [0,1])
-  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [0])
-  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [1])
-  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [2])
-  
---  print $ Cube.lookUp (nc "Demo.Cube.Main")  (ND.Data $ map Strict.Idx [1,0,0]) cube4D   
+--  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [1,2])
+--  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [0,2])
+--  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [0,1])
+--  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [0])
+--  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [1])
+--  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [2])
+
+--  print $ Cube.lookUp (nc "Demo.Cube.Main")  (ND.Data $ map Strict.Idx [1,0,0]) cube4D
 --  print $ Cube.extract (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [1,2]) (Map.fromList [(ND.Idx 0, Strict.Idx 1)])
 --  print $ Cube.extractAll (nc "Demo.Cube.Main") cube4D (ND.Data $ map ND.Idx [0])
 --  print $  map (\(PlotD3.PlotData _ r _) -> r) $  PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
---  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") 
-    --PlotD3.blankStyle $ 
+--  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo")
+    --PlotD3.blankStyle $
 --    PlotD3.plotInfo3lineTitles $
 --    PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
---  PlotD3.eachIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") 
-    --PlotD3.blankStyle $ 
+--  PlotD3.eachIO DefaultTerm.cons (PlotD3.labledFrame "Hallo")
+    --PlotD3.blankStyle $
 --    PlotD3.plotInfo3lineTitles $
 --    PlotCube.toPlotData (nc "plot") (Just "Test") cube4D
-
 {-
-myTrace: "Grid"-"reduce" : 
-  Data [Axis {getLabel = "x", getType = P, getVec = [Idx {getInt = 1}]},
-        Axis {getLabel = "y", getType = E, getVec = [Idx {getInt = 0},Idx {getInt = 1}]},
-        Axis {getLabel = "z", getType = P, getVec = [Idx {getInt = 0},Idx {getInt = 1}]}]
-  
-myTrace: "Grid"-"reduce" : 
-  [Data [Idx {getInt = 1},Idx {getInt = 0},Idx {getInt = 0}],
-   Data [Idx {getInt = 1},Idx {getInt = 0},Idx {getInt = 1}],
-   Data [Idx {getInt = 1},Idx {getInt = 1},Idx {getInt = 0}],
-   Data [Idx {getInt = 1},Idx {getInt = 1},Idx {getInt = 1}]]
-  
-myTrace: "Grid"-"reduce" : 
-  [LinIdx {getInt = 2},LinIdx {getInt = 3},LinIdx {getInt = 4},LinIdx {getInt = 5}]
+[(fromList [(Idx 0,("x",1.0,P))],Cube {getGrid = Data [Axis {getLabel = "y", getType = E, getVec = [3.0,4.0]},Axis {getLabel = "z", getType = P, getVec = [7.0,8.0]}], getData = Data {getVector = [TC 10.0,TC 30.0,TC 11.0,TC 31.0]}}),
 
-Cube {getGrid = Data [Axis {getLabel = "y", getType = E, getVec = [3.0,4.0]},Axis {getLabel = "z", getType = P, getVec = [7.0,8.0]}], getData = Data {getVector = [TC 12.0,TC 32.0,TC 13.0,TC 33.0]}}
--}  
+ (fromList [(Idx 0,("x",2.0,P))],Cube {getGrid = Data [Axis {getLabel = "y", getType = E, getVec = [3.0,4.0]},Axis {getLabel = "z", getType = P, getVec = [7.0,8.0]}], getData = Data {getVector = [TC 12.0,TC 32.0,TC 13.0,TC 33.0]}})]
+-}

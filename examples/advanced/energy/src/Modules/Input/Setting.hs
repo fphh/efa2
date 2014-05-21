@@ -158,7 +158,7 @@ initEnv :: StateQty.Graph Node
 initEnv = AppOpt.storageEdgeXFactors optParams 3 3
           $ AppOpt.initialEnv optParams System.stateFlowGraph
 
-etaMap :: TPT.Map Double -> 
+etaMap :: TPT.Map Double ->
           Map Name (Params.EtaFunction Double Double)
 
 etaMap tabEta = Map.map Params.EtaFunction $
