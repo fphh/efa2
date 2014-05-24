@@ -7,6 +7,7 @@ module EFA.Flow.Topology.Record (
    fullFlow,
    sectionToPowerRecord,
    sectionResultToPowerRecord,
+   topologyToPowerMap
    ) where
 
 import qualified EFA.Flow.Topology.Quantity as FlowTopo

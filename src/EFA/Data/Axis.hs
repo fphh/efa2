@@ -26,6 +26,7 @@ class GetInfo axis vec a where
   getVector :: axis typ label vec a -> vec a
   getType :: axis typ label vec a -> Type.Dynamic
   getRange :: axis typ label vec a -> Value.Range a
+  getLength :: axis typ label vec a -> Int
 
 
   

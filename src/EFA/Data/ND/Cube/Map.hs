@@ -12,6 +12,8 @@ import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
 import qualified EFA.Value as Value
 import qualified EFA.Value.Type as Type
 import qualified EFA.Data.ND as ND
+import qualified EFA.Data.Collection as Collection
+
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Data.Vector as DV
@@ -183,8 +185,6 @@ instance (
  QC.Arbitrary (Data inst dim vec a) where
   arbitrary = fmap DV.fromList QC.arbitrary
 
-
-
 instance (Ref.ToData (vec a)) => Ref.ToData (Data inst dim vec a) where
   toData (Data vec) = Ref.SingleType "Cube.Data" $ Ref.toData vec
 
@@ -192,6 +192,9 @@ instance (Ord b, DV.Storage vec b, DV.Singleton vec) =>
          ND.GetValueRange  Cube vec b where
   getValueRange = (\(x,y) -> Value.Range x y) . DV.minmax . getVector . getData
 
+--data Collection label a = Collection (OrdData a) (Map.Map label a)
+
+type Collection key inst dim label vec a b = Collection.Collection key (Cube inst dim label vec a b)
 
 lookupLin ::
   (DV.LookupMaybe vec b,
@@ -259,6 +262,12 @@ map ::
    DV.Storage vec b) =>
   (b -> c) -> Cube inst dim label vec a b -> Cube inst dim label vec a c
 map f (Cube grid (Data vec)) = (Cube grid $ Data $ DV.map f vec)
+
+-- TODO not very elegant, how about some functor Stuff later
+mapData :: 
+  (DV.Walker vec, DV.Storage vec a, DV.Storage vec a1) =>
+  (a1 -> a) -> Data t t1 vec a1 -> Data inst dim vec a
+mapData f (Data vec) = Data $ DV.map f vec
 
 
 mapWithGrid ::

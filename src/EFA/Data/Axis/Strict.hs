@@ -47,13 +47,15 @@ instance Ref.ToData Idx where
 instance
   (Ord a,Type.GetDynamicType a,
    DV.Storage vec a,
-   DV.Singleton vec)
+   DV.Singleton vec, 
+   DV.Length vec)
   => Axis.GetInfo Axis vec a where
   getLabel axis = getLabel axis
   getVector axis = getVec axis
   getType axis = getType axis
   getRange axis = (\(x,y) -> Value.Range x y) $ DV.minmax $ getVec axis
-
+  getLength axis = len axis
+  
 imap ::
   (DV.Walker vec,
    DV.Storage vec b,

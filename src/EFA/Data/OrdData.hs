@@ -9,6 +9,7 @@ import qualified Prelude as P
 import Prelude hiding (map)
 
 type family Data a
+--type instance Data  
 
 
 

@@ -43,6 +43,11 @@ dimensionMultiplicators ::
 dimensionMultiplicators (ND.Data grid) = ND.Data $ foldr f [1::Int] (init $ map Strict.len grid)
   where f x acc = [x*(head acc)]++acc
 
+linearLength :: 
+  (DV.Storage vec a, DV.Length vec) => 
+  Grid inst dim label vec a -> Int
+linearLength (ND.Data grid) =  foldl (*) 1 $ map Strict.len $ grid
+
 -- | Converts a dimensional index to a linear Index
 toLinear ::
  (DV.Storage vec a, DV.Length vec)=>
