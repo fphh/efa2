@@ -2,6 +2,8 @@
 
 module EFA.Data.ND.Cube.Grid where
 
+
+
 --import qualified Prelude as P
 --import Prelude hiding (map)
 
@@ -28,6 +30,7 @@ nc = genCaller m
 -- newtype Idx = Idx {getInt :: Int} deriving Show
 
 type Grid inst dim label vec a = ND.Data dim (Strict.Axis inst label vec a)
+
 
 --instance Ref.ToData Grid where
 --  toData (Grid vec) = Ref.SingleData "Grid" $ toData vec

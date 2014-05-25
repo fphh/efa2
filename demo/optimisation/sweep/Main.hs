@@ -7,10 +7,15 @@ import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
 import qualified EFA.Report.Format as Format
 import EFA.Application.Optimisation.Params (EtaAssignMap, Name(Name))
 
+import qualified EFA.Data.Collection as Collection
+import qualified EFA.Data.Plot.Collection as PlotCollection
+import qualified EFA.Data.Plot.D3 as PlotD3
 import qualified EFA.Value.Type as Type
+import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Data.ND.Cube.Map as CubeMap 
 import qualified EFA.Data.ND.Cube.Grid as Grid 
+import qualified EFA.Data.Plot as DataPlot 
 import qualified  EFA.Action.Optimisation as ActOpt
 import qualified EFA.IO.TableParserTypes as TPT
 import qualified EFA.Graph.Topology.Node as Node
@@ -43,6 +48,7 @@ import qualified Data.Text.Lazy as LazyText
 import qualified EFA.Signal.ConvertTable as CT
 
 import qualified Data.Map as Map
+import Data.GraphViz.Attributes.Colors.X11 (X11Color(DarkSeaGreen2, Lavender))
 
 modul :: ModuleName
 modul = ModuleName "Modules.Setting"
@@ -139,8 +145,8 @@ etaMap tabEta = Map.map Params.EtaFunction $
             tabEta
 
 grid :: Grid.Grid Base ND.Dim2 (TopoIdx.Position Node) [] Double 
-grid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.6 .. 6.2]),
-                    (TopoIdx.ppos Rest Network,Type.P,[0.1,0.3 .. 2.1])]
+grid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[-2,-1,1,2]),
+                    (TopoIdx.ppos Rest Network,Type.P,[-4,-3,3,4])]
 
 p_lowVoltage :: CubeMap.Cube Base ND.Dim2 (TopoIdx.Position Node) [] Double Double    
 p_lowVoltage = CubeMap.generateWithGrid (\(ND.Data [x,_]) -> x) grid
@@ -154,23 +160,33 @@ p_water = CubeMap.map (\ _ -> Arith.one)  p_midVoltage
 p_gas ::  CubeMap.Cube Base ND.Dim2 (TopoIdx.Position Node) [] Double Double    
 p_gas = CubeMap.map (\ _ -> Arith.one)  p_midVoltage 
 
-demand :: (Grid.Grid Base ND.Dim2 (TopoIdx.Position Node) [] Double, Map.Map (TopoIdx.Position Node) (CubeMap.Data Base ND.Dim2 [] Double))
-demand = (grid, (Map.fromList $ map (\(x,y) -> (x, CubeMap.getData y)) $  
-         [(TopoIdx.ppos LocalRest LocalNetwork,p_lowVoltage), 
-          (TopoIdx.ppos Rest Network,p_midVoltage)]))
-
-
-
-
+demand :: Collection.Collection (TopoIdx.Position Node) (CubeMap.Cube Base ND.Dim2 (TopoIdx.Position Node) [] Double Double) 
+demand = Collection.fromList (nc "Main.hs") [(TopoIdx.ppos LocalNetwork Gas ,p_gas),
+                                             (TopoIdx.ppos Network Water ,p_water),
+                                             (TopoIdx.ppos LocalRest LocalNetwork,p_lowVoltage), 
+                                             (TopoIdx.ppos Rest Network,p_midVoltage)]
+  
 main :: IO()
 main = do
 
   tabEta <- Table.read "eta.txt"
   
-  let res = ActOpt.solve topology etaAssignMap (etaMap tabEta)  demand 
-      res :: FlowTopo.Section Node (Result.Result (CubeMap.Data Base ND.Dim2 [] Double))
+  let flow = ActOpt.solve topology etaAssignMap (etaMap tabEta)  demand 
+      flow :: FlowTopo.Section Node (Result.Result (CubeMap.Data Base ND.Dim2 [] Double))
              
-  let pl1 = ActOpt.envToPowerCollection res          
+  let pl1 = ActOpt.getPowers flow         
+  let topo = FlowTopo.topology  flow  
   
   print pl1   
 
+
+  const Draw.xterm "simulationGraphsSequence"
+    $ Draw.bgcolour DarkSeaGreen2
+    $ Draw.title "Sequence Flow Graph from Simulation"
+    $ Draw.flowSection Draw.optionsDefault flow
+
+--  DataPlot.allInOneIO DefaultTerm.cons id id demand
+  
+--  PlotDre
+  
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") PlotD3.plotInfo3lineTitles $ CubePlot.toPlotData (nc "plot") (Just "Test") p_lowVoltage

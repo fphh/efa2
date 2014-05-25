@@ -6,8 +6,8 @@
 module EFA.Action.Optimisation where
 
 import EFA.Data.Vector as DV
---import EFA.Data.ND as ND
---import EFA.Data.Axis.Strict as Strict
+import EFA.Data.ND as ND
+import EFA.Data.Axis.Strict as Strict
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology as FlowTopoPlain
 
@@ -35,7 +35,7 @@ import qualified EFA.Equation.Verify as Verify
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Flow.Topology.Quantity as TopoQty
+--import qualified EFA.Flow.Topology.Quantity as TopoQty
 
 --import qualified EFA.Signal.Vector as SV
 --import qualified EFA.Signal.Signal as Sig
@@ -49,61 +49,8 @@ import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
 import Data.Map (Map)
 import Data.Monoid((<>))
---import qualified EFA.Application.Utility as ModUt
---import qualified Modules.Setting as ModSet
---import qualified EFA.Application.Utility as AppUt
---import qualified EFA.Graph.Topology as Topo
 
---import qualified EFA.Flow.Topology.Index as XIdx
-
---import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
---import qualified EFA.Application.Optimisation as AppOpt
---import qualified EFA.Application.Optimisation.Sweep as Sweep
---import qualified EFA.Application.Optimisation.DoubleSweep as DoubleSweep
---import qualified EFA.Application.Type as Type
---import qualified EFA.Application.Optimisation.Params as Params
---import EFA.Application.Optimisation.Params (Name)
---  (EtaAssignMap, Name, InitStorageState(InitStorageState))
---import qualified EFA.Application.Optimisation.Balance as Forcing
-
--- import EFA.Application.Simulation (makeEtaFuncGiven2)
-
---import qualified EFA.Flow.State as State
---import qualified EFA.Flow.State.Absolute as StateAbs
---import qualified EFA.Flow.State.Quantity as StateQty
---import qualified EFA.Flow.State.Index as StateIdx
-
---import qualified EFA.Application.Flow.State.SystemEta as StateEta
-
---import qualified EFA.Flow.Sequence.Absolute as SeqAbs
---import qualified EFA.Flow.Sequence.Quantity as SeqQty
---import qualified EFA.Flow.Sequence.Index as SeqIdx
---import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
---import qualified EFA.Flow.SequenceState.EquationSystem as SeqStateEqSys
 import qualified EFA.Flow.Topology.Index as TopoIdx
---import qualified EFA.Flow.Topology as Topology
-
---import qualified EFA.Graph as Graph
-
---import qualified EFA.Flow.SequenceState.Index as Idx
-
---import qualified EFA.Equation.Arithmetic as Arith
---import qualified EFA.Equation.Verify as Verify
---import EFA.Equation.Result (Result)
-
---import qualified EFA.Signal.Vector as Vec
---import EFA.Signal.Data (Data(Data), Nil, (:>))
-
---import qualified EFA.Graph.Topology.Node as Node
-
---import qualified Data.Map as Map; import Data.Map (Map)
---import qualified Data.Foldable as Fold
---import qualified Data.Vector.Unboxed as UV(Unbox)
---import Data.Monoid (Monoid)
---import qualified Data.Set as Set
---import qualified Data.Maybe as Maybe
---import Data.Monoid ((<>), mempty)
-
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.ND.Cube.Map as CubeMap
@@ -111,7 +58,11 @@ import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 
 
 solve :: 
-  (Eq b,
+  (Collection.OrdData (CubeMap.Cube inst dim label vec a b)
+   ~ ND.Data dim (Strict.Axis inst label vec a),
+   Collection.ValData (CubeMap.Cube inst dim label vec a b)
+   ~ CubeMap.Data inst dim vec b,
+   Eq b,
    Zipper vec,
    Ord b, 
    Show b, 
@@ -127,7 +78,7 @@ solve ::
   Topo.Topology node -> 
   Map (TopoIdx.Position node) (Name, Name) -> 
   Map Name (Params.EtaFunction b b) -> 
-  (CubeGrid.Grid inst dim label vec a, Map.Map (TopoIdx.Position node) (CubeMap.Data inst dim vec b)) -> 
+  Collection.Collection (TopoIdx.Position node) (CubeMap.Cube inst dim label vec a b) -> 
   FlowTopo.Section node (Result.Result (CubeMap.Data inst dim vec b))
 solve topology etaAssign etaFunc powerCollection =
    EqSys.solve (quantityTopology topology) $
@@ -135,7 +86,11 @@ solve topology etaAssign etaFunc powerCollection =
 
 
 given :: 
-  (ULSystem.Value mode (CubeMap.Data inst dim vec b),
+  (Collection.OrdData (CubeMap.Cube inst dim label vec a b)
+   ~ ND.Data dim (Strict.Axis inst label vec a),
+   Collection.ValData (CubeMap.Cube inst dim label vec a b)
+   ~ CubeMap.Data inst dim vec b,
+   ULSystem.Value mode (CubeMap.Data inst dim vec b),
    Node.C node, 
    Storage vec a, 
    Length vec,
@@ -147,16 +102,18 @@ given ::
    Ord b, Show b, Zipper vec, FromList vec) =>
    Map (TopoIdx.Position node) (Name, Name) -> 
   Map Name (Params.EtaFunction b b) -> 
-  (CubeGrid.Grid inst dim label vec a, Map.Map (TopoIdx.Position node) (CubeMap.Data inst dim vec b)) -> 
+  Collection.Collection (TopoIdx.Position node) (CubeMap.Cube inst dim label vec a b) -> 
   EqSys.EquationSystem mode node s (CubeMap.Data inst dim vec b)
-given etaAssign etaFunc (grid,mp) =
-   (XIdx.dTime .= (CubeMap.Data $ DV.replicate (CubeGrid.linearLength grid) Arith.zero))
-   <> EqSys.withExpressionGraph (makeEtaFuncGiven2 etaAssign etaFunc)
+given etaAssign etaFunc (Collection.Collection grid mp) =
+   (XIdx.dTime .= (CubeMap.Data $ DV.replicate (CubeGrid.linearLength grid) Arith.one))
+   <> EqSys.withExpressionGraph (makeEtaFuncGiven etaAssign etaFunc)
    <> Fold.fold (Map.mapWithKey f mp)
    where
-     f ppos p  =  XIdx.powerFromPosition ppos .= p -- Sig.unpack p
+     f ppos p  =  XIdx.powerFromPosition ppos .= p
 
-makeEtaFuncGiven2 ::
+
+-- TODO: Ist diese Funktion am richtigen Platz ?
+makeEtaFuncGiven ::
   (ULSystem.Value mode (CubeMap.Data inst dim vec a), 
    Zipper vec, 
    Arith.Sum a, 
@@ -169,7 +126,7 @@ makeEtaFuncGiven2 ::
   Map Name (Params.EtaFunction a a) ->
   FlowTopo.Section node (EqAbs.Expression mode vars s (CubeMap.Data inst dim vec a)) ->
   EqAbs.VariableSystem mode vars s
-makeEtaFuncGiven2 etaAssign etaFunc topo =
+makeEtaFuncGiven etaAssign etaFunc topo =
    Fold.fold $
    Map.mapWithKey
       (\se (strP, strN) ->
@@ -182,6 +139,7 @@ makeEtaFuncGiven2 etaAssign etaFunc topo =
                id se topo))
       etaAssign
 
+-- TODO: Ist diese Funktion am richtigen Platz ?
 absEtaFunction ::
    (Ord a, Show a, Arith.Constant a, Arith.Product b) =>
    Name -> Name -> Map Name (Params.EtaFunction a b) -> a -> b
@@ -194,19 +152,10 @@ absEtaFunction strP strN etaFunc =
    in  \x -> if x >= Arith.zero then fpos x else fneg x
 
 
-envToPowerCollection ::
-  (Ord node) =>
-  TopoQty.Section node (Result.Result (CubeMap.Data inst dim vec a)) ->
-  Map.Map (XIdx.Position node) (Result.Result (CubeMap.Data inst dim vec a))
-envToPowerCollection =
-  sectionToCollection
-  . TopoQty.mapSection id -- (ModUt.checkDetermined "envToPowerRecord")
-
-
-sectionToCollection ::
+getPowers ::
    (Ord node) =>
    FlowTopo.Section node (Result.Result (CubeMap.Data inst dim vec a)) ->
    Map.Map (XIdx.Position node) (Result.Result (CubeMap.Data inst dim vec a))
-sectionToCollection (FlowTopoPlain.Section time topo) =
+getPowers (FlowTopoPlain.Section time topo) =
    TopoRecord.topologyToPowerMap topo
 

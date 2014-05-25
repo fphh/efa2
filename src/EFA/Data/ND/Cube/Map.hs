@@ -49,6 +49,16 @@ data Cube inst dim label vec a b = Cube {
   getGrid :: Grid inst dim label vec a,
   getData :: Data inst dim vec b } deriving (Show,Eq)
 
+type instance Collection.OrdData (Cube inst dim label vec a b) = 
+  (Grid inst dim label vec a)
+  
+type instance Collection.ValData (Cube inst dim label vec a b) = 
+  (Data inst dim vec b)
+  
+instance Collection.Unpack (Cube inst dim label vec a b) where   
+  pack (g,d) = Cube g d 
+  unpack (Cube g d) =  (g,d)
+
 instance 
   (DV.Zipper vec,
    DV.Walker vec,
@@ -170,11 +180,11 @@ instance (
 
 
 instance 
-  (DV.Storage (Data inst dim vec) a,
-   DV.FromList (Data inst dim vec),
-   FormatValue.FormatValue a) =>
+  (FormatValue.FormatValue a,
+   DV.Storage vec a, 
+   DV.FromList vec) =>
   FormatValue.FormatValue (Data inst dim vec a) where
-  formatValue = FormatValue.formatValue . DV.toList
+  formatValue = FormatValue.formatValue . DV.toList . getVector
 
 
 -- = Only testing
@@ -192,9 +202,6 @@ instance (Ord b, DV.Storage vec b, DV.Singleton vec) =>
          ND.GetValueRange  Cube vec b where
   getValueRange = (\(x,y) -> Value.Range x y) . DV.minmax . getVector . getData
 
---data Collection label a = Collection (OrdData a) (Map.Map label a)
-
-type Collection key inst dim label vec a b = Collection.Collection key (Cube inst dim label vec a b)
 
 lookupLin ::
   (DV.LookupMaybe vec b,
