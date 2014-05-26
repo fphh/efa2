@@ -3,20 +3,22 @@
 
 module Main where
 
-import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
+import EFA.Utility(Caller,
+                   --merror,(|>),
+                   ModuleName(..),FunctionName, genCaller)
 import qualified EFA.Report.Format as Format
 import EFA.Application.Optimisation.Params (EtaAssignMap, Name(Name))
 
 import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.Plot.Collection as PlotCollection
-import qualified EFA.Data.Plot.D3 as PlotD3
+import qualified EFA.Data.Plot.D3 as PlotD3 -- TODO -- import Orphan instance
 import qualified EFA.Value.Type as Type
 import qualified EFA.Flow.Draw as Draw
-import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+--import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified EFA.Data.ND.Cube.Map as CubeMap 
 import qualified EFA.Data.ND.Cube.Grid as Grid 
-import qualified EFA.Data.Plot as DataPlot 
+--import qualified EFA.Data.Plot as DataPlot 
 import qualified EFA.Data.Plot.D3.Cube as CubePlot 
 
 import qualified  EFA.Action.Optimisation as ActOpt
@@ -25,34 +27,35 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
-import EFA.Utility.Async (concurrentlyMany_)
+--import EFA.Utility.Async (concurrentlyMany_)
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Data.ND as ND
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Application.Utility as AppUt
 
-import Text.Printf (printf)
+--import Text.Printf (printf)
 import qualified EFA.Application.Optimisation.Params as Params
-import qualified EFA.Application.Type as Type
-import Text.Printf (--printf,
-                    PrintfArg)
+--import qualified EFA.Application.Type as Type
+--import Text.Printf (--printf,
+                --    PrintfArg)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
-import qualified Data.GraphViz.Types.Canonical as Canonical
+--import qualified Data.GraphViz.Types.Canonical as Canonical
 import qualified EFA.Equation.Result as Result
 
-import qualified EFA.Report.FormatValue as FormatValue
+--import qualified EFA.Report.FormatValue as FormatValue
 import qualified EFA.Equation.Arithmetic as Arith
 
-import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
+--import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 
 import qualified EFA.IO.TableParser as Table
 
-import qualified Data.Text.Lazy as LazyText
+--import qualified Data.Text.Lazy as LazyText
 import qualified EFA.Signal.ConvertTable as CT
 
 import qualified Data.Map as Map
-import Data.GraphViz.Attributes.Colors.X11 (X11Color(DarkSeaGreen2, Lavender))
+import Data.GraphViz.Attributes.Colors.X11 (X11Color(DarkSeaGreen2))
+                                                     -- Lavender))
 
 modul :: ModuleName
 modul = ModuleName "Modules.Setting"
@@ -178,10 +181,10 @@ main = do
   let flow = ActOpt.solve topology etaAssignMap (etaMap tabEta)  demand 
       flow :: FlowTopo.Section Node (Result.Result (CubeMap.Data Base ND.Dim2 [] Double))
              
-  let pl1 = ActOpt.getPowers flow         
-  let topo = FlowTopo.topology  flow  
+  let powers = ActOpt.getPowers grid flow         
+  let _topo = FlowTopo.topology  flow  
   
-  print pl1   
+--  print pl1   
 
 
   const Draw.xterm "simulationGraphsSequence"
@@ -194,5 +197,6 @@ main = do
   
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") demand
 
-  PlotD3.eachIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") demand
+--  PlotD3.eachIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") demand
  
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") powers

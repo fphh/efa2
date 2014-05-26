@@ -11,6 +11,7 @@ import EFA.Data.Axis.Strict as Strict
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology as FlowTopoPlain
 
+import qualified EFA.Application.Utility as AppUt
 
 import EFA.Application.Utility (quantityTopology)
 --import qualified EFA.Application.Optimisation.Sweep as Sweep
@@ -151,11 +152,13 @@ absEtaFunction strP strN etaFunc =
           maybe (\x -> error ("not defined: '" ++ str ++ "' for " ++ show x))
    in  \x -> if x >= Arith.zero then fpos x else fneg x
 
-
+-- TODO :: get rid of AppUt.checkDetermined
 getPowers ::
-   (Ord node) =>
-   FlowTopo.Section node (Result.Result (CubeMap.Data inst dim vec a)) ->
-   Map.Map (XIdx.Position node) (Result.Result (CubeMap.Data inst dim vec a))
-getPowers (FlowTopoPlain.Section time topo) =
-   TopoRecord.topologyToPowerMap topo
+   (Ord node, Show node) =>
+   CubeGrid.Grid inst dim label vec a ->
+   FlowTopo.Section node (Result.Result (CubeMap.Data inst dim vec b)) ->
+   Collection.Collection (XIdx.Position node) (CubeMap.Cube inst dim label vec a b)
+getPowers grid (FlowTopoPlain.Section _ topo) = Collection.Collection grid (
+   Map.mapWithKey (\ key x -> AppUt.checkDetermined (show key) x) $ 
+   TopoRecord.topologyToPowerMap topo)
 
