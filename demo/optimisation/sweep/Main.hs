@@ -12,10 +12,13 @@ import qualified EFA.Data.Plot.Collection as PlotCollection
 import qualified EFA.Data.Plot.D3 as PlotD3
 import qualified EFA.Value.Type as Type
 import qualified EFA.Flow.Draw as Draw
+import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified EFA.Data.ND.Cube.Map as CubeMap 
 import qualified EFA.Data.ND.Cube.Grid as Grid 
 import qualified EFA.Data.Plot as DataPlot 
+import qualified EFA.Data.Plot.D3.Cube as CubePlot 
+
 import qualified  EFA.Action.Optimisation as ActOpt
 import qualified EFA.IO.TableParserTypes as TPT
 import qualified EFA.Graph.Topology.Node as Node
@@ -41,6 +44,7 @@ import qualified EFA.Equation.Result as Result
 import qualified EFA.Report.FormatValue as FormatValue
 import qualified EFA.Equation.Arithmetic as Arith
 
+import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 
 import qualified EFA.IO.TableParser as Table
 
@@ -185,8 +189,10 @@ main = do
     $ Draw.title "Sequence Flow Graph from Simulation"
     $ Draw.flowSection Draw.optionsDefault flow
 
---  DataPlot.allInOneIO DefaultTerm.cons id id demand
+
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") (Just "Test") p_lowVoltage
   
---  PlotDre
-  
-  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") PlotD3.plotInfo3lineTitles $ CubePlot.toPlotData (nc "plot") (Just "Test") p_lowVoltage
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") demand
+
+  PlotD3.eachIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") demand
+ 

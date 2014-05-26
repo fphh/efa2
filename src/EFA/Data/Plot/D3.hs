@@ -67,7 +67,7 @@ import qualified EFA.Data.Plot as DataPlot
 
 import qualified Data.Map as Map
 --import qualified Data.List as List
---import qualified Data.Foldable as Foldable
+import qualified Data.Foldable as Foldable
 --import qualified Data.List.Key as Key
 --import Data.Map (Map)
 --import Control.Functor.HT (void)
@@ -104,12 +104,6 @@ data D3RangeInfo label a b = D3RangeInfo
   (DataPlot.AxisInfo label a)
   (DataPlot.AxisInfo label a)
   (DataPlot.AxisInfo label b) deriving Show
-
-
---type instance DataPlot.PlotInfoContent id label a b (Plot3D.T a a b) = Cut label a
---type instance DataPlot.RangeInfo id label a b (Plot3D.T a a b) = D3RangeInfo label a b
--- type PlotData2 id  = DataPlot.PlotData2 id label a b (Plot3D.T a a b)
-
 
 collectPlotIds ::  (Show id) => [PlotData id label a b] -> [Maybe id]
 collectPlotIds xs = map f xs
@@ -151,7 +145,7 @@ blankFrame title _ = Opts.title title $ defaultFrameAttr
 
 plotInfo2lineTitle :: (Show id, Show a, Show label) => DataPlot.PlotInfo id (Cut label a) -> (LineSpec.T -> LineSpec.T)
 plotInfo2lineTitle (DataPlot.PlotInfo _ (Just cut))  = LineSpec.title $ show cut
-plotInfo2lineTitle (DataPlot.PlotInfo _ Nothing)  =  LineSpec.title $ ""
+plotInfo2lineTitle (DataPlot.PlotInfo ident Nothing)  =  LineSpec.title $ show ident
 
 plotInfo3lineTitles :: (Show label, Show id,Show a) => Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)
 plotInfo3lineTitles _ (PlotData info _ _) = plotInfo2lineTitle info
@@ -169,7 +163,7 @@ labledFrame title xs =
     rs = map f xs
     f (PlotData _ rangeInfo _) = rangeInfo
     plotIds = collectPlotIds xs
-{-
+
 allInOneIO ::(Terminal.C terminal, Atom.C a, Atom.C b)=>
   terminal ->
   ([PlotData id label a b] ->  Opts.T (Graph3D.T a a b)) ->
@@ -179,17 +173,6 @@ allInOneIO ::(Terminal.C terminal, Atom.C a, Atom.C b)=>
 allInOneIO terminal makeFrameStyle setGraphStyle xs =
   DataPlot.run terminal (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
   where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
--}
-
-allInOneIO ::(Terminal.C terminal, Atom.C a, Atom.C b)=>
-  terminal ->
-  ([PlotData id label a b] ->  Opts.T (Graph3D.T a a b)) ->
-  (Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)) ->
-  [PlotData id label a b] ->
-  IO()
-allInOneIO terminal makeFrameStyle setGraphStyle xs =
-  DataPlot.allInOneIO terminal makeFrameStyle makeGraph xs
-    where makeGraph (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
 
 eachIO :: (Terminal.C terminal, Atom.C a, Atom.C b)=>
   terminal ->
@@ -202,3 +185,8 @@ eachIO terminal makeFrameStyle setGraphStyle xs =
   where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData $ LineSpec.deflt) plot
 
 
+class ToPlotData ndContainer dim label vec a b where
+  toPlotData :: Caller ->
+             Maybe id ->
+             (ndContainer :: * -> * -> * -> (* -> *) -> * -> * -> *) inst dim label vec a b ->
+             [PlotData id label a b]

@@ -58,6 +58,9 @@ import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Data.Plot.D3 as PlotD3
 import qualified EFA.Data.Plot as DataPlot
+import qualified EFA.Data.Plot.Collection as PlotCollection
+import qualified EFA.Data.Collection as Collection
+
 --import qualified EFA.Value as Value
 
 --import qualified EFA.Graph.Topology.Node as Node
@@ -131,21 +134,8 @@ frameAttr ::
 frameAttr ti _ _ =
    Opts.title ti $
    Opts.add (Opt.custom "hidden3d" "") ["back offset 1 trianglepattern 3 undefined 1 altdiagonal bentover"] $
---   Opts.xLabel (genAxLabel x) $
---   Opts.yLabel (genAxLabel y) $
    Opts.grid True $
    Opts.deflt
-{-
-blankFrameAttr ::
-   (Graph.C graph) => Opts.T graph
-blankFrameAttr ti =
-   Opts.title ti $
-   Opts.add (Opt.custom "hidden3d" "") ["back offset 1 trianglepattern 3 undefined 1 altdiagonal bentover"] $
-   Opts.grid True $
-   Opts.deflt
--}
-
--- TODO:: CUBE Dim2 == Dim3 korrigieren
 
 getD3RangeInfo ::
   (Show label, Ord a, Arith.Constant a, Arith.Constant b,
@@ -202,130 +192,6 @@ basic caller ident cut cube@(CubeMap.Cube (grid) _) =
                                                DV.toList $ CubeMap.tupleVec subCube) subCubes
      [typx,typy] = map Strict.getType $ ND.toList grid
 
-
-basic2 ::
-  (Ord b,
-   Ord a,
-   Show label,
-   DV.Singleton vec,
-   Arith.Constant b,
-   Type.GetDynamicType b,
-   Type.GetDynamicType a, 
-   Tuple.C b, 
-   Tuple.C a, 
-   Atom.C b,
-   DV.Slice vec, 
-   DV.Length vec,
-   Arith.Constant a,Type.ToDisplayUnit b, 
-   DV.Storage vec (ND.Data ND.Dim1 a, b),
-   DV.FromList vec,
-   DV.Zipper vec,
-   DV.Walker vec,
-   DV.Storage vec (vec [a]),
-   DV.Storage vec b,
-   DV.Storage vec (ND.Data ND.Dim1 a),
-   DV.Storage vec a,
-   DV.Storage vec [a],
-   Atom.C a)=>
-   Caller ->
-   Maybe id ->
-   Maybe (PlotD3.Cut label a) ->
-   CubeMap.Cube inst ND.Dim2 label vec a b ->
-   DataPlot.PlotData2 id (CubeMap.Cube inst ND.Dim2 label vec a b)
-basic2 caller ident cut cube@(CubeMap.Cube (grid) _) =
-  DataPlot.PlotData2 (DataPlot.PlotInfo ident cut) (getD3RangeInfo cube) $ Plot3D.mesh plotData
-   where
-     subCubes = CubeMap.getSubCubes (caller |> nc "getSubCube") cube
-     plotData = map (\((_,_,x),subCube) -> map (\(ND.Data [y],z) -> (Type.toDisplayUnit' typx x,
-                                                                     Type.toDisplayUnit' typy y,
-                                                                     Type.toDisplayUnit z)) $
-                                               DV.toList $ CubeMap.tupleVec subCube) subCubes
-     [typx,typy] = map Strict.getType $ ND.toList grid
-
-
--- type instance DataPlot.PlotType (CubeMap.Cube inst dim label vec a b) = [DataPlot.PlotData2 inst label a b (Plot3D.T a a b)]
-type instance DataPlot.PlotInfoContent (CubeMap.Cube inst dim label vec a b) = (PlotD3.Cut label a)
-type instance DataPlot.RangeInfo (CubeMap.Cube inst dim label vec a b) = PlotD3.D3RangeInfo label a b
-type instance DataPlot.PlotType (CubeMap.Cube inst dim label vec a b) = Plot3D.T a a b
-
-instance 
-  (Ord a,
-   Ord b,
-   Show label,
-   DV.Zipper vec,
-   DV.Walker vec,
-   DV.Storage vec [a],
-   DV.Storage vec a,
-   DV.Storage vec (ND.Data ND.Dim1 a),
-   DV.Storage vec b,
-   DV.Storage vec (vec [a]),
-   DV.Storage vec (ND.Data ND.Dim1 a, b),
-   DV.Slice vec,
-   DV.Singleton vec,
-   DV.Length vec,
-   DV.FromList vec,
-   Arith.Constant a,
-   Arith.Constant b,
-   Tuple.C a,
-   Tuple.C b,
-   Atom.C a,
-   Atom.C b,
-   Type.ToDisplayUnit b,
-   Type.GetDynamicType a,
-   Type.GetDynamicType b) => 
-  DataPlot.ToPlotData inst (CubeMap.Cube inst ND.Dim2 label vec a b) (CubeMap.Cube inst ND.Dim2 label vec a b) where
-   toPlotData2 caller ident cube = [basic2 caller ident Nothing cube]
-
-
-instance 
-  (Ord a,
-   Ord b,
-   DV.Zipper vec,
-   DV.Storage vec [a],
-   DV.Storage vec (ND.Data ND.Dim1 a),
-   DV.Storage vec (vec [a]),
-   DV.Storage vec (ND.Data ND.Dim1 a, b),
-   DV.Slice vec,
-   Arith.Constant a,
-   Arith.Constant b,
-   Tuple.C a,
-   Tuple.C b,
-   Atom.C a,
-   Atom.C b,
-   Type.ToDisplayUnit b,
-   Type.GetDynamicType a,
-   Type.GetDynamicType b, 
-   Show (vec CubeGrid.LinIdx),
-   Show (vec Strict.Idx),
-   Show label,
-   Show (vec (ND.Data ND.Dim3 Strict.Idx)),
-   DV.Walker vec,
-   DV.Storage vec a,
-   DV.Storage vec Strict.Idx,
-   DV.Storage vec b,
-   DV.Storage vec CubeGrid.LinIdx,
-   DV.Storage vec (ND.Data ND.Dim3 Strict.Idx),
-   DV.Storage vec [Strict.Idx],
-   DV.Storage vec (vec [Strict.Idx]),
-   DV.Singleton vec,
-   DV.LookupUnsafe vec b,
-   DV.LookupUnsafe vec a,
-   DV.Length vec,
-   DV.FromList vec) =>
-  DataPlot.ToPlotData inst (CubeMap.Cube inst ND.Dim3 label vec a b) (CubeMap.Cube inst ND.Dim2 label vec a b) where
-   toPlotData2 caller ident cube = map f $ CubeMap.extractAll caller cube (ND.Data $ map ND.Idx [0,1])
-     where f (cut, subCube) = basic2 caller ident (Just $ PlotD3.Cut cut) subCube
-
-
--- TODO: Erweiterung auf ND
--- TODO: Labels generieren
-
-class Surface dim label vec a b where
-  toPlotData :: Caller ->
-             Maybe id ->
-             CubeMap.Cube inst dim label vec a b ->
-             [PlotD3.PlotData id label a b]
-
 instance
    (Show b, Type.GetDynamicType a, Arith.Constant b, Arith.Constant a,Type.ToDisplayUnit b,
    Ord a,
@@ -347,7 +213,7 @@ instance
    Tuple.C b,
    Atom.C a,
    Atom.C b) =>
-      Surface ND.Dim2 label vec a b where
+      PlotD3.ToPlotData CubeMap.Cube ND.Dim2 label vec a b where
    toPlotData caller ident cube = [basic caller ident Nothing cube]
 
 instance
@@ -380,7 +246,7 @@ instance
    DV.Storage vec Strict.Idx,
    DV.LookupUnsafe vec Type.Dynamic,
    DV.LookupUnsafe vec b)=>
-  Surface ND.Dim3 label vec a b where
+  PlotD3.ToPlotData CubeMap.Cube ND.Dim3 label vec a b where
    toPlotData caller ident cube = map f $ CubeMap.extractAll caller cube (ND.Data $ map ND.Idx [0,1])
      where f (cut, subCube) = basic caller ident (Just $ PlotD3.Cut cut) subCube
 
@@ -414,7 +280,7 @@ instance
    DV.Storage vec Strict.Idx,
    DV.LookupUnsafe vec Type.Dynamic,
    DV.LookupUnsafe vec b)=>
-  Surface ND.Dim4 label vec a b where
+  PlotD3.ToPlotData CubeMap.Cube ND.Dim4 label vec a b where
    toPlotData caller ident cube = map f $ CubeMap.extractAll caller cube (ND.Data $ map ND.Idx [0,1])
      where f (cut, subCube) = basic caller ident (Just $ PlotD3.Cut cut) subCube
 
@@ -448,7 +314,14 @@ instance
    DV.Storage vec Strict.Idx,
    DV.LookupUnsafe vec Type.Dynamic,
    DV.LookupUnsafe vec b)=>
-  Surface ND.Dim5 label vec a b where
+  PlotD3.ToPlotData CubeMap.Cube ND.Dim5 label vec a b where
    toPlotData caller ident cube = map f $ CubeMap.extractAll caller cube (ND.Data $ map ND.Idx [0,1])
      where f (cut, subCube) = basic caller ident (Just $ PlotD3.Cut cut) subCube
 
+instance 
+  (PlotD3.ToPlotData ndContainer dim label vec a b,
+   Eq (Collection.OrdData (ndContainer inst dim label vec a b)),
+   Ord key,
+   Collection.Unpack (ndContainer inst dim label vec a b)) =>
+  PlotCollection.ToD3PlotData id key ndContainer inst dim label vec a b where
+  toD3PlotData caller ident collection = concat $ map (\(label,x) -> PlotD3.toPlotData caller (Just label) x) $ Collection.toList collection

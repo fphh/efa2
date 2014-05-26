@@ -74,7 +74,7 @@ import qualified EFA.Data.Axis as Axis
 
 --import qualified Data.Map as Map
 import qualified Data.List as List
-import qualified Data.Foldable as Foldable
+--import qualified Data.Foldable as Foldable
 --import qualified Data.List.Key as Key
 --import Data.Map (Map)
 import Control.Functor.HT (void)
@@ -174,6 +174,8 @@ run terminal frameAttr plt =
 data PlotInfo id a = PlotInfo (Maybe id) (Maybe a)
 
 
+{-
+
 allInOneIO :: 
   (Graph.C graph, Terminal.C terminal) =>
   terminal -> 
@@ -184,31 +186,16 @@ allInOneIO ::
 allInOneIO terminal setFrameStyle makeGraph xs =
   run terminal (setFrameStyle xs) $ (Foldable.fold $ map makeGraph $ zip [0..] xs)
 
+eachIO :: 
+  (Graph.C graph, Terminal.C terminal) =>
+  terminal -> 
+  ([a] -> Opts.T graph) -> 
+  ((Int, a) -> Plt.T graph) 
+  -> [a] 
+  -> IO()
+eachIO terminal setFrameStyle makeGraph xs =
+  mapM_ (run terminal (setFrameStyle xs)) $ map makeGraph $ zip [0..] xs
 
-{-
-eachIO :: (Terminal.C terminal, Atom.C a, Atom.C b)=>
-  terminal ->
-  ([PlotData id label a b] ->  Opts.T (Graph3D.T a a b)) ->
-  (Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)) ->
-  [PlotData id label a b] ->
-  IO()
-eachIO terminal makeFrameStyle setGraphStyle xs =
-  mapM_ (DataPlot.run terminal (makeFrameStyle xs)) $ map g $ zip [0..] xs
-  where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData $ LineSpec.deflt) plot
--}
-
-{-
-data PlotData2 id label a b plot =
-  PlotData2 (PlotInfo id (PlotInfoContent id label a b plot)) (RangeInfo id label a b plot) plot
-  
-type family PlotInfoContent id label a b plot   
-type family RangeInfo id label a b plot   
-  
-type family PlotType z
-
-class ToPlotData id z plot where
-  toPlotData2 :: Caller -> Maybe id -> z -> (PlotType z) --[PlotData2 id2 label a b plot]
--}
 
 data PlotData2 id z  =
   PlotData2 (PlotInfo id (PlotInfoContent z)) (RangeInfo z) (PlotType z)
@@ -217,5 +204,6 @@ type family PlotInfoContent z
 type family RangeInfo z
 type family PlotType z
 
-class ToPlotData id zin z where
-  toPlotData2 :: Caller -> Maybe id -> zin -> [PlotData2 id z]
+class ToPlotData idin id zin z where
+  toPlotData2 :: Caller -> Maybe idin -> zin -> [PlotData2 id z]
+-}
