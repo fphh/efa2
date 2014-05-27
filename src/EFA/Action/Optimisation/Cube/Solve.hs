@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE  TypeFamilies #-}
 
-module EFA.Action.Optimisation where
+module EFA.Action.Optimisation.Cube.Solve where
 
 import EFA.Data.Vector as DV
 import EFA.Data.ND as ND

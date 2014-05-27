@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE  TypeFamilies #-}
 
-module EFA.Action.Optimisation.CubeSweep where
+module EFA.Action.Optimisation.Cube.Sweep where
 import EFA.Utility(Caller,
                    merror,(|>),
                    ModuleName(..),FunctionName, genCaller)
