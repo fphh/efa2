@@ -59,9 +59,9 @@ import qualified EFA.Equation.Result as Result
 import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.ND.Cube.Map as CubeMap
 import qualified EFA.Data.ND.Cube.Grid as CubeGrid
+import qualified EFA.Action.Optimisation.Sweep as Sweep
 
-data Demand a
-data Search a
+
 
 -- TODO: Modul so verallgemeinern, dass mit verschiedenen Datentypen gesweept werden kann
 modul :: ModuleName
@@ -71,8 +71,8 @@ nc :: FunctionName -> Caller
 nc = genCaller modul
 
 
-type DoubleSweepCollection inst inst1 dim dim1 label vec vec1 a =  
-  CubeMap.Cube inst dim label vec a (Collection.Collection label (CubeMap.Cube inst1 dim1 label vec1 a a)) 
+type DoubleSweepCollection inst dim dim1 label vec vec1 a =  
+  CubeMap.Cube (Sweep.Demand inst) dim label vec a (Collection.Collection label (CubeMap.Cube (Sweep.Search inst) dim1 label vec1 a a)) 
 
 
 generateWithGrid :: 
@@ -94,13 +94,13 @@ generateWithGrid ::
    DV.Storage
    vec
    (Collection.Collection
-    label (CubeMap.Cube inst1 dim1 label vec1 a a)),
+    label (CubeMap.Cube (Sweep.Search inst) dim1 label vec1 a a)),
    DV.Singleton vec,
    DV.FromList vec) =>
   Caller ->
-  (CubeGrid.Grid inst dim label vec a) -> 
-  (CubeGrid.Grid inst1 dim1 label vec1 a) -> 
-  CubeMap.Cube inst dim label vec a (Collection.Collection label (CubeMap.Cube inst1 dim1 label vec1 a a)) 
+  (CubeGrid.Grid (Sweep.Demand inst) dim label vec a) -> 
+  (CubeGrid.Grid (Sweep.Search inst) dim1 label vec1 a) -> 
+  CubeMap.Cube (Sweep.Demand inst) dim label vec a (Collection.Collection label (CubeMap.Cube (Sweep.Search inst) dim1 label vec1 a a)) 
   
 generateWithGrid caller demandGrid searchGrid = 
   if CubeGrid.haveNoCommonAxes demandGrid searchGrid then result else err
