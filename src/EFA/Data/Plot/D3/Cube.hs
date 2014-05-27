@@ -318,6 +318,7 @@ instance
    toPlotData caller ident cube = map f $ CubeMap.extractAll caller cube (ND.Data $ map ND.Idx [0,1])
      where f (cut, subCube) = basic caller ident (Just $ PlotD3.Cut cut) subCube
 
+-- TODO : create the right labelling, how to deal with labels on different levels ? 
 instance 
   (PlotD3.ToPlotData ndContainer dim label vec a b,
    Eq (Collection.OrdData (ndContainer inst dim label vec a b)),

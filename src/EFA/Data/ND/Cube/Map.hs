@@ -212,6 +212,12 @@ lookupLin caller (Cube _ (Data vec)) (Grid.LinIdx idx) =
   where e = merror caller modul "lookupLinear"
             $ "linear Index out of Bounds - Index : " ++ show idx ++"- Vector: "++ show vec
 
+lookupLinMaybe ::
+  (DV.LookupMaybe vec b) =>
+  Cube inst dim label vec a b -> Grid.LinIdx -> Maybe b
+lookupLinMaybe (Cube _ (Data vec)) (Grid.LinIdx idx) = DV.lookupMaybe vec idx
+
+
 lookupLinUnsafe ::
   DV.LookupUnsafe vec b =>
   Cube inst dim label vec a b -> Grid.LinIdx -> b
@@ -223,6 +229,14 @@ lookUp ::
    DV.Length vec) =>
   Caller -> Grid.DimIdx dim -> Cube inst dim label vec a b -> b
 lookUp caller idx cube@(Cube grid _) = lookupLin (caller |> nc "lookUp") cube index
+  where index = Grid.toLinear grid idx
+
+lookupMaybe ::
+  (DV.LookupMaybe vec b,
+   DV.Storage vec a,
+   DV.Length vec) =>
+  Grid.DimIdx dim -> Cube inst dim label vec a b -> Maybe b
+lookupMaybe idx cube@(Cube grid _) = lookupLinMaybe cube index
   where index = Grid.toLinear grid idx
 
 checkVector ::
@@ -262,6 +276,20 @@ generateWithGrid ::
    DV.FromList vec) =>
    (ND.Data dim a -> b) -> Grid inst dim label vec a -> Cube inst dim label vec a b
 generateWithGrid f grid =  Cube grid $ Data $ DV.map f (Grid.toVector grid)
+
+makeConstantCube ::
+  (DV.Walker vec,
+   DV.Storage vec [a],
+   DV.Storage vec a,
+   DV.Storage vec (vec [a]),
+   DV.Storage vec (ND.Data dim a),
+   DV.Storage vec b,
+   DV.Singleton vec,
+   DV.FromList vec) =>
+  Grid inst dim label vec a -> 
+  b -> 
+  Cube inst dim label vec a b
+makeConstantCube grid x = generateWithGrid (\ _ -> x) grid 
 
 map ::
   (DV.Walker vec,

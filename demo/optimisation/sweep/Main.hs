@@ -152,8 +152,8 @@ etaMap tabEta = Map.map Params.EtaFunction $
             tabEta
 
 grid :: Grid.Grid Base ND.Dim2 (TopoIdx.Position Node) [] Double 
-grid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[-2,-1,1,2]),
-                    (TopoIdx.ppos Rest Network,Type.P,[-4,-3,3,4])]
+grid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[-200..200]),
+                    (TopoIdx.ppos Rest Network,Type.P,[-400..400])]
 
 p_lowVoltage :: CubeMap.Cube Base ND.Dim2 (TopoIdx.Position Node) [] Double Double    
 p_lowVoltage = CubeMap.generateWithGrid (\(ND.Data [x,_]) -> x) grid
@@ -185,8 +185,11 @@ main = do
   let _topo = FlowTopo.topology  flow  
   
 --  print pl1   
+  print powers
+--  print $ map (\(_,cube) ->  CubeMap.lookupLin (nc "Main") cube (Grid.LinIdx 0)) $ Collection.toList powers
 
 
+{-
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
     $ Draw.title "Sequence Flow Graph from Simulation"
@@ -200,3 +203,4 @@ main = do
 --  PlotD3.eachIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") demand
  
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") powers
+-}

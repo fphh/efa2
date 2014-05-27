@@ -19,6 +19,7 @@ import qualified EFA.Data.Axis.Strict as Strict
 import EFA.Utility.Trace(mytrace)
 
 import qualified Data.Map as Map
+import qualified Data.List as List
 
 
 m :: ModuleName
@@ -169,3 +170,11 @@ permute:: [(ND.Idx,[Strict.Idx])] -> [[(ND.Idx,Strict.Idx)]]
 permute xss = mytrace 1 "grid" "permute" $ foldl f [] xss
  where f [] (dimIdx, axIndices) = map (:[]) $ zip (repeat dimIdx) axIndices
        f xs (dimIdx, axIndices) = concat $ map (\ newItem -> map (++ [newItem]) xs) $ zip (repeat dimIdx) axIndices
+       
+       
+haveNoCommonAxes :: (Eq label) =>
+  Grid inst dim label vec a  -> 
+  Grid inst1 dim1 label vec1 a1  ->
+  Bool
+haveNoCommonAxes grid grid1 = (List.intersect (f grid) (f grid1) == []) 
+  where f grid = ND.toList $ ND.map (Strict.getLabel) grid

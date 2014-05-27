@@ -32,6 +32,9 @@ class Unpack a where
   
 data Collection key a = Collection (OrdData a) (Map.Map key (ValData a))
 
+instance (Show (ValData a), Show (OrdData a), Show key) => Show (Collection key a) where
+  show (Collection grid val) = "Collection " ++ show grid ++ " "  ++ show  val
+
 modul :: ModuleName
 modul = ModuleName "Collection"
 

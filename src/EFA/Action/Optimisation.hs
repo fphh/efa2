@@ -59,11 +59,7 @@ import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 
 
 solve :: 
-  (Collection.OrdData (CubeMap.Cube inst dim label vec a b)
-   ~ ND.Data dim (Strict.Axis inst label vec a),
-   Collection.ValData (CubeMap.Cube inst dim label vec a b)
-   ~ CubeMap.Data inst dim vec b,
-   Eq b,
+  (Eq b,
    Zipper vec,
    Ord b, 
    Show b, 
@@ -87,11 +83,7 @@ solve topology etaAssign etaFunc powerCollection =
 
 
 given :: 
-  (Collection.OrdData (CubeMap.Cube inst dim label vec a b)
-   ~ ND.Data dim (Strict.Axis inst label vec a),
-   Collection.ValData (CubeMap.Cube inst dim label vec a b)
-   ~ CubeMap.Data inst dim vec b,
-   ULSystem.Value mode (CubeMap.Data inst dim vec b),
+   (ULSystem.Value mode (CubeMap.Data inst dim vec b),
    Node.C node, 
    Storage vec a, 
    Length vec,
