@@ -6,8 +6,8 @@
 module EFA.Action.Optimisation.Cube.Solve where
 
 import EFA.Data.Vector as DV
-import EFA.Data.ND as ND
-import EFA.Data.Axis.Strict as Strict
+--import EFA.Data.ND as ND
+-- import EFA.Data.Axis.Strict as Strict
 import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology as FlowTopoPlain
 

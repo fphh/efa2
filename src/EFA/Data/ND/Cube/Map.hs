@@ -14,7 +14,7 @@ import qualified EFA.Value.Type as Type
 import qualified EFA.Data.ND as ND
 import qualified EFA.Data.Collection as Collection
 
-
+import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Data.Vector as DV
 --import qualified EFA.Data.ND as ND
@@ -54,10 +54,24 @@ type instance Collection.OrdData (Cube inst dim label vec a b) =
   
 type instance Collection.ValData (Cube inst dim label vec a b) = 
   (Data inst dim vec b)
+
+type instance Collection.OrdData (Result.Result (Cube inst dim label vec a b)) = 
+  (Result.Result (Grid inst dim label vec a))
+ 
+type instance Collection.ValData (Result.Result (Cube inst dim label vec a b)) = 
+  (Result.Result (Data inst dim vec b))
   
 instance Collection.Unpack (Cube inst dim label vec a b) where   
   pack (g,d) = Cube g d 
   unpack (Cube g d) =  (g,d)
+
+
+instance Collection.Unpack (Result.Result (Cube inst dim label vec a b)) where   
+  pack (Result.Determined g,Result.Determined d) = Result.Determined (Cube g d)
+  pack (_,_) = Result.Undetermined
+  unpack (Result.Determined (Cube g d)) =  (Result.Determined g,Result.Determined d)
+  unpack Result.Undetermined =  (Result.Undetermined,Result.Undetermined)
+
 
 instance 
   (DV.Zipper vec,
@@ -355,6 +369,19 @@ zipWith ::
 zipWith caller f (Cube grid (Data vec)) (Cube grid1 (Data vec1)) =
   if grid == grid1 then Cube grid $ Data $ DV.zipWith f vec vec1
                    else merror caller modul "zipWith" "Grid differ"
+any :: (DV.Storage vec b, DV.Singleton vec) =>
+  (b -> Bool) -> 
+  Cube inst dim label vec a b -> 
+  Bool
+any f cube = DV.any f $ getVector $ getData cube 
+
+all ::  (DV.Storage vec b, DV.Singleton vec) =>
+  (b -> Bool) -> 
+  Cube inst dim label vec a b -> 
+  Bool
+all f cube = DV.all f $ getVector $ getData cube 
+
+
 
 -- | Removes the first Dimension
 getSubCube ::

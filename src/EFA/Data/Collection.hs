@@ -8,6 +8,7 @@ import qualified Data.Map as Map
 import qualified Prelude as P
 import Prelude hiding (map)
 
+import qualified EFA.Equation.Result as Result
 
 type family OrdData a
 type family ValData a
@@ -31,6 +32,8 @@ class Unpack a where
   pack :: (OrdData a,ValData a) -> a
   
 data Collection key a = Collection (OrdData a) (Map.Map key (ValData a))
+
+--data ResultColl key a = ResultColl (OrdData a) (Map.Map key (Result.Result (ValData a)))
 
 instance (Show (ValData a), Show (OrdData a), Show key) => Show (Collection key a) where
   show (Collection grid val) = "Collection " ++ show grid ++ " "  ++ show  val
@@ -72,6 +75,10 @@ toList ::
   Collection label a -> [(label, a)]
 toList (Collection o m) = P.map (\(x,y)-> (x, pack (o,y))) $ Map.toList m
 
+{-
+fromMap :: OrdData a -> Map.Map key a -> Collection (OrdData a) a
+fromMap  grid = Collection grid 
+-}
 
 ordFromList :: Eq a => Caller -> [a] -> a
 ordFromList caller [] = merror caller modul "getOrdFromList" "empty List"

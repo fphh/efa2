@@ -7,6 +7,7 @@ module EFA.Flow.Topology.Record (
    fullFlow,
    sectionToPowerRecord,
    sectionResultToPowerRecord,
+   sectionResultToPowerMap,
    topologyToPowerMap
    ) where
 
@@ -116,6 +117,12 @@ sectionResultToPowerRecord (FlowTopoPlain.Section rtime topo) =
           Undetermined -> error "sectionResultToPowerRecord"
           Determined time -> time) $
    fmap Signal.TC $ Map.mapMaybe Result.toMaybe $ topologyToPowerMap topo
+
+sectionResultToPowerMap ::
+   (Ord node) =>
+   FlowTopo.Section node a ->
+   Map.Map (Idx.Position node) a
+sectionResultToPowerMap (FlowTopoPlain.Section _ topo) = topologyToPowerMap topo
 
 topologyToPowerMap ::
    (Ord node) =>
