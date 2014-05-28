@@ -3,6 +3,8 @@
 
 module Main where
 
+import qualified EFA.Data.OD.Curve as Curve
+
 --import qualified EFA.Data.OrdData as OrdData
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.Vector as DV
@@ -198,15 +200,18 @@ main = do
   let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) result
       
   let powerResult = CubeSweep.getDemandSweepPowers (\(Result.Determined (CubeMap.Data x)) -> Result.Determined (DV.maximum x)) result :: Collection.Collection (TopoIdx.Position Node) (Result.Result (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double Double))    
-      powerResult2 = Collection.mapOrdAndData (\(Result.Determined x) -> x) (\(Result.Determined x) -> x) $ Collection.filter (Result.isDetermined) powerResult :: Collection.Collection (TopoIdx.Position Node) (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double Double)
+      powerResult2 = Collection.getDetermined powerResult :: Collection.Collection (TopoIdx.Position Node) (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double Double)
   
   let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $ (\(Just x) -> x) $
                                   Collection.lookup (TopoIdx.ppos Coal Network) collection) powers
+                     
+  let etaResult = CubeMap.map (\(CubeMap.Data x) -> DV.maximum x) $ CubeMap.map (\(Result.Determined x) -> x) $ CubeMap.map ActFlowTopo.etaSys result          
 --  print powerResult2
   
-  let etaSys = ActFlowTopo.etaSys flow_00
+  let etaSys = ActFlowTopo.etaSys flow_00 
   print "SystemEfficiency"    
   print etaSys     
+  print etaResult
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
@@ -219,6 +224,8 @@ main = do
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Result") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") 
     (Just "Power") powerResult2
 
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Result") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") 
+    (Just "EtaSys") etaResult
 {-
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") (Just "Test") p_lowVoltage
   

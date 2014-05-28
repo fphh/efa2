@@ -6,9 +6,9 @@ module EFA.Data.Collection where
 import EFA.Utility(Caller,merror,ModuleName(..),FunctionName, genCaller)
 import qualified Data.Map as Map
 import qualified Prelude as P
-import Prelude hiding (map)
+import Prelude hiding (map,filter)
 
--- import qualified EFA.Equation.Result as Result
+import qualified EFA.Equation.Result as Result
 
 type family OrdData a
 type family ValData a
@@ -97,3 +97,14 @@ lookup label (Collection o m) = case Map.lookup label m of
 
 filter :: (Ord label) => (ValData a -> Bool) -> Collection label a -> Collection label a
 filter f (Collection o m) = Collection o (Map.filter f m)
+
+-- getDetermined :: (Ord label) => Collection label (Result.Result a) -> Collection label a
+getDetermined :: 
+  (Ord label, OrdData a ~ Result.Result (OrdData b),
+   ValData a ~ Result.Result (ValData b)) =>
+  Collection label a -> Collection label b
+getDetermined collection =   
+  mapOrdAndData 
+  (\(Result.Determined x) -> x) 
+  (\(Result.Determined x) -> x) $ 
+  filter (Result.isDetermined) collection

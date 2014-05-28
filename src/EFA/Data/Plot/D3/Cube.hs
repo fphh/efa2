@@ -42,7 +42,7 @@ import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 import qualified EFA.Data.ND as ND
 import qualified EFA.Value.Type as Type
 
-import qualified EFA.Equation.Result as Result
+-- import qualified EFA.Equation.Result as Result
 
 --import qualified EFA.Signal.Sequence as Sequ
 --import qualified EFA.Signal.Signal as S
