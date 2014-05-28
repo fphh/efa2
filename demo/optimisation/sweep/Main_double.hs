@@ -56,6 +56,7 @@ import qualified EFA.Equation.Result as Result
 --import qualified EFA.Equation.Arithmetic as Arith
 
 --import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
+import qualified EFA.Action.EtaCurves as EtaCurves
 
 import qualified EFA.IO.TableParser as Table
 
@@ -180,6 +181,7 @@ main :: IO()
 main = do
 
   tabEta <- Table.read "eta.txt"
+  print tabEta
 {-  
   let flow = ActOpt.solve topology etaAssignMap (etaMap tabEta) given 
       flow :: FlowTopo.Section Node (Result.Result (MyDoubleCube))
@@ -209,9 +211,9 @@ main = do
 --  print powerResult2
   
   let etaSys = ActFlowTopo.etaSys flow_00 
-  print "SystemEfficiency"    
-  print etaSys     
-  print etaResult
+--  print "SystemEfficiency"    
+--  print etaSys     
+--  print etaResult
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2

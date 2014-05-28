@@ -60,6 +60,7 @@ instance GetDynamicType (TC E.F P.E a) where getDynamicType _ = E
 data Dynamic =
   P
   | E
+  | N  
   | UT deriving (Show,Eq)
 
 
