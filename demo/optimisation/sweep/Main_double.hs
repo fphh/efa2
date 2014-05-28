@@ -9,7 +9,7 @@ import qualified EFA.Data.Vector as DV
 
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
-
+import qualified EFA.Action.Flow.Topology as ActFlowTopo
 import EFA.Utility(Caller,
                    --merror,(|>),
                    ModuleName(..),FunctionName, genCaller)
@@ -202,7 +202,11 @@ main = do
   
   let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $ (\(Just x) -> x) $
                                   Collection.lookup (TopoIdx.ppos Coal Network) collection) powers
-  print powerResult2
+--  print powerResult2
+  
+  let etaSys = ActFlowTopo.etaSys flow_00
+  print "SystemEfficiency"    
+  print etaSys     
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
