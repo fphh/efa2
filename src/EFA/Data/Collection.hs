@@ -8,7 +8,7 @@ import qualified Data.Map as Map
 import qualified Prelude as P
 import Prelude hiding (map)
 
-import qualified EFA.Equation.Result as Result
+-- import qualified EFA.Equation.Result as Result
 
 type family OrdData a
 type family ValData a
@@ -33,8 +33,6 @@ class Unpack a where
   
 data Collection key a = Collection (OrdData a) (Map.Map key (ValData a))
 
---data ResultColl key a = ResultColl (OrdData a) (Map.Map key (Result.Result (ValData a)))
-
 instance (Show (ValData a), Show (OrdData a), Show key) => Show (Collection key a) where
   show (Collection grid val) = "Collection " ++ show grid ++ " "  ++ show  val
 
@@ -54,6 +52,9 @@ mapDataWithOrd f (Collection o m) = Collection o $ Map.map (f o) m
 
 map :: (Unpack a) => (a -> a) -> Collection label a -> Collection label a
 map f (Collection o m) = Collection o $ Map.map (snd . unpack . f . pack . (,) o) m
+
+mapOrdAndData :: (OrdData a -> OrdData b) -> (ValData a -> ValData b) -> Collection label a -> Collection label b
+mapOrdAndData f g (Collection o m) = Collection (f o) (Map.map g m)
 
 
 getOrdData :: Collection label a -> OrdData a
@@ -94,3 +95,5 @@ lookup label (Collection o m) = case Map.lookup label m of
   Just d -> Just $ pack(o,d)
   Nothing -> Nothing
 
+filter :: (Ord label) => (ValData a -> Bool) -> Collection label a -> Collection label a
+filter f (Collection o m) = Collection o (Map.filter f m)

@@ -3,8 +3,9 @@
 
 module Main where
 
-import qualified EFA.Data.OrdData as OrdData
+--import qualified EFA.Data.OrdData as OrdData
 import qualified EFA.Data.Axis.Strict as Strict
+import qualified EFA.Data.Vector as DV
 
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
@@ -34,7 +35,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 --import EFA.Utility.Async (concurrentlyMany_)
-import qualified EFA.Flow.Topology.Quantity as FlowTopo
+--import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Data.ND as ND
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Application.Utility as AppUt
@@ -50,7 +51,7 @@ import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified EFA.Equation.Result as Result
 
 --import qualified EFA.Report.FormatValue as FormatValue
-import qualified EFA.Equation.Arithmetic as Arith
+--import qualified EFA.Equation.Arithmetic as Arith
 
 --import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 
@@ -62,7 +63,7 @@ import qualified EFA.Signal.ConvertTable as CT
 import qualified Data.Map as Map
 import Data.GraphViz.Attributes.Colors.X11 (X11Color(DarkSeaGreen2))
                                                      -- Lavender))
-import Data.Maybe as Maybe
+--import Data.Maybe as Maybe
 
 data Base
 
@@ -160,8 +161,8 @@ etaMap tabEta = Map.map Params.EtaFunction $
             tabEta
 
 demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
-demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[-20..20]),
-                    (TopoIdx.ppos Rest Network,Type.P,[-40..40])]
+demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[-2..2]),
+                    (TopoIdx.ppos Rest Network,Type.P,[-4..4])]
 
 searchGrid :: Grid.Grid (Sweep.Search Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
 searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[-2.5,-1.5,1.5,2.5]),
@@ -196,14 +197,13 @@ main = do
   let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) result
   let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) result
       
-{-  
-  let collection = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $ (\(Just x) -> x) $
-                                  Collection.lookup (TopoIdx.ppos Coal Network) collection) powers
--}
-      
+  let powerResult = CubeSweep.getDemandSweepPowers (\(Result.Determined (CubeMap.Data x)) -> Result.Determined (DV.maximum x)) result :: Collection.Collection (TopoIdx.Position Node) (Result.Result (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double Double))    
+      powerResult2 = Collection.mapOrdAndData (\(Result.Determined x) -> x) (\(Result.Determined x) -> x) $ Collection.filter (Result.isDetermined) powerResult :: Collection.Collection (TopoIdx.Position Node) (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double Double)
+  
   let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $ (\(Just x) -> x) $
                                   Collection.lookup (TopoIdx.ppos Coal Network) collection) powers
-
+  print powerResult2
+  
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
     $ Draw.title "Sequence Flow Graph from Simulation"
@@ -212,6 +212,8 @@ main = do
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "P_Coal") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") 
     (Just "Test") p_CoalDemand
     
+  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Result") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") 
+    (Just "Power") powerResult2
 
 {-
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") (Just "Test") p_lowVoltage
