@@ -10,16 +10,17 @@ import qualified EFA.Data.Vector as DV
 import qualified EFA.Data.Axis as Axis
 import qualified EFA.Value.Type as Type
 import qualified EFA.Value as Value
+import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Reference.Base as Ref
 
 --import qualified Data.Map as Map
 
-m :: ModuleName
-m = ModuleName "Axis.Axis"
+modul :: ModuleName
+modul = ModuleName "Axis.Axis"
 
 nc :: FunctionName -> Caller
-nc = genCaller m
+nc = genCaller modul
 
 -- | Datatype with strict monotonically rising values
 -- | typ can be edge oder mid and relates to whether data is related to an intervall or an edge
@@ -77,7 +78,7 @@ fromVec ::
   Caller -> label -> Type.Dynamic -> vec a -> Axis inst label vec a
 fromVec caller label typ vec =
   if isMonoton then Axis label typ vec
-  else merror caller m "fromVec" "Vector of elements is not strict monotonically rising"
+  else merror caller modul "fromVec" "Vector of elements is not strict monotonically rising"
     where isMonoton = DV.all (==True) $ DV.deltaMap (\ x1 x2 -> x2 > x1) vec
 
 findIndex ::
@@ -109,8 +110,52 @@ getSupportPoints ::
    DV.Length vec,
    DV.Find vec,
    DV.LookupUnsafe vec a) =>
-  Axis inst label vec a ->  a -> ((Idx,Idx),(a,a))
+  Axis inst label vec a -> a -> ((Idx,Idx),(a,a))
 getSupportPoints axis x = ((leftIndex,rightIndex),
-                                 (lookupUnsafe axis leftIndex, lookupUnsafe axis rightIndex))
+                           (lookupUnsafe axis leftIndex, lookupUnsafe axis rightIndex))
   where rightIndex = findRightInterpolationIndex axis x
         leftIndex = indexAdd rightIndex (-1)
+
+addLeft :: 
+  (DV.Storage vec a, DV.Singleton vec,DV.FromList vec) => 
+  [a] -> Axis inst label vec a  -> Axis inst label vec a     
+addLeft xs (Axis label typ vec) = Axis label typ $ DV.append (DV.fromList xs) vec
+
+addRight :: 
+  (DV.Storage vec a, DV.Singleton vec,DV.FromList vec) => 
+  Axis inst label vec a  -> [a] -> Axis inst label vec a     
+addRight (Axis label typ vec) xs = Axis label typ $ DV.append vec $ DV.fromList xs
+
+{- TODO: Add drops
+dropLeft :: Int -> Axis inst label vec a  -> Axis inst label vec a     
+dropLeft x (Axis label typ vec) = Axis label typ $ DV.drop x vec
+
+dropRight :: [a] -> Axis inst label vec a  -> Axis inst label vec a     
+dropRight xs (Axis label typ vec) = Axis label typ $ DV.take (DV.take x vec
+-}
+
+scale:: 
+  (DV.Walker vec, DV.Storage vec a, Arith.Product a) => 
+  a -> Axis inst label vec a -> Axis inst label vec a
+scale x (Axis label typ vec) = (Axis label typ $ DV.map (Arith.~*x) vec)
+
+offset:: 
+  (DV.Walker vec, DV.Storage vec a, Arith.Sum a) => 
+  a -> Axis inst label vec a -> Axis inst label vec a
+offset x (Axis label typ vec) = (Axis label typ $ DV.map (Arith.~+x) vec)
+
+flip :: (DV.Walker vec, DV.Storage vec a, Arith.Sum a, DV.Reverse vec) => Axis inst label vec a -> Axis inst label vec a
+flip (Axis label typ vec) = (Axis label typ $ DV.map (Arith.negate) $ DV.reverse vec)
+
+combine ::(DV.Storage vec a, DV.Singleton vec, Eq label, Ord a) => Caller -> Axis inst label vec a -> Axis inst label vec a -> Axis inst label vec a
+combine caller (Axis label typ vec) (Axis label1 typ1 vec1) = let
+  check1 = label == label1 && typ == typ1
+  check2 = DV.last vec < DV.head vec1
+  in case (check1,check2) of 
+    (False,_) -> merror caller modul "combine" "Type or Label differ"
+    (_,False) -> merror caller modul "combine" "Axes are overlapping"
+    (_,True) -> Axis label typ (DV.append vec vec1)
+
+
+modifyLabelWith :: (label -> label1) -> Axis inst label vec a -> Axis inst label1 vec a
+modifyLabelWith f (Axis label typ vec) =  (Axis (f label) typ vec)

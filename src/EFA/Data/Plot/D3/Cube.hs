@@ -161,6 +161,7 @@ getD3RangeInfo cube@(CubeMap.Cube grid _) =
 
 
 -- TODO: ist es unsauber die b mit UniScale zu multiplizieren ?
+{-
 basic ::(
    Atom.C b, Show a, Show b,Show label,Type.GetDynamicType a,
    Arith.Constant a, Arith.Constant b,Type.ToDisplayUnit b,
@@ -183,7 +184,7 @@ basic ::(
    Maybe id ->
    Maybe (PlotD3.Cut label a) ->
    CubeMap.Cube inst ND.Dim2 label vec a b ->
-   PlotD3.PlotData id label a b
+   PlotD3.PlotData id label a b -}
 basic caller ident cut cube@(CubeMap.Cube (grid) _) =
   PlotD3.PlotData (DataPlot.PlotInfo ident cut) (getD3RangeInfo cube) $ Plot3D.mesh plotData
    where
@@ -327,4 +328,4 @@ instance
    Ord key,
    Collection.Unpack (ndContainer inst dim label vec a b)) =>
   PlotCollection.ToD3PlotData id key ndContainer inst dim label vec a b where
-  toD3PlotData caller ident collection = concat $ map (\(label,x) -> PlotD3.toPlotData caller (Just label) x) $ Collection.toList collection
+  toD3PlotData caller _ collection = concat $ map (\(label,x) -> PlotD3.toPlotData caller (Just label) x) $ Collection.toList collection

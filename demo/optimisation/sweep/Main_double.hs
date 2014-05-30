@@ -3,8 +3,9 @@
 
 module Main where
 
+import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.OD.Curve as Curve
-
+import qualified EFA.Action.EtaFunctions as EtaFunctions
 --import qualified EFA.Data.OrdData as OrdData
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.Vector as DV
@@ -56,7 +57,7 @@ import qualified EFA.Equation.Result as Result
 --import qualified EFA.Equation.Arithmetic as Arith
 
 --import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
-import qualified EFA.Action.EtaCurves as EtaCurves
+import qualified EFA.Action.EtaFunctions as EtaFunctions
 
 import qualified EFA.IO.TableParser as Table
 
@@ -139,6 +140,7 @@ scaleTableEta = Map.fromList $
   (local,       (3, 1)) :
   (rest,        (3, 1)) :
   []
+
   
 etaAssign ::
    node -> node -> name ->
@@ -156,6 +158,17 @@ etaAssignMap = Map.fromList $
    etaAssign Rest Network rest :
    []
    
+etaAssignMap2 :: EtaFunctions.EtaAssignMap Node Double
+etaAssignMap2 = Map.fromList $
+   (TopoIdx.Position Network Water,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage"))) : 
+   (TopoIdx.Position Network Coal ,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.7], "coal"))) : 
+   (TopoIdx.Position LocalNetwork Water,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "gas"))) : 
+   (TopoIdx.Position LocalNetwork Network,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "transformer"))) : 
+   (TopoIdx.Position LocalRest LocalNetwork,
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "local"))) : 
+   (TopoIdx.Position Rest Network,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "rest"))) : 
+   []
+
 etaMap :: TPT.Map Double -> Map.Map Params.Name (Params.EtaFunction Double Double)
 etaMap tabEta = Map.map Params.EtaFunction $
          Map.mapKeys Params.Name $
@@ -163,7 +176,8 @@ etaMap tabEta = Map.map Params.EtaFunction $
             (Map.mapKeys Params.unName scaleTableEta)
             tabEta
 
-demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
+
+--demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
 demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[-2..2]),
                     (TopoIdx.ppos Rest Network,Type.P,[-4..4])]
 
@@ -173,7 +187,7 @@ searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[-2.
 
 given :: CubeSweep.Given Base 
          ND.Dim2 ND.Dim2  
-         (TopoIdx.Position Node) [] [] Double
+         (TopoIdx.Position Node) [] [] Double (Interp.Val Double)
 given = CubeSweep.generateGiven (nc "Main") demandGrid searchGrid
 
 
@@ -181,7 +195,12 @@ main :: IO()
 main = do
 
   tabEta <- Table.read "eta.txt"
-  print tabEta
+  let rawEtaCurves = Curve.curvesfromParseTableMap (nc "etaCurves") tabEta 
+                     :: Curve.Map String Base String  [] Double Double
+                        
+  let etaFunctions = EtaFunctions.makeEtaFunctions (nc "Main") etaAssignMap2 rawEtaCurves                     
+        :: EtaFunctions.FunctionMap Node Double
+
 {-  
   let flow = ActOpt.solve topology etaAssignMap (etaMap tabEta) given 
       flow :: FlowTopo.Section Node (Result.Result (MyDoubleCube))
@@ -195,17 +214,22 @@ main = do
 --  print given
   
 --  let result = CubeMap.map (CubeSolve.solve topology etaAssignMap (etaMap tabEta)) given
-  let result = CubeSweep.solve topology etaAssignMap (etaMap tabEta) given    
+--  let result = CubeSweep.solve topology etaAssignMap (etaMap tabEta) given    
+  let result = CubeSweep.solve topology etaFunctions given    
   
 --  print result    
   let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) result
   let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) result
       
-  let powerResult = CubeSweep.getDemandSweepPowers (\(Result.Determined (CubeMap.Data x)) -> Result.Determined (DV.maximum x)) result :: Collection.Collection (TopoIdx.Position Node) (Result.Result (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double Double))    
-      powerResult2 = Collection.getDetermined powerResult :: Collection.Collection (TopoIdx.Position Node) (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double Double)
+  let powerResult = CubeSweep.getDemandSweepPowers (condenseResult) result :: Collection.Collection (TopoIdx.Position Node) (Result.Result (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double (Interp.Val Double)))    
+      
+      condenseResult (Result.Determined (CubeMap.Data x)) = Result.Determined (DV.maximum x)
+      condenseResult Result.Undetermined = Result.Undetermined
+
+      powerResult2 = Collection.getDetermined powerResult :: Collection.Collection (TopoIdx.Position Node) (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double (Interp.Val Double))
   
-  let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $ (\(Just x) -> x) $
-                                  Collection.lookup (TopoIdx.ppos Coal Network) collection) powers
+  let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $
+                                  Collection.lookup (nc "main") (TopoIdx.ppos Coal Network) collection) powers
                      
   let etaResult = CubeMap.map (\(CubeMap.Data x) -> DV.maximum x) $ CubeMap.map (\(Result.Determined x) -> x) $ CubeMap.map ActFlowTopo.etaSys result          
 --  print powerResult2

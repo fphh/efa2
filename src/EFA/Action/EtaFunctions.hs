@@ -1,0 +1,110 @@
+
+{-# LANGUAGE FlexibleContexts #-}
+
+module EFA.Action.EtaFunctions where
+
+import qualified EFA.Data.Axis.Strict as Strict
+import qualified EFA.Data.Interpolation as Interp
+import qualified EFA.Data.Vector as DV
+import qualified EFA.Data.Collection as Collection
+
+import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.IO.TableParserTypes as ParseTable
+
+import qualified EFA.Flow.Topology.Index as TopoIdx
+
+import qualified  EFA.Data.OD.Curve as Curve
+
+import EFA.Utility(Caller,
+                   merror,(|>),
+                   ModuleName(..),FunctionName, genCaller)
+
+import qualified EFA.IO.TableParserTypes as ParseTable
+import qualified EFA.Value.Type as Type
+
+import qualified Data.List as List
+import qualified Data.Map as Map
+
+modul :: ModuleName
+modul = ModuleName "OD.Curve"
+
+nc :: FunctionName -> Caller
+nc = genCaller modul
+
+data Conf a = Pair a a | Single a | Duplicate a | DuplicateCombine a
+
+type EtaAssignMap node a = Map.Map (TopoIdx.Position node) 
+                           (Conf ((Interp.Method a, Interp.ExtrapMethod a), ([Curve.ModifyOps a],String)))
+
+type FunctionMap node a = Map.Map (TopoIdx.Position node) (Interp.Val a -> Interp.Val a)
+
+makeEtaFunctions :: 
+  (Arith.Product a,
+   DV.Walker vec,
+   DV.Storage vec a,
+   DV.Singleton vec,
+   DV.Reverse vec,
+   DV.FromList vec, 
+   Ord a,
+   Show a,
+   Arith.Constant (Interp.Val a),
+   Arith.Constant a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,
+   DV.Find vec) =>
+  Caller ->
+  EtaAssignMap node a -> 
+  Curve.Map String inst String vec a a ->  
+  FunctionMap node a
+makeEtaFunctions caller assignMap etaCurves = Map.mapWithKey f assignMap    
+  where f pos assign = 
+          let -- TODO:: Insert errror message as Map.lookup        
+            g (ops,name) =  (Curve.modify ops $ 
+                             (\(Just x) -> x) $ Map.lookup name etaCurves) 
+            in case assign of 
+          (Pair (m,x) (n,y)) ->  etaFunctionWithTwoCurves (caller |> nc "makeEtaFunction") (m,g x) (n,g y)
+          (Single (m,x)) -> etaFunctionWithOneCurve (caller |> nc "makeEtaFunction")  (m,g x)
+          (Duplicate (m,x)) -> etaFunctionWithTwoCurves (caller |> nc "makeEtaFunction")(m,Curve.flipX $ g x) (m,g x) 
+          (DuplicateCombine (m,x)) -> etaFunctionWithOneCurve (caller |> nc "makeEtaFunction") 
+                                      (m ,Curve.combine (caller |> nc "makeEtaFunction") (Curve.flipX $ g x) (g x))
+            
+
+-- TODO -- include Range check on curve0 and 1 
+etaFunctionWithTwoCurves ::  
+  (Ord a,
+   Show label,
+   Show a,
+   Arith.Constant a,
+   DV.Storage vec a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,
+   DV.Find vec, 
+   Arith.Constant (Interp.Val a)) =>
+  Caller -> 
+  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) -> 
+  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) -> 
+  Interp.Val a ->
+  Interp.Val  a     
+etaFunctionWithTwoCurves caller ((inmethodNeg,exmethodNeg),curveNeg) ((inmethodPos,exmethodPos),curvePos) x = 
+  case x>= Arith.zero of 
+     True -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodNeg exmethodNeg curveNeg x
+     False -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodPos exmethodPos curvePos x
+
+etaFunctionWithOneCurve ::
+  (Ord a,
+   Show a,
+   Show label,
+   Arith.Constant a,
+   DV.Storage vec a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,
+   DV.Find vec) =>
+  Caller -> 
+  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) ->   
+  Interp.Val a ->
+  Interp.Val a         
+etaFunctionWithOneCurve caller ((inmethod,exmethod),curve) x = 
+  Curve.interpolate (caller |> nc "etaFunctionWithOneCurve") inmethod exmethod curve x
+  
+      
+

@@ -278,7 +278,7 @@ create caller xs vec =
        else merror caller modul "create"
             "Vector doesn't contain the right number of elements"
 
-
+{-
 generateWithGrid ::
   (DV.Walker vec,
    DV.Storage vec b,
@@ -288,7 +288,7 @@ generateWithGrid ::
    DV.Storage vec [a],
    DV.Singleton vec,
    DV.FromList vec) =>
-   (ND.Data dim a -> b) -> Grid inst dim label vec a -> Cube inst dim label vec a b
+   (ND.Data dim a -> b) -> Grid inst dim label vec a -> Cube inst dim label vec a b-}
 generateWithGrid f grid =  Cube grid $ Data $ DV.map f (Grid.toVector grid)
 
 makeConstantCube ::

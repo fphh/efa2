@@ -61,6 +61,7 @@ data Dynamic =
   P
   | E
   | N  
+  | UD 
   | UT deriving (Show,Eq)
 
 

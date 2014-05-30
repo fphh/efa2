@@ -177,4 +177,4 @@ haveNoCommonAxes :: (Eq label) =>
   Grid inst1 dim1 label vec1 a1  ->
   Bool
 haveNoCommonAxes grid grid1 = (List.intersect (f grid) (f grid1) == []) 
-  where f grid = ND.toList $ ND.map (Strict.getLabel) grid
+  where f gr = ND.toList $ ND.map (Strict.getLabel) gr

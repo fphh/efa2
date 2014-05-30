@@ -5,6 +5,9 @@
 
 module EFA.Action.Optimisation.Cube.Solve where
 
+import EFA.Action.EtaFunctions as EtaFunctions
+
+import qualified EFA.Data.Interpolation as Interp
 import EFA.Data.Vector as DV
 --import EFA.Data.ND as ND
 -- import EFA.Data.Axis.Strict as Strict
@@ -57,92 +60,64 @@ import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.ND.Cube.Map as CubeMap
 import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 
-
-solve :: 
-  (Eq b,
+solve ::
+  (Eq a,
+   Arith.Constant a,
+   Storage vec a,
+   Node.C node,
    Zipper vec,
-   Ord b, 
-   Show b, 
-   Storage vec a, 
-   FromList vec,
    Walker vec,
-   Storage vec b,
+   Storage vec (Interp.Val a),
    Storage vec Bool,
    Singleton vec,
-   Length vec,
-   Arith.Constant b,
-   Node.C node) =>
+   Length vec) =>
   Topo.Topology node -> 
-  Map (TopoIdx.Position node) (Name, Name) -> 
-  Map Name (Params.EtaFunction b b) -> 
-  Collection.Collection (TopoIdx.Position node) (CubeMap.Cube inst dim label vec a b) -> 
-  FlowTopo.Section node (Result.Result (CubeMap.Data inst dim vec b))
-solve topology etaAssign etaFunc powerCollection =
+  EtaFunctions.FunctionMap node a ->  
+  Collection.Collection (TopoIdx.Position node) (CubeMap.Cube inst dim label vec a (Interp.Val a)) -> 
+  FlowTopo.Section node (Result.Result (CubeMap.Data inst dim vec (Interp.Val a)))
+solve topology etaFunctions powerCollection =
    EqSys.solve (quantityTopology topology) $
-   given etaAssign etaFunc powerCollection
-
+   given etaFunctions powerCollection
 
 given :: 
-   (ULSystem.Value mode (CubeMap.Data inst dim vec b),
+  (Verify.GlobalVar mode (CubeMap.Data inst dim vec (Interp.Val a)) (RecIdx.Record RecIdx.Absolute (Variable.Signal node)), 
+   ULSystem.Value mode (CubeMap.Data inst dim vec a),
+   Arith.Constant a,Storage vec (Interp.Val a),
+   Storage vec a, Zipper vec,Walker vec,
+   Length vec, 
    Node.C node, 
-   Storage vec a, 
-   Length vec,
-   Walker vec,
-   Storage vec b,
-   Singleton vec,
-   Arith.Constant b,
-   Verify.GlobalVar mode (CubeMap.Data inst dim vec b) (RecIdx.Record RecIdx.Absolute (Variable.Signal node)),
-   Ord b, Show b, Zipper vec, FromList vec) =>
-   Map (TopoIdx.Position node) (Name, Name) -> 
-  Map Name (Params.EtaFunction b b) -> 
-  Collection.Collection (TopoIdx.Position node) (CubeMap.Cube inst dim label vec a b) -> 
-  EqSys.EquationSystem mode node s (CubeMap.Data inst dim vec b)
-given etaAssign etaFunc (Collection.Collection grid mp) =
+   Singleton vec)=>
+  EtaFunctions.FunctionMap node a ->
+  Collection.Collection (TopoIdx.Position node) (CubeMap.Cube inst dim label vec a (Interp.Val a)) -> 
+  EqSys.EquationSystem mode node s (CubeMap.Data inst dim vec (Interp.Val a))
+given etaFunctions  (Collection.Collection grid mp) =
    (XIdx.dTime .= (CubeMap.Data $ DV.replicate (CubeGrid.linearLength grid) Arith.one))
-   <> EqSys.withExpressionGraph (makeEtaFuncGiven etaAssign etaFunc)
+   <> EqSys.withExpressionGraph (makeEtaFuncGiven etaFunctions)
    <> Fold.fold (Map.mapWithKey f mp)
    where
      f ppos p  =  XIdx.powerFromPosition ppos .= p
 
 
--- TODO: Ist diese Funktion am richtigen Platz ?
-makeEtaFuncGiven ::
-  (ULSystem.Value mode (CubeMap.Data inst dim vec a), 
-   Zipper vec, 
-   Arith.Sum a, 
-   Walker vec, 
-   Storage vec a, 
-   Ord node, Ord a, 
-   Show a, 
-   Arith.Constant a) =>
-  Map (XIdx.Position node) (Name, Name) ->
-  Map Name (Params.EtaFunction a a) ->
-  FlowTopo.Section node (EqAbs.Expression mode vars s (CubeMap.Data inst dim vec a)) ->
+makeEtaFuncGiven:: 
+  (ULSystem.Value
+   mode (CubeMap.Data inst dim vec (Interp.Val a)), Walker vec, Storage vec (Interp.Val a),
+   Ord node,
+   Arith.Sum a, Zipper vec) =>
+  EtaFunctions.FunctionMap node a ->  
+  FlowTopo.Section node (EqAbs.Expression mode vars s (CubeMap.Data inst dim vec (Interp.Val a))) ->
   EqAbs.VariableSystem mode vars s
-makeEtaFuncGiven etaAssign etaFunc topo =
+makeEtaFuncGiven etaFunctions topo =
    Fold.fold $
    Map.mapWithKey
-      (\se (strP, strN) ->
+      (\position etaFunc ->
          Fold.foldMap
             (\(eta, power) ->
-               eta =.= EqAbs.liftF (CubeMap.mapData (absEtaFunction strP strN etaFunc)) power)
+               eta =.= EqAbs.liftF (CubeMap.mapData etaFunc) power)
             (FlowTopo.lookupAutoDirSection
                (\flow -> (FlowTopo.flowEta flow, FlowTopo.flowPowerOut flow))
                (\flow -> (FlowTopo.flowEta flow, FlowTopo.flowPowerIn  flow))
-               id se topo))
-      etaAssign
-
--- TODO: Ist diese Funktion am richtigen Platz ?
-absEtaFunction ::
-   (Ord a, Show a, Arith.Constant a, Arith.Product b) =>
-   Name -> Name -> Map Name (Params.EtaFunction a b) -> a -> b
-absEtaFunction strP strN etaFunc =
-   let fpos = check strP id $ Map.lookup strP $ Map.map Params.func etaFunc
-       fneg = check strN rev $ Map.lookup strN $ Map.map Params.func etaFunc
-       rev h = Arith.recip . h . Arith.negate
-       check (Name str) =
-          maybe (\x -> error ("not defined: '" ++ str ++ "' for " ++ show x))
-   in  \x -> if x >= Arith.zero then fpos x else fneg x
+               id position topo))
+      etaFunctions
 
 -- TODO :: get rid of AppUt.checkDetermined
 getPowers ::

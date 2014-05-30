@@ -88,12 +88,21 @@ ordFromList caller (x:xs) =
   if all (==x) xs then x
   else merror caller modul "getOrdFromList" "OrdData differs"
 
-lookup ::
+lookupMaybe ::
   (Ord label, Unpack a) =>
   label -> Collection label a -> Maybe a
-lookup label (Collection o m) = case Map.lookup label m of
+lookupMaybe label (Collection o m) = case Map.lookup label m of
   Just d -> Just $ pack(o,d)
   Nothing -> Nothing
+
+lookup ::
+  (Ord label, Show label,Unpack a) =>
+  Caller -> label -> Collection label a -> a
+lookup caller label collection = case lookupMaybe label collection of
+  Just x -> x 
+  Nothing -> merror caller modul "lookup" ("not in collection: " ++ show label)
+
+
 
 filter :: (Ord label) => (ValData a -> Bool) -> Collection label a -> Collection label a
 filter f (Collection o m) = Collection o (Map.filter f m)
