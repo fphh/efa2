@@ -79,7 +79,16 @@ class UnWrap e p where
 
 instance UnWrap E.T P.P where unWrap (Wrap_P x) = x
 
-data DisplayUnit = Unit_kWh | Unit_Joule | Unit_kJoule | Unit_kW | Unit_Percent | Unit_None | Unit_Sec | Unit_UT | Unit_W deriving Show
+data DisplayUnit = Unit_kWh 
+                 | Unit_Joule 
+                 | Unit_kJoule 
+                 | Unit_kW 
+                 | Unit_Percent 
+                 | Unit_None 
+                 | Unit_Sec 
+                 | Unit_UT 
+                 | Unit_W 
+                 | Unit_Undefined deriving Show
 
 toDisplayUnit' :: (Arith.Constant a) => Dynamic -> a -> a
 toDisplayUnit' typ x = (Arith.fromRational scal) Arith.~* x
@@ -106,6 +115,7 @@ showUnit x = case x of
  Unit_Sec -> "s"
  Unit_UT -> "UT"
  Unit_W -> "W"
+ Unit_Undefined -> "#"
  _ -> error " EFA.Value.Type/showUnit - not implemented:" ++ show x
 
 
@@ -114,6 +124,8 @@ getDisplayUnit :: Dynamic -> DisplayUnit
 getDisplayUnit P = Unit_kW
 getDisplayUnit E = Unit_kWh
 getDisplayUnit UT = Unit_UT
+getDisplayUnit N = Unit_None
+getDisplayUnit UD = Unit_Undefined
 getDisplayUnit x = (error $ "Error EFA.Value.Type/getDisplayUnit - not implemented: " ++ show x)
 
 newtype UnitScale = UnitScale Rational

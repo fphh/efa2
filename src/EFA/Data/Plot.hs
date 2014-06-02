@@ -174,6 +174,7 @@ run terminal frameAttr plt =
 data PlotInfo id a = PlotInfo (Maybe id) (Maybe a)
 
 
+
 {-
 
 allInOneIO :: 

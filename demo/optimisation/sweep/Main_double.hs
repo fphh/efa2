@@ -10,6 +10,9 @@ import qualified EFA.Action.EtaFunctions as EtaFunctions
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.Vector as DV
 
+import qualified EFA.Data.Plot.D2 as PlotD2
+import qualified EFA.Data.Plot.D2.Curve as PlotCurve
+
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Flow.Topology as ActFlowTopo
@@ -161,11 +164,11 @@ etaAssignMap = Map.fromList $
 etaAssignMap2 :: EtaFunctions.EtaAssignMap Node Double
 etaAssignMap2 = Map.fromList $
    (TopoIdx.Position Network Water,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage"))) : 
-   (TopoIdx.Position Network Coal ,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.7], "coal"))) : 
-   (TopoIdx.Position LocalNetwork Water,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "gas"))) : 
-   (TopoIdx.Position LocalNetwork Network,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "transformer"))) : 
+   (TopoIdx.Position Network Coal ,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 4 0.7], "coal"))) : 
+   (TopoIdx.Position LocalNetwork Gas,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "gas"))) : 
+   (TopoIdx.Position LocalNetwork Network,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 3 0.9], "transformer"))) : 
    (TopoIdx.Position LocalRest LocalNetwork,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "local"))) : 
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 1], "local"))) : 
    (TopoIdx.Position Rest Network,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "rest"))) : 
    []
 
@@ -178,12 +181,12 @@ etaMap tabEta = Map.map Params.EtaFunction $
 
 
 --demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
-demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[-2..2]),
-                    (TopoIdx.ppos Rest Network,Type.P,[-4..4])]
+demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[-1,-0.5..1]),
+                    (TopoIdx.ppos Rest Network,Type.P,[-1,-0.5..1])]
 
 searchGrid :: Grid.Grid (Sweep.Search Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
-searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[-2.5,-1.5,1.5,2.5]),
-                    (TopoIdx.ppos Network Water,Type.P,[-4.5,-3.5,3.5,4.5])]
+searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[-1,-0.5..1]),
+                    (TopoIdx.ppos Network Water,Type.P,[-1,-0.5..1])]
 
 given :: CubeSweep.Given Base 
          ND.Dim2 ND.Dim2  
@@ -200,6 +203,9 @@ main = do
                         
   let etaFunctions = EtaFunctions.makeEtaFunctions (nc "Main") etaAssignMap2 rawEtaCurves                     
         :: EtaFunctions.FunctionMap Node Double
+           
+  let etaCurves = EtaFunctions.toCurveMap (Strict.Axis "Power" Type.UT [-3,-2.9..3]) etaFunctions 
+                  :: Curve.Map (TopoIdx.Position Node) Base String  [] Double (Interp.Val Double)      
 
 {-  
   let flow = ActOpt.solve topology etaAssignMap (etaMap tabEta) given 
@@ -232,17 +238,18 @@ main = do
                                   Collection.lookup (nc "main") (TopoIdx.ppos Coal Network) collection) powers
                      
   let etaResult = CubeMap.map (\(CubeMap.Data x) -> DV.maximum x) $ CubeMap.map (\(Result.Determined x) -> x) $ CubeMap.map ActFlowTopo.etaSys result          
---  print powerResult2
   
   let etaSys = ActFlowTopo.etaSys flow_00 
---  print "SystemEfficiency"    
---  print etaSys     
---  print etaResult
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
     $ Draw.title "Sequence Flow Graph from Simulation"
     $ Draw.flowSection Draw.optionsDefault flow_00
+    
+  PlotD2.allInOneIO DefaultTerm.cons (PlotD2.labledFrame "EtaCurves")  PlotD2.plotInfo3lineTitles $ PlotCurve.toPlotDataMap  rawEtaCurves
+  
+  print etaCurves
+  PlotD2.allInOneIO DefaultTerm.cons (PlotD2.labledFrame "EtaCurves")  PlotD2.plotInfo3lineTitles $ PlotCurve.toPlotDataMap  etaCurves
     
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "P_Coal") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") 
     (Just "Test") p_CoalDemand
@@ -261,3 +268,4 @@ main = do
  
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") powers
 -}
+

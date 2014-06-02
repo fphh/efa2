@@ -6,10 +6,10 @@ module EFA.Action.EtaFunctions where
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.Vector as DV
-import qualified EFA.Data.Collection as Collection
+--import qualified EFA.Data.Collection as Collection
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.IO.TableParserTypes as ParseTable
+--import qualified EFA.IO.TableParserTypes as ParseTable
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
@@ -20,9 +20,9 @@ import EFA.Utility(Caller,
                    ModuleName(..),FunctionName, genCaller)
 
 import qualified EFA.IO.TableParserTypes as ParseTable
-import qualified EFA.Value.Type as Type
+--import qualified EFA.Value.Type as Type
 
-import qualified Data.List as List
+--import qualified Data.List as List
 import qualified Data.Map as Map
 
 modul :: ModuleName
@@ -64,9 +64,9 @@ makeEtaFunctions caller assignMap etaCurves = Map.mapWithKey f assignMap
             in case assign of 
           (Pair (m,x) (n,y)) ->  etaFunctionWithTwoCurves (caller |> nc "makeEtaFunction") (m,g x) (n,g y)
           (Single (m,x)) -> etaFunctionWithOneCurve (caller |> nc "makeEtaFunction")  (m,g x)
-          (Duplicate (m,x)) -> etaFunctionWithTwoCurves (caller |> nc "makeEtaFunction")(m,Curve.flipX $ g x) (m,g x) 
+          (Duplicate (m,x)) -> etaFunctionWithTwoCurves (caller |> nc "makeEtaFunction")(m,Curve.recipY $ Curve.flipX $ g x) (m,g x) 
           (DuplicateCombine (m,x)) -> etaFunctionWithOneCurve (caller |> nc "makeEtaFunction") 
-                                      (m ,Curve.combine (caller |> nc "makeEtaFunction") (Curve.flipX $ g x) (g x))
+                                      (m ,Curve.combine (caller |> nc "makeEtaFunction") (Curve.recipY $ Curve.flipX $ g x) (g x))
             
 
 -- TODO -- include Range check on curve0 and 1 
@@ -87,8 +87,8 @@ etaFunctionWithTwoCurves ::
   Interp.Val  a     
 etaFunctionWithTwoCurves caller ((inmethodNeg,exmethodNeg),curveNeg) ((inmethodPos,exmethodPos),curvePos) x = 
   case x>= Arith.zero of 
-     True -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodNeg exmethodNeg curveNeg x
-     False -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodPos exmethodPos curvePos x
+     False -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodNeg exmethodNeg curveNeg x
+     True -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodPos exmethodPos curvePos x
 
 etaFunctionWithOneCurve ::
   (Ord a,
@@ -108,3 +108,8 @@ etaFunctionWithOneCurve caller ((inmethod,exmethod),curve) x =
   
       
 
+toCurveMap :: 
+  (DV.Walker vec, DV.Storage vec (Interp.Val a),DV.Storage vec a) => 
+  Strict.Axis inst label vec a -> FunctionMap node a -> Curve.Map (TopoIdx.Position node) inst label vec a (Interp.Val a)
+toCurveMap axis functionMap = Map.map f functionMap
+  where f function = Curve.Curve axis (DV.map function $ DV.map Interp.Inter $ Strict.getVec axis)

@@ -1,10 +1,13 @@
 module EFA.Data.OD.Curve where
 
+import qualified EFA.Value as Value
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.Interpolation as Interpolation
 import qualified EFA.Data.Vector as DV
 
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified Graphics.Gnuplot.Value.Atom as Atom
+import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
 
 import EFA.Utility(Caller,
@@ -29,7 +32,7 @@ nc = genCaller modul
 -- TODO: generate OrdData -DataType-Wrapper for x which prevents swapping x and y in all interpolation and scaling stuff
 
 data Curve inst label vec a b = Curve {getAxis :: Strict.Axis inst label vec a, 
-                                       getData :: vec b}
+                                       getData :: vec b} deriving Show
 
 type Map key inst label vec a b = Map.Map key (Curve inst label vec a b)                               
 
@@ -174,3 +177,9 @@ modifyLabelWith ::
   Curve inst label vec a b ->
   Curve inst label1 vec a b
 modifyLabelWith f (Curve axis vec) = (Curve (Strict.modifyLabelWith f axis) vec)
+
+
+getValueRange :: 
+  (Ord b, DV.Storage vec b, DV.Singleton vec) => 
+  Curve inst label vec a b -> Value.Range b
+getValueRange (Curve axis vec) = Value.getValueRange vec
