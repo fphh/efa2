@@ -2,7 +2,7 @@ module EFA.Action.Flow.Topology where
 
 import qualified EFA.Action.Flow as ActFlow
 import qualified EFA.Graph.Topology.Node as Node
-import EFA.Equation.Result (Result(Determined, Undetermined))
+import EFA.Equation.Result (Result)
 import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Flow.Topology.Quantity as TopoQty

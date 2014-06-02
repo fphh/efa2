@@ -6,8 +6,8 @@ import qualified EFA.Data.Interpolation as Interpolation
 import qualified EFA.Data.Vector as DV
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified Graphics.Gnuplot.Value.Atom as Atom
-import qualified Graphics.Gnuplot.Value.Tuple as Tuple
+--import qualified Graphics.Gnuplot.Value.Atom as Atom
+--import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
 
 import EFA.Utility(Caller,
@@ -93,7 +93,7 @@ data ModifyOps a =
   FlipY |
   RecipY |
   Scale a a |
-  Offset a a |
+--  Offset a a |
   AddPntsL [(a,a)] |
   AddPntsR [(a,a)] 
 --  AddAtZero b 
@@ -182,4 +182,4 @@ modifyLabelWith f (Curve axis vec) = (Curve (Strict.modifyLabelWith f axis) vec)
 getValueRange :: 
   (Ord b, DV.Storage vec b, DV.Singleton vec) => 
   Curve inst label vec a b -> Value.Range b
-getValueRange (Curve axis vec) = Value.getValueRange vec
+getValueRange (Curve _ vec) = Value.getValueRange vec

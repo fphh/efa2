@@ -16,10 +16,11 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified  EFA.Data.OD.Curve as Curve
 
 import EFA.Utility(Caller,
-                   merror,(|>),
+                 --  merror,
+                   (|>),
                    ModuleName(..),FunctionName, genCaller)
 
-import qualified EFA.IO.TableParserTypes as ParseTable
+--import qualified EFA.IO.TableParserTypes as ParseTable
 --import qualified EFA.Value.Type as Type
 
 --import qualified Data.List as List
@@ -57,7 +58,7 @@ makeEtaFunctions ::
   Curve.Map String inst String vec a a ->  
   FunctionMap node a
 makeEtaFunctions caller assignMap etaCurves = Map.mapWithKey f assignMap    
-  where f pos assign = 
+  where f _ assign = 
           let -- TODO:: Insert errror message as Map.lookup        
             g (ops,name) =  (Curve.modify ops $ 
                              (\(Just x) -> x) $ Map.lookup name etaCurves) 

@@ -119,8 +119,8 @@ combineRange (D3RangeInfo x y z) (D3RangeInfo x1 y1 z1) =
   (DataPlot.combine y y1)
   (DataPlot.combine z z1)
 
-combineRangeList :: (Ord b, Ord a) => [D3RangeInfo label a b] -> D3RangeInfo label a b
-combineRangeList (x:xs) = foldl combineRange x xs
+combineRangeList :: (Ord b, Ord a) => D3RangeInfo label a b -> [D3RangeInfo label a b] -> D3RangeInfo label a b
+combineRangeList x xs = foldl combineRange x xs
 
 class GetD3RangeInfo d3data where
   getD3RangeInfo ::
@@ -159,7 +159,7 @@ labledFrame title xs =
   Opts.zLabel (DataPlot.makeAxisLabelWithIds plotIds ax3) $
   Opts.title title $ defaultFrameAttr
   where
-    D3RangeInfo ax1 ax2 ax3 = combineRangeList rs
+    D3RangeInfo ax1 ax2 ax3 = combineRangeList (head rs) (tail rs)
     rs = map f xs
     f (PlotData _ rangeInfo _) = rangeInfo
     plotIds = collectPlotIds xs

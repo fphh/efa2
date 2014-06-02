@@ -73,11 +73,14 @@ class Wrap e p where
   wrap :: TC e p a -> Wrapper a
 
 instance Wrap E.T P.P where wrap x = Wrap_P x
+-- instance Wrap E.T P.UT where wrap x = Wrap_UT x
 
 class UnWrap e p where
   unWrap :: Wrapper a -> TC e p a
 
+-- TODO: roll out with correct physical typing
 instance UnWrap E.T P.P where unWrap (Wrap_P x) = x
+-- instance UnWrap E.T P.UT where unWrap (Wrap_UT x) = x
 
 data DisplayUnit = Unit_kWh 
                  | Unit_Joule 
@@ -116,7 +119,7 @@ showUnit x = case x of
  Unit_UT -> "UT"
  Unit_W -> "W"
  Unit_Undefined -> "#"
- _ -> error " EFA.Value.Type/showUnit - not implemented:" ++ show x
+ -- _ -> error " EFA.Value.Type/showUnit - not implemented:" ++ show x
 
 
 
@@ -126,7 +129,7 @@ getDisplayUnit E = Unit_kWh
 getDisplayUnit UT = Unit_UT
 getDisplayUnit N = Unit_None
 getDisplayUnit UD = Unit_Undefined
-getDisplayUnit x = (error $ "Error EFA.Value.Type/getDisplayUnit - not implemented: " ++ show x)
+-- getDisplayUnit x = (error $ "Error EFA.Value.Type/getDisplayUnit - not implemented: " ++ show x)
 
 newtype UnitScale = UnitScale Rational
 
@@ -141,3 +144,4 @@ getUnitScale Unit_Sec = UnitScale 1
 getUnitScale Unit_kW = UnitScale (1/1000)
 getUnitScale Unit_UT = UnitScale 1
 getUnitScale Unit_W = UnitScale 1
+getUnitScale Unit_Undefined = UnitScale 1

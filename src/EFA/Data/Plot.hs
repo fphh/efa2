@@ -134,8 +134,8 @@ combineTics NoTics (Tics xs) = Tics xs
 combineTics (Tics xs) (Tics xs1) = Tics $ List.sort $ xs ++ xs1
 
 
-combineList :: Ord a => [AxisInfo label a] -> AxisInfo label a
-combineList (x:xs) = foldl combine x xs
+combineList :: Ord a => AxisInfo label a -> [AxisInfo label a] -> AxisInfo label a
+combineList x xs = foldl combine x xs
 
 combine :: Ord a =>
   AxisInfo label a ->

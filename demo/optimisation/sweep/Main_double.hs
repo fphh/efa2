@@ -134,35 +134,8 @@ edgeList = [(Coal, Network, "Coal\\lPlant", "Coal","ElCoal"),
                (Gas, LocalNetwork,"Gas\\lPlant","Gas","ElGas"),
                (LocalNetwork, LocalRest, "100%", "toResidualLV", "toResidualLV")]
 
-scaleTableEta :: Map.Map Params.Name (Double, Double)
-scaleTableEta = Map.fromList $
-  (storage,     (1, 0.9)) :
-  (gas,         (1, 0.7)) :
-  (transformer, (3, 0.95)) :
-  (coal,        (7, 0.45)) :
-  (local,       (3, 1)) :
-  (rest,        (3, 1)) :
-  []
-
-  
-etaAssign ::
-   node -> node -> name ->
-   (TopoIdx.Position node, (name, name))
-etaAssign from to name =
-   (TopoIdx.Position from to, (name, name))
-
-etaAssignMap :: EtaAssignMap Node
+etaAssignMap :: EtaFunctions.EtaAssignMap Node Double
 etaAssignMap = Map.fromList $
-   etaAssign Network Water storage :
-   etaAssign Network Coal coal :
-   etaAssign LocalNetwork Gas gas :
-   etaAssign LocalNetwork Network transformer :
-   etaAssign LocalRest LocalNetwork local :
-   etaAssign Rest Network rest :
-   []
-   
-etaAssignMap2 :: EtaFunctions.EtaAssignMap Node Double
-etaAssignMap2 = Map.fromList $
    (TopoIdx.Position Network Water,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage"))) : 
    (TopoIdx.Position Network Coal ,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 4 0.7], "coal"))) : 
    (TopoIdx.Position LocalNetwork Gas,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "gas"))) : 
@@ -172,21 +145,13 @@ etaAssignMap2 = Map.fromList $
    (TopoIdx.Position Rest Network,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "rest"))) : 
    []
 
-etaMap :: TPT.Map Double -> Map.Map Params.Name (Params.EtaFunction Double Double)
-etaMap tabEta = Map.map Params.EtaFunction $
-         Map.mapKeys Params.Name $
-         CT.makeEtaFunctions2D
-            (Map.mapKeys Params.unName scaleTableEta)
-            tabEta
-
-
---demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
-demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[-1,-0.5..1]),
-                    (TopoIdx.ppos Rest Network,Type.P,[-1,-0.5..1])]
+demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
+demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.5..1.1]),
+                    (TopoIdx.ppos Rest Network,Type.P,[0.1,0.5..1.1])]
 
 searchGrid :: Grid.Grid (Sweep.Search Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
-searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[-1,-0.5..1]),
-                    (TopoIdx.ppos Network Water,Type.P,[-1,-0.5..1])]
+searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[0.1,0.5..1.1]),
+                    (TopoIdx.ppos Network Water,Type.P,[0.1,0.5..1.1])]
 
 given :: CubeSweep.Given Base 
          ND.Dim2 ND.Dim2  
@@ -201,7 +166,7 @@ main = do
   let rawEtaCurves = Curve.curvesfromParseTableMap (nc "etaCurves") tabEta 
                      :: Curve.Map String Base String  [] Double Double
                         
-  let etaFunctions = EtaFunctions.makeEtaFunctions (nc "Main") etaAssignMap2 rawEtaCurves                     
+  let etaFunctions = EtaFunctions.makeEtaFunctions (nc "Main") etaAssignMap rawEtaCurves                     
         :: EtaFunctions.FunctionMap Node Double
            
   let etaCurves = EtaFunctions.toCurveMap (Strict.Axis "Power" Type.UT [-3,-2.9..3]) etaFunctions 

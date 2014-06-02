@@ -21,7 +21,7 @@ import qualified EFA.Value.Type as Type
 
 import Control.Applicative
 import qualified EFA.Report.Format as Format
-import EFA.Report.Format (Format)
+--import EFA.Report.Format (Format)
 
 modul :: ModuleName
 modul = ModuleName "Data.Interpolation"
@@ -84,7 +84,7 @@ instance (FormatValue a,Show a) => FormatValue.FormatValue (Val a) where
 instance Tuple.C a => Tuple.C (Val a) where
   text (Inter x) = Tuple.text x
   text (Extra x) = Tuple.text x
-  text (Invalid x) = Tuple.text (0/0::Double)
+  text (Invalid _) = Tuple.text (0/0::Double)
 
 instance Atom.C (Val a) where
 
@@ -97,11 +97,11 @@ instance (Type.ToDisplayUnit a) => Type.ToDisplayUnit (Val a) where
 instance Type.GetDynamicType a =>Type.GetDynamicType (Val a) where 
   getDynamicType (Inter x) = Type.getDynamicType x
   getDynamicType (Extra x) = Type.getDynamicType x
-  getDynamicType (Invalid x) = Type.UD
+  getDynamicType (Invalid _) = Type.UD
   
 
 instance Functor Val where
-  fmap f (Invalid xs) = Invalid xs -- $ map (\(label,x) -> (label,f x)) xs
+  fmap _ (Invalid xs) = Invalid xs -- $ map (\(label,x) -> (label,f x)) xs
   fmap f (Extra x) = Extra (f x)
   fmap f (Inter x) = Inter (f x)
 
