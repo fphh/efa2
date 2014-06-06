@@ -35,7 +35,7 @@ import qualified Test.QuickCheck as QC
 
 import qualified Prelude as P
 import Prelude hiding (zipWith, map, foldl)
-import Data.Maybe(fromMaybe)
+import Data.Maybe(fromMaybe, fromJust)
 
 import EFA.Utility.Trace(mytrace)
 
@@ -317,6 +317,16 @@ mapData ::
   (a1 -> a) -> Data t t1 vec a1 -> Data inst dim vec a
 mapData f (Data vec) = Data $ DV.map f vec
 
+zipWithData :: 
+  (DV.Zipper vec,
+    DV.Storage vec c,
+    DV.Storage vec b,
+    DV.Storage vec a) => 
+  (a -> b -> c) -> 
+  Data inst dim vec a ->
+  Data inst dim vec b ->
+  Data inst dim vec c
+zipWithData f (Data vec) (Data vec1) = Data $ DV.zipWith f vec vec1
 
 mapWithGrid ::
  (DV.Walker vec,
@@ -537,3 +547,39 @@ extractAll caller cube@(Cube grid _) dims2Keep = P.map f $ mytrace 1 "Cube" "ext
     g dimIdx axIdx = (Strict.getLabel axis, Strict.lookupUnsafe axis axIdx, Strict.getType axis)
       where axis = Grid.getAxis (caller |> nc "extractCube2D") grid dimIdx
 
+
+findBestWithIndexByAccess :: 
+  (DV.Storage vec (Int, b), 
+   DV.Storage vec (Grid.LinIdx, opt),
+   DV.Walker vec,
+   DV.Storage vec Int,
+   DV.Storage vec b, 
+   DV.Zipper vec) =>
+  (b -> opt) ->
+  (opt -> opt -> Bool) -> 
+  Cube inst dim label vec a b -> 
+  (Grid.LinIdx,opt)
+findBestWithIndexByAccess faccess fselect cube = fromJust $ DV.foldl g Nothing indexedVec
+  where 
+    indexedVec = DV.imap (\i x ->(Grid.LinIdx i, faccess x)) $ getVector $ getData cube
+    g Nothing  (idx,val) = Just (idx, val)
+    g (Just (oldIdx,oldVal)) (idx,val) = if (fselect oldVal val) then Just (idx, val)
+                                                         else Just (oldIdx, oldVal)
+
+
+findBestWithIndexBy :: 
+  (DV.Storage vec (Int, b), 
+   DV.Storage vec (Grid.LinIdx, b),
+   DV.Walker vec,
+   DV.Storage vec Int,
+   DV.Storage vec b, 
+   DV.Zipper vec) =>
+  (b -> b -> Bool) -> 
+  Cube inst dim label vec a b -> 
+  (Grid.LinIdx,b)
+findBestWithIndexBy fselect cube = fromJust $ DV.foldl g Nothing indexedVec
+  where 
+    indexedVec = DV.imap (\i x ->(Grid.LinIdx i, x)) $ getVector $ getData cube
+    g Nothing  (idx,val) = Just (idx, val)
+    g (Just (oldIdx,oldVal)) (idx,val) = if (fselect oldVal val) then Just (idx, val)
+                                                         else Just (oldIdx, oldVal)

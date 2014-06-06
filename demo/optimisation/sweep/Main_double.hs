@@ -16,6 +16,7 @@ import qualified EFA.Data.Plot.D2.Curve as PlotCurve
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Flow.Topology as ActFlowTopo
+import qualified EFA.Action.Flow as ActFlow
 import EFA.Utility(Caller,
                    --merror,(|>),
                    ModuleName(..),FunctionName, genCaller)
@@ -146,8 +147,8 @@ etaAssignMap = Map.fromList $
    []
 
 demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
-demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.5..1.1]),
-                    (TopoIdx.ppos Rest Network,Type.P,[0.1,0.5..1.1])]
+demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.5..1.1]), -- [-1.1,-0.6..(-0.1)]),
+                    (TopoIdx.ppos Rest Network,Type.P,[0.1,0.5..1.1])] -- [-1.1,-0.6..(-0.1)])]
 
 searchGrid :: Grid.Grid (Sweep.Search Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
 searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[0.1,0.5..1.1]),
@@ -205,6 +206,8 @@ main = do
   let etaResult = CubeMap.map (\(CubeMap.Data x) -> DV.maximum x) $ CubeMap.map (\(Result.Determined x) -> x) $ CubeMap.map ActFlowTopo.etaSys result          
   
   let etaSys = ActFlowTopo.etaSys flow_00 
+  let absState = ActFlowTopo.absoluteStateIndex flow_00
+  print absState    
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
@@ -213,7 +216,7 @@ main = do
     
   PlotD2.allInOneIO DefaultTerm.cons (PlotD2.labledFrame "EtaCurves")  PlotD2.plotInfo3lineTitles $ PlotCurve.toPlotDataMap  rawEtaCurves
   
-  print etaCurves
+--  print etaCurves
   PlotD2.allInOneIO DefaultTerm.cons (PlotD2.labledFrame "EtaCurves")  PlotD2.plotInfo3lineTitles $ PlotCurve.toPlotDataMap  etaCurves
     
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "P_Coal") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") 

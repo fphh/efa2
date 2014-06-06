@@ -18,8 +18,8 @@ import qualified EFA.Application.Utility as AppUt
 
 import EFA.Application.Utility (quantityTopology)
 --import qualified EFA.Application.Optimisation.Sweep as Sweep
-import EFA.Application.Optimisation.Params (Name(Name))
-import qualified EFA.Application.Optimisation.Params as Params
+--import EFA.Application.Optimisation.Params (Name(Name))
+--import qualified EFA.Application.Optimisation.Params as Params
 
 import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -51,7 +51,7 @@ import qualified  UniqueLogic.ST.TF.System as ULSystem
 
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
-import Data.Map (Map)
+--import Data.Map (Map)
 import Data.Monoid((<>))
 
 import qualified EFA.Flow.Topology.Index as TopoIdx

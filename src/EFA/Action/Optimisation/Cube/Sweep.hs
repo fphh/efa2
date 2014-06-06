@@ -21,8 +21,8 @@ import qualified EFA.Data.Interpolation as Interp
 
 --import EFA.Application.Utility (quantityTopology)
 --import qualified EFA.Application.Optimisation.Sweep as Sweep
-import EFA.Application.Optimisation.Params (Name)
-import qualified EFA.Application.Optimisation.Params as Params
+--import EFA.Application.Optimisation.Params (Name)
+--import qualified EFA.Application.Optimisation.Params as Params
 
 --import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
@@ -195,11 +195,11 @@ getFlowAtSingleSweepPoint result sweepGrid demandIdx searchIdx = f $ CubeMap.loo
         g Result.Undetermined = Result.Undetermined
 
 
-{--    
+{-    
 getDemandSweepFlow:: 
   (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a) -> Result.Result (Interp.Val a))) ->   
   SweepResult node inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a) ->
-  DemandSweepResult node inst dim (TopoIdx.Position node) vec a (Interp.Val a) --}
+  DemandSweepResult node inst dim (TopoIdx.Position node) vec a (Interp.Val a) -}
 getDemandSweepFlow f result = CubeMap.map (FlowTopo.mapSection f) result  
 
   
