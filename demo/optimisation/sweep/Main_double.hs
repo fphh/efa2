@@ -206,7 +206,7 @@ main = do
   let etaResult = CubeMap.map (\(CubeMap.Data x) -> DV.maximum x) $ CubeMap.map (\(Result.Determined x) -> x) $ CubeMap.map ActFlowTopo.etaSys result          
   
   let etaSys = ActFlowTopo.etaSys flow_00 
-  let absState = ActFlowTopo.absoluteStateIndex flow_00
+  let absState = ActFlowTopo.getFlowStatus (nc "Main") flow_00
   print absState    
   
   const Draw.xterm "simulationGraphsSequence"
