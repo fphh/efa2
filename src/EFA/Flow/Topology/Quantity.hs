@@ -334,7 +334,7 @@ data Flow v =
 
 data Sums v =
    Sums { sumIn, sumOut :: Maybe v }
-   deriving (Eq)
+   deriving (Show,Eq)
 
 
 instance Functor Flow where

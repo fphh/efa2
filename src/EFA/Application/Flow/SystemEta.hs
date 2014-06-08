@@ -37,3 +37,5 @@ etaSys sq =
           foldl1 (liftA2 (~+)) . foldMap Map.elems
 
    in liftA2 (~/) (sumRes sinks) (sumRes sources)
+
+

@@ -25,7 +25,7 @@ import qualified EFA.Data.Interpolation as Interp
 --import qualified EFA.Application.Optimisation.Params as Params
 
 --import qualified EFA.Flow.Topology.Absolute as EqSys
-import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Quantity as TopoQty
 --import qualified EFA.Flow.Topology.Index as XIdx
 --import qualified EFA.Flow.Topology.Variable as Variable
 --import EFA.Flow.Topology.Absolute ( (.=), 
@@ -83,10 +83,10 @@ type Given inst dim dim1 label vec vec1 a b =
   CubeMap.Cube (Sweep.Demand inst) dim label vec a (Collection.Collection label (CubeMap.Cube (Sweep.Search inst) dim1 label vec1 a b)) 
 
 type SweepResult node inst dim dim1 label vec vec1 a b = 
-  CubeMap.Cube (Sweep.Demand inst) dim label vec a (FlowTopo.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 b)))
+  CubeMap.Cube (Sweep.Demand inst) dim label vec a (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 b)))
 
 type DemandSweepResult node inst dim label vec a b = 
-  CubeMap.Cube (Sweep.Demand inst) dim label vec a (FlowTopo.Section node b)
+  CubeMap.Cube (Sweep.Demand inst) dim label vec a (TopoQty.Section node b)
 
 generateGiven :: 
   (Eq label, 
@@ -141,7 +141,7 @@ solve::
    DV.Storage vec1 a,
    DV.Singleton vec1,
    DV.Length vec1,
-   DV.Storage vec (FlowTopo.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a))))) =>
+   DV.Storage vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a))))) =>
   Topo.Topology node -> 
   EtaFunctions.FunctionMap node a ->  
   Given inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a) ->
@@ -153,17 +153,17 @@ solve topology etaFunctions given = CubeMap.map (CubeSolve.solve topology etaFun
 getSearchSweepFlow::
   (DV.Storage vec a,
    DV.Length vec, 
-   DV.LookupMaybe vec (FlowTopo.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))))=>
+   DV.LookupMaybe vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))))=>
   SweepResult node inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a) ->
   CubeGrid.DimIdx dim ->
-  Maybe (FlowTopo.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a))))  
+  Maybe (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a))))  
 getSearchSweepFlow result ndIdx = CubeMap.lookupMaybe ndIdx result
 
 -- | Delivers the energy flow at one location in the demand room and one location in the search room
 getSearchSweepPowers :: 
   (Ord node, 
    DV.Storage vec a,
-   DV.LookupMaybe vec (FlowTopo.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
+   DV.LookupMaybe vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
    DV.Length vec) =>
   CubeGrid.Grid (Sweep.Search inst) dim1 (TopoIdx.Position node) vec1 a ->
   SweepResult node inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a) -> 
@@ -178,7 +178,7 @@ getSearchSweepPowers sweepGrid result ndIdx = f $ getSearchSweepFlow result ndId
 -- | Delivers the energy flow at one location in the demand room and one location in the search room
 getFlowAtSingleSweepPoint::
   (DV.Storage vec a,
-   DV.LookupMaybe vec (FlowTopo.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
+   DV.LookupMaybe vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
    DV.Length vec, 
    DV.Storage vec1 a,
    DV.LookupMaybe vec1 (Interp.Val a),
@@ -187,9 +187,9 @@ getFlowAtSingleSweepPoint::
   CubeGrid.Grid (Sweep.Search inst) dim1 label vec1 a ->
   CubeGrid.DimIdx dim ->
   CubeGrid.DimIdx dim1 ->
-  Maybe (FlowTopo.Section node (Result.Result  (Maybe (Interp.Val a))))  
+  Maybe (TopoQty.Section node (Result.Result  (Maybe (Interp.Val a))))  
 getFlowAtSingleSweepPoint result sweepGrid demandIdx searchIdx = f $ CubeMap.lookupMaybe demandIdx result
-  where f (Just sweepFlow) = Just $ FlowTopo.mapSection g sweepFlow
+  where f (Just sweepFlow) = Just $ TopoQty.mapSection g sweepFlow
         f Nothing = Nothing  
         g (Result.Determined cubeData) = Result.Determined $ CubeMap.lookupMaybe searchIdx (CubeMap.Cube sweepGrid cubeData)
         g Result.Undetermined = Result.Undetermined
@@ -200,17 +200,17 @@ getDemandSweepFlow::
   (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a) -> Result.Result (Interp.Val a))) ->   
   SweepResult node inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a) ->
   DemandSweepResult node inst dim (TopoIdx.Position node) vec a (Interp.Val a) -}
-getDemandSweepFlow f result = CubeMap.map (FlowTopo.mapSection f) result  
+getDemandSweepFlow f result = CubeMap.map (TopoQty.mapSection f) result  
 
   
 getDemandSweepPower:: 
   (Eq a,Ord node,
-   DV.Storage vec (FlowTopo.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
+   DV.Storage vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
    DV.Storage vec (Maybe (Result.Result (Interp.Val a))),
    Arith.Constant a,
    DV.Storage vec (Interp.Val a), 
    DV.Walker vec,
-   DV.Storage vec (FlowTopo.Section node (Result.Result (Interp.Val a))),
+   DV.Storage vec (TopoQty.Section node (Result.Result (Interp.Val a))),
    DV.Storage vec (Map.Map (TopoIdx.Position node) (Result.Result (Interp.Val a))),
    DV.Singleton vec)=>
   (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)) -> Result.Result (Interp.Val a)) -> 
@@ -229,15 +229,15 @@ getDemandSweepPower f result key = g cube
 
 getDemandSweepPowers::
   (Eq a,Ord node,
-   DV.Storage vec (FlowTopo.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))), 
+   DV.Storage vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))), 
         Arith.Constant a,
    DV.Walker vec, 
-   DV.LookupUnsafe vec (FlowTopo.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
+   DV.LookupUnsafe vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
    DV.Storage
    vec
    (Map.Map (TopoIdx.Position node) (Result.Result (Interp.Val a))),
    DV.Storage
-   vec (FlowTopo.Section node (Result.Result (Interp.Val a))),
+   vec (TopoQty.Section node (Result.Result (Interp.Val a))),
    DV.Storage vec (Interp.Val a),
    DV.Storage vec (Maybe (Result.Result (Interp.Val a))),
    DV.Singleton vec)=>

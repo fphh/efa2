@@ -15,8 +15,14 @@ import qualified EFA.Data.Plot.D2.Curve as PlotCurve
 
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
-import qualified EFA.Action.Flow.Topology as ActFlowTopo
+import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
+
 import qualified EFA.Action.Flow as ActFlow
+import qualified EFA.Action.Flow.Optimality as FlowOpt
+
+
+
 import EFA.Utility(Caller,
                    --merror,(|>),
                    ModuleName(..),FunctionName, genCaller)
@@ -38,7 +44,7 @@ import qualified EFA.Data.Plot.D3.Cube as CubePlot
 import qualified  EFA.Action.Optimisation.Cube.Solve as CubeSolve
 import qualified EFA.IO.TableParserTypes as TPT
 import qualified EFA.Graph.Topology.Node as Node
-
+import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 --import EFA.Utility.Async (concurrentlyMany_)
@@ -160,6 +166,13 @@ given :: CubeSweep.Given Base
 given = CubeSweep.generateGiven (nc "Main") demandGrid searchGrid
 
 
+signCorrectionMap :: FlowOpt.StorageSignCorrection Node
+signCorrectionMap = FlowOpt.StorageSignCorrection $ Map.fromList [(Water,FlowOpt.Flip)]
+
+lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
+lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [335,616,598]) $ replicate 3 $
+               Map.fromList [(Water,(FlowOpt.GenerationEfficiency $ Interp.Inter 1.0, FlowOpt.UsageEfficiency $ Interp.Inter 1.0))] 
+
 main :: IO()
 main = do
 
@@ -203,11 +216,17 @@ main = do
   let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $
                                   Collection.lookup (nc "main") (TopoIdx.ppos Coal Network) collection) powers
                      
-  let etaResult = CubeMap.map (\(CubeMap.Data x) -> DV.maximum x) $ CubeMap.map (\(Result.Determined x) -> x) $ CubeMap.map ActFlowTopo.etaSys result          
+  let etaValues = CubeMap.map (FlowTopoOpt.getEtaValues (nc "main") signCorrectionMap) result 
+  let etaResult = CubeMap.map (FlowTopoOpt.calcEtaSys (nc "main") (Idx.AbsoluteState 0) lifeCycleMap) etaValues                 
+      
+--  let etaOpt = CubeMap.map (CubeMap.findBestWithIndexBy (nc "main") (FlowTopoOpt.maxEta)) etaValues  
   
-  let etaSys = ActFlowTopo.etaSys flow_00 
-  let absState = ActFlowTopo.getFlowStatus (nc "Main") flow_00
-  print absState    
+--  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
+  let absState = FlowTopoCheck.getFlowStatus (nc "Main") flow_00
+--  print absState    
+--  print lifeCycleMap
+--  print etaValues
+  print etaResult
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
@@ -225,8 +244,8 @@ main = do
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Result") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") 
     (Just "Power") powerResult2
 
-  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Result") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") 
-    (Just "EtaSys") etaResult
+--  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Result") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") 
+--    (Just "EtaSys") etaResult
 {-
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") (Just "Test") p_lowVoltage
   

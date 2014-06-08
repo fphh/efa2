@@ -583,3 +583,4 @@ findBestWithIndexBy fselect cube = fromJust $ DV.foldl g Nothing indexedVec
     g Nothing  (idx,val) = Just (idx, val)
     g (Just (oldIdx,oldVal)) (idx,val) = if (fselect oldVal val) then Just (idx, val)
                                                          else Just (oldIdx, oldVal)
+
