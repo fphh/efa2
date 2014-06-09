@@ -581,3 +581,19 @@ findBestWithIndexBy fselect dat = fromJust $ DV.foldl g Nothing indexedVec
     g (Just (oldIdx,oldVal)) (idx,val) = if (fselect oldVal val) then Just (idx, val)
                                                          else Just (oldIdx, oldVal)
 
+findBestWithIndexByPerCategory :: 
+  (DV.Walker vec,Ord category,
+   DV.Storage vec (Grid.LinIdx, a),
+   DV.Storage vec a) =>
+  (a -> category) ->
+  (a -> a -> Bool) -> 
+  Data inst dim vec a -> 
+  Map.Map category (Grid.LinIdx,a)
+findBestWithIndexByPerCategory getCategory fselect dat = DV.foldl g (Map.fromList []) indexedVec
+  where 
+    indexedVec = DV.imap (\i x ->(Grid.LinIdx i, x)) $ getVector $ dat
+    g m (idx,val) = f $ Map.lookup (getCategory val) m
+        where f (Just (_,oldVal)) = 
+                if fselect oldVal val then Map.insert (getCategory val) (idx, val) m else m
+              f Nothing = Map.insert (getCategory val) (idx, val) m                                                     
+

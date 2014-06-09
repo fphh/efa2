@@ -275,18 +275,21 @@ findMaximumEta ::
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)),
    DV.Storage vec (CubeGrid.LinIdx, 
                    (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)))) =>
+  Caller ->
   Result.Result (CubeMap.Data (Sweep.Search inst) dim vec 
                  (ActFlowCheck.EdgeFlowStatus,
                   (FlowOpt.TotalBalanceForce (Interp.Val a),
                    (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))) -> 
-  Result.Result (CubeGrid.LinIdx,
+  Result.Result (Map.Map Idx.AbsoluteState (CubeGrid.LinIdx,
                  (ActFlowCheck.EdgeFlowStatus,
                   (FlowOpt.TotalBalanceForce (Interp.Val a),
-                   (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a)))))
-findMaximumEta cubeData = fmap (CubeMap.findBestWithIndexBy f) cubeData
+                   (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))))
+findMaximumEta caller cubeData = fmap (CubeMap.findBestWithIndexByPerCategory (Maybe.fromMaybe e . ActFlowCheck.getState . fst) f) cubeData
   where  f (_,(FlowOpt.TotalBalanceForce forcing,(FlowOpt.EtaSys eta,_))) 
            (_,(FlowOpt.TotalBalanceForce forcing1, (FlowOpt.EtaSys eta1,_)))= 
                 greaterThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
+         g (x,y) = (ActFlowCheck.getState x,y)
+         e = merror caller modul "findMaximumEta" "Undefined State"
 
 findMinimumLoss :: 
   (DV.Walker vec,Ord a, Arith.Constant a,
@@ -299,18 +302,21 @@ findMinimumLoss ::
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)),
    DV.Storage vec (CubeGrid.LinIdx, 
                    (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)))) =>
+  Caller ->
   Result.Result (CubeMap.Data (Sweep.Search inst) dim vec 
                  (ActFlowCheck.EdgeFlowStatus,
                   (FlowOpt.TotalBalanceForce (Interp.Val a),
                    (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))) -> 
-  Result.Result (CubeGrid.LinIdx,
+  Result.Result (Map.Map Idx.AbsoluteState (CubeGrid.LinIdx,
                  (ActFlowCheck.EdgeFlowStatus,
                   (FlowOpt.TotalBalanceForce (Interp.Val a),
-                   (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a)))))
-findMinimumLoss cubeData = fmap (CubeMap.findBestWithIndexBy f) cubeData
-  where  f (_,(FlowOpt.TotalBalanceForce forcing,(FlowOpt.EtaSys eta,_))) 
-           (_,(FlowOpt.TotalBalanceForce forcing1, (FlowOpt.EtaSys eta1,_)))= 
-                lessThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
+                   (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))))
+findMinimumLoss caller cubeData = fmap (CubeMap.findBestWithIndexByPerCategory (Maybe.fromMaybe e . ActFlowCheck.getState . fst) f) cubeData
+  where  f (_,(FlowOpt.TotalBalanceForce forcing,(_,FlowOpt.LossSys loss))) 
+           (_,(FlowOpt.TotalBalanceForce forcing1, (_,FlowOpt.LossSys loss1)))= 
+                lessThanWithInvalid (loss Arith.~+ forcing) (loss1 Arith.~+ forcing1) 
+         g (x,y) = (ActFlowCheck.getState x,y)
+         e = merror caller modul "findMinimumLoss" "Undefined State"
 
 -- if new value is bigger then True (take new value) 
 greaterThanWithInvalid :: (Arith.Constant a,Ord a) => Interp.Val a -> Interp.Val a -> Bool

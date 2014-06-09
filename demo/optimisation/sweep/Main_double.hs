@@ -83,7 +83,7 @@ import Data.GraphViz.Attributes.Colors.X11 (X11Color(DarkSeaGreen2))
 data Base
 
 modul :: ModuleName
-modul = ModuleName "Modules.Setting"
+modul = ModuleName "Demo.Optimisation.Sweep"
 
 nc :: FunctionName -> Caller
 nc = genCaller modul
@@ -216,7 +216,7 @@ main = do
   let objectiveFunctionValues = CubeMap.zipWith (nc "main") 
                                (\ x st -> FlowTopoOpt.objectiveFunctionValues (nc "main") st lifeCycleMap balanceForcingMap x) endNodeValues status
       
-  let optimumResult = CubeMap.map FlowTopoOpt.findMaximumEta objectiveFunctionValues
+  let optimumResult = CubeMap.map  (FlowTopoOpt.findMaximumEta (nc "Main")) objectiveFunctionValues
 --  let etaOpt = CubeMap.map (CubeMap.findBestWithIndexBy (nc "main") (FlowTopoOpt.maxEta)) etaValues  
   
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
@@ -224,7 +224,7 @@ main = do
 --  print absState    
 --  print lifeCycleMap
 --  print etaValues
-  print objectiveFunctionValues
+  print optimumResult 
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
