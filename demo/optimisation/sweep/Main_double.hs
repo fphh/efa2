@@ -18,7 +18,7 @@ import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 
-import qualified EFA.Action.Flow as ActFlow
+--import qualified EFA.Action.Flow as ActFlow
 import qualified EFA.Action.Flow.Optimality as FlowOpt
 
 
@@ -27,7 +27,7 @@ import EFA.Utility(Caller,
                    --merror,(|>),
                    ModuleName(..),FunctionName, genCaller)
 import qualified EFA.Report.Format as Format
-import EFA.Application.Optimisation.Params (EtaAssignMap, Name(Name))
+import EFA.Application.Optimisation.Params (Name(Name))
 
 import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.Plot.Collection as PlotCollection
@@ -42,7 +42,7 @@ import qualified EFA.Data.ND.Cube.Grid as Grid
 import qualified EFA.Data.Plot.D3.Cube as CubePlot 
 
 import qualified  EFA.Action.Optimisation.Cube.Solve as CubeSolve
-import qualified EFA.IO.TableParserTypes as TPT
+--import qualified EFA.IO.TableParserTypes as TPT
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
@@ -54,7 +54,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Application.Utility as AppUt
 
 --import Text.Printf (printf)
-import qualified EFA.Application.Optimisation.Params as Params
+--import qualified EFA.Application.Optimisation.Params as Params
 --import qualified EFA.Application.Type as Type
 --import Text.Printf (--printf,
                 --    PrintfArg)
@@ -67,12 +67,12 @@ import qualified EFA.Equation.Result as Result
 --import qualified EFA.Equation.Arithmetic as Arith
 
 --import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
-import qualified EFA.Action.EtaFunctions as EtaFunctions
+--import qualified EFA.Action.EtaFunctions as EtaFunctions
 
 import qualified EFA.IO.TableParser as Table
 
 --import qualified Data.Text.Lazy as LazyText
-import qualified EFA.Signal.ConvertTable as CT
+--import qualified EFA.Signal.ConvertTable as CT
 
 import qualified Data.Map as Map
 import Data.GraphViz.Attributes.Colors.X11 (X11Color(DarkSeaGreen2))
@@ -143,13 +143,18 @@ edgeList = [(Coal, Network, "Coal\\lPlant", "Coal","ElCoal"),
 
 etaAssignMap :: EtaFunctions.EtaAssignMap Node Double
 etaAssignMap = Map.fromList $
-   (TopoIdx.Position Network Water,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage"))) : 
-   (TopoIdx.Position Network Coal ,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 4 0.7], "coal"))) : 
-   (TopoIdx.Position LocalNetwork Gas,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "gas"))) : 
-   (TopoIdx.Position LocalNetwork Network,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 3 0.9], "transformer"))) : 
+   (TopoIdx.Position Network Water,
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage"))) : 
+   (TopoIdx.Position Network Coal ,
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 4 0.7], "coal"))) : 
+   (TopoIdx.Position LocalNetwork Gas,
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "gas"))) : 
+   (TopoIdx.Position LocalNetwork Network,
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 3 0.9], "transformer"))) : 
    (TopoIdx.Position LocalRest LocalNetwork,
     EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 1], "local"))) : 
-   (TopoIdx.Position Rest Network,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "rest"))) : 
+   (TopoIdx.Position Rest Network,
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "rest"))) : 
    []
 
 demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
@@ -164,10 +169,6 @@ given :: CubeSweep.Given Base
          ND.Dim2 ND.Dim2  
          (TopoIdx.Position Node) [] [] Double (Interp.Val Double)
 given = CubeSweep.generateGiven (nc "Main") demandGrid searchGrid
-
-
-signCorrectionMap :: FlowOpt.StorageSignCorrection Node
-signCorrectionMap = FlowOpt.StorageSignCorrection $ Map.fromList [(Water,FlowOpt.Flip)]
 
 lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
 lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [335,616,598]) $ replicate 3 $
@@ -186,16 +187,6 @@ main = do
   let etaCurves = EtaFunctions.toCurveMap (Strict.Axis "Power" Type.UT [-3,-2.9..3]) etaFunctions 
                   :: Curve.Map (TopoIdx.Position Node) Base String  [] Double (Interp.Val Double)      
 
-{-  
-  let flow = ActOpt.solve topology etaAssignMap (etaMap tabEta) given 
-      flow :: FlowTopo.Section Node (Result.Result (MyDoubleCube))
-             
---  let powers = ActOpt.getPowers grid flow         
---  let _topo = FlowTopo.topology  flow  
-  
-  print given 
-  print $ Collection.mapData $ CubeMap.lookupLin (nc "Main") (Grid.LinIdx 0)
--}
 --  print given
   
 --  let result = CubeMap.map (CubeSolve.solve topology etaAssignMap (etaMap tabEta)) given
@@ -216,8 +207,8 @@ main = do
   let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $
                                   Collection.lookup (nc "main") (TopoIdx.ppos Coal Network) collection) powers
                      
-  let etaValues = CubeMap.map (FlowTopoOpt.getEtaValues (nc "main") signCorrectionMap) result 
-  let etaResult = CubeMap.map (FlowTopoOpt.calcEtaSys (nc "main") (Idx.AbsoluteState 0) lifeCycleMap) etaValues                 
+  let endNodeValues = CubeMap.map FlowTopoOpt.getEtaValues result 
+  let etaSweep = CubeMap.map (FlowTopoOpt.calcEtaSys (nc "main") (Idx.AbsoluteState 0) lifeCycleMap) endNodeValues
       
 --  let etaOpt = CubeMap.map (CubeMap.findBestWithIndexBy (nc "main") (FlowTopoOpt.maxEta)) etaValues  
   
@@ -226,7 +217,7 @@ main = do
 --  print absState    
 --  print lifeCycleMap
 --  print etaValues
-  print etaResult
+  print etaSweep
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
