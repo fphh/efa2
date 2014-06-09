@@ -568,18 +568,15 @@ findBestWithIndexByAccess faccess fselect cube = fromJust $ DV.foldl g Nothing i
 
 
 findBestWithIndexBy :: 
-  (DV.Storage vec (Int, b), 
-   DV.Storage vec (Grid.LinIdx, b),
-   DV.Walker vec,
-   DV.Storage vec Int,
-   DV.Storage vec b, 
-   DV.Zipper vec) =>
-  (b -> b -> Bool) -> 
-  Cube inst dim label vec a b -> 
-  (Grid.LinIdx,b)
-findBestWithIndexBy fselect cube = fromJust $ DV.foldl g Nothing indexedVec
+  (DV.Walker vec,
+   DV.Storage vec (Grid.LinIdx, a),
+   DV.Storage vec a) =>
+  (a -> a -> Bool) -> 
+  Data inst dim vec a -> 
+  (Grid.LinIdx,a)
+findBestWithIndexBy fselect dat = fromJust $ DV.foldl g Nothing indexedVec
   where 
-    indexedVec = DV.imap (\i x ->(Grid.LinIdx i, x)) $ getVector $ getData cube
+    indexedVec = DV.imap (\i x ->(Grid.LinIdx i, x)) $ getVector $ dat
     g Nothing  (idx,val) = Just (idx, val)
     g (Just (oldIdx,oldVal)) (idx,val) = if (fselect oldVal val) then Just (idx, val)
                                                          else Just (oldIdx, oldVal)

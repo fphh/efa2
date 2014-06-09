@@ -17,6 +17,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
+import qualified EFA.Action.Flow.Balance as FlowBal
 
 --import qualified EFA.Action.Flow as ActFlow
 import qualified EFA.Action.Flow.Optimality as FlowOpt
@@ -174,6 +175,9 @@ lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
 lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [335,616,598]) $ replicate 3 $
                Map.fromList [(Water,(FlowOpt.GenerationEfficiency $ Interp.Inter 1.0, FlowOpt.UsageEfficiency $ Interp.Inter 1.0))] 
 
+balanceForcingMap :: FlowBal.Forcing Node (Interp.Val Double)
+balanceForcingMap = FlowBal.ForcingMap $ Map.fromList [(Water, FlowBal.ChargeDrive (Interp.Inter 0.5))]
+
 main :: IO()
 main = do
 
@@ -206,10 +210,13 @@ main = do
   
   let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $
                                   Collection.lookup (nc "main") (TopoIdx.ppos Coal Network) collection) powers
-                     
-  let endNodeValues = CubeMap.map FlowTopoOpt.getEtaValues result 
-  let etaSweep = CubeMap.map (FlowTopoOpt.calcEtaSys (nc "main") (Idx.AbsoluteState 0) lifeCycleMap) endNodeValues
+  let status = CubeMap.map (FlowTopoCheck.getFlowStatus (nc "main")) result
+  let endNodeValues = CubeMap.map FlowTopoOpt.getEndNodeFlows result 
       
+  let objectiveFunctionValues = CubeMap.zipWith (nc "main") 
+                               (\ x st -> FlowTopoOpt.objectiveFunctionValues (nc "main") st lifeCycleMap balanceForcingMap x) endNodeValues status
+      
+  let optimumResult = CubeMap.map FlowTopoOpt.findMaximumEta objectiveFunctionValues
 --  let etaOpt = CubeMap.map (CubeMap.findBestWithIndexBy (nc "main") (FlowTopoOpt.maxEta)) etaValues  
   
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
@@ -217,7 +224,7 @@ main = do
 --  print absState    
 --  print lifeCycleMap
 --  print etaValues
-  print etaSweep
+  print objectiveFunctionValues
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
