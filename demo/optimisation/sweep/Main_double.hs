@@ -210,13 +210,12 @@ main = do
   
   let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $
                                   Collection.lookup (nc "main") (TopoIdx.ppos Coal Network) collection) powers
-  let status = CubeMap.map (FlowTopoCheck.getFlowStatus (nc "main")) result
-  let endNodeValues = CubeMap.map FlowTopoOpt.getEndNodeFlows result 
+  let status = CubeSweep.getFlowStatus (nc "main") result
+  let endNodeValues = CubeSweep.getEndNodeFlows result 
       
-  let objectiveFunctionValues = CubeMap.zipWith (nc "main") 
-                               (\ x st -> FlowTopoOpt.objectiveFunctionValues (nc "main") st lifeCycleMap balanceForcingMap x) endNodeValues status
+  let objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") lifeCycleMap balanceForcingMap endNodeValues status
       
-  let optimumResult = CubeMap.map  (FlowTopoOpt.findMaximumEta (nc "Main")) objectiveFunctionValues
+  let optimumResult = CubeSweep.findMaximumEta (nc "Main") objectiveFunctionValues
 --  let etaOpt = CubeMap.map (CubeMap.findBestWithIndexBy (nc "main") (FlowTopoOpt.maxEta)) etaValues  
   
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 

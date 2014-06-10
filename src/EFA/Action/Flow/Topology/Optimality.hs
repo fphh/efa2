@@ -263,7 +263,7 @@ applyBalanceForcing caller balanceForcing node (Just sums) = case sums of
     f x =  x Arith.~* forcing
     forcing = ActBal.getSocDrive $ ActBal.lookupBalanceForcing (caller |> nc "applyBalanceForcing") balanceForcing node  
 
-
+-- | If State in Nothing, than state could not be detected because of invalid values
 findMaximumEta :: 
   (DV.Walker vec,Ord a, Arith.Constant a,
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, 
@@ -280,16 +280,16 @@ findMaximumEta ::
                  (ActFlowCheck.EdgeFlowStatus,
                   (FlowOpt.TotalBalanceForce (Interp.Val a),
                    (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))) -> 
-  Result.Result (Map.Map Idx.AbsoluteState (CubeGrid.LinIdx,
+  Result.Result (Map.Map (Maybe Idx.AbsoluteState) (CubeGrid.LinIdx,
                  (ActFlowCheck.EdgeFlowStatus,
                   (FlowOpt.TotalBalanceForce (Interp.Val a),
                    (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))))
-findMaximumEta caller cubeData = fmap (CubeMap.findBestWithIndexByPerCategory (Maybe.fromMaybe e . ActFlowCheck.getState . fst) f) cubeData
+findMaximumEta caller cubeData = fmap (CubeMap.findBestWithIndexByPerCategory (ActFlowCheck.getState . fst) f) cubeData
   where  f (_,(FlowOpt.TotalBalanceForce forcing,(FlowOpt.EtaSys eta,_))) 
            (_,(FlowOpt.TotalBalanceForce forcing1, (FlowOpt.EtaSys eta1,_)))= 
                 greaterThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
          g (x,y) = (ActFlowCheck.getState x,y)
-         e = merror caller modul "findMaximumEta" "Undefined State"
+--         e = merror caller modul "findMaximumEta" "Undefined State"
 
 findMinimumLoss :: 
   (DV.Walker vec,Ord a, Arith.Constant a,
