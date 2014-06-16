@@ -239,7 +239,10 @@ instance Walker V.Vector where
    foldl = V.foldl'
    equalBy f xs ys =
       V.length xs == V.length ys  &&  V.and (V.zipWith f xs ys)
-
+{-
+instance Walker (NonEmpty vec) where
+  map = NonEmpty.map 
+-}
 
 ------------------------------------------------------------
 -- | Zipper

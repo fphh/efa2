@@ -248,3 +248,7 @@ signApprox eps x =
    if' (x > eps) Positive $
    if' (x < negate eps) Negative $
    Zero
+
+
+mean :: (Sum a, Product a, Constant a ) => a -> a -> a
+mean x y = (x ~+ y) ~/ (one ~+ one)

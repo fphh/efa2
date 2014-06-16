@@ -28,5 +28,3 @@ class GetInfo axis vec a where
   getRange :: axis typ label vec a -> Value.Range a
   getLength :: axis typ label vec a -> Int
 
-
-  

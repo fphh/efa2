@@ -56,6 +56,9 @@ map f (Data xs) = Data (P.map f xs)
 imap :: (Idx -> a -> b) -> Data dim a -> Data dim b
 imap f (Data xs) = Data $ P.zipWith f (P.map Idx [0..]) xs
 
+zipWith :: (a -> b -> c) -> Data dim a -> Data dim b -> Data dim c
+zipWith f (Data xs) (Data ys) = Data (P.zipWith f xs ys) 
+
 len :: Data dim a -> Int
 len (Data xs) = length xs
 

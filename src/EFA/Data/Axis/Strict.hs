@@ -40,7 +40,9 @@ instance (Show label,Ref.ToData (vec a)) =>
                                 (Ref.StringData "Typ" (show typ))
                                 (Ref.toData vec)
 
-newtype Idx = Idx {getInt :: Int} deriving Show
+newtype Idx = Idx {getInt :: Int} deriving (Show,Ord,Eq)
+
+data Section = Section Idx Idx deriving (Show,Eq)
 
 instance Ref.ToData Idx where
   toData (Idx x) = Ref.StringData "Idx" (show x)
@@ -115,6 +117,27 @@ getSupportPoints axis x = ((leftIndex,rightIndex),
                            (lookupUnsafe axis leftIndex, lookupUnsafe axis rightIndex))
   where rightIndex = findRightInterpolationIndex axis x
         leftIndex = indexAdd rightIndex (-1)
+
+-- | delivers supporting points for interpolation
+data SupportingPoints a = PairOfPoints (Idx,a) (Idx,a) | LeftPoint (Idx,a) | RightPoint (Idx,a)
+
+getSupportPoints2 :: 
+  (Eq a,DV.LookupUnsafe vec a, 
+   Ord a,
+   DV.Storage vec a,
+   DV.Length vec,
+   DV.Find vec)=> 
+  Caller -> Axis inst label vec a -> a -> SupportingPoints a 
+getSupportPoints2 caller axis x = case (x==leftValue,x==rightValue) of  
+  (False, False) -> PairOfPoints (leftIndex,leftValue) (rightIndex,rightValue)
+  (True, False) -> LeftPoint (leftIndex,leftValue)
+  (False,True) -> RightPoint (rightIndex,rightValue)
+  (True,True) -> merror caller modul "getSupportPoints2" "axis not strictly monoton" 
+  where rightIndex = findRightInterpolationIndex axis x
+        leftIndex = indexAdd rightIndex (-1)
+        leftValue = lookupUnsafe axis leftIndex
+        rightValue = lookupUnsafe axis rightIndex
+
 
 addLeft :: 
   (DV.Storage vec a, DV.Singleton vec,DV.FromList vec) => 

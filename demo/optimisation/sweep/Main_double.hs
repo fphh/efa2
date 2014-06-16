@@ -15,7 +15,7 @@ import qualified EFA.Data.Plot.D2.Curve as PlotCurve
 
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
-import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+--import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Balance as FlowBal
 
@@ -23,6 +23,10 @@ import qualified EFA.Action.Flow.Balance as FlowBal
 import qualified EFA.Action.Flow.Optimality as FlowOpt
 
 
+import qualified EFA.Data.OD.Signal.Time as SignalTime
+import qualified EFA.Data.OD.Signal.Flow as SignalFlow
+
+import qualified EFA.Data.OD.Signal.Record as SignalRecord
 
 import EFA.Utility(Caller,
                    --merror,(|>),
@@ -190,6 +194,8 @@ main = do
            
   let etaCurves = EtaFunctions.toCurveMap (Strict.Axis "Power" Type.UT [-3,-2.9..3]) etaFunctions 
                   :: Curve.Map (TopoIdx.Position Node) Base String  [] Double (Interp.Val Double)      
+                     
+--  let demandCyle = SignalFlow.fromList [ND.fromList (3,5)]                   
 
 --  print given
   
@@ -220,6 +226,9 @@ main = do
   
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
   let absState = FlowTopoCheck.getFlowStatus (nc "Main") flow_00
+      
+--  let supportPoints = SignalFlow.map (CubeGrid.getSupportPoints) demandGrid demandCycle    
+        
 --  print absState    
 --  print lifeCycleMap
 --  print etaValues

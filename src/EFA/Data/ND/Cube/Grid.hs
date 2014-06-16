@@ -178,3 +178,18 @@ haveNoCommonAxes :: (Eq label) =>
   Bool
 haveNoCommonAxes grid grid1 = (List.intersect (f grid) (f grid1) == []) 
   where f gr = ND.toList $ ND.map (Strict.getLabel) gr
+
+
+getSupportingPoints :: 
+  (Ord a,
+   DV.Storage vec a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,
+   DV.Find vec)=>
+  Caller ->
+  Grid inst dim label vec a ->
+  ND.Data dim a ->
+  ND.Data dim (Strict.SupportingPoints a)
+getSupportingPoints caller grid coordinates = 
+  ND.zipWith (Strict.getSupportPoints2 (caller |> nc "getSupportingPoints")) grid coordinates
+  
