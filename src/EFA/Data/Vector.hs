@@ -107,6 +107,7 @@ class Singleton vec where
    all :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
    any :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
    replicate :: (Storage vec d) => Int -> d -> vec d
+   null :: (Storage vec d) => vec d -> Bool
 
 
 _minmaxSemiStrict :: (Ord d) => (d, d) -> d -> (d, d)
@@ -152,6 +153,7 @@ instance Singleton V.Vector where
    all = V.all
    any = V.any
    replicate = V.replicate
+   null = V.null
 
 instance Singleton UV.Vector where
    maximum x = readUnbox UV.maximum x
@@ -176,6 +178,7 @@ instance Singleton UV.Vector where
    all f = readUnbox (UV.all f)
    any f = readUnbox (UV.any f)
    replicate leng x = writeUnbox (UV.replicate leng x)
+   null = readUnbox $ UV.null
 
 instance Singleton [] where
    maximum x = List.maximum x
@@ -195,6 +198,7 @@ instance Singleton [] where
    all = List.all
    any = List.any
    replicate = List.replicate
+   null = List.null
 
 
 ------------------------------------------------------------
@@ -239,10 +243,7 @@ instance Walker V.Vector where
    foldl = V.foldl'
    equalBy f xs ys =
       V.length xs == V.length ys  &&  V.and (V.zipWith f xs ys)
-{-
-instance Walker (NonEmpty vec) where
-  map = NonEmpty.map 
--}
+
 
 ------------------------------------------------------------
 -- | Zipper

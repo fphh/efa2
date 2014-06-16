@@ -102,7 +102,7 @@ data Tics a = NoTics | Tics [a]  deriving Show
 fromAxis ::
   (Arith.Constant a, DV.Storage vec a, Axis.GetInfo axis vec a,
    DV.FromList vec) =>
-  (axis:: * -> * -> (* -> *) -> * -> *) typ label vec a -> AxisInfo label a
+   (axis:: * -> * -> (* -> *) -> * -> *) inst label vec a -> AxisInfo label a
 fromAxis axis =
   AxisInfo [Just $ Axis.getLabel axis]
             (fmap (Type.toDisplayUnit' typ) $ Axis.getRange axis)

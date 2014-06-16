@@ -90,19 +90,3 @@ findRightInterpolationIndex axis x = rightIndex
       Just (Idx ix) -> if ix==0 then Idx 1 else Idx ix
       Nothing   -> Idx $ (len axis)-1
 
-
-{-
--- | TODO -- Code ist wrong -- exact point hits have to be considered
--- | get all Points involved in the interpolation of a point on the given coordinates
-getSupportPoints ::
-  (Ord a,
-   DV.Storage vec a,
-   DV.Length vec,
-   DV.Find vec,
-   DV.LookupUnsafe vec a) =>
-  Axis inst label vec a ->  a -> ((Idx,Idx),(a,a))
-getSupportPoints axis x = ((leftIndex,rightIndex),
-                                 (lookupUnsafe axis leftIndex, lookupUnsafe axis rightIndex))
-  where rightIndex = findRightInterpolationIndex axis x
-        leftIndex = indexAdd rightIndex (-1)  
--}

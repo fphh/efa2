@@ -74,6 +74,7 @@ len ::
   Axis inst label vec a -> Int
 len (Axis _ _ vec) = DV.length vec
 
+
 fromVec ::
   (DV.Storage vec Bool, DV.Singleton vec,
    DV.Zipper vec, DV.Storage vec a,Ord a) =>

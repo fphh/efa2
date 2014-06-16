@@ -195,7 +195,7 @@ main = do
   let etaCurves = EtaFunctions.toCurveMap (Strict.Axis "Power" Type.UT [-3,-2.9..3]) etaFunctions 
                   :: Curve.Map (TopoIdx.Position Node) Base String  [] Double (Interp.Val Double)      
                      
---  let demandCyle = SignalFlow.fromList [ND.fromList (3,5)]                   
+  let demandCyle = SignalFlow.fromList [ND.fromList (3,5)]                   
 
 --  print given
   
@@ -227,7 +227,7 @@ main = do
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
   let absState = FlowTopoCheck.getFlowStatus (nc "Main") flow_00
       
---  let supportPoints = SignalFlow.map (CubeGrid.getSupportPoints) demandGrid demandCycle    
+  let supportPoints = SignalFlow.map (Grid.getSupportingPoints) demandGrid demandCycle    
         
 --  print absState    
 --  print lifeCycleMap
