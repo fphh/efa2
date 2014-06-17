@@ -74,6 +74,7 @@ len ::
   Axis inst label vec a -> Int
 len (Axis _ _ vec) = DV.length vec
 
+fromList caller label typ xs = fromVec caller label typ $ DV.fromList xs 
 
 fromVec ::
   (DV.Storage vec Bool, DV.Singleton vec,
@@ -120,7 +121,12 @@ getSupportPoints axis x = ((leftIndex,rightIndex),
         leftIndex = indexAdd rightIndex (-1)
 
 -- | delivers supporting points for interpolation
-data SupportingPoints a = PairOfPoints (Idx,a) (Idx,a) | LeftPoint (Idx,a) | RightPoint (Idx,a)
+data SupportingPoints a = PairOfPoints a a | LeftPoint a | RightPoint a deriving Show
+
+instance Functor SupportingPoints where
+  fmap f (PairOfPoints x x1) = (PairOfPoints (f x) (f x1))
+  fmap f (LeftPoint x) = LeftPoint (f x)
+  fmap f (RightPoint x) = RightPoint (f x)
 
 getSupportPoints2 :: 
   (Eq a,DV.LookupUnsafe vec a, 
@@ -128,7 +134,7 @@ getSupportPoints2 ::
    DV.Storage vec a,
    DV.Length vec,
    DV.Find vec)=> 
-  Caller -> Axis inst label vec a -> a -> SupportingPoints a 
+  Caller -> Axis inst label vec a -> a -> SupportingPoints (Idx,a) 
 getSupportPoints2 caller axis x = case (x==leftValue,x==rightValue) of  
   (False, False) -> PairOfPoints (leftIndex,leftValue) (rightIndex,rightValue)
   (True, False) -> LeftPoint (leftIndex,leftValue)
@@ -138,6 +144,8 @@ getSupportPoints2 caller axis x = case (x==leftValue,x==rightValue) of
         leftIndex = indexAdd rightIndex (-1)
         leftValue = lookupUnsafe axis leftIndex
         rightValue = lookupUnsafe axis rightIndex
+
+
 
 
 addLeft :: 

@@ -444,6 +444,45 @@ interpolate caller interpFunction cube coordinates = DataInterp.combine3 y1 y2 y
                     DataInterp.Inter $ lookUp newCaller (ND.Data [idx2]) cube)
     y = interpFunction (x1,x2) (DataInterp.unpack y1,DataInterp.unpack y2) x
 
+
+interpolateWithSupport :: 
+  (DV.Storage vec a,Arith.Constant b,Show (vec b),DV.LookupMaybe vec b,
+   DV.Storage vec b,
+   DV.Slice vec,
+   DV.Length vec) =>
+  Caller ->
+  ((a,a) -> (b,b) -> a -> DataInterp.Val b) ->
+   Cube inst dim label vec a b ->
+  ND.Data dim (Strict.SupportingPoints (Strict.Idx,a)) ->
+   (ND.Data dim a) ->
+  DataInterp.Val b
+interpolateWithSupport caller interpFunction cube support coordinates = g (ND.getFirst newCaller support) 
+  where    
+    newCaller = (caller |> (nc "interpolateWithSupport"))
+    f idx = interpolateWithSupport newCaller interpFunction 
+            (getSubCube newCaller cube idx) 
+            (ND.dropFirst newCaller support) (ND.dropFirst newCaller coordinates)   
+    g (Strict.LeftPoint (idx,_)) = f idx 
+    g (Strict.RightPoint (idx,_)) = f idx
+    g (Strict.PairOfPoints (idx1,x1) (idx2,x2)) = 
+      DataInterp.combine3 y1 y2 $ interpFunction (x1,x2) 
+      (DataInterp.unpack y1,DataInterp.unpack y2) $ ND.getFirst newCaller coordinates
+      where    
+        (y1,y2) = if ND.len coordinates >=2 then (f idx1, f idx2)
+                  else (DataInterp.Inter $ lookUp newCaller (ND.Data [idx1]) cube,
+                      DataInterp.Inter $ lookUp newCaller (ND.Data [idx2]) cube)
+
+
+lookupSupportingPoints ::
+  (DV.Storage vec a, DV.LookupUnsafe vec b, DV.Length vec,
+   ND.Dimensions dim) =>
+  Caller -> Cube inst dim label vec a b -> ND.Data dim (Strict.SupportingPoints (Strict.Idx, a)) -> [b]
+lookupSupportingPoints caller cube support = P.map (lookupLinUnsafe cube) linIndices
+  where
+    linIndices = Grid.getSupportingPointLinearIndices caller (getGrid cube) support
+
+
+
 dimension :: ND.Dimensions dim => Cube inst dim label vec a b -> Int
 dimension (Cube grid _) = ND.num grid
 

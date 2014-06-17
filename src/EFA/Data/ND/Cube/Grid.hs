@@ -189,7 +189,26 @@ getSupportingPoints ::
   Caller ->
   Grid inst dim label vec a ->
   ND.Data dim a ->
-  ND.Data dim (Strict.SupportingPoints a)
+  ND.Data dim (Strict.SupportingPoints  (Strict.Idx,a))
 getSupportingPoints caller grid coordinates = 
   ND.zipWith (Strict.getSupportPoints2 (caller |> nc "getSupportingPoints")) grid coordinates
-  
+
+
+getSupportingPointLinearIndices :: 
+  (DV.Storage vec a, DV.Length vec, ND.Dimensions dim) => 
+  Caller -> 
+  Grid inst dim label vec a ->
+  ND.Data dim (Strict.SupportingPoints (Strict.Idx,a)) -> 
+  [LinIdx]
+getSupportingPointLinearIndices caller grid supp = convertToLinear $ foldl f [] $ ND.toList supp
+  where 
+    f acc (Strict.PairOfPoints (idx,_) (idx1,_)) = mapIndex acc idx ++ mapIndex acc idx1 -- map (++[idx]) acc ++ map (++[idx1]) acc 
+    f acc (Strict.LeftPoint (idx,_)) = mapIndex acc idx -- map (++[idx]) acc
+    f acc (Strict.RightPoint (idx,_)) = mapIndex acc idx -- (map (++[idx]) acc)
+    
+    mapIndex [] idx = [[idx]]
+    mapIndex acc idx = map (++[idx]) acc 
+    
+    convertToLinear acc = map (toLinear grid . ND.fromList (caller |> nc "supportingPoints2ND")) acc
+
+    

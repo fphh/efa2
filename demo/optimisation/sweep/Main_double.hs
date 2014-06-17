@@ -195,8 +195,9 @@ main = do
   let etaCurves = EtaFunctions.toCurveMap (Strict.Axis "Power" Type.UT [-3,-2.9..3]) etaFunctions 
                   :: Curve.Map (TopoIdx.Position Node) Base String  [] Double (Interp.Val Double)      
                      
-  let demandCyle = SignalFlow.fromList [ND.fromList (3,5)]                   
-
+  let demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5])]
+        :: SignalFlow.DemandCycle Base ND.Dim2 String [] Double Double
+      
 --  print given
   
 --  let result = CubeMap.map (CubeSolve.solve topology etaAssignMap (etaMap tabEta)) given
@@ -227,12 +228,17 @@ main = do
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
   let absState = FlowTopoCheck.getFlowStatus (nc "Main") flow_00
       
-  let supportPoints = SignalFlow.map (Grid.getSupportingPoints) demandGrid demandCycle    
+  let supportPoints = SignalFlow.map (Grid.getSupportingPoints (nc "main") demandGrid) demandCycle   
+  let supportPointsLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportPoints
+  let supportPointsValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
         
 --  print absState    
 --  print lifeCycleMap
 --  print etaValues
   print optimumResult 
+  print supportPoints
+  print supportPointsLinIdx
+  print supportPointsValues
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2

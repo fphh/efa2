@@ -28,11 +28,3 @@ class GetInfo axis vec a where
   getRange :: axis inst label vec a -> Value.Range a
   getLength :: axis inst label vec a -> Int
 
-
-class GetInfoNE (axis:: * -> * -> * -> (* -> *) -> * -> *) (ne::(* -> *) -> * -> *) vec a where
-  getLabelNE :: axis inst label ne vec a -> label
-  getVectorNE :: axis inst label ne vec a -> ne vec a
-  getTypeNE :: axis inst label ne vec a -> Type.Dynamic
-  getRangeNE :: axis inst label ne vec a -> Value.Range a
-  getLengthNE :: axis inst label ne vec a -> Int
-
