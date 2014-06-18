@@ -202,9 +202,9 @@ getSupportingPointLinearIndices ::
   [LinIdx]
 getSupportingPointLinearIndices caller grid supp = convertToLinear $ foldl f [] $ ND.toList supp
   where 
-    f acc (Strict.PairOfPoints (idx,_) (idx1,_)) = mapIndex acc idx ++ mapIndex acc idx1 -- map (++[idx]) acc ++ map (++[idx1]) acc 
-    f acc (Strict.LeftPoint (idx,_)) = mapIndex acc idx -- map (++[idx]) acc
-    f acc (Strict.RightPoint (idx,_)) = mapIndex acc idx -- (map (++[idx]) acc)
+    f acc (Strict.PairOfPoints (idx,_) (idx1,_)) = mapIndex acc idx ++ mapIndex acc idx1 
+    f acc (Strict.LeftPoint (idx,_)) = mapIndex acc idx
+    f acc (Strict.RightPoint (idx,_)) = mapIndex acc idx
     
     mapIndex [] idx = [[idx]]
     mapIndex acc idx = map (++[idx]) acc 

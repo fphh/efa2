@@ -15,7 +15,9 @@ import qualified EFA.Data.Plot.D2.Curve as PlotCurve
 
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
---import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+--import qualified EFA.Action.Optimisation.Flow.Topology as 
+
+import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Balance as FlowBal
 
@@ -230,7 +232,10 @@ main = do
       
   let supportPoints = SignalFlow.map (Grid.getSupportingPoints (nc "main") demandGrid) demandCycle   
   let supportPointsLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportPoints
-  let supportPointsValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
+--  let supportPointsObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
+--  let supportPointOpt = CubeSweep.getOptimalSuportPoints (nc "main") supportPointsObjFuncValues
+
+
         
 --  print absState    
 --  print lifeCycleMap
@@ -238,7 +243,12 @@ main = do
   print optimumResult 
   print supportPoints
   print supportPointsLinIdx
-  print supportPointsValues
+  print supportPointsObjFuncValues
+  print "" 
+  print "-------------"
+  print ""
+  
+  print supportPointOpt
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
