@@ -3,6 +3,8 @@
 
 module Main where
 
+
+--import qualified EFA.Value.State as ValueState
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.OD.Curve as Curve
 import qualified EFA.Action.EtaFunctions as EtaFunctions
@@ -17,7 +19,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
 --import qualified EFA.Action.Optimisation.Flow.Topology as 
 
-import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+--import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Balance as FlowBal
 
@@ -25,10 +27,10 @@ import qualified EFA.Action.Flow.Balance as FlowBal
 import qualified EFA.Action.Flow.Optimality as FlowOpt
 
 
-import qualified EFA.Data.OD.Signal.Time as SignalTime
+--import qualified EFA.Data.OD.Signal.Time as SignalTime
 import qualified EFA.Data.OD.Signal.Flow as SignalFlow
 
-import qualified EFA.Data.OD.Signal.Record as SignalRecord
+--import qualified EFA.Data.OD.Signal.Record as SignalRecord
 
 import EFA.Utility(Caller,
                    --merror,(|>),
@@ -224,16 +226,23 @@ main = do
       
   let objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") lifeCycleMap balanceForcingMap endNodeValues status
       
-  let optimumResult = CubeSweep.findMaximumEta (nc "Main") objectiveFunctionValues
---  let etaOpt = CubeMap.map (CubeMap.findBestWithIndexBy (nc "main") (FlowTopoOpt.maxEta)) etaValues  
+  let optimumResult = CubeSweep.findMaximumEtaPerState (nc "Main") objectiveFunctionValues
   
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
   let absState = FlowTopoCheck.getFlowStatus (nc "Main") flow_00
       
   let supportPoints = SignalFlow.map (Grid.getSupportingPoints (nc "main") demandGrid) demandCycle   
   let supportPointsLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportPoints
---  let supportPointsObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
---  let supportPointOpt = CubeSweep.getOptimalSuportPoints (nc "main") supportPointsObjFuncValues
+  let supportPointsObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
+  let supportPointOpt = CubeSweep.getOptimalSuportPoints (nc "main") supportPointsObjFuncValues
+      
+      
+  let optimalStateSignals = 
+        SignalFlow.zipWith (CubeMap.interpolateWithSupportPerState (nc "main") 
+                            undefined 
+                            undefined 
+                            optimumResult) 
+        supportPoints demandCycle
 
 
         

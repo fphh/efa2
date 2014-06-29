@@ -2,6 +2,7 @@
 
 module EFA.Action.Flow.Topology.Optimality where
 
+import qualified EFA.Value.State as ValueState 
 --import qualified EFA.Action.Flow.Topology.Check as ActFlowTopoCheck
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 import qualified EFA.Action.Flow.Optimality as FlowOpt
@@ -266,25 +267,20 @@ applyBalanceForcing caller balanceForcing node (Just sums) = case sums of
 -- | If State in Nothing, than state could not be detected because of invalid values
 findMaximumEta :: 
   (DV.Walker vec,Ord a, Arith.Constant a,
-   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, 
-                   (FlowOpt.TotalBalanceForce (Interp.Val a),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,(FlowOpt.TotalBalanceForce (Interp.Val a),
                     (FlowOpt.EtaSys (Interp.Val a),FlowOpt.LossSys (Interp.Val a)))),
-   DV.Storage vec (CubeGrid.LinIdx, (ActFlowCheck.EdgeFlowStatus, 
-                                     (FlowOpt.TotalBalanceForce (Interp.Val a),
+   DV.Storage vec (CubeGrid.LinIdx, (ActFlowCheck.EdgeFlowStatus,(FlowOpt.TotalBalanceForce (Interp.Val a),
                                       (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))),
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)),
-   DV.Storage vec (CubeGrid.LinIdx, 
-                   (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)))) =>
+   DV.Storage vec (CubeGrid.LinIdx, (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)))) =>
   Caller ->
   Result.Result (CubeMap.Data (Sweep.Search inst) dim vec 
                  (ActFlowCheck.EdgeFlowStatus,
                   (FlowOpt.TotalBalanceForce (Interp.Val a),
                    (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))) -> 
-  Result.Result (Map.Map (Maybe Idx.AbsoluteState) (CubeGrid.LinIdx,
-                 (ActFlowCheck.EdgeFlowStatus,
-                  (FlowOpt.TotalBalanceForce (Interp.Val a),
-                   (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))))
-findMaximumEta caller cubeData = fmap (CubeMap.findBestWithIndexByPerCategory (ActFlowCheck.getState . fst) f) cubeData
+  Result.Result (ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,
+                  (FlowOpt.TotalBalanceForce (Interp.Val a),(FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))))
+findMaximumEta caller cubeData = fmap (CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f) cubeData
   where  f (_,(FlowOpt.TotalBalanceForce forcing,(FlowOpt.EtaSys eta,_))) 
            (_,(FlowOpt.TotalBalanceForce forcing1, (FlowOpt.EtaSys eta1,_)))= 
                 greaterThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
@@ -307,16 +303,14 @@ findMinimumLoss ::
                  (ActFlowCheck.EdgeFlowStatus,
                   (FlowOpt.TotalBalanceForce (Interp.Val a),
                    (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))) -> 
-  Result.Result (Map.Map Idx.AbsoluteState (CubeGrid.LinIdx,
-                 (ActFlowCheck.EdgeFlowStatus,
-                  (FlowOpt.TotalBalanceForce (Interp.Val a),
+  Result.Result (ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,(FlowOpt.TotalBalanceForce (Interp.Val a),
                    (FlowOpt.EtaSys (Interp.Val a), FlowOpt.LossSys (Interp.Val a))))))
-findMinimumLoss caller cubeData = fmap (CubeMap.findBestWithIndexByPerCategory (Maybe.fromMaybe e . ActFlowCheck.getState . fst) f) cubeData
+findMinimumLoss caller cubeData = fmap (CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f) cubeData
   where  f (_,(FlowOpt.TotalBalanceForce forcing,(_,FlowOpt.LossSys loss))) 
            (_,(FlowOpt.TotalBalanceForce forcing1, (_,FlowOpt.LossSys loss1)))= 
                 lessThanWithInvalid (loss Arith.~+ forcing) (loss1 Arith.~+ forcing1) 
          g (x,y) = (ActFlowCheck.getState x,y)
-         e = merror caller modul "findMinimumLoss" "Undefined State"
+--         e = merror caller modul "findMinimumLoss" "Undefined State"
 
 -- if new value is bigger then True (take new value) 
 greaterThanWithInvalid :: (Arith.Constant a,Ord a) => Interp.Val a -> Interp.Val a -> Bool

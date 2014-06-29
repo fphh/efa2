@@ -9,6 +9,9 @@ module EFA.Data.ND.Cube.Map where
 
 import EFA.Utility(Caller,merror,(|>),ModuleName(..),FunctionName, genCaller)
 
+import qualified EFA.Value.State as ValueState
+import qualified EFA.Flow.SequenceState.Index as Idx
+
 import qualified EFA.Value as Value
 import qualified EFA.Value.Type as Type
 import qualified EFA.Data.ND as ND
@@ -446,20 +449,21 @@ interpolate caller interpFunction cube coordinates = DataInterp.combine3 y1 y2 y
 
 
 interpolateWithSupport :: 
-  (DV.Storage vec a,Arith.Constant b,Show (vec b),DV.LookupMaybe vec b,
-   DV.Storage vec b,
+  (DV.Storage vec a,Arith.Constant b,
+   DV.Storage vec z,Show (vec z), DV.LookupMaybe vec z,
    DV.Slice vec,
    DV.Length vec) =>
   Caller ->
   ((a,a) -> (b,b) -> a -> DataInterp.Val b) ->
-   Cube inst dim label vec a b ->
+  (z -> b) ->
+   Cube inst dim label vec a z ->
   ND.Data dim (Strict.SupportingPoints (Strict.Idx,a)) ->
    (ND.Data dim a) ->
   DataInterp.Val b
-interpolateWithSupport caller interpFunction cube support coordinates = g (ND.getFirst newCaller support) 
+interpolateWithSupport caller interpFunction faccess cube support coordinates = g (ND.getFirst newCaller support) 
   where    
     newCaller = (caller |> (nc "interpolateWithSupport"))
-    f idx = interpolateWithSupport newCaller interpFunction 
+    f idx = interpolateWithSupport newCaller interpFunction faccess
             (getSubCube newCaller cube idx) 
             (ND.dropFirst newCaller support) (ND.dropFirst newCaller coordinates)   
     g (Strict.LeftPoint (idx,_)) = f idx 
@@ -469,9 +473,49 @@ interpolateWithSupport caller interpFunction cube support coordinates = g (ND.ge
       (DataInterp.unpack y1,DataInterp.unpack y2) $ ND.getFirst newCaller coordinates
       where    
         (y1,y2) = if ND.len coordinates >=2 then (f idx1, f idx2)
-                  else (DataInterp.Inter $ lookUp newCaller (ND.Data [idx1]) cube,
-                      DataInterp.Inter $ lookUp newCaller (ND.Data [idx2]) cube)
+                  else (DataInterp.Inter $ faccess $ lookUp newCaller (ND.Data [idx1]) cube,
+                      DataInterp.Inter $  faccess $ lookUp newCaller (ND.Data [idx2]) cube)
 
+
+
+interpolateWithSupportPerState :: 
+  (DV.Storage vec a,
+   DV.Storage vec (ValueState.Map z),
+   Show (vec (ValueState.Map z)),
+   DV.LookupMaybe vec (ValueState.Map z),
+   Arith.Constant b,
+   DV.Storage vec z,
+   DV.Storage vec (Result.Result (ValueState.Map z)),
+   Show (vec (Result.Result (ValueState.Map z))),
+   DV.LookupMaybe vec (Result.Result (ValueState.Map z)),
+   Show (vec z),
+   DV.LookupMaybe vec z,
+   DV.Slice vec,
+   DV.Length vec) =>
+  Caller ->
+  ((a,a) -> 
+   (ValueState.Map (DataInterp.Val b), ValueState.Map (DataInterp.Val b)) -> 
+   a -> 
+   ValueState.Map (DataInterp.Val b)) ->
+  (z -> DataInterp.Val b) ->
+  Cube inst dim label vec a (Result.Result (ValueState.Map z)) ->
+  ND.Data dim (Strict.SupportingPoints (Strict.Idx,a)) ->
+   (ND.Data dim a) ->
+   Result.Result (ValueState.Map (DataInterp.Val b))   
+interpolateWithSupportPerState caller interpFunction faccess cube support coordinates = g (ND.getFirst newCaller support) 
+  where    
+    newCaller = (caller |> (nc "interpolateWithSupportPerState"))
+    f idx = interpolateWithSupportPerState newCaller interpFunction faccess
+            (getSubCube newCaller cube idx) 
+            (ND.dropFirst newCaller support) (ND.dropFirst newCaller coordinates)   
+    g (Strict.LeftPoint (idx,_)) = f idx 
+    g (Strict.RightPoint (idx,_)) = f idx
+    g (Strict.PairOfPoints (idx1,x1) (idx2,x2)) = 
+      ValueState.combineWithResult (\ ya yb -> interpFunction (x1,x2) (ya,yb) $ ND.getFirst newCaller coordinates) y1 y2 
+      where    
+        (y1,y2) = if ND.len coordinates >=2 then (f idx1, f idx2)
+                  else (fmap (ValueState.map faccess) $ lookUp newCaller (ND.Data [idx1]) cube,
+                        fmap (ValueState.map faccess) $ lookUp newCaller (ND.Data [idx2]) cube)
 
 lookupSupportingPoints ::
   (DV.Storage vec a, DV.LookupUnsafe vec b, DV.Length vec,
@@ -619,7 +663,7 @@ findBestWithIndexBy fselect dat = fromJust $ DV.foldl g Nothing indexedVec
     g Nothing  (idx,val) = Just (idx, val)
     g (Just (oldIdx,oldVal)) (idx,val) = if (fselect oldVal val) then Just (idx, val)
                                                          else Just (oldIdx, oldVal)
-
+{-
 findBestWithIndexByPerCategory :: 
   (DV.Walker vec,Ord category,
    DV.Storage vec (Grid.LinIdx, a),
@@ -635,4 +679,20 @@ findBestWithIndexByPerCategory getCategory fselect dat = DV.foldl g (Map.fromLis
         where f (Just (_,oldVal)) = 
                 if fselect oldVal val then Map.insert (getCategory val) (idx, val) m else m
               f Nothing = Map.insert (getCategory val) (idx, val) m                                                     
+-}
 
+findBestWithIndexByPerState :: 
+  (DV.Walker vec,
+   DV.Storage vec (Grid.LinIdx, a),
+   DV.Storage vec a) =>
+  (a -> Maybe Idx.AbsoluteState) ->
+  (a -> a -> Bool) -> 
+  Data inst dim vec a -> 
+  ValueState.Map (Grid.LinIdx,a)
+findBestWithIndexByPerState getState fselect dat = ValueState.Map $ DV.foldl g (Map.fromList []) indexedVec
+  where 
+    indexedVec = DV.imap (\i x ->(Grid.LinIdx i, x)) $ getVector $ dat
+    g m (idx,val) = f $ Map.lookup (getState val) m
+        where f (Just (_,oldVal)) = 
+                if fselect oldVal val then Map.insert (getState val) (idx, val) m else m
+              f Nothing = Map.insert (getState val) (idx, val) m                                                     
