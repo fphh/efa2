@@ -3,7 +3,7 @@
 
 module Main where
 
-
+import qualified EFA.Action.DemandAndControl as DemandAndControl
 --import qualified EFA.Value.State as ValueState
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.OD.Curve as Curve
@@ -200,7 +200,7 @@ main = do
                   :: Curve.Map (TopoIdx.Position Node) Base String  [] Double (Interp.Val Double)      
                      
   let demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5])]
-        :: SignalFlow.DemandCycle Base ND.Dim2 String [] Double Double
+        :: DemandAndControl.DemandCycle Base ND.Dim2 String [] Double Double
       
 --  print given
   
@@ -226,7 +226,7 @@ main = do
       
   let objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") lifeCycleMap balanceForcingMap endNodeValues status
       
-  let optimumResult = CubeSweep.findMaximumEtaPerState (nc "Main") objectiveFunctionValues
+  let optimumResult = CubeSweep.findMaximumEtaPerState objectiveFunctionValues
   
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
   let absState = FlowTopoCheck.getFlowStatus (nc "Main") flow_00
@@ -234,7 +234,7 @@ main = do
   let supportPoints = SignalFlow.map (Grid.getSupportingPoints (nc "main") demandGrid) demandCycle   
   let supportPointsLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportPoints
   let supportPointsObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
-  let supportPointOpt = CubeSweep.getOptimalSuportPoints (nc "main") supportPointsObjFuncValues
+  let supportPointOpt = CubeSweep.getOptimalSuportPoints supportPointsObjFuncValues
       
       
   let optimalStateSignals = 

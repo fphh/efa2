@@ -26,6 +26,8 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 import Control.Monad(join)
 --import Data.Foldable (Foldable, foldMap)
 
+import qualified EFA.Action.DemandAndControl as DemandAndControl
+
 import EFA.Utility(Caller,
 --                 merror,
                --    (|>),
@@ -45,11 +47,6 @@ newtype StorageFlow a = StorageFlow a deriving Show
 
 newtype LifeCycleMap node a = 
   LifeCycleMap (Map.Map Idx.AbsoluteState (Map.Map node (GenerationEfficiency a,UsageEfficiency a))) deriving Show
-  
-  
-newtype SinkMap node a = SinkMap (Map.Map node a) deriving Show  
-newtype SourceMap node a = SourceMap (Map.Map node a) deriving Show  
-newtype StorageMap node a =  StorageMap (Map.Map node a) deriving Show  
 
 lookupLifeCycleEta :: (Ord node, Ord a, Arith.Constant a, Arith.Product a) =>
   LifeCycleMap node a -> 
@@ -57,7 +54,19 @@ lookupLifeCycleEta :: (Ord node, Ord a, Arith.Constant a, Arith.Product a) =>
   node -> 
   Maybe (GenerationEfficiency a, UsageEfficiency a) 
 lookupLifeCycleEta (LifeCycleMap m) state node = join $ fmap (Map.lookup node) $ Map.lookup state m 
+  
+newtype SinkMap node a = SinkMap (Map.Map node a) deriving Show  
+newtype SourceMap node a = SourceMap (Map.Map node a) deriving Show  
+newtype StorageMap node a =  StorageMap (Map.Map node a) deriving Show  
 
-newtype EtaSys a = EtaSys a deriving Show
-newtype LossSys a = LossSys a deriving Show
+-- data EndNodeEnergies node a = EndNodeEnergies (SinkMap node a) (SourceMap node a) (StorageMap node (Maybe (TopoQty.Sums a)))
+
+data Eta2Optimise a = EtaSys a deriving Show -- TODO add | SelectedEta a deriving Show
+data Loss2Optimise a = LossSys a deriving Show -- TODO add | SelectedLoss a deriving Show
 newtype TotalBalanceForce a = TotalBalanceForce a deriving Show
+
+data OptimalityValues a = OptimalityValues (Eta2Optimise a) (Loss2Optimise a) (TotalBalanceForce a) 
+
+-- data Essence node a = Essence (OptimalityValues a) (StorageMap node a) (DemandAndControl.ControlMap node a)
+
+

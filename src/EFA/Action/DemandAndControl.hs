@@ -1,0 +1,19 @@
+module EFA.Action.DemandAndControl where
+
+
+import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Data.OD.Signal.Flow as SignalFlow 
+import qualified EFA.Data.ND as ND
+
+import qualified Data.Map as Map
+
+
+data ControlVar node = ControlPower (TopoIdx.Power node ) | ControlRatio (TopoIdx.X node)
+data DemandVar node = DemandPower (TopoIdx.Power node ) | DemandRatio (TopoIdx.X node)
+
+type ControlMap node a = Map.Map (ControlVar node) a
+type DemandMap node a = Map.Map (DemandVar node) a
+
+type DemandCycle inst dim label vec a b = SignalFlow.Signal inst label vec a (ND.Data dim b)
+
+-- type Control  

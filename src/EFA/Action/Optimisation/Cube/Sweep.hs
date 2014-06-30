@@ -22,7 +22,7 @@ import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 import qualified EFA.Flow.Topology as FlowTopo
-import qualified EFA.Data.Interpolation as Interp
+--import qualified EFA.Data.Interpolation as Interp
 --import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Flow.SequenceState.Index as Idx
 
@@ -76,7 +76,7 @@ import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Optimisation.Cube.Solve as CubeSolve
 
 import qualified Data.Maybe as Maybe
-import Control.Applicative as Applicative
+--import Control.Applicative as Applicative
 
 --import qualified EFA.Flow.Topology as FlowTopo
 
@@ -313,24 +313,24 @@ objectiveFunctionValues ::
   DV.Storage vec1 (a1,a1),
   DV.Storage vec1 a1,
   DV.Storage vec1 ActFlowCheck.EdgeFlowStatus,
-  DV.Storage vec1 (FlowOpt.EtaSys a1),
+  DV.Storage vec1 (FlowOpt.Eta2Optimise a1),
   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
   (FlowOpt.TotalBalanceForce a1,
-  (FlowOpt.EtaSys a1,
-  FlowOpt.LossSys a1))),
+  (FlowOpt.Eta2Optimise a1,
+  FlowOpt.Loss2Optimise a1))),
   DV.Storage vec1 (FlowOpt.TotalBalanceForce a1,
-  (FlowOpt.EtaSys a1,
-  FlowOpt.LossSys a1)),
+  (FlowOpt.Eta2Optimise a1,
+  FlowOpt.Loss2Optimise a1)),
   DV.Storage vec1 (FlowOpt.TotalBalanceForce a1),
-  DV.Storage vec1 (FlowOpt.LossSys a1),
-  DV.Storage vec1 (FlowOpt.EtaSys a1,
-  FlowOpt.LossSys a1),
+  DV.Storage vec1 (FlowOpt.Loss2Optimise a1),
+  DV.Storage vec1 (FlowOpt.Eta2Optimise a1,
+  FlowOpt.Loss2Optimise a1),
   DV.Storage vec (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 a1))),
   DV.Storage vec (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 ActFlowCheck.EdgeFlowStatus)),
   DV.Storage vec (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
  (FlowOpt.TotalBalanceForce a1,
-  (FlowOpt.EtaSys a1,
-  FlowOpt.LossSys a1))))),
+  (FlowOpt.Eta2Optimise a1,
+  FlowOpt.Loss2Optimise a1))))),
   DV.Singleton vec1,
   DV.Length vec1) =>
   Caller ->
@@ -339,7 +339,7 @@ objectiveFunctionValues ::
   CubeMap.Cube inst dim label vec a (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 a1))) ->
   CubeMap.Cube inst dim label vec a (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 ActFlowCheck.EdgeFlowStatus)) ->
   CubeMap.Cube inst dim label vec a (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
-  (FlowOpt.TotalBalanceForce a1,(FlowOpt.EtaSys a1,FlowOpt.LossSys a1)))))
+  (FlowOpt.TotalBalanceForce a1,(FlowOpt.Eta2Optimise a1,FlowOpt.Loss2Optimise a1)))))
 objectiveFunctionValues caller lifeCycleMap balanceForcingMap endNodeValues status = 
   CubeMap.zipWith (caller |> nc "getEndNodeFlows") 
   (\ x st -> FlowTopoOpt.objectiveFunctionValues (caller |> nc "getEndNodeFlows") 
@@ -347,67 +347,37 @@ objectiveFunctionValues caller lifeCycleMap balanceForcingMap endNodeValues stat
   endNodeValues status
       
 findMaximumEtaPerState ::
- (Ord a1,
- Arith.Constant a1,
+ (Ord  b,
+ Arith.Constant  b,
  DV.Walker vec1,
  DV.Walker vec,
  DV.Storage vec1 (CubeGrid.LinIdx,
  (ActFlowCheck.EdgeFlowStatus,
- (Interp.Val a1,
- Interp.Val a1))),
+ (Interp.Val  b,
+ Interp.Val  b))),
  DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
- (Interp.Val a1,
- Interp.Val a1)),
- DV.Storage vec1 (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus, (FlowOpt.TotalBalanceForce (Interp.Val a1), (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1))))),DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,(FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1), FlowOpt.LossSys (Interp.Val a1)))),
+ (Interp.Val  b,
+ Interp.Val  b)),
+ DV.Storage vec1 (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus, (FlowOpt.TotalBalanceForce (Interp.Val  b), (FlowOpt.Eta2Optimise (Interp.Val  b),
+ FlowOpt.Loss2Optimise (Interp.Val  b))))),DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,(FlowOpt.TotalBalanceForce (Interp.Val  b),
+ (FlowOpt.Eta2Optimise (Interp.Val  b), FlowOpt.Loss2Optimise (Interp.Val  b)))),
  DV.Storage vec (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
- (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1)))))),
+ (FlowOpt.TotalBalanceForce (Interp.Val  b),
+ (FlowOpt.Eta2Optimise (Interp.Val  b),
+ FlowOpt.Loss2Optimise (Interp.Val  b)))))),
  DV.Storage vec (Result.Result (ValueState.Map (CubeGrid.LinIdx,
  (ActFlowCheck.EdgeFlowStatus,
- (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1)))))))) =>
- Caller ->
+ (FlowOpt.TotalBalanceForce (Interp.Val  b),
+ (FlowOpt.Eta2Optimise (Interp.Val  b),
+ FlowOpt.Loss2Optimise (Interp.Val  b)))))))) =>
  CubeMap.Cube inst dim label vec a (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
- (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1)))))) ->
+ (FlowOpt.TotalBalanceForce (Interp.Val  b),
+ (FlowOpt.Eta2Optimise (Interp.Val  b),
+ FlowOpt.Loss2Optimise (Interp.Val  b)))))) ->
  CubeMap.Cube inst dim label vec a (Result.Result (ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,
- (FlowOpt.TotalBalanceForce (Interp.Val a1),(FlowOpt.EtaSys (Interp.Val a1),FlowOpt.LossSys (Interp.Val a1)))))))
+ (FlowOpt.TotalBalanceForce (Interp.Val  b),(FlowOpt.Eta2Optimise (Interp.Val  b),FlowOpt.Loss2Optimise (Interp.Val  b)))))))
 
-findMaximumEtaPerState caller objFunctionValues = CubeMap.map  (FlowTopoOpt.findMaximumEta (caller |> nc "getOptimalResult")) objFunctionValues
-
-{-
-interpolateWithSupportPerState::                                       
-  Caller ->
-  ((a,a) ->  (Result.Result (ValueState.Map b), Result.Result (ValueState.Map b)) ->
-   a -> Result.Result (ValueState.Map b)) -> -- Interp.Val (Result.Result (Map.Map (Maybe Idx.AbsoluteState) b))) ->  
-  (z -> b) ->
-  CubeMap.Cube inst dim label vec a (Result.Result (ValueState.Map z)) ->
-  ND.Data dim (Strict.SupportingPoints (Strict.Idx,a)) ->
-  ND.Data dim a ->
- Result.Result (ValueState.Map b)
-interpolateWithSupportPerState caller interpFunction faccess cube support coordinates = let 
-  f _ (Result.Undetermined,_) _ = Result.Undetermined 
-  f _ (_, Result.Undetermined) _ = Result.Undetermined
-  f (x0,x1) (Result.Determined y, Result.Determined y1) x = Result.Determined $ h y y1  
-    where
-      h m m1 = j ys 
-        where
-          j xs | any (\(Interp.Inter _) -> True) xs = Interp.Inter $ Map.fromList $ zip keys $ map Interp.unpack xs
-          j xs | all (\(Interp.Extra _) -> True) xs = Interp.Extra $ Map.fromList $ zip keys $ map Interp.unpack xs
-          j xs | otherwise = Interp.Invalid ["interpolateWithSupportPerState"]
-          
-          ys = map (g (x0,x1) x) $ zip xs xs1
-          xs = Map.elems $ Map.intersection m m1
-          xs1 = Map.elems $ Map.intersection m1 m
-          keys = Map.keys $ Map.intersection m m1
-          g (x0,x1) x (y,y1) = interpFunction (x0,x1) (y,y1) x
-  in CubeMap.interpolateWithSupportPerState caller f faccess cube support coordinates
--}
+findMaximumEtaPerState objFunctionValues = CubeMap.map FlowTopoOpt.findMaximumEta objFunctionValues
 
 -- TODO -- don't use now
 getOptimalSuportPoints ::
@@ -425,32 +395,31 @@ getOptimalSuportPoints ::
  DV.Storage vec1 (CubeGrid.LinIdx,
  (ActFlowCheck.EdgeFlowStatus,
  (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1))))),
+ (FlowOpt.Eta2Optimise (Interp.Val a1),
+ FlowOpt.Loss2Optimise (Interp.Val a1))))),
  DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
  (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1)))),
+ (FlowOpt.Eta2Optimise (Interp.Val a1),
+ FlowOpt.Loss2Optimise (Interp.Val a1)))),
  DV.Storage vec [Result.Result (CubeMap.Data (Sweep.Search inst1) dim vec1 (ActFlowCheck.EdgeFlowStatus,
  (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1)))))],
+ (FlowOpt.Eta2Optimise (Interp.Val a1),
+ FlowOpt.Loss2Optimise (Interp.Val a1)))))],
  DV.Storage vec [Result.Result (ValueState.Map (CubeGrid.LinIdx,
  (ActFlowCheck.EdgeFlowStatus,
  (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1))))))]) =>
- Caller ->
+ (FlowOpt.Eta2Optimise (Interp.Val a1),
+ FlowOpt.Loss2Optimise (Interp.Val a1))))))]) =>
  SignalFlow.Signal inst label vec a [Result.Result (CubeMap.Data (Sweep.Search inst1) dim vec1 (ActFlowCheck.EdgeFlowStatus,
  (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1)))))] ->
+ (FlowOpt.Eta2Optimise (Interp.Val a1),
+ FlowOpt.Loss2Optimise (Interp.Val a1)))))] ->
  SignalFlow.Signal inst label vec a [Result.Result (ValueState.Map (CubeGrid.LinIdx,
  (ActFlowCheck.EdgeFlowStatus,
  (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.EtaSys (Interp.Val a1),
- FlowOpt.LossSys (Interp.Val a1))))))] 
+ (FlowOpt.Eta2Optimise (Interp.Val a1),
+ FlowOpt.Loss2Optimise (Interp.Val a1))))))] 
 
-getOptimalSuportPoints caller supportPointsObjFuncValues = SignalFlow.map (map (FlowTopoOpt.findMaximumEta (caller |> nc "getOptimalSuportPoints"))) supportPointsObjFuncValues
+getOptimalSuportPoints supportPointsObjFuncValues = SignalFlow.map (map FlowTopoOpt.findMaximumEta) supportPointsObjFuncValues
 
 
