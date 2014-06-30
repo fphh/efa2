@@ -226,7 +226,7 @@ main = do
       
   let objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") lifeCycleMap balanceForcingMap endNodeValues status
       
-  let optimumResult = CubeSweep.findMaximumEtaPerState objectiveFunctionValues
+  let optimumResult = CubeSweep.findMaximumEtaPerState  (nc "main") objectiveFunctionValues
   
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
   let absState = FlowTopoCheck.getFlowStatus (nc "Main") flow_00
@@ -234,16 +234,16 @@ main = do
   let supportPoints = SignalFlow.map (Grid.getSupportingPoints (nc "main") demandGrid) demandCycle   
   let supportPointsLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportPoints
   let supportPointsObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
-  let supportPointOpt = CubeSweep.getOptimalSuportPoints supportPointsObjFuncValues
+--  let supportPointOpt = CubeSweep.getOptimalSuportPoints supportPointsObjFuncValues
       
-      
+{-      
   let optimalStateSignals = 
         SignalFlow.zipWith (CubeMap.interpolateWithSupportPerState (nc "main") 
                             undefined 
                             undefined 
                             optimumResult) 
         supportPoints demandCycle
-
+-}
 
         
 --  print absState    
@@ -257,7 +257,7 @@ main = do
   print "-------------"
   print ""
   
-  print supportPointOpt
+--  print supportPointOpt
   
   const Draw.xterm "simulationGraphsSequence"
     $ Draw.bgcolour DarkSeaGreen2
