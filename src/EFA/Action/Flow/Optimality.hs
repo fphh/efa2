@@ -59,8 +59,6 @@ newtype SinkMap node a = SinkMap (Map.Map node a) deriving Show
 newtype SourceMap node a = SourceMap (Map.Map node a) deriving Show  
 newtype StorageMap node a =  StorageMap (Map.Map node a) deriving Show  
 
--- data EndNodeEnergies node a = EndNodeEnergies (SinkMap node a) (SourceMap node a) (StorageMap node (Maybe (TopoQty.Sums a)))
-
 data Eta2Optimise a = EtaSys a deriving Show -- TODO add | SelectedEta a deriving Show
 data Loss2Optimise a = LossSys a deriving Show -- TODO add | SelectedLoss a deriving Show
 newtype TotalBalanceForce a = TotalBalanceForce a deriving Show
@@ -83,21 +81,11 @@ getLossVal (OptimalityValues (_,LossSys x) _) = x
 getForceVal :: OptimalityValues a -> a 
 getForceVal (OptimalityValues _ (TotalBalanceForce x)) = x
 
-{-
- interpolateOptimality :: (Ord a, Show a, Arith.Product a,Arith.Constant a)=> 
- Caller ->
- Interp.Method a ->
- String ->
- Strict.SupportingPoints (a, OptimalityValues (Interp.Val a))->
- a ->
- OptimalityValues (Interp.Val a)
-interpolateOptimality caller inmethod label support x = 
-  OptimalityValues (EtaSys eta,LossSys loss) (TotalBalanceForce force)
-  where
-    eta = Interp.dim1WithSupport caller inmethod label (fmap (\(a,b) -> (a, getEtaVal b)) support) x
-    loss = Interp.dim1WithSupport caller inmethod label (fmap (\(a,b) -> (a, getLossVal b)) support) x
-    force = Interp.dim1WithSupport caller inmethod label (fmap (\(a,b) -> (a, getForceVal b)) support)  x
--}
+getOptEtaVal :: (Arith.Sum a) => OptimalityValues a -> a             
+getOptEtaVal (OptimalityValues (EtaSys x,_) (TotalBalanceForce y)) = x Arith.~+ y
+
+getOptLossVal :: (Arith.Sum a) => OptimalityValues a -> a             
+getOptLossVal (OptimalityValues (_,LossSys x) (TotalBalanceForce y)) = x Arith.~+ y
 
 interpolateOptimalityPerState :: (Ord a, Show a, Arith.Product a,Arith.Constant a)=> 
  Caller ->
@@ -118,17 +106,3 @@ interpolateOptimalityPerState caller inmethod label xPair yPair x = ValueState.z
     force = Interp.dim1PerState caller inmethod label xPair 
             ((\(a,b) -> (ValueState.map getForceVal a, ValueState.map getForceVal b)) yPair) x
    
-{-
-interpolateOptimalityPerState ::  
-  (Ord a, Show a, Arith.Product a) =>   
- Caller ->
- Interp.Method a ->
- String ->
- Strict.SupportingPoints (a,ValueState.Map (OptimalityValues (Interp.Val a))) ->
- a ->
- ValueState.Map (OptimalityValues (Interp.Val a))  
-interpolateOptimalityPerState caller inmethod label support x = 
-  fmap (ValueState.map (interpolateOptimality caller inmethod label x)) support
--}
-  
-  

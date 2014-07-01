@@ -289,7 +289,7 @@ findMaximumEta ::
 findMaximumEta caller cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f $ g cubeData
   where  f (_,FlowOpt.OptimalityValues (FlowOpt.EtaSys eta,_) (FlowOpt.TotalBalanceForce forcing)) 
            (_,FlowOpt.OptimalityValues (FlowOpt.EtaSys eta1,_) (FlowOpt.TotalBalanceForce forcing1))= 
-                greaterThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
+                Interp.greaterThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
          g (Determined x) = x
          g (Undetermined) = merror caller modul "findMaximumEta" "Undetermined Variables in Solution" 
 
@@ -314,18 +314,7 @@ findMinimumLoss ::
 findMinimumLoss caller cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f $ g cubeData
   where  f (_,(FlowOpt.TotalBalanceForce forcing,(_,FlowOpt.LossSys loss))) 
            (_,(FlowOpt.TotalBalanceForce forcing1, (_,FlowOpt.LossSys loss1)))= 
-                lessThanWithInvalid (loss Arith.~+ forcing) (loss1 Arith.~+ forcing1) 
+                Interp.lessThanWithInvalid (loss Arith.~+ forcing) (loss1 Arith.~+ forcing1) 
          g (Determined x) = x
          g (Undetermined) = merror caller modul "findMinimumLoss" "Undetermined Variables in Solution" 
 
--- if new value is bigger then True (take new value) 
-greaterThanWithInvalid :: (Arith.Constant a,Ord a) => Interp.Val a -> Interp.Val a -> Bool
-greaterThanWithInvalid (Interp.Invalid _) _ = True 
-greaterThanWithInvalid _ (Interp.Invalid _) = False
-greaterThanWithInvalid x y = (Interp.unpack y) > (Interp.unpack x)
-
--- the new value y is taken, when it is smaller
-lessThanWithInvalid :: (Arith.Constant a,Ord a) => Interp.Val a -> Interp.Val a -> Bool
-lessThanWithInvalid (Interp.Invalid _) _ = True
-lessThanWithInvalid _ (Interp.Invalid _) = False
-lessThanWithInvalid x y = (Interp.unpack y) < (Interp.unpack x)

@@ -201,7 +201,6 @@ lookupStorageBalance caller balance sto =
   where e = merror caller modul "lookupStorageBalance"
           (" - Storage not in Map: " ++ show sto)
 
-data StateForcing = StateForcingOn | StateForcingOff deriving (Show)
 
 
 

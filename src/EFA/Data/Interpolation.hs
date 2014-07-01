@@ -395,4 +395,31 @@ dim1PerState caller inmethod label (x0,x1) (y0,y1) x = ValueState.zipWith3 combi
         f ya yb = dim1 (caller |> nc "dim1PerState") inmethod ExtrapError label (x0,x1) 
             (unpack ya, unpack yb) (Inter x)
   
-        
+
+-- TODO: correct logic behind greaterThanWithInvalid to correspond with >
+-- | Invalid is always smaller
+greaterThanWithInvalid :: (Arith.Constant a,Ord a) => Val a -> Val a -> Bool
+greaterThanWithInvalid (Invalid _) _ = True 
+greaterThanWithInvalid _ (Invalid _) = False
+greaterThanWithInvalid x y = (unpack y) > (unpack x)
+
+-- | Invalid is always bigger
+lessThanWithInvalid :: (Arith.Constant a,Ord a) => Val a -> Val a -> Bool
+lessThanWithInvalid (Invalid _) _ = True
+lessThanWithInvalid _ (Invalid _) = False
+lessThanWithInvalid x y = (unpack y) < (unpack x)
+
+
+-- | Invalid is the worst in this case the smalles Value
+compareMaxWithInvalid :: (Ord a,Constant a) => Val a -> Val a -> Ordering
+compareMaxWithInvalid (Invalid _) (Invalid _) = EQ 
+compareMaxWithInvalid (Invalid _) _ = LT
+compareMaxWithInvalid _ (Invalid _) = GT
+compareMaxWithInvalid x y = compare (unpack x) (unpack y)
+
+-- | Invalid is the worst in this case the smalles Value
+compareMinWithInvalid :: (Ord a,Constant a) => Val a -> Val a -> Ordering
+compareMinWithInvalid (Invalid _) (Invalid _) = EQ 
+compareMinWithInvalid (Invalid _) _ = GT
+compareMinWithInvalid _ (Invalid _) = LT
+compareMinWithInvalid x y = compare (unpack x) (unpack y)

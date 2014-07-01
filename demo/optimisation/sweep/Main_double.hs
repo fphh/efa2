@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Main where
-
+import qualified EFA.Action.Optimisation.Signal as OptSignal
 import qualified EFA.Action.DemandAndControl as DemandAndControl
 --import qualified EFA.Value.State as ValueState
 import qualified EFA.Data.Interpolation as Interp
@@ -235,22 +235,8 @@ main = do
   let supportPointsLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportPoints
   let supportPointsObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
 --  let supportPointOpt = CubeSweep.getOptimalSuportPoints supportPointsObjFuncValues
-  let optimalStateSignals = SignalFlow.zipWith 
-                            (CubeSweep.interpolateOptimalityValuesWithSupportPerState (nc "main") 
-                            Interp.Linear
-                            optimumResult) 
-        supportPoints demandCycle    
-  
-  
-{-      
-  let optimalStateSignals = 
-        SignalFlow.zipWith (CubeMap.interpolateWithSupportPerState (nc "main") 
-                            undefined 
-                            undefined 
-                            optimumResult) 
-        supportPoints demandCycle
--}
-
+  let optimalStateSignals = OptSignal.optimalStateSignals (nc "main") optimumResult supportPoints demandCycle
+  let optimalStates = OptSignal.findOptimalStatesUsingMaxEta (nc "main") OptSignal.StateForcingOff optimalStateSignals
         
 --  print absState    
 --  print lifeCycleMap
@@ -263,8 +249,12 @@ main = do
   print "--supportPointsObjFuncValues--"
   print supportPointsObjFuncValues
   print "" 
-  print "-------------"
+  print "--optimalStateSignals--"
   print optimalStateSignals
+  
+  print "--optimalStates--"
+  print optimalStates
+  
   
 --  print supportPointOpt
   
