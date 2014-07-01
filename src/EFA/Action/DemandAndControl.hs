@@ -16,4 +16,11 @@ type DemandMap node a = Map.Map (DemandVar node) a
 
 type DemandCycle inst dim label vec a b = SignalFlow.Signal inst label vec a (ND.Data dim b)
 
--- type Control  
+{-
+lookupControlVar :: 
+  (TopoQty.Section node (Result.Result b)  
+  (ControlVar node) -> 
+lookupControlVar flowSection (ControlPower idx) = TopoQty.lookupPower flowSection idx    
+lookupControlVar flowSection (ControlRatio idx) = TopoQty.lookupX flowSection idx    
+
+-}

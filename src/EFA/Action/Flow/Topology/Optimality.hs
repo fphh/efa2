@@ -115,8 +115,6 @@ getEndNodeFlows flowSection =
        storages = FlowOpt.StorageMap $ Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
               $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
                   
---       control = Map.fromList $ zip controlVars $ map (lookupControlVar flowSection) controlVars          
-               
     in (EndNodeEnergies sinks sources storages)
       
 lookupControlVar :: Ord node => TopoQty.Section node v -> DemandAndControl.ControlVar node -> Maybe v

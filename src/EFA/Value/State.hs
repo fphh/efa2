@@ -16,6 +16,10 @@ instance Functor Map where
 map :: (a -> b) -> Map a -> Map b 
 map = fmap  
 
+lookupUnsafe ::  Map a -> Maybe Idx.AbsoluteState -> a
+lookupUnsafe (Map m) idx = m Map.! idx 
+
+
 toList :: Map a -> [(Maybe Idx.AbsoluteState, a)]
 toList (Map m) = Map.toList m
 

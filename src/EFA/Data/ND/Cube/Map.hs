@@ -240,6 +240,11 @@ lookupLinUnsafe ::
   Cube inst dim label vec a b -> Grid.LinIdx -> b
 lookupLinUnsafe (Cube _ (Data vec)) (Grid.LinIdx idx) = DV.lookupUnsafe vec idx
 
+lookupLinUnsafeData ::
+  DV.LookupUnsafe vec a =>
+  Data inst dim vec a -> Grid.LinIdx -> a
+lookupLinUnsafeData (Data vec) (Grid.LinIdx idx) = DV.lookupUnsafe vec idx
+
 lookUp ::
   (DV.LookupMaybe vec b,
    DV.Storage vec a,Show (vec b),

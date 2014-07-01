@@ -7,7 +7,8 @@ module EFA.Action.Optimisation.Cube.Sweep where
 import EFA.Utility(Caller,
                    merror,(|>),
                    ModuleName(..),FunctionName, genCaller)
-  
+import qualified EFA.Action.Optimisation.Sweep as Sweep
+ 
 import qualified EFA.Data.Interpolation as Interp  
 import qualified EFA.Value.State as ValueState
 import qualified EFA.Action.EtaFunctions as EtaFunctions
@@ -25,7 +26,7 @@ import qualified EFA.Flow.Topology as FlowTopo
 --import qualified EFA.Data.Interpolation as Interp
 --import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Flow.SequenceState.Index as Idx
-
+import qualified EFA.Action.DemandAndControl as DemandAndControl
 --import qualified EFA.Data.OD.Signal.Flow as SignalFlow
 --import EFA.Application.Utility (quantityTopology)
 --import qualified EFA.Application.Optimisation.Sweep as Sweep
@@ -72,7 +73,7 @@ import qualified EFA.Data.ND.Cube.Map as CubeMap
 import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
 
-import qualified EFA.Action.Optimisation.Sweep as Sweep
+-- import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Optimisation.Cube.Solve as CubeSolve
 
 import qualified Data.Maybe as Maybe
@@ -416,4 +417,84 @@ combine3PerStateOptimality m m1 m2 =  ValueState.zipWith3 f  m m1 m2
 
 
 
+getOptimalFlowPerStateCube :: 
+  (Eq label,DV.LookupUnsafe vec1 b,
+   Eq (vec a),
+   DV.Zipper vec,
+   DV.Storage vec (ValueState.Map (CubeGrid.LinIdx,
+                                   (ActFlowCheck.EdgeFlowStatus,
+                                    FlowOpt.OptimalityValues (Interp.Val b)))),
+   DV.Storage vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))),
+   DV.Storage vec (ValueState.Map (TopoQty.Section node (Result.Result b)))) =>
+   Caller ->
+  CubeMap.Cube  (Sweep.Demand inst) dim label vec a 
+  (ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityValues (Interp.Val  b)))) ->
+  CubeMap.Cube (Sweep.Demand inst) dim label vec a (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 b)))->
+  CubeMap.Cube (Sweep.Demand inst) dim label vec a (ValueState.Map (TopoQty.Section node (Result.Result b)))
+getOptimalFlowPerStateCube caller optimalityCube sweepCube = CubeMap.zipWith (caller |> nc "getOptimalValueCube") f  optimalityCube  sweepCube
+  where f stateMap flowSection = ValueState.map (\(linIdx,_) -> TopoQty.mapSection (\searchCubeData ->  
+                                             fmap (flip CubeMap.lookupLinUnsafeData linIdx) searchCubeData ) flowSection) stateMap
 
+
+-- TODO Move to better place
+lookupControlVar :: (Ord node) =>
+  TopoQty.Section node b ->  
+  DemandAndControl.ControlVar node -> 
+  Maybe b
+lookupControlVar flowSection (DemandAndControl.ControlPower idx) = TopoQty.lookupPower idx flowSection
+lookupControlVar flowSection (DemandAndControl.ControlRatio idx) = TopoQty.lookupX idx flowSection
+
+
+lookupControlVariablesPerState ::(Ord node)=> 
+  Caller ->
+  ValueState.Map (TopoQty.Section node b) ->
+  [DemandAndControl.ControlVar node] ->
+  ValueState.Map (Map.Map (DemandAndControl.ControlVar node) b)
+lookupControlVariablesPerState  caller flowSectionMap controlVars = ValueState.map g flowSectionMap
+  where g flowSection = Map.fromList $ zip controlVars $ 
+                        map (Maybe.fromMaybe err . lookupControlVar flowSection) controlVars
+        err = merror caller modul "lookupControlVariables" "ControlVariable not found in flowSection"
+
+lookupControlVariablePerState ::(Ord node)=> 
+  Caller ->
+  ValueState.Map (TopoQty.Section node b) ->
+  DemandAndControl.ControlVar node ->
+  ValueState.Map  b
+lookupControlVariablePerState  caller flowSectionMap controlVar = ValueState.map g flowSectionMap
+  where g flowSection = (Maybe.fromMaybe err . lookupControlVar flowSection) controlVar
+        err = merror caller modul "lookupControlVariables" "ControlVariable not found in flowSection"
+
+
+interpolateWithSupportPerState :: 
+  (Show label,Ord a, Show a, Arith.Constant a,
+   DV.Storage vec a,
+   DV.Storage vec (ValueState.Map (Interp.Val a)),
+   DV.Slice vec,
+   DV.Length vec, 
+   Show (vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
+   Show (vec (ValueState.Map (Interp.Val a))),
+   DV.LookupMaybe vec (ValueState.Map (Interp.Val a)),
+   DV.LookupMaybe vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))) =>
+  Caller -> 
+  Interp.Method a ->
+  CubeMap.Cube inst dim label vec a (ValueState.Map (Interp.Val  a)) ->
+  ND.Data dim (Strict.SupportingPoints (Strict.Idx,a)) ->
+  (ND.Data dim a) ->
+  ValueState.Map (Interp.Val a)
+interpolateWithSupportPerState caller inmethod cube support coordinates = g (ND.getFirst newCaller support) 
+  where 
+    newCaller = (caller |> (nc "interpolateWithSupportPerState"))
+    label = show $ Strict.getLabel $ ND.getFirst newCaller $ CubeMap.getGrid cube
+    f idx = if ND.len coordinates >=2 
+            then
+               interpolateWithSupportPerState newCaller inmethod (CubeMap.getSubCube newCaller cube idx) 
+               (ND.dropFirst (caller |> (nc "interpolateOptimalityValuesWithSupportPerState-support")) support) 
+               (ND.dropFirst (caller |> (nc "interpolateOptimalityValuesWithSupportPerState-coordinates")) coordinates)
+            else CubeMap.lookUp newCaller (ND.Data [idx]) cube   
+    g (Strict.LeftPoint (idx,_)) = f idx 
+    g (Strict.RightPoint (idx,_)) = f idx
+    g (Strict.PairOfPoints (idx1,x1) (idx2,x2)) = 
+      Interp.dim1PerState caller inmethod label (x1,x2) (y1,y2) 
+                                             $ ND.getFirst newCaller coordinates 
+      where    
+        (y1,y2) = (f idx1, f idx2)
