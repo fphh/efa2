@@ -1,7 +1,7 @@
 module EFA.Value.State where
 
-import qualified EFA.Equation.Result as Result
-import qualified EFA.Data.Interpolation as Interp
+--import qualified EFA.Equation.Result as Result
+-- import qualified EFA.Data.Interpolation as Interp
 import qualified Data.Map as Map
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Flow.SequenceState.Index as Idx
@@ -59,13 +59,14 @@ instance (Arith.Constant a, Arith.Sum a, Arith.Product a) => Arith.Product (Map 
   recip x = fmap Arith.recip x
   constOne x = fmap (\ _ -> Arith.one) x 
   
-  
+{-  
 unpack :: (Arith.Constant a) => Map (Interp.Val a) -> Map a
 unpack m = map Interp.unpack m 
 
 combine3 :: Map (Interp.Val a) -> Map (Interp.Val a) -> Map (Interp.Val a) -> Map (Interp.Val a)
 combine3 m m1 m2 =  zipWith3 Interp.combine3 m m1 m2
-
+-}
+{-
 combineWithResult :: 
   (Map (Interp.Val a) -> Map (Interp.Val a) -> Map (Interp.Val a)) -> 
   Result.Result (Map (Interp.Val a)) -> 
@@ -74,3 +75,4 @@ combineWithResult ::
 combineWithResult _ Result.Undetermined _ = Result.Undetermined 
 combineWithResult _ _ Result.Undetermined = Result.Undetermined
 combineWithResult f (Result.Determined y) (Result.Determined y1) = Result.Determined $ combine3 y y1 $ f y y1  
+-}

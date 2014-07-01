@@ -92,7 +92,7 @@ dropFirst caller (Data [_]) = merror caller m "dropFirst" "no Dimension left"
 dropFirst _ (Data (_:xs)) = Data xs
 
 getFirst :: Caller -> Data dim a -> a
-getFirst caller (Data []) = merror caller m "dropFirst" "no Dimension left"
+getFirst caller (Data []) = merror caller m "getFirst" "no Dimension left"
 getFirst _ (Data (x:_)) = x
 
 

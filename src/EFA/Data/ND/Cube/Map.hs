@@ -477,7 +477,7 @@ interpolateWithSupport caller interpFunction faccess cube support coordinates = 
                       DataInterp.Inter $  faccess $ lookUp newCaller (ND.Data [idx2]) cube)
 
 
-
+{-
 interpolateWithSupportPerState :: 
   (DV.Storage vec a,
    DV.Storage vec (ValueState.Map z),
@@ -516,6 +516,7 @@ interpolateWithSupportPerState caller interpFunction faccess cube support coordi
         (y1,y2) = if ND.len coordinates >=2 then (f idx1, f idx2)
                   else (fmap (ValueState.map faccess) $ lookUp newCaller (ND.Data [idx1]) cube,
                         fmap (ValueState.map faccess) $ lookUp newCaller (ND.Data [idx2]) cube)
+-}
 
 lookupSupportingPoints ::
   (DV.Storage vec a, DV.LookupUnsafe vec b, DV.Length vec,

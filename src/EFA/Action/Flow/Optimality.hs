@@ -2,7 +2,7 @@
 module EFA.Action.Flow.Optimality where
 
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
-
+--import qualified EFA.Data.Axis.Strict as Strict
 --import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Value.State as ValueState
 import qualified EFA.Data.Interpolation as Interp
@@ -65,39 +65,70 @@ data Eta2Optimise a = EtaSys a deriving Show -- TODO add | SelectedEta a derivin
 data Loss2Optimise a = LossSys a deriving Show -- TODO add | SelectedLoss a deriving Show
 newtype TotalBalanceForce a = TotalBalanceForce a deriving Show
 
+
+
 data OptimalityValues a = OptimalityValues (Eta2Optimise a,Loss2Optimise a) (TotalBalanceForce a) deriving Show
 
--- data Essence node a = Essence (OptimalityValues a) (StorageMap node a) (DemandAndControl.ControlMap node a)
+instance Functor OptimalityValues where
+  fmap f (OptimalityValues (EtaSys e,LossSys l) (TotalBalanceForce fo)) = 
+             (OptimalityValues (EtaSys $ f e,LossSys $ f l) (TotalBalanceForce $ f fo)) 
 
-interpolateOptimality :: (Ord a, Show a, Arith.Product a)=> 
+-- TODO:: getEtaVal & Co -- mangelhafte Typsicherheit
+getEtaVal :: OptimalityValues a -> a             
+getEtaVal (OptimalityValues (EtaSys x,_) _) = x
+
+getLossVal :: OptimalityValues a -> a   
+getLossVal (OptimalityValues (_,LossSys x) _) = x
+
+getForceVal :: OptimalityValues a -> a 
+getForceVal (OptimalityValues _ (TotalBalanceForce x)) = x
+
+{-
+ interpolateOptimality :: (Ord a, Show a, Arith.Product a,Arith.Constant a)=> 
  Caller ->
  Interp.Method a ->
- Interp.ExtrapMethod a ->
  String ->
- (a,a) ->
- (Interp.Val a) ->
- OptimalityValues a ->
- OptimalityValues a ->
- (OptimalityValues (Interp.Val a))
-interpolateOptimality caller inmethod exmethod label (x0,x1) x
-  (OptimalityValues (EtaSys eta0,LossSys loss0) (TotalBalanceForce force0))
-  (OptimalityValues (EtaSys eta1,LossSys loss1) (TotalBalanceForce force1)) = 
+ Strict.SupportingPoints (a, OptimalityValues (Interp.Val a))->
+ a ->
+ OptimalityValues (Interp.Val a)
+interpolateOptimality caller inmethod label support x = 
   OptimalityValues (EtaSys eta,LossSys loss) (TotalBalanceForce force)
   where
-    eta = Interp.dim1 caller inmethod exmethod label (x0,x1) (eta0,eta1) x
-    loss = Interp.dim1 caller inmethod exmethod label (x0,x1) (loss0,loss1) x
-    force = Interp.dim1 caller inmethod exmethod label (x0,x1) (force0,force1) x
-    
+    eta = Interp.dim1WithSupport caller inmethod label (fmap (\(a,b) -> (a, getEtaVal b)) support) x
+    loss = Interp.dim1WithSupport caller inmethod label (fmap (\(a,b) -> (a, getLossVal b)) support) x
+    force = Interp.dim1WithSupport caller inmethod label (fmap (\(a,b) -> (a, getForceVal b)) support)  x
+-}
+
+interpolateOptimalityPerState :: (Ord a, Show a, Arith.Product a,Arith.Constant a)=> 
+ Caller ->
+ Interp.Method a ->
+ String ->
+ (a,a) ->
+ (ValueState.Map (OptimalityValues (Interp.Val a)),
+  ValueState.Map (OptimalityValues (Interp.Val a))) ->
+ a ->
+ ValueState.Map (OptimalityValues (Interp.Val a))
+interpolateOptimalityPerState caller inmethod label xPair yPair x = ValueState.zipWith3 f eta loss force
+  where
+    f e l fo = OptimalityValues (EtaSys e,LossSys l) (TotalBalanceForce fo)
+    eta = Interp.dim1PerState caller inmethod label xPair 
+          ((\(a,b) -> (ValueState.map getEtaVal a, ValueState.map getEtaVal b)) yPair) x
+    loss = Interp.dim1PerState caller inmethod label xPair 
+           ((\(a,b) -> (ValueState.map getLossVal a, ValueState.map getLossVal b)) yPair) x
+    force = Interp.dim1PerState caller inmethod label xPair 
+            ((\(a,b) -> (ValueState.map getForceVal a, ValueState.map getForceVal b)) yPair) x
+   
+{-
 interpolateOptimalityPerState ::  
   (Ord a, Show a, Arith.Product a) =>   
  Caller ->
  Interp.Method a ->
- Interp.ExtrapMethod a ->
  String ->
- (a,a) ->
- (ValueState.Map (OptimalityValues a),ValueState.Map (OptimalityValues a)) ->
- (Interp.Val a) ->
- (ValueState.Map (OptimalityValues (Interp.Val a)))  
-interpolateOptimalityPerState caller inmethod exmethod label (x0,x1) (m0,m1) x = 
-  ValueState.zipWith (interpolateOptimality caller inmethod exmethod label (x0,x1) x) m0 m1
+ Strict.SupportingPoints (a,ValueState.Map (OptimalityValues (Interp.Val a))) ->
+ a ->
+ ValueState.Map (OptimalityValues (Interp.Val a))  
+interpolateOptimalityPerState caller inmethod label support x = 
+  fmap (ValueState.map (interpolateOptimality caller inmethod label x)) support
+-}
+  
   

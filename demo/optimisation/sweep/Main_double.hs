@@ -235,7 +235,13 @@ main = do
   let supportPointsLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportPoints
   let supportPointsObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
 --  let supportPointOpt = CubeSweep.getOptimalSuportPoints supportPointsObjFuncValues
-      
+  let optimalStateSignals = SignalFlow.zipWith 
+                            (CubeSweep.interpolateOptimalityValuesWithSupportPerState (nc "main") 
+                            Interp.Linear
+                            optimumResult) 
+        supportPoints demandCycle    
+  
+  
 {-      
   let optimalStateSignals = 
         SignalFlow.zipWith (CubeMap.interpolateWithSupportPerState (nc "main") 
@@ -250,12 +256,15 @@ main = do
 --  print lifeCycleMap
 --  print etaValues
   print optimumResult 
+  print "--supportPoints--"
   print supportPoints
+  print "--supportPointsLinIdx--"
   print supportPointsLinIdx
+  print "--supportPointsObjFuncValues--"
   print supportPointsObjFuncValues
   print "" 
   print "-------------"
-  print ""
+  print optimalStateSignals
   
 --  print supportPointOpt
   

@@ -6,8 +6,11 @@ module EFA.Data.Interpolation where
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 
+import qualified EFA.Data.Axis.Strict as Strict
+import qualified EFA.Value.State as ValueState
+
 import EFA.Utility(Caller,
-                   merror,-- (|>),
+                   merror, (|>),
                    ModuleName(..),FunctionName, genCaller)
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -362,3 +365,34 @@ instance QC.Arbitrary (Val String Double) where
     ValConstructor f <- QC.arbitrary
     return (f x)
 -}
+
+-- | This is the Version to Interpolate the optimal maps
+-- TODO -- should it be moved to Axis.Strict ?       
+dim1WithSupport ::
+  (Eq a,Ord a, Sum a, Product a, Show a, Constant a) =>
+  Caller ->
+  Method a ->
+  String ->
+  Strict.SupportingPoints (a,Val a) 
+  -> a 
+  -> Val a
+dim1WithSupport _ _ _ (Strict.LeftPoint (_,y)) _ = y
+dim1WithSupport _ _ _ (Strict.RightPoint (_,y)) _ = y
+dim1WithSupport caller inmethod label (Strict.PairOfPoints (x0,y0) (x1,y1)) x = combine3 y y0 y1 
+  where y = dim1 (caller |> nc "dim1WithSupport") inmethod ExtrapError label (x0,x1) (unpack y0, unpack y1) (Inter x)
+  
+dim1PerState ::
+  (Eq a,Ord a, Sum a, Product a, Show a, Constant a) =>
+  Caller ->
+  Method a ->
+  String ->
+  (a,a) ->
+  (ValueState.Map (Val a),ValueState.Map (Val a)) -> 
+  a -> 
+  ValueState.Map (Val a)
+dim1PerState caller inmethod label (x0,x1) (y0,y1) x = ValueState.zipWith3 combine3 y y0 y1 
+  where y = ValueState.zipWith f y0 y1
+        f ya yb = dim1 (caller |> nc "dim1PerState") inmethod ExtrapError label (x0,x1) 
+            (unpack ya, unpack yb) (Inter x)
+  
+        

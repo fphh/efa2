@@ -363,43 +363,57 @@ findMaximumEtaPerState ::
 findMaximumEtaPerState caller objFunctionValues = 
   CubeMap.map (FlowTopoOpt.findMaximumEta (caller |> nc "findMaximumEtaPerState")) objFunctionValues
 
-{-
--- TODO -- don't use now
 
-getOptimalSuportPoints ::
-  (Ord a1,
- Arith.Constant a1,
- DV.Walker vec1,
- DV.Walker vec,
- DV.Storage vec1 (CubeGrid.LinIdx,
- (ActFlowCheck.EdgeFlowStatus,
- (Interp.Val a1,
- Interp.Val a1))),
- DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
- (Interp.Val a1,
- Interp.Val a1)),
- DV.Storage vec1 (CubeGrid.LinIdx,
- (ActFlowCheck.EdgeFlowStatus,
- (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.Eta2Optimise (Interp.Val a1),
- FlowOpt.Loss2Optimise (Interp.Val a1))))),
- DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
- (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.Eta2Optimise (Interp.Val a1),
- FlowOpt.Loss2Optimise (Interp.Val a1)))),
- DV.Storage vec [Result.Result (CubeMap.Data (Sweep.Search inst1) dim vec1 (ActFlowCheck.EdgeFlowStatus,
- (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.Eta2Optimise (Interp.Val a1),
- FlowOpt.Loss2Optimise (Interp.Val a1)))))],
- DV.Storage vec [Result.Result (ValueState.Map (CubeGrid.LinIdx,
- (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityValues (Interp.Val a1),
- SignalFlow.Signal inst label vec a [Result.Result (CubeMap.Data (Sweep.Search inst1) dim vec1 (ActFlowCheck.EdgeFlowStatus,
- (FlowOpt.TotalBalanceForce (Interp.Val a1),
- (FlowOpt.Eta2Optimise (Interp.Val a1),
- FlowOpt.Loss2Optimise (Interp.Val a1)))))] ->
- SignalFlow.Signal inst label vec a [Result.Result (ValueState.Map (CubeGrid.LinIdx,
- (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a1))))] 
+interpolateOptimalityValuesWithSupportPerState :: 
+  (Ord a, Show a, Arith.Constant a,DV.Storage vec a, Show label,
+   DV.Storage vec (ValueState.Map (CubeGrid.LinIdx, (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a)))),
+   DV.Slice vec,
+   Show(vec (ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a))))),
+   DV.LookupMaybe vec (ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a)))),
+   DV.Length vec) =>
+  Caller -> 
+  Interp.Method a ->
+  CubeMap.Cube inst dim label vec a (ValueState.Map (CubeGrid.LinIdx,
+                                                     (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityValues (Interp.Val  a)))) ->
+  ND.Data dim (Strict.SupportingPoints (Strict.Idx,a)) ->
+  (ND.Data dim a) ->
+  ValueState.Map (FlowOpt.OptimalityValues(Interp.Val a))
+interpolateOptimalityValuesWithSupportPerState caller inmethod cube support coordinates = g (ND.getFirst newCaller support) 
+  where 
+    faccess = snd . snd
+    newCaller = (caller |> (nc "interpolateOptimalityValuesWithSupportPerState"))
+    label = show $ Strict.getLabel $ ND.getFirst newCaller $ CubeMap.getGrid cube
+    f idx = if ND.len coordinates >=2 
+            then
+               interpolateOptimalityValuesWithSupportPerState newCaller inmethod (CubeMap.getSubCube newCaller cube idx) 
+               (ND.dropFirst (caller |> (nc "interpolateOptimalityValuesWithSupportPerState-support")) support) 
+               (ND.dropFirst (caller |> (nc "interpolateOptimalityValuesWithSupportPerState-coordinates")) coordinates)
+            else ValueState.map faccess $ CubeMap.lookUp newCaller (ND.Data [idx]) cube   
+    g (Strict.LeftPoint (idx,_)) = f idx 
+    g (Strict.RightPoint (idx,_)) = f idx
+    g (Strict.PairOfPoints (idx1,x1) (idx2,x2)) = 
+      combine3PerStateOptimality (FlowOpt.interpolateOptimalityPerState caller inmethod label (x1,x2) (y1,y2) 
+                                             $ ND.getFirst newCaller coordinates) y1 y2 
+      where    
+        (y1,y2) = (f idx1, f idx2)
 
-getOptimalSuportPoints supportPointsObjFuncValues = SignalFlow.map (map FlowTopoOpt.findMaximumEta) supportPointsObjFuncValues
+  
+  
+  
+                       
+combine3PerStateOptimality :: 
+  ValueState.Map (FlowOpt.OptimalityValues(Interp.Val a)) -> 
+  ValueState.Map (FlowOpt.OptimalityValues(Interp.Val a)) -> 
+  ValueState.Map (FlowOpt.OptimalityValues(Interp.Val a)) -> 
+  ValueState.Map (FlowOpt.OptimalityValues(Interp.Val a))
+combine3PerStateOptimality m m1 m2 =  ValueState.zipWith3 f  m m1 m2
+  where f (FlowOpt.OptimalityValues (FlowOpt.EtaSys e,FlowOpt.LossSys l) (FlowOpt.TotalBalanceForce fo)) 
+          (FlowOpt.OptimalityValues (FlowOpt.EtaSys e1,FlowOpt.LossSys l1) (FlowOpt.TotalBalanceForce fo1))
+          (FlowOpt.OptimalityValues (FlowOpt.EtaSys e2,FlowOpt.LossSys l2) (FlowOpt.TotalBalanceForce fo2))
+          
+          = (FlowOpt.OptimalityValues (FlowOpt.EtaSys $  g e e1 e2,FlowOpt.LossSys $ g l l1 l2) (FlowOpt.TotalBalanceForce $ g fo fo1 fo2 ))  
+        g = Interp.combine3   
 
--}
+
+
+
