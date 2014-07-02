@@ -229,7 +229,55 @@ applyUsageEfficiency caller state lifeCycleEfficiencies node (Just sums) = case 
     e3 = merror caller modul "applyUsageEfficiency" 
                     ("Undefined State")
                     
+calculateOptimalityMeasure :: 
+  (Ord node, Ord a, Show node, Arith.Constant a, DV.Zipper vec,
+   DV.Storage vec (FlowOpt.Eta2Optimise a, FlowOpt.Loss2Optimise a), 
+   DV.Storage vec (FlowOpt.Loss2Optimise a), 
+   DV.Storage vec (FlowOpt.TotalBalanceForce a),
+   DV.Storage vec (FlowOpt.OptimalityMeasure a),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure a),
+   DV.Storage vec (FlowOpt.Eta2Optimise a),
+   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
+   DV.Walker vec, DV.Storage vec a, DV.Singleton vec,
+   DV.Storage vec (a, a),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, (a, a)),
+   DV.Length vec) =>
+   Caller -> 
+   Result (CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus) ->
+   FlowOpt.LifeCycleMap node a -> 
+   EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst) dim vec a)) ->
+   Result.Result (CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure a))
+calculateOptimalityMeasure caller state lifeCycleEfficiencies endNodeEnergies = let
+    etaLossSys = calcEtaLossSys caller state lifeCycleEfficiencies endNodeEnergies
+  in liftA2 (CubeMap.zipWithData ((,))) state $ fmap (CubeMap.mapData (\(x,y) -> FlowOpt.OptimalityMeasure x y)) etaLossSys
 
+objectiveFunctionValues :: 
+  (Ord node, Ord a, Show node, Arith.Constant a, DV.Zipper vec,
+   DV.Storage vec (FlowOpt.OptimalityMeasure a),
+   DV.Storage vec (FlowOpt.Eta2Optimise a, FlowOpt.Loss2Optimise a), 
+   DV.Storage vec (FlowOpt.Loss2Optimise a), 
+   DV.Storage vec (FlowOpt.TotalBalanceForce a),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure a),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues a),
+   DV.Storage vec (FlowOpt.Eta2Optimise a),
+   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
+   DV.Walker vec, DV.Storage vec a, DV.Singleton vec,
+   DV.Storage vec (a, a),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, (a, a)),
+   DV.Length vec) =>
+   Caller -> 
+   ActBal.Forcing node a ->
+--   Result (CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus) ->
+   EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst) dim vec a)) ->
+   Result.Result (CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityMeasure a)) ->
+   Result.Result (CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues a))
+objectiveFunctionValues caller balanceForcing (EndNodeEnergies _ _ (FlowOpt.StorageMap stos)) optimalityMeasure = let
+    forcing = fmap (CubeMap.mapData FlowOpt.TotalBalanceForce) $ 
+              makeSum $ Map.mapWithKey (\node x -> applyBalanceForcing caller balanceForcing node x) stos
+    makeSum = foldl1 (liftA2 (Arith.~+)) . Maybe.catMaybes . Map.elems
+  in liftA2 (CubeMap.zipWithData (\(st,optMeas) fo -> (st,FlowOpt.OptimalityValues optMeas fo))) optimalityMeasure forcing
+
+{-
 objectiveFunctionValues :: 
   (Ord node, Ord a, Show node, Arith.Constant a, DV.Zipper vec,
    DV.Storage vec (FlowOpt.Eta2Optimise a, FlowOpt.Loss2Optimise a), 
@@ -256,6 +304,7 @@ objectiveFunctionValues caller state lifeCycleEfficiencies balanceForcing
               makeSum $ Map.mapWithKey (\node x -> applyBalanceForcing caller balanceForcing node x) stos
     makeSum = foldl1 (liftA2 (Arith.~+)) . Maybe.catMaybes . Map.elems
   in liftA2 (CubeMap.zipWithData ((,))) state $ (liftA2 (CubeMap.zipWithData FlowOpt.OptimalityValues) etaLossSys forcing)
+-}
 
 applyBalanceForcing :: 
   (DV.Walker vec, 
@@ -293,8 +342,8 @@ findMaximumEta ::
                  (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a))) -> 
   ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityValues (Interp.Val a)))
 findMaximumEta caller cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f $ g cubeData
-  where  f (_,FlowOpt.OptimalityValues (FlowOpt.EtaSys eta,_) (FlowOpt.TotalBalanceForce forcing)) 
-           (_,FlowOpt.OptimalityValues (FlowOpt.EtaSys eta1,_) (FlowOpt.TotalBalanceForce forcing1))= 
+  where  f (_,FlowOpt.OptimalityValues (FlowOpt.OptimalityMeasure (FlowOpt.EtaSys eta) _) (FlowOpt.TotalBalanceForce forcing)) 
+           (_,FlowOpt.OptimalityValues (FlowOpt.OptimalityMeasure (FlowOpt.EtaSys eta1) _) (FlowOpt.TotalBalanceForce forcing1))= 
                 Interp.greaterThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
          g (Determined x) = x
          g (Undetermined) = merror caller modul "findMaximumEta" "Undetermined Variables in Solution" 

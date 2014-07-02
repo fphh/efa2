@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Main where
+
+import qualified EFA.Action.Optimisation.Process as Process
 import qualified EFA.Action.Optimisation.Signal as OptSignal
 import qualified EFA.Action.DemandAndControl as DemandAndControl
 --import qualified EFA.Value.State as ValueState
@@ -181,10 +183,10 @@ searchGrid :: Grid.Grid (Sweep.Search Base) ND.Dim2 (TopoIdx.Position Node) [] D
 searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[0.1,0.5..1.1]),
                     (TopoIdx.ppos Network Water,Type.P,[0.1,0.5..1.1])]
 
-given :: CubeSweep.Given Base 
+given :: CubeSweep.Variation Base 
          ND.Dim2 ND.Dim2  
          (TopoIdx.Position Node) [] [] Double (Interp.Val Double)
-given = CubeSweep.generateGiven (nc "Main") demandGrid searchGrid
+given = CubeSweep.generateVariation (nc "Main") demandGrid searchGrid
 
 lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
 lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [335,616,598]) $ replicate 3 $
@@ -226,8 +228,9 @@ main = do
                                   Collection.lookup (nc "main") (TopoIdx.ppos Coal Network) collection) powers
   let status = CubeSweep.getFlowStatus (nc "main") sweepCube
   let endNodeValues = CubeSweep.getEndNodeFlows sweepCube 
-      
-  let objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") lifeCycleMap balanceForcingMap endNodeValues status
+  let optimalityMeasure =  CubeSweep.calculateOptimalityMeasure (nc "main") lifeCycleMap endNodeValues status
+    
+  let objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") balanceForcingMap endNodeValues optimalityMeasure
       
   let optimisationResultPerState = CubeSweep.findMaximumEtaPerState  (nc "main") objectiveFunctionValues
   
@@ -251,8 +254,10 @@ main = do
   let optimalStoragePowersPerState = OptSignal.interpolateStoragePowersPerState (nc "main") Interp.Linear 
                               optimalFlowCube supportSignal demandCycle storageList                                   
                               
-  let optimalControl = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
-  let optimalStorage = OptSignal.generateOptimalStorageSignals optimalStateSignal optimalStoragePowersPerState
+  let optimalControlSignals = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
+  let optimalStorageSignals = OptSignal.generateOptimalStorageSignals optimalStateSignal optimalStoragePowersPerState
+      
+  let balance = OptSignal.getBalance optimalStorageSignals 
         
 --  print given
 --  print sweepCube    
@@ -279,11 +284,14 @@ main = do
   print "storagePowersPerState"
   print optimalStoragePowersPerState
   
-  print "optimalControl"
-  print optimalControl
+  print "optimalControlSignals"
+  print optimalControlSignals
   
-  print "optimalStorage"
-  print optimalStorage
+  print "optimalStorageSignals"
+  print optimalStorageSignals
+  
+  print "Balance"
+  print balance
   
   
 --  print supportPointOpt

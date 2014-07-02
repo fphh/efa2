@@ -8,6 +8,7 @@ import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 import qualified EFA.Flow.Topology as FlowTopo
+import qualified EFA.Action.Flow.Balance as Balance
 
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Flow.SequenceState.Index as Idx
@@ -228,42 +229,34 @@ interpolateControlSignalsPerState caller inmethod flowCube supportSig coordinate
             g support coordinates = CubeSweep.interpolateWithSupportPerState caller inmethod varCube support coordinates
             varCube = CubeMap.map (\ x -> CubeSweep.lookupControlVariablePerState caller x var) flowCube
 
-interpolateStoragePowersPerState :: 
-  (Ord node,Arith.Sum a, Node.C node,
-   Ord a,
-   DV.Storage vec (ValueState.Map (Maybe (Interp.Val a))),
+interpolateStoragePowersPerState ::
+  (Ord a,
    Show (vec (ValueState.Map (Maybe (Interp.Val a)))),
-   Show(vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
+   Show (vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
    Show a,
    Show label,
    Arith.Constant a,
-   DV.Storage vec a,
-   DV.Slice vec,
-   DV.LookupMaybe
-   vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
-   DV.LookupMaybe vec (ValueState.Map (Maybe (Interp.Val a))),
-   DV.Length vec,
+   Node.C node,
    DV.Zipper vec1,
-   DV.Storage vec (Map.Map node (Maybe (TopoQty.Sums v))),
-   DV.Storage vec1 (ValueState.Map (Interp.Val a)),
-   DV.Storage vec1 (ND.Data dim a),
-   DV.Storage vec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
-   DV.Storage vec1 (ND.Data dim (Strict.SupportingPoints (Strict.Idx, a))),
-   DV.Storage vec1 (ValueState.Map (Maybe (Interp.Val a))),
-   DV.Storage vec1 (ValueState.Map (Maybe (Maybe (Interp.Val a)))),
-   DV.Storage vec (ValueState.Map (FlowTopo.Section node Graph.EitherEdge (Interp.Val a) 
-                                   (TopoQty.Sums (Interp.Val a)) (Maybe (TopoQty.Flow (Interp.Val a))))),
-   DV.Storage vec (ValueState.Map (Maybe (Maybe (Interp.Val a)))),
    DV.Walker vec,
-   DV.Storage vec (FlowTopoOpt.EndNodeEnergies node v),
-   DV.Storage vec (FlowOpt.StorageMap node (Maybe (TopoQty.Sums v)))) =>
+   DV.Storage vec1 (ValueState.Map (Maybe (Interp.Val a))),
+   DV.Storage vec1 (ND.Data dim a),
+   DV.Storage vec1 (ND.Data dim (Strict.SupportingPoints (Strict.Idx,a))),
+   DV.Storage vec a,
+   DV.Storage vec (ValueState.Map (Maybe (Interp.Val a))),
+   DV.Storage vec (ValueState.Map (FlowTopo.Section node Graph.EitherEdge (Interp.Val a) (TopoQty.Sums (Interp.Val a)) (Maybe (TopoQty.Flow (Interp.Val a))))),
+   DV.Storage vec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
+   DV.Slice vec,
+   DV.LookupMaybe vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
+   DV.LookupMaybe vec (ValueState.Map (Maybe (Interp.Val a))),
+   DV.Length vec) =>
   Caller ->
   Interp.Method a ->
-  CubeMap.Cube inst dim label vec a (ValueState.Map (TopoQty.Section node (Interp.Val a))) ->
+  CubeMap.Cube inst dim label vec a (ValueState.Map (FlowTopo.Section node Graph.EitherEdge (Interp.Val a) (TopoQty.Sums (Interp.Val a)) (Maybe (TopoQty.Flow (Interp.Val a))))) ->
   SignalFlow.Signal inst1 label1 vec1 a1 (ND.Data dim (Strict.SupportingPoints (Strict.Idx,a))) ->
   SignalFlow.Signal inst1 label1 vec1 a1 (ND.Data dim a) ->
   [node] ->
-  Map.Map (node) (SignalFlow.Signal inst1 label1 vec1 a1 (ValueState.Map (Maybe (Interp.Val a))))
+  Map.Map node (SignalFlow.Signal inst1 label1 vec1 a1 (ValueState.Map (Maybe (Interp.Val a))))
 interpolateStoragePowersPerState caller inmethod flowCube supportSig coordinateSig storageList = 
   Map.fromList $ zip storageList $ map f storageList
    where stoCube = CubeMap.map (ValueState.map getStoragePowers) flowCube
@@ -313,3 +306,19 @@ generateOptimalStorageSignals ::
   Map.Map (node) (SignalFlow.Signal inst label vec a (Maybe (Interp.Val a)))
 generateOptimalStorageSignals optimalStateSignal storagePowerSignalPerState = Map.map f storagePowerSignalPerState
   where f sig =  generateOptimalSignal optimalStateSignal sig
+        
+        
+getBalance :: 
+  (Arith.Constant a,
+   DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec (a, Maybe (Interp.Val a)),
+   DV.Storage vec (Maybe (Interp.Val a)),
+   DV.Storage vec a) =>       
+  Map.Map (node) (SignalFlow.Signal inst label vec a (Maybe (Interp.Val a))) ->
+  Balance.Balance node (Maybe (Interp.Val a))
+getBalance storageSignals = Balance.Balance $ Map.map f storageSignals
+  where f storageSignal = SignalFlow.foldlWithTime g Nothing storageSignal
+        g _ (_,Nothing) = Nothing
+        g Nothing (t,Just x) = Just ((Interp.Inter t) Arith.~* x)
+        g (Just acc) (t, Just x) = Just $ ((Interp.Inter t) Arith.~* x)  Arith.~+ acc        

@@ -63,29 +63,30 @@ data Eta2Optimise a = EtaSys a deriving Show -- TODO add | SelectedEta a derivin
 data Loss2Optimise a = LossSys a deriving Show -- TODO add | SelectedLoss a deriving Show
 newtype TotalBalanceForce a = TotalBalanceForce a deriving Show
 
+data OptimalityValues a = OptimalityValues (OptimalityMeasure a) (TotalBalanceForce a) deriving Show
 
+data OptimalityMeasure a = OptimalityMeasure (Eta2Optimise a) (Loss2Optimise a) deriving Show
 
-data OptimalityValues a = OptimalityValues (Eta2Optimise a,Loss2Optimise a) (TotalBalanceForce a) deriving Show
-
+-- TODO :: pretty ugly
 instance Functor OptimalityValues where
-  fmap f (OptimalityValues (EtaSys e,LossSys l) (TotalBalanceForce fo)) = 
-             (OptimalityValues (EtaSys $ f e,LossSys $ f l) (TotalBalanceForce $ f fo)) 
+  fmap f (OptimalityValues (OptimalityMeasure(EtaSys e) (LossSys l)) (TotalBalanceForce fo)) = 
+             (OptimalityValues (OptimalityMeasure (EtaSys $ f e) (LossSys $ f l)) (TotalBalanceForce $ f fo)) 
 
 -- TODO:: getEtaVal & Co -- mangelhafte Typsicherheit
 getEtaVal :: OptimalityValues a -> a             
-getEtaVal (OptimalityValues (EtaSys x,_) _) = x
+getEtaVal (OptimalityValues (OptimalityMeasure (EtaSys x) _) _) = x
 
 getLossVal :: OptimalityValues a -> a   
-getLossVal (OptimalityValues (_,LossSys x) _) = x
+getLossVal (OptimalityValues (OptimalityMeasure _ (LossSys x)) _) = x
 
 getForceVal :: OptimalityValues a -> a 
 getForceVal (OptimalityValues _ (TotalBalanceForce x)) = x
 
 getOptEtaVal :: (Arith.Sum a) => OptimalityValues a -> a             
-getOptEtaVal (OptimalityValues (EtaSys x,_) (TotalBalanceForce y)) = x Arith.~+ y
+getOptEtaVal (OptimalityValues (OptimalityMeasure (EtaSys x) _) (TotalBalanceForce y)) = x Arith.~+ y
 
 getOptLossVal :: (Arith.Sum a) => OptimalityValues a -> a             
-getOptLossVal (OptimalityValues (_,LossSys x) (TotalBalanceForce y)) = x Arith.~+ y
+getOptLossVal (OptimalityValues (OptimalityMeasure _ (LossSys x)) (TotalBalanceForce y)) = x Arith.~+ y
 
 interpolateOptimalityPerState :: (Ord a, Show a, Arith.Product a,Arith.Constant a)=> 
  Caller ->
@@ -98,7 +99,7 @@ interpolateOptimalityPerState :: (Ord a, Show a, Arith.Product a,Arith.Constant 
  ValueState.Map (OptimalityValues (Interp.Val a))
 interpolateOptimalityPerState caller inmethod label xPair yPair x = ValueState.zipWith3 f eta loss force
   where
-    f e l fo = OptimalityValues (EtaSys e,LossSys l) (TotalBalanceForce fo)
+    f e l fo = OptimalityValues (OptimalityMeasure (EtaSys e) (LossSys l)) (TotalBalanceForce fo)
     eta = Interp.dim1PerState caller inmethod label xPair 
           ((\(a,b) -> (ValueState.map getEtaVal a, ValueState.map getEtaVal b)) yPair) x
     loss = Interp.dim1PerState caller inmethod label xPair 

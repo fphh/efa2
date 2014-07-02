@@ -79,7 +79,7 @@ optimalPower :: [(Idx.State, [(TopoIdx.Position node)])] -> OptimalPower node
 optimalPower = Map.fromList
 -}
 
-type Balance node a = Map node a
+newtype Balance node a = Balance (Map node a) deriving Show
 
 
 data Absolute
@@ -196,7 +196,7 @@ lookupStorageBalance ::
   (Ord node, Show node) =>
   Caller ->  Balance node a ->
   node -> a
-lookupStorageBalance caller balance sto =
+lookupStorageBalance caller (Balance balance) sto =
   fromMaybe e $ Map.lookup sto balance
   where e = merror caller modul "lookupStorageBalance"
           (" - Storage not in Map: " ++ show sto)
