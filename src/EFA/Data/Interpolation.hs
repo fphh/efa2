@@ -395,7 +395,21 @@ dim1PerState caller inmethod label (x0,x1) (y0,y1) x = ValueState.zipWith3 combi
         f ya yb = dim1 (caller |> nc "dim1PerState") inmethod ExtrapError label (x0,x1) 
             (unpack ya, unpack yb) (Inter x)
   
-
+dim1PerStateWithMaybe ::
+  (Eq a,Ord a, Sum a, Product a, Show a, Constant a) =>
+  Caller ->
+  Method a ->
+  String ->
+  (a,a) ->
+  (ValueState.Map (Maybe (Val a)),ValueState.Map (Maybe (Val a))) -> 
+  a -> 
+  ValueState.Map (Maybe (Val a))
+dim1PerStateWithMaybe caller inmethod label (x0,x1) (y0,y1) x = ValueState.zipWith3 (liftA3 combine3) y y0 y1 
+  where y = ValueState.zipWith f y0 y1
+        f (Just ya) (Just yb) = Just $ dim1 (caller |> nc "dim1PerState") inmethod ExtrapError label (x0,x1) 
+            (unpack ya, unpack yb) (Inter x)
+        f _ _ = Nothing
+        
 -- TODO: correct logic behind greaterThanWithInvalid to correspond with >
 -- | Invalid is always smaller
 greaterThanWithInvalid :: (Arith.Constant a,Ord a) => Val a -> Val a -> Bool

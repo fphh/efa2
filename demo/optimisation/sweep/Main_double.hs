@@ -170,6 +170,13 @@ demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] D
 demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.5..1.1]), -- [-1.1,-0.6..(-0.1)]),
                     (TopoIdx.ppos Rest Network,Type.P,[0.1,0.5..1.1])] -- [-1.1,-0.6..(-0.1)])]
 
+controlVars :: [DemandAndControl.ControlVar Node]
+controlVars = [DemandAndControl.ControlPower $ TopoIdx.Power (TopoIdx.Position LocalNetwork Gas), 
+               DemandAndControl.ControlPower $ TopoIdx.Power (TopoIdx.Position Network Water)]
+
+storageList :: [Node]              
+storageList = [Water]              
+
 searchGrid :: Grid.Grid (Sweep.Search Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
 searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[0.1,0.5..1.1]),
                     (TopoIdx.ppos Network Water,Type.P,[0.1,0.5..1.1])]
@@ -202,17 +209,13 @@ main = do
   let demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5])]
         :: DemandAndControl.DemandCycle Base ND.Dim2 String [] Double Double
       
---  print given
+  let sweepCube = CubeSweep.solve topology etaFunctions given    
   
---  let result = CubeMap.map (CubeSolve.solve topology etaAssignMap (etaMap tabEta)) given
---  let result = CubeSweep.solve topology etaAssignMap (etaMap tabEta) given    
-  let result = CubeSweep.solve topology etaFunctions given    
-  
---  print result    
-  let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) result
-  let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) result
+  let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) sweepCube
+  let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) sweepCube
       
-  let powerResult = CubeSweep.getDemandSweepPowers (condenseResult) result :: Collection.Collection (TopoIdx.Position Node) (Result.Result (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double (Interp.Val Double)))    
+  -- TODO :: Same as Control Signals ?     
+  let powerResult = CubeSweep.getDemandSweepPowers (condenseResult) sweepCube :: Collection.Collection (TopoIdx.Position Node) (Result.Result (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double (Interp.Val Double)))    
       
       condenseResult (Result.Determined (CubeMap.Data x)) = Result.Determined (DV.maximum x)
       condenseResult Result.Undetermined = Result.Undetermined
@@ -221,40 +224,66 @@ main = do
   
   let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $
                                   Collection.lookup (nc "main") (TopoIdx.ppos Coal Network) collection) powers
-  let status = CubeSweep.getFlowStatus (nc "main") result
-  let endNodeValues = CubeSweep.getEndNodeFlows result 
+  let status = CubeSweep.getFlowStatus (nc "main") sweepCube
+  let endNodeValues = CubeSweep.getEndNodeFlows sweepCube 
       
   let objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") lifeCycleMap balanceForcingMap endNodeValues status
       
-  let optimumResult = CubeSweep.findMaximumEtaPerState  (nc "main") objectiveFunctionValues
+  let optimisationResultPerState = CubeSweep.findMaximumEtaPerState  (nc "main") objectiveFunctionValues
   
 --  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
   let absState = FlowTopoCheck.getFlowStatus (nc "Main") flow_00
       
-  let supportPoints = OptSignal.getSupportPoints (nc "Main") demandGrid demandCycle 
+  let supportSignal = OptSignal.getSupportPoints (nc "Main") demandGrid demandCycle 
 
-  let supportPointsLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportPoints
-  let supportPointsObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportPoints
---  let supportPointOpt = CubeSweep.getOptimalSuportPoints supportPointsObjFuncValues
-  let optimalStateSignals = OptSignal.optimalStateSignals (nc "main") optimumResult supportPoints demandCycle
-  let optimalStates = OptSignal.findOptimalStatesUsingMaxEta (nc "main") OptSignal.StateForcingOff optimalStateSignals
+  let supportSignalLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportSignal
+  let supportSignalObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportSignal
+--  let supportPointOpt = CubeSweep.getOptimalSuportPoints supportSignalObjFuncValues
+  let optimalStateSignals = OptSignal.optimalStateSignals (nc "main") optimisationResultPerState supportSignal demandCycle
+  let optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta (nc "main") OptSignal.StateForcingOff optimalStateSignals
+      
+  let optimalFlowCube = CubeSweep.unresultOptimalFlowPerStateCube (nc "main") $ 
+                        CubeSweep.getOptimalFlowPerStateCube (nc "main") optimisationResultPerState sweepCube
+      
+  let optimalControlSignalsPerState = OptSignal.interpolateControlSignalsPerState (nc "main") Interp.Linear 
+                                       optimalFlowCube supportSignal demandCycle controlVars 
+                                       
+  let optimalStoragePowersPerState = OptSignal.interpolateStoragePowersPerState (nc "main") Interp.Linear 
+                              optimalFlowCube supportSignal demandCycle storageList                                   
+                              
+  let optimalControl = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
+  let optimalStorage = OptSignal.generateOptimalStorageSignals optimalStateSignal optimalStoragePowersPerState
         
+--  print given
+--  print sweepCube    
 --  print absState    
 --  print lifeCycleMap
 --  print etaValues
-  print optimumResult 
-  print "--supportPoints--"
-  print supportPoints
-  print "--supportPointsLinIdx--"
-  print supportPointsLinIdx
-  print "--supportPointsObjFuncValues--"
-  print supportPointsObjFuncValues
+  print optimisationResultPerState
+  print "--supportSignal--"
+  print supportSignal
+  print "--supportSignalLinIdx--"
+  print supportSignalLinIdx
+  print "--supportSignalObjFuncValues--"
+  print supportSignalObjFuncValues
   print "" 
   print "--optimalStateSignals--"
   print optimalStateSignals
   
-  print "--optimalStates--"
-  print optimalStates
+  print "--optimalStateSignal--"
+  print optimalStateSignal
+  
+  print "optimalControlSignalsPerState"
+  print optimalControlSignalsPerState
+  
+  print "storagePowersPerState"
+  print optimalStoragePowersPerState
+  
+  print "optimalControl"
+  print optimalControl
+  
+  print "optimalStorage"
+  print optimalStorage
   
   
 --  print supportPointOpt

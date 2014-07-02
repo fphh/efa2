@@ -4,8 +4,12 @@ module EFA.Action.Optimisation.Signal where
 
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Action.DemandAndControl as DemandAndControl
+import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph as Graph
+import qualified EFA.Flow.Topology as FlowTopo
 
-import qualified EFA.Action.Optimisation.Sweep as Sweep
+--import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.ND as ND
@@ -21,7 +25,7 @@ import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.ND.Cube.Map as CubeMap
 
 import qualified Data.Map as Map
-
+import qualified Control.Monad as Monad
 import qualified Data.Maybe as Maybe
 
 import EFA.Utility(Caller,
@@ -133,6 +137,8 @@ findOptimalStatesUsingMaxEta caller StateForcingOn optimalitySignalPerState =
     err2 = merror caller modul "findOptimalStatesUsingMaxEta" "no State found"
     conditionedSignal = SignalFlow.map (\ m -> ValueState.zipWith (Arith.~-) m minDifferencePerState) etaOptSignal 
 
+{-
+-- TODO: make sure this is not applied to Energy Signals (Time Splitting than would require to alter signal values)
 generateOptimalSignal:: 
   (Arith.Constant a,
    DV.Zipper vec,
@@ -151,7 +157,43 @@ generateOptimalSignal::
 generateOptimalSignal optimalStateSignal stateSignal = SignalFlow.concatEvenEvenTimeShare
    $ SignalFlow.zipWith f optimalStateSignal stateSignal
   where f (states,_) m = map (ValueState.lookupUnsafe m) states
-    
+-}
+
+-- TODO: make sure this is not applied to Energy Signals (Time Splitting than would require to alter signal values)
+{-generateOptimalSignal:: 
+  (Arith.Constant a,
+   DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec a,
+   DV.Storage vec [b],
+   DV.Storage vec b,
+   DV.Storage vec [a],
+   DV.Singleton vec,
+   DV.Storage vec (ValueState.Map b),
+   DV.Storage vec ([Maybe Idx.AbsoluteState], Maybe b),
+   DV.FromList vec) =>
+  SignalFlow.Signal inst label vec a ([Maybe Idx.AbsoluteState], Maybe b) ->
+  SignalFlow.Signal inst label vec a (ValueState.Map c) -> 
+  SignalFlow.Signal inst1 label vec a c -}
+generateOptimalSignal ::
+  (Arith.Constant a,
+   DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec (ValueState.Map b),
+   DV.Storage vec ([Maybe Idx.AbsoluteState],c),
+   DV.Storage vec a,
+   DV.Storage vec [b],
+   DV.Storage vec b,
+   DV.Storage vec [a],
+   DV.Singleton vec,
+   DV.FromList vec) =>
+  SignalFlow.Signal inst label vec a ([Maybe Idx.AbsoluteState],c) ->
+  SignalFlow.Signal inst label vec a (ValueState.Map b) ->
+  SignalFlow.Signal inst1 label vec a b
+generateOptimalSignal optimalStateSignal stateSignal = SignalFlow.concatEvenEvenTimeShare
+   $ SignalFlow.zipWith f optimalStateSignal stateSignal
+  where f (states,_) m = map (ValueState.lookupUnsafe m) states    
+
 interpolateControlSignalsPerState ::
   (Ord a,
    Ord node,
@@ -185,12 +227,89 @@ interpolateControlSignalsPerState caller inmethod flowCube supportSig coordinate
           where 
             g support coordinates = CubeSweep.interpolateWithSupportPerState caller inmethod varCube support coordinates
             varCube = CubeMap.map (\ x -> CubeSweep.lookupControlVariablePerState caller x var) flowCube
-        
 
-interpolateStoragePowersPerState caller inmethod flowCube supportSig coordinateSig = 
-  Map.fromList $ zip controlVars $ map f controlVars
-  where f var = SignalFlow.zipWith g supportSig coordinateSig
-          where 
-            g support coordinates = CubeSweep.interpolateWithSupportPerState caller inmethod varCube support coordinates
-            varCube = CubeMap.map (\ x -> CubeSweep.lookupControlVariablePerState caller x var) flowCube
+interpolateStoragePowersPerState :: 
+  (Ord node,Arith.Sum a, Node.C node,
+   Ord a,
+   DV.Storage vec (ValueState.Map (Maybe (Interp.Val a))),
+   Show (vec (ValueState.Map (Maybe (Interp.Val a)))),
+   Show(vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
+   Show a,
+   Show label,
+   Arith.Constant a,
+   DV.Storage vec a,
+   DV.Slice vec,
+   DV.LookupMaybe
+   vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
+   DV.LookupMaybe vec (ValueState.Map (Maybe (Interp.Val a))),
+   DV.Length vec,
+   DV.Zipper vec1,
+   DV.Storage vec (Map.Map node (Maybe (TopoQty.Sums v))),
+   DV.Storage vec1 (ValueState.Map (Interp.Val a)),
+   DV.Storage vec1 (ND.Data dim a),
+   DV.Storage vec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
+   DV.Storage vec1 (ND.Data dim (Strict.SupportingPoints (Strict.Idx, a))),
+   DV.Storage vec1 (ValueState.Map (Maybe (Interp.Val a))),
+   DV.Storage vec1 (ValueState.Map (Maybe (Maybe (Interp.Val a)))),
+   DV.Storage vec (ValueState.Map (FlowTopo.Section node Graph.EitherEdge (Interp.Val a) 
+                                   (TopoQty.Sums (Interp.Val a)) (Maybe (TopoQty.Flow (Interp.Val a))))),
+   DV.Storage vec (ValueState.Map (Maybe (Maybe (Interp.Val a)))),
+   DV.Walker vec,
+   DV.Storage vec (FlowTopoOpt.EndNodeEnergies node v),
+   DV.Storage vec (FlowOpt.StorageMap node (Maybe (TopoQty.Sums v)))) =>
+  Caller ->
+  Interp.Method a ->
+  CubeMap.Cube inst dim label vec a (ValueState.Map (TopoQty.Section node (Interp.Val a))) ->
+  SignalFlow.Signal inst1 label1 vec1 a1 (ND.Data dim (Strict.SupportingPoints (Strict.Idx,a))) ->
+  SignalFlow.Signal inst1 label1 vec1 a1 (ND.Data dim a) ->
+  [node] ->
+  Map.Map (node) (SignalFlow.Signal inst1 label1 vec1 a1 (ValueState.Map (Maybe (Interp.Val a))))
+interpolateStoragePowersPerState caller inmethod flowCube supportSig coordinateSig storageList = 
+  Map.fromList $ zip storageList $ map f storageList
+   where stoCube = CubeMap.map (ValueState.map getStoragePowers) flowCube
+         getStoragePowers flowSection = let 
+                topo = TopoQty.topology flowSection
+                nodes = Graph.nodeLabels topo
+                storages = Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
+                           $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
+                in Map.map (fmap FlowTopoOpt.getStoragePowerWithSign) storages 
+         f sto = SignalFlow.zipWith g supportSig coordinateSig
+           where 
+             g support coordinates = CubeSweep.interpolateWithSupportPerStateMaybe caller inmethod stoPowerCube support coordinates
+             stoPowerCube = CubeMap.map (ValueState.map (Monad.join . flip (Map.!) sto)) stoCube
         
+generateOptimalControl ::
+  (Arith.Constant a,
+   DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val b)),
+   DV.Storage vec (ValueState.Map (Interp.Val b)),
+   DV.Storage vec [a],
+   DV.Storage vec (Interp.Val b),
+   DV.Storage vec [Interp.Val b],
+   DV.Storage vec a,
+   DV.Singleton vec,
+   DV.FromList vec) =>
+  SignalFlow.Signal inst label vec a ([Maybe Idx.AbsoluteState], Maybe (Interp.Val b)) ->
+  Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst label vec a (ValueState.Map (Interp.Val b))) ->
+  Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst label vec a (Interp.Val b))
+generateOptimalControl optimalStateSignal optimalControlSignalsPerState = Map.map f optimalControlSignalsPerState 
+  where f sig = generateOptimalSignal optimalStateSignal sig
+        
+generateOptimalStorageSignals :: 
+  (DV.Storage vec (ValueState.Map (Maybe (Interp.Val a))),
+   DV.Storage vec [Maybe (Interp.Val a)],
+   DV.Storage vec (Maybe (Interp.Val a)), 
+   Arith.Constant a,
+   DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec [a],
+   DV.Storage vec a,
+   DV.Storage vec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val b)),
+   DV.Singleton vec,
+   DV.FromList vec) =>        
+  SignalFlow.Signal inst label vec a ([Maybe Idx.AbsoluteState], Maybe (Interp.Val b)) ->
+  Map.Map (node) (SignalFlow.Signal inst label vec a (ValueState.Map (Maybe (Interp.Val a)))) ->
+  Map.Map (node) (SignalFlow.Signal inst label vec a (Maybe (Interp.Val a)))
+generateOptimalStorageSignals optimalStateSignal storagePowerSignalPerState = Map.map f storagePowerSignalPerState
+  where f sig =  generateOptimalSignal optimalStateSignal sig

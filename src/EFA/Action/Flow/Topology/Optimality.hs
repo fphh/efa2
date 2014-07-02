@@ -154,6 +154,14 @@ calcEtaLossSys caller state lifeCycleEfficiencies (EndNodeEnergies (FlowOpt.Sink
   loss = fmap (CubeMap.mapData FlowOpt.LossSys) $ liftA2 (Arith.~-) term1 term
   in liftA2 (CubeMap.zipWithData ((,))) eta loss
 
+-- TODO: move to right place -- use in applyGenerationEfficiency,applyUsageEfficiency
+getStoragePowerWithSign :: (Arith.Sum v) => TopoQty.Sums v -> Maybe v
+getStoragePowerWithSign sums = case sums of                 
+  -- TODO how to mach case Just Just ?
+  TopoQty.Sums Nothing (Just energy) -> Just $ energy
+  TopoQty.Sums  (Just energy) Nothing -> Just $ Arith.negate energy
+  TopoQty.Sums Nothing Nothing -> Nothing 
+
 applyGenerationEfficiency :: 
   (DV.Walker vec, 
    DV.Zipper vec,
