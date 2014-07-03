@@ -3,7 +3,7 @@
 module EFA.Action.Optimisation.Process where
 
 import qualified EFA.Action.Optimisation.Signal as OptSignal
-import qualified EFA.Data.OD.Signal.Flow as SignalFlow
+--import qualified EFA.Data.OD.Signal.Flow as SignalFlow
 import qualified EFA.Action.Flow.Balance as Balance
 
 import EFA.Utility(Caller,
@@ -69,7 +69,7 @@ import qualified Data.Map as Map
 -- import Data.Map as (Map)
 --import Data.Monoid((<>))
 
-import qualified EFA.Flow.Topology.Index as TopoIdx
+--import qualified EFA.Flow.Topology.Index as TopoIdx
 --import qualified EFA.Equation.Result as Result
 import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.ND.Cube.Map as CubeMap
@@ -78,7 +78,7 @@ import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 import qualified EFA.Value.Type as Type
 -- import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
-import qualified EFA.Action.DemandAndControl as DemandAndControl
+--import qualified EFA.Action.DemandAndControl as DemandAndControl
 --import qualified Data.Maybe as Maybe
 --import Control.Applicative as Applicative
 
@@ -115,7 +115,7 @@ data SweepResults node inst demDim srchDim demVec srchVec a =
 
 data SweepEvaluationResults node inst demDim srchDim demVec srchVec a = 
   SweepEvaluationResults {accessSweepOptimality :: 
-                             CubeSweep.OptimalityMeasure node inst demDim srchDim demVec srchVec a a}
+                             CubeSweep.OptimalityMeasure node inst demDim srchDim demVec srchVec a (Interp.Val a)}
 
 
 data OptimisationPerStateResults node inst demDim srchDim demVec srchVec sigVec a = OptimisationPerStateResults {
@@ -210,15 +210,15 @@ sweep ::
    DV.Length srchVec) =>
   Topo.Topology node ->
   EtaFunctions.FunctionMap node a ->
-  CubeSweep.Variation node inst demDim srchDim demVec srchVec a (Interp.Val a) ->
+  SweepAndDemandCycleData node inst demDim srchDim demVec srchVec sigVec a ->
   SweepResults node inst demDim srchDim demVec srchVec a
-sweep topology etaFunctions given = SweepResults energyFlow flowStatus endNodePowers 
+sweep topology etaFunctions sweepAndDemandCyleData = SweepResults energyFlow flowStatus endNodePowers 
   where 
-    energyFlow = CubeSweep.solve topology etaFunctions given 
+    energyFlow = CubeSweep.solve topology etaFunctions (accessVariation sweepAndDemandCyleData)
     flowStatus = CubeSweep.getFlowStatus (nc "main") energyFlow
     endNodePowers = CubeSweep.getEndNodeFlows energyFlow
 
-evaluateSweep :: 
+evaluateSweep ::
   (Eq (demVec a),
    Ord node,
    Ord a,
@@ -228,96 +228,6 @@ evaluateSweep ::
    DV.Zipper srchVec,
    DV.Walker srchVec,
    DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                                       (FlowOpt.TotalBalanceForce a,
-                                                                                        (FlowOpt.Eta2Optimise a,
-                                                                                         FlowOpt.Loss2Optimise a))))),
-   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus)),
-   DV.Storage demVec (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec a))),
-   DV.Storage srchVec (FlowOpt.Eta2Optimise a,
-                       FlowOpt.Loss2Optimise a),
-   DV.Storage srchVec (FlowOpt.Loss2Optimise a),
-   DV.Storage srchVec (FlowOpt.OptimalityMeasure a),
-   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
-                       FlowOpt.OptimalityMeasure a),
-   DV.Storage srchVec (FlowOpt.TotalBalanceForce a),
-   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                                       FlowOpt.OptimalityMeasure a))),
-   DV.Storage srchVec (FlowOpt.Eta2Optimise a),
-   DV.Storage srchVec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage srchVec a,
-   DV.Storage srchVec (a, a),
-   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus, (a,a)),
-   DV.Singleton srchVec,
-   DV.Length srchVec) =>
-  Caller ->
-  FlowOpt.LifeCycleMap node a ->
-  CubeSweep.EndNodeFlows node inst demDim srchDim demVec srchVec a a ->
-  CubeSweep.FlowStatus node inst demDim srchDim demVec srchVec a ->
-  SweepEvaluationResults node inst demDim srchDim demVec srchVec a
-evaluateSweep caller lifeCycleMap endNodePowers status = 
-  SweepEvaluationResults $ CubeSweep.calculateOptimalityMeasure caller lifeCycleMap endNodePowers status
- 
-
-{- optimisationPerState :: 
-  CubeSweep.FlowResult node inst demDim srchDim demVec srchVec a (Interp.Val a) ->
-  CubeSweep.EndNodeFlows node inst demDim srchDim demVec srchVec a (Interp.Val a) ->
-  CubeSweep.OptimalityMeasure node inst demDim srchDim demVec srchVec a (Interp.Val a) ->
-  OptSignal.DemandCycle node inst demDim sigVec a a ->
-  OptSignal.SupportSignal node inst demDim sigVec a a ->
-  [node] ->
-  FlowBal.Forcing node (Interp.Val a)  ->
-  [DemandAndControl.ControlVar node] ->
-  OptimisationPerStateResults node inst demDim srchDim demVec srchVec sigVec a -}
-
-optimisationPerState ::
-  (Eq (demVec a),
-   Ord a,
-   Show (sigVec (ValueState.Map (CubeGrid.LinIdx,
-                                 (ActFlowCheck.EdgeFlowStatus,
-                                  FlowOpt.OptimalityValues (Interp.Val a))))),
-   Show (demVec (ValueState.Map (CubeGrid.LinIdx,
-                                 (ActFlowCheck.EdgeFlowStatus,
-                                  FlowOpt.OptimalityValues (Interp.Val a))))),
-   Show (demVec (ValueState.Map (Interp.Val a))),
-   Show a,
-   Show (demVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
-   Show (demVec (ValueState.Map (Maybe (Interp.Val a)))),
-   Show node,
-   Arith.Constant a,
-   Node.C node,
-   DV.Zipper sigVec,
-   DV.Zipper demVec,
-   DV.Zipper srchVec,
-   DV.Walker demVec,
-   DV.Walker srchVec,
-   DV.Storage sigVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
-   DV.Storage sigVec (ValueState.Map (CubeGrid.LinIdx,
-                                      (ActFlowCheck.EdgeFlowStatus,
-                                       FlowOpt.OptimalityValues (Interp.Val a)))),
-   DV.Storage sigVec a,
-   DV.Storage demVec (ValueState.Map (Interp.Val a)),
-   DV.Storage sigVec (ValueState.Map (Interp.Val a)),
-   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
-   DV.Storage demVec (ValueState.Map (Maybe (Interp.Val a))),
-   DV.Storage demVec a,
-   DV.Storage sigVec (ND.Data demDim (Strict.SupportingPoints (Strict.Idx,
-                                                               a))),
-   DV.Storage sigVec (ND.Data demDim a),
-   DV.Storage sigVec (ValueState.Map (Maybe (Interp.Val a))),
-   DV.Storage demVec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
-   DV.Storage demVec (ValueState.Map (TopoQty.Section node (Interp.Val a))),
-   DV.Storage demVec (ValueState.Map (TopoQty.Section node (Result.Result (Interp.Val a)))),
-   DV.Storage demVec (ValueState.Map (CubeGrid.LinIdx,
-                                      (ActFlowCheck.EdgeFlowStatus,
-                                       FlowOpt.OptimalityValues (Interp.Val a)))),
-   DV.Storage srchVec (CubeGrid.LinIdx,
-                       (ActFlowCheck.EdgeFlowStatus,
-                        FlowOpt.OptimalityValues (Interp.Val a))),
-   DV.Storage srchVec (CubeGrid.LinIdx,
-                       (ActFlowCheck.EdgeFlowStatus,
-                        (Interp.Val a,
-                         Interp.Val a))),
-   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
                                                                                        (FlowOpt.TotalBalanceForce (Interp.Val a),
                                                                                         (FlowOpt.Eta2Optimise (Interp.Val a),
                                                                                          FlowOpt.Loss2Optimise (Interp.Val a)))))),
@@ -326,18 +236,13 @@ optimisationPerState ::
    DV.Storage srchVec (FlowOpt.Eta2Optimise (Interp.Val a),
                        FlowOpt.Loss2Optimise (Interp.Val a)),
    DV.Storage srchVec (FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage srchVec (FlowOpt.OptimalityValues (Interp.Val a)),
-   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
-                       FlowOpt.OptimalityValues (Interp.Val a)),
-   DV.Storage srchVec (FlowOpt.TotalBalanceForce (Interp.Val a)),
-   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                                       FlowOpt.OptimalityValues (Interp.Val a)))),
-   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                                       FlowOpt.OptimalityMeasure (Interp.Val a)))),
-   DV.Storage srchVec (FlowOpt.Eta2Optimise (Interp.Val a)),
    DV.Storage srchVec (FlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
                        FlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Storage srchVec (FlowOpt.TotalBalanceForce (Interp.Val a)),
+   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                                       FlowOpt.OptimalityMeasure (Interp.Val a)))),
+   DV.Storage srchVec (FlowOpt.Eta2Optimise (Interp.Val a)),
    DV.Storage srchVec ActFlowCheck.EdgeFlowStatus,
    DV.Storage srchVec (Interp.Val a),
    DV.Storage srchVec (Interp.Val a,
@@ -345,32 +250,118 @@ optimisationPerState ::
    DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
                        (Interp.Val a,
                         Interp.Val a)),
-   DV.Slice sigVec,
-   DV.Slice demVec,
    DV.Singleton srchVec,
-   DV.LookupUnsafe vec1 (Interp.Val a),
-   DV.LookupMaybe demVec (ValueState.Map (CubeGrid.LinIdx,
-                                          (ActFlowCheck.EdgeFlowStatus,
-                                           FlowOpt.OptimalityValues (Interp.Val a)))),
-   DV.LookupMaybe sigVec (ValueState.Map (CubeGrid.LinIdx,
-                                          (ActFlowCheck.EdgeFlowStatus,
-                                           FlowOpt.OptimalityValues (Interp.Val a)))),
+   DV.Length srchVec) =>
+  Caller ->
+  FlowOpt.LifeCycleMap node (Interp.Val a) ->
+  SweepResults node inst demDim srchDim demVec srchVec a ->
+  SweepEvaluationResults node inst demDim srchDim demVec srchVec a
+evaluateSweep caller lifeCycleMap sweepResults = 
+  SweepEvaluationResults $ CubeSweep.calculateOptimalityMeasure caller lifeCycleMap endNodePowers status
+  where endNodePowers = accessSweepEndNodePowers sweepResults
+        status = accessSweepFlowStatus sweepResults
+ 
+optimisationPerState ::
+  (Eq (demVec a),
+   Ord a,
+   Show (demVec (ValueState.Map (Interp.Val a))),
+   Show (demVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
+   Show (demVec (ValueState.Map (Maybe (Interp.Val a)))),
+   Show a,
+   Show (sigVec (ValueState.Map (CubeGrid.LinIdx,
+                                 (ActFlowCheck.EdgeFlowStatus,
+                                  FlowOpt.OptimalityValues (Interp.Val a))))),
+   Show (demVec (ValueState.Map (CubeGrid.LinIdx,
+                                  (ActFlowCheck.EdgeFlowStatus,
+                                   FlowOpt.OptimalityValues (Interp.Val a))))),
+   Show node,
+   Arith.Constant a,
+   Node.C node,
+   DV.Zipper sigVec,
+   DV.Zipper demVec,
+   DV.Zipper srchVec,
+   DV.Walker demVec,
+   DV.Walker srchVec,
+   DV.Storage demVec (ValueState.Map (Interp.Val a)),
+   DV.Storage sigVec (ValueState.Map (Interp.Val a)),
+   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
+   DV.Storage demVec (ValueState.Map (Maybe (Interp.Val a))),
+   DV.Storage sigVec (ValueState.Map (Maybe (Interp.Val a))),
+   DV.Storage sigVec (ND.Data demDim (Strict.SupportingPoints (Strict.Idx,
+                                                               a))),
+   DV.Storage sigVec (ND.Data demDim a),
+   DV.Storage sigVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
+   DV.Storage demVec a,
+   DV.Storage sigVec (ValueState.Map (CubeGrid.LinIdx,
+                                      (ActFlowCheck.EdgeFlowStatus,
+                                       FlowOpt.OptimalityValues (Interp.Val a)))),
+   DV.Storage sigVec a,
+   DV.Storage demVec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)))),
+   DV.Storage demVec (ValueState.Map (TopoQty.Section node (Interp.Val a))),
+   DV.Storage demVec (ValueState.Map (TopoQty.Section node (Result.Result (Interp.Val a)))),
+   DV.Storage demVec (ValueState.Map (CubeGrid.LinIdx,
+                                       (ActFlowCheck.EdgeFlowStatus,
+                                        FlowOpt.OptimalityValues (Interp.Val a)))),
+   DV.Storage srchVec (CubeGrid.LinIdx,
+                        (ActFlowCheck.EdgeFlowStatus,
+                         FlowOpt.OptimalityValues (Interp.Val a))),
+   DV.Storage srchVec (CubeGrid.LinIdx,
+                        (ActFlowCheck.EdgeFlowStatus,
+                         (Interp.Val a,
+                          Interp.Val a))),
+   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                                          (FlowOpt.TotalBalanceForce (Interp.Val a),
+                                                                                           (FlowOpt.Eta2Optimise (Interp.Val a),
+                                                                                            FlowOpt.Loss2Optimise (Interp.Val a)))))),
+   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus)),
+   DV.Storage demVec (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)))),
+   DV.Storage srchVec (FlowOpt.Eta2Optimise (Interp.Val a),
+                        FlowOpt.Loss2Optimise (Interp.Val a)),
+   DV.Storage srchVec (FlowOpt.Loss2Optimise (Interp.Val a)),
+   DV.Storage srchVec (FlowOpt.OptimalityValues (Interp.Val a)),
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                        FlowOpt.OptimalityValues (Interp.Val a)),
+   DV.Storage srchVec (FlowOpt.TotalBalanceForce (Interp.Val a)),
+   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                                          FlowOpt.OptimalityValues (Interp.Val a)))),
+   DV.Storage demVec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                                          FlowOpt.OptimalityMeasure (Interp.Val a)))),
+   DV.Storage srchVec (FlowOpt.Eta2Optimise (Interp.Val a)),
+   DV.Storage srchVec (FlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                        FlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Storage srchVec ActFlowCheck.EdgeFlowStatus,
+   DV.Storage srchVec (Interp.Val a),
+   DV.Storage srchVec (Interp.Val a,
+                        Interp.Val a),
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                        (Interp.Val a,
+                         Interp.Val a)),
+   DV.Slice demVec,
+   DV.Slice sigVec,
+   DV.Singleton srchVec,
+   DV.LookupUnsafe srchVec (Interp.Val a),
    DV.LookupMaybe demVec (ValueState.Map (Interp.Val a)),
    DV.LookupMaybe demVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.LookupMaybe demVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
-   DV.Length sigVec,
+   DV.LookupMaybe demVec (ValueState.Map (CubeGrid.LinIdx,
+                                           (ActFlowCheck.EdgeFlowStatus,
+                                            FlowOpt.OptimalityValues (Interp.Val a)))),
+   DV.LookupMaybe sigVec (ValueState.Map (CubeGrid.LinIdx,
+                                          (ActFlowCheck.EdgeFlowStatus,
+                                           FlowOpt.OptimalityValues (Interp.Val a)))),
    DV.Length demVec,
+   DV.Length sigVec,
    DV.Length srchVec) =>
-  CubeSweep.FlowResult node inst demDim dim1 demVec vec1 a (Interp.Val a) ->
-  CubeSweep.EndNodeFlows node inst demDim srchDim demVec srchVec a (Interp.Val a) ->
-  CubeSweep.OptimalityMeasure node inst demDim srchDim demVec srchVec a (Interp.Val a) ->
-  OptSignal.DemandCycle node inst demDim sigVec a a ->
-  OptSignal.SupportSignal node inst demDim sigVec a a ->
+  SweepAndDemandCycleData node inst demDim srchDim demVec srchVec sigVec a ->
+  SweepResults node inst demDim srchDim demVec srchVec a ->
+  SweepEvaluationResults node inst demDim srchDim demVec srchVec a ->
   [node] ->
   FlowBal.Forcing node (Interp.Val a) ->
   [DemandAndControl.ControlVar node] ->
   OptimisationPerStateResults node inst demDim srchDim demVec srchVec sigVec a
-optimisationPerState sweepCube endNodePowers optimalityMeasure demandCycle supportSignal storageList balanceForcingMap controlVars = 
+
+optimisationPerState sweepAndDemandCycleData sweepResults sweepEvaluationResults storageList balanceForcingMap controlVars = 
   OptimisationPerStateResults
   objectiveFunctionValues    
   optimisationResultPerState
@@ -379,44 +370,49 @@ optimisationPerState sweepCube endNodePowers optimalityMeasure demandCycle suppo
   optimalControlSignalsPerState 
   optimalStoragePowersPerState
   where 
+    demandCycle = accessDemandCycle sweepAndDemandCycleData
+    supportSignal = accessSupportSignal sweepAndDemandCycleData
+    flowResult = accessSweepFlow sweepResults
+    endNodePowers = accessSweepEndNodePowers sweepResults
+    optimalityMeasure = accessSweepOptimality sweepEvaluationResults
     objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") balanceForcingMap endNodePowers optimalityMeasure
     optimisationResultPerState = CubeSweep.findMaximumEtaPerState  (nc "main") objectiveFunctionValues                          
     optimalFlowCube = CubeSweep.unresultOptimalFlowPerStateCube (nc "main") $ 
-                        CubeSweep.getOptimalFlowPerStateCube (nc "main") optimisationResultPerState sweepCube
+                        CubeSweep.getOptimalFlowPerStateCube (nc "main") optimisationResultPerState flowResult
     optimalStateSignals = OptSignal.optimalStateSignals (nc "main") optimisationResultPerState supportSignal demandCycle
     optimalStoragePowersPerState = OptSignal.interpolateStoragePowersPerState (nc "main") Interp.Linear 
                               optimalFlowCube supportSignal demandCycle storageList                                   
     optimalControlSignalsPerState = OptSignal.interpolateControlSignalsPerState (nc "main") Interp.Linear 
                                        optimalFlowCube supportSignal demandCycle controlVars
-
 optimalOperation ::
-      (Ord a,
-       Arith.Constant a,
-       DV.Zipper vec,
-       DV.Walker vec,
-       DV.Storage vec (a,
-                       Maybe (Interp.Val a)),
-       DV.Storage vec [Maybe (Interp.Val a)],
-       DV.Storage vec (ValueState.Map (Maybe (Interp.Val a))),
-       DV.Storage vec a,
-       DV.Storage vec [Interp.Val a],
-       DV.Storage vec [a],
-       DV.Storage vec ([Maybe Idx.AbsoluteState],
-                       Maybe (Interp.Val a)),
-       DV.Storage vec (Interp.Val a),
-       DV.Storage vec (Maybe (Interp.Val a)),
-       DV.Storage vec (ValueState.Map (Interp.Val a)),
-       DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
-       DV.Singleton vec,
-       DV.FromList vec) =>
- OptSignal.OptimalityPerStateSignal node inst vec a (Interp.Val a) ->
- OptSignal.OptimalStoragePowersPerState node inst vec a (Interp.Val a) ->
- OptSignal.OptimalControlSignalsPerState node inst vec a (Interp.Val a) ->
+  (Ord a,
+ Arith.Constant a,
+ DV.Zipper vec,
+ DV.Walker vec,
+ DV.Storage vec (a,
+ Maybe (Interp.Val a)),
+ DV.Storage vec [Maybe (Interp.Val a)],
+ DV.Storage vec (ValueState.Map (Maybe (Interp.Val a))),
+ DV.Storage vec a,
+ DV.Storage vec [Interp.Val a],
+ DV.Storage vec [a],
+ DV.Storage vec ([Maybe Idx.AbsoluteState],
+ Maybe (Interp.Val a)),
+ DV.Storage vec (Interp.Val a),
+ DV.Storage vec (Maybe (Interp.Val a)),
+ DV.Storage vec (ValueState.Map (Interp.Val a)),
+ DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
+ DV.Singleton vec,
+ DV.FromList vec) =>
+ OptimisationPerStateResults node inst demDim srchDim demVec srchVec vec a ->
  OptimalOperation node inst vec a
-optimalOperation   optimalStateSignals optimalStoragePowersPerState optimalControlSignalsPerState =
+optimalOperation optimisationPerStateResults =
   OptimalOperation optimalStateSignal optimalControlSignals
      optimalStorageSignals balance
   where
+    optimalStateSignals = accessOptimalStateSignals optimisationPerStateResults
+    optimalStoragePowersPerState = accessOptimalStoragePowersPerState optimisationPerStateResults
+    optimalControlSignalsPerState = accessOptimalControlSignalsPerState optimisationPerStateResults
     
     optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta (nc "main") OptSignal.StateForcingOff optimalStateSignals
     optimalControlSignals = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
