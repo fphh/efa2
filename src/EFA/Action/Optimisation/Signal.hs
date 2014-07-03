@@ -40,6 +40,31 @@ nc = genCaller modul
 
 data StateForcing = StateForcingOn | StateForcingOff deriving (Show)
 
+newtype DemandCycle inst dim label vec a b = 
+  DemandCycle (SignalFlow.Signal inst label vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b))))
+
+newtype SupportSignal inst dim label vec a b = 
+  SupportSignal (SignalFlow.Signal inst label vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b))))
+  
+newtype OptimalityPerStateSignal inst label vec a b = OptimalityPerStateSignal
+        (SignalFlow.Signal inst label vec a (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val b))))
+
+newtype OptimalControlSignalsPerState node inst label vec a b = OptimalControlSignalsPerState
+     (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst label vec a (ValueState.Map (Interp.Val b))))
+
+newtype OptimalStoragePowersPerState node inst label vec a b = 
+  OptimalStoragePowersPerState (Map.Map node (SignalFlow.Signal inst label vec a (ValueState.Map (Maybe (Interp.Val b)))))
+
+newtype OptimalStateChoice inst label vec a b = 
+  OptimalStateChoice (SignalFlow.Signal inst label vec a ([Maybe Idx.AbsoluteState],Maybe (Interp.Val b)))
+
+newtype OptimalControlSignals node inst label vec a b = 
+  OptimalControlSignals (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst label vec a (Interp.Val b)))
+
+newtype OptimalStorageSignals node inst label vec a b = 
+  OptimalStorageSignals (Map.Map (node) (SignalFlow.Signal inst label vec a (Maybe (Interp.Val b))))
+
+
 -- | Signal Containing Indices and ccordinates of supporting points holding the interpolation tiles 
 getSupportPoints ::
   (Ord b,
@@ -55,45 +80,46 @@ getSupportPoints ::
   SignalFlow.Signal inst label vec a (ND.Data dim b) ->
   SignalFlow.Signal inst label vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b)))
 getSupportPoints caller demandGrid demandCycle = 
-  SignalFlow.map (CubeGrid.getSupportingPoints (caller |> nc "getSupportPoints") 
-                  demandGrid) demandCycle
-{-
-lookupSupportingPoints ::
-  (DV.Storage vec a, DV.LookupUnsafe vec b, DV.Length vec,
-   ND.Dimensions dim) =>
-  Caller -> Cube inst dim label vec a b -> ND.Data dim (Strict.SupportingPoints (Strict.Idx, a)) -> [b]
-lookupSupportingPoints caller cube support = P.map (lookupLinUnsafe cube) linIndices
-  where
-    linIndices = Grid.getSupportingPointLinearIndices caller (getGrid cube) support
--}
+  SignalFlow.map (CubeGrid.getSupportingPoints (caller |> nc "getSupportPoints") demandGrid) demandCycle
 
 optimalStateSignals ::
-  (Ord b,
- Show (vec1 (ValueState.Map (CubeGrid.LinIdx,
- (ActFlowCheck.EdgeFlowStatus,
- FlowOpt.OptimalityValues (Interp.Val b))))),
- Show label1,
- Show b,Arith.Constant b,
- DV.Zipper vec,
- DV.Storage vec1 (ValueState.Map (CubeGrid.LinIdx,
- (ActFlowCheck.EdgeFlowStatus,
- FlowOpt.OptimalityValues (Interp.Val b)))),
- DV.Storage vec1 b,
- DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val b))),
- DV.Storage vec (ND.Data dim b),
- DV.Storage vec (ND.Data dim (Strict.SupportingPoints (Strict.Idx,
- b))),
- DV.Slice vec1,
- DV.LookupMaybe vec1 (ValueState.Map (CubeGrid.LinIdx,
- (ActFlowCheck.EdgeFlowStatus,
- FlowOpt.OptimalityValues (Interp.Val b)))),
- DV.Length vec1) =>
- Caller -> 
- CubeMap.Cube inst1 dim label1 vec1 b (ValueState.Map (CubeGrid.LinIdx,
- (ActFlowCheck.EdgeFlowStatus,
- FlowOpt.OptimalityValues (Interp.Val b)))) ->
- SignalFlow.Signal inst label vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,
- b))) ->
+    (Ord b,Show label,
+     DV.Storage vec b,
+     DV.Slice vec,
+     DV.LookupMaybe vec (ValueState.Map (CubeGrid.LinIdx,
+                                         (ActFlowCheck.EdgeFlowStatus,
+                                          FlowOpt.OptimalityValues (Interp.Val b)))),
+     DV.Length vec,
+     Show (vec1 (ValueState.Map (CubeGrid.LinIdx,
+                                 (ActFlowCheck.EdgeFlowStatus,
+                                  FlowOpt.OptimalityValues (Interp.Val b))))),
+     Show (vec (ValueState.Map (CubeGrid.LinIdx,
+                                (ActFlowCheck.EdgeFlowStatus,
+                                 FlowOpt.OptimalityValues (Interp.Val b))))),
+     DV.Storage vec (ValueState.Map (CubeGrid.LinIdx,
+                                     (ActFlowCheck.EdgeFlowStatus,
+                                      FlowOpt.OptimalityValues (Interp.Val b)))),
+     Show b,Arith.Constant b,
+     DV.Zipper vec,
+     DV.Storage vec1 (ValueState.Map (CubeGrid.LinIdx,
+                                      (ActFlowCheck.EdgeFlowStatus,
+                                       FlowOpt.OptimalityValues (Interp.Val b)))),
+     DV.Storage vec1 b,
+     DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val b))),
+     DV.Storage vec (ND.Data dim b),
+     DV.Storage vec (ND.Data dim (Strict.SupportingPoints (Strict.Idx,
+                                                           b))),
+     DV.Slice vec1,
+     DV.LookupMaybe vec1 (ValueState.Map (CubeGrid.LinIdx,
+                                          (ActFlowCheck.EdgeFlowStatus,
+                                           FlowOpt.OptimalityValues (Interp.Val b)))),
+     DV.Length vec1) =>
+    Caller -> 
+    CubeSweep.OptimalChoicePerState inst dim label vec b (Interp.Val b) ->
+    -- CubeMap.Cube inst1 dim label1 vec1 b (ValueState.Map (CubeGrid.LinIdx,
+    -- (ActFlowCheck.EdgeFlowStatus,
+    -- FlowOpt.OptimalityValues (Interp.Val b)))) ->
+    SignalFlow.Signal inst label vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b))) ->
  SignalFlow.Signal inst label vec a (ND.Data dim b) ->
  SignalFlow.Signal inst label vec a (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val b)))
 optimalStateSignals caller optimumResultCube supportPoints demandCycle = 
@@ -138,44 +164,8 @@ findOptimalStatesUsingMaxEta caller StateForcingOn optimalitySignalPerState =
     err2 = merror caller modul "findOptimalStatesUsingMaxEta" "no State found"
     conditionedSignal = SignalFlow.map (\ m -> ValueState.zipWith (Arith.~-) m minDifferencePerState) etaOptSignal 
 
-{-
--- TODO: make sure this is not applied to Energy Signals (Time Splitting than would require to alter signal values)
-generateOptimalSignal:: 
-  (Arith.Constant a,
-   DV.Zipper vec,
-   DV.Walker vec,
-   DV.Storage vec a,
-   DV.Storage vec [Interp.Val b],
-   DV.Storage vec (Interp.Val b),
-   DV.Storage vec [a],
-   DV.Singleton vec,
-   DV.Storage vec (ValueState.Map (Interp.Val b)),
-   DV.Storage vec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val b)),
-   DV.FromList vec) =>
-  SignalFlow.Signal inst label vec a ([Maybe Idx.AbsoluteState], Maybe (Interp.Val b)) ->
-  SignalFlow.Signal inst label vec a (ValueState.Map (Interp.Val b)) -> 
-  SignalFlow.Signal inst1 label vec a (Interp.Val b)
-generateOptimalSignal optimalStateSignal stateSignal = SignalFlow.concatEvenEvenTimeShare
-   $ SignalFlow.zipWith f optimalStateSignal stateSignal
-  where f (states,_) m = map (ValueState.lookupUnsafe m) states
--}
 
 -- TODO: make sure this is not applied to Energy Signals (Time Splitting than would require to alter signal values)
-{-generateOptimalSignal:: 
-  (Arith.Constant a,
-   DV.Zipper vec,
-   DV.Walker vec,
-   DV.Storage vec a,
-   DV.Storage vec [b],
-   DV.Storage vec b,
-   DV.Storage vec [a],
-   DV.Singleton vec,
-   DV.Storage vec (ValueState.Map b),
-   DV.Storage vec ([Maybe Idx.AbsoluteState], Maybe b),
-   DV.FromList vec) =>
-  SignalFlow.Signal inst label vec a ([Maybe Idx.AbsoluteState], Maybe b) ->
-  SignalFlow.Signal inst label vec a (ValueState.Map c) -> 
-  SignalFlow.Signal inst1 label vec a c -}
 generateOptimalSignal ::
   (Arith.Constant a,
    DV.Zipper vec,

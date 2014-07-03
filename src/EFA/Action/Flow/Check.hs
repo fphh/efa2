@@ -44,8 +44,8 @@ combineValidity :: Validity ->  Validity -> Validity
 combineValidity (Valid c) (Valid c1) = Valid $ combineConsistency c c1
 combineValidity _ _ = Invalid
 
-data EdgeFlowStatus = EdgeFlowStatus {getvalidity :: Validity, getState:: Maybe Idx.AbsoluteState} deriving Show
-data Validity = Valid EdgeFlowConsistency | Invalid deriving Show
+data EdgeFlowStatus = EdgeFlowStatus {getvalidity :: Validity, getState:: Maybe Idx.AbsoluteState} deriving (Show,Eq)
+data Validity = Valid EdgeFlowConsistency | Invalid deriving (Show,Eq)
 
 getEdgeFlowStatus :: 
   (Ord a, Arith.Constant a, DV.Zipper vec, DV.Walker vec,
@@ -73,9 +73,9 @@ validityCheck edgeFlowCheck p p1 = if (not $ Interp.isInvalid p) && (not $ Inter
 combineConsistency :: EdgeFlowConsistency -> EdgeFlowConsistency -> EdgeFlowConsistency
 combineConsistency (EFC s e) (EFC s1 e1) = EFC (combineSignCheck s s1)  (combineEtaCheck e e1)  
 
-data EdgeFlowConsistency = EFC SignCheck EtaCheck deriving Show
-data EtaCheck = EtaOK | EtaNotOK deriving Show
-data SignCheck = SignsOK | SignsNotOK deriving Show
+data EdgeFlowConsistency = EFC SignCheck EtaCheck deriving (Show,Eq)
+data EtaCheck = EtaOK | EtaNotOK deriving (Show,Eq)
+data SignCheck = SignsOK | SignsNotOK deriving (Show,Eq)
 
 combineSignCheck :: SignCheck -> SignCheck -> SignCheck
 combineSignCheck SignsOK SignsOK = SignsOK

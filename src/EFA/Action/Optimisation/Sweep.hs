@@ -14,8 +14,8 @@ nc :: FunctionName -> Caller
 nc = genCaller modul
 
 
-data Dmnd a
-data Srch a
+data Dmnd a -- deriving (Show,Eq)
+data Srch a -- deriving (Show,Eq)
 
 type Demand inst = OrdData.Edge (Dmnd inst)
 type Search inst = OrdData.Edge (Srch inst)

@@ -211,7 +211,7 @@ main = do
   let demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5])]
         :: DemandAndControl.DemandCycle Base ND.Dim2 String [] Double Double
       
-  let sweepCube = CubeSweep.solve topology etaFunctions given    
+  let (CubeSweep.FlowResult sweepCube) = CubeSweep.solve topology etaFunctions given    
   
   let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) sweepCube
   let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) sweepCube

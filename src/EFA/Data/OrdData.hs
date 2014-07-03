@@ -20,8 +20,8 @@ type family Data a
 -- | OrdData and UseData then can be combined accordingly
 -- | !! There should be only one instance of ordData of each instance type or all instances of ordData have to be exact copies !!!
 
-data Edge instance'
-data Mid instance'
+data Edge instance' -- deriving (Show,Eq)
+data Mid instance' -- deriving (Show,Eq)
 
 data Global
 

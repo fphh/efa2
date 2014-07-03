@@ -4,6 +4,7 @@ module EFA.Action.Optimisation.Process where
 
 import qualified EFA.Action.Optimisation.Signal as OptSignal
 import qualified EFA.Data.OD.Signal.Flow as SignalFlow
+import qualified EFA.Action.Flow.Balance as Balance
 
 import EFA.Utility(Caller,
                   -- merror,(|>),
@@ -73,7 +74,7 @@ import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.ND.Cube.Map as CubeMap
 import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
-
+import qualified EFA.Value.Type as Type
 -- import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 
@@ -87,14 +88,88 @@ modul = ModuleName "Demo.Optimisation.Process"
 
 nc :: FunctionName -> Caller
 nc = genCaller modul
+                               
+-- TODO :: Insert Control and Demand Variables into label !! -> Variation labels will differ !
+data SweepAndDemandCycleData inst demandDim searchDim label demandVec searchVec sigVec a b = 
+  SweepAndDemandCycleData {accessDemandVariation :: [(label,Type.Dynamic,demandVec b)],
+                           accessSearchVariation :: [(label,Type.Dynamic,searchVec b)],  
+                           accessDemandGrid ::  CubeGrid.Grid inst demandDim label demandVec b,
+                           accessSearchGrid ::  CubeGrid.Grid inst searchDim label searchVec b,
+                           accessVariation :: CubeSweep.Variation inst demandDim searchDim label demandVec searchVec a b,
+                           accessDemandCycle ::  OptSignal.DemandCycle inst demandDim label sigVec a b,
+                           accessSupportSignal :: OptSignal.SupportSignal inst demandDim label sigVec a b} 
 
-{-
-data SweepResult = SweepResult {getSweepFlow :: SweepResult node inst dim dim1 label vec vec1 a b
-                                getSweepFlowStatus :: 
-                                getSweepEndNodePowers:: 
-                                  }
--}                                
-  
+data SweepResults node inst demandDim searchDim label demandVec searchVec a b = 
+  SweepResults {accessSweepFlow :: CubeSweep.FlowResult node inst demandDim searchDim label demandVec searchVec a b,
+                accessSweepFlowStatus :: CubeSweep.FlowStatus inst demandDim searchDim label demandVec searchVec a,
+                accessSweepEndNodePowers:: CubeSweep.EndNodeFlows node inst demandDim searchDim label demandVec searchVec a b
+               }
+
+data SweepEvaluationResults node inst demandDim searchDim label demandVec searchVec a b = 
+  SweepEvaluationResults {accessSweepOptimality :: 
+                             CubeSweep.OptimalityMeasure node inst demandDim searchDim label demandVec searchVec a b}
+
+
+data OptimisationPerStateResults node inst dim label vec a b = OptimisationPerStateResults {
+  accessOptimalChoicePerState :: CubeSweep.OptimalChoicePerState inst dim label vec a b,
+  accessOptimalFlowPerState :: CubeSweep.OptimalFlowPerState node inst dim label vec a b, 
+  accessOptimalControlSignalsPerState :: OptSignal.OptimalControlSignalsPerState node inst label vec a b,
+  accessOptimalStoragePowersPerState :: OptSignal.OptimalStoragePowersPerState node inst label vec a b}
+
+
+data OptimalOperation node inst label vec a b = OptimalOperation {
+  accessOptimalStateChoice :: OptSignal.OptimalStateChoice inst label vec a b,
+  accessOptimalControlSignals :: OptSignal.OptimalControlSignals node inst label vec a b,
+  accessOptimalStorageSignals :: OptSignal.OptimalStorageSignals node inst label vec a b,
+  accessBalance :: Balance.Balance node (Maybe (Interp.Val b))}
+
+
+
+prepare ::
+  (Eq (vec1 a),
+   Ord label1,
+   Ord a,
+   DV.Zipper vec2,
+   DV.Zipper vec1,
+   DV.Walker vec,
+   DV.Walker vec1,
+   DV.Walker vec2,
+   DV.Storage vec (ND.Data dim (Strict.SupportingPoints (Strict.Idx, a))),
+   DV.Storage vec (ND.Data dim a),
+   DV.Storage vec2 (Collection.Collection label1 (CubeMap.Cube (Sweep.Search inst) dim1 label1 vec1 a (Interp.Val a))),
+   DV.Storage vec1 (Interp.Val a),
+   DV.Storage vec1 (vec1 [a]),
+   DV.Storage vec1 [a],
+   DV.Storage vec1 (ND.Data dim1 a),
+   DV.Storage vec2 (vec2 [a]),
+   DV.Storage vec2 [a],
+   DV.Storage vec2 (ND.Data dim a),
+   DV.Storage vec2 Bool,
+   DV.Storage vec2 a,
+   DV.Storage vec1 Bool,
+   DV.Storage vec1 a,
+   DV.Singleton vec2,
+   DV.Singleton vec1,
+   DV.LookupUnsafe vec2 a,
+   DV.Length vec2,
+   DV.FromList vec2,
+   DV.FromList vec1,
+   DV.Find vec2,
+   ND.Dimensions dim,
+   ND.Dimensions dim1) =>
+  [(label1,Type.Dynamic,vec2 a)] ->
+  [(label1,Type.Dynamic,vec1 a)] ->
+  SignalFlow.Signal inst1 label vec a (ND.Data dim a) ->
+  (CubeGrid.Grid inst2 dim label1 vec2 a,
+   CubeGrid.Grid inst3 dim1 label1 vec1 a,
+   CubeSweep.Variation inst dim dim1 label1 vec2 vec1 a (Interp.Val a),
+   SignalFlow.Signal inst1 label vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,a))))
+prepare demandVariation searchVariation demandCycle = (demandGrid,searchGrid,sweepVariation,supportSignal)
+  where
+    demandGrid = CubeGrid.create (nc "Main") demandVariation
+    searchGrid = CubeGrid.create (nc "Main") searchVariation
+    sweepVariation = CubeSweep.generateVariation (nc "Main") demandGrid searchGrid
+    supportSignal = OptSignal.getSupportPoints (nc "Main") demandGrid demandCycle 
 
 
 -- | Only has to be calculated once, unless efficiency curves change
@@ -110,6 +185,7 @@ sweep ::
    DV.Storage vec1 ActFlowCheck.EdgeFlowStatus,
    DV.Storage vec1 (Maybe Idx.AbsoluteState),
    DV.Storage vec1 ActFlowCheck.Validity,
+   DV.Storage vec (TopoQty.Section node (Maybe (TopoQty.Flow (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))))),   
    DV.Storage vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
    DV.Storage vec1 a,
    DV.Storage vec1 (Interp.Val a),
@@ -120,9 +196,9 @@ sweep ::
   Topo.Topology node ->
   EtaFunctions.FunctionMap node a ->
   CubeSweep.Variation inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a) ->
-  (CubeSweep.SweepResult node inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a),
-   CubeMap.Cube (Sweep.Demand inst) dim (TopoIdx.Position node) vec a (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus)),
-   CubeMap.Cube (Sweep.Demand inst) dim (TopoIdx.Position node) vec a (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)))))
+  (CubeSweep.FlowResult node inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a),
+   CubeSweep.FlowStatus inst dim dim1 (TopoIdx.Position node) vec vec1 a,
+   CubeSweep.EndNodeFlows node inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a))
 sweep topology etaFunctions given = (energyFlow,flowStatus,endNodePowers) 
   where 
     energyFlow = CubeSweep.solve topology etaFunctions given 
@@ -166,6 +242,7 @@ evaluateSweep ::
    DV.Length vec1) =>
   Caller ->
   FlowOpt.LifeCycleMap node b ->
+  
   CubeMap.Cube inst dim label vec a (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 b))) ->
   CubeMap.Cube inst dim label vec a (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 ActFlowCheck.EdgeFlowStatus)) ->
   CubeMap.Cube inst dim label vec a (Result.Result (CubeMap.Data (Sweep.Search inst1) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,

@@ -31,7 +31,7 @@ class Unpack a where
   unpack :: a -> (OrdData a, ValData a)
   pack :: (OrdData a,ValData a) -> a
   
-data Collection key a = Collection (OrdData a) (Map.Map key (ValData a))
+data Collection key a = Collection (OrdData a) (Map.Map key (ValData a)) -- deriving (Show,Eq)
 
 instance (Show (ValData a), Show (OrdData a), Show key) => Show (Collection key a) where
   show (Collection grid val) = "Collection " ++ show grid ++ " "  ++ show  val
