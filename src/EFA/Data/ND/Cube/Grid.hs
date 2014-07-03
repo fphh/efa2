@@ -171,14 +171,14 @@ permute xss = mytrace 1 "grid" "permute" $ foldl f [] xss
  where f [] (dimIdx, axIndices) = map (:[]) $ zip (repeat dimIdx) axIndices
        f xs (dimIdx, axIndices) = concat $ map (\ newItem -> map (++ [newItem]) xs) $ zip (repeat dimIdx) axIndices
        
-       
+{-       
 haveNoCommonAxes :: (Eq label) =>
   Grid inst dim label vec a  -> 
   Grid inst1 dim1 label vec1 a1  ->
   Bool
 haveNoCommonAxes grid grid1 = (List.intersect (f grid) (f grid1) == []) 
   where f gr = ND.toList $ ND.map (Strict.getLabel) gr
-
+-}
 
 getSupportingPoints :: 
   (Ord a,

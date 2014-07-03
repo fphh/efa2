@@ -7,9 +7,17 @@ import qualified EFA.Data.ND as ND
 
 import qualified Data.Map as Map
 
-
+data Var node = Power (TopoIdx.Power node ) | Ratio (TopoIdx.X node) deriving (Show,Eq,Ord)
 data ControlVar node = ControlPower (TopoIdx.Power node ) | ControlRatio (TopoIdx.X node) deriving (Show,Eq,Ord)
 data DemandVar node = DemandPower (TopoIdx.Power node ) | DemandRatio (TopoIdx.X node) deriving (Show,Eq,Ord)
+
+
+unControlVar (ControlPower x) = (Power x)
+unControlVar (ControlRatio x) = (Ratio x)
+
+unDemandVar (ControlPower x) = (Power x)
+unDemandVar (ControlRatio x) = (Ratio x)
+
 
 type ControlMap node a = Map.Map (ControlVar node) a 
 type DemandMap node a = Map.Map (DemandVar node) a 

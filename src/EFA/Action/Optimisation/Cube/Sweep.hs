@@ -89,11 +89,11 @@ modul = ModuleName "DoubleSweep"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-newtype Variation inst demDim srchDim label demVec srchVec a b = 
+newtype Variation node inst demDim srchDim demVec srchVec a b = 
   Variation 
-  (CubeMap.Cube (Sweep.Demand inst) demDim label demVec a 
-   (Collection.Collection label (CubeMap.Cube (Sweep.Search inst) 
-                                 srchDim label srchVec a b)))
+  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+   (Collection.Collection (DemandAndControl.Var node) (CubeMap.Cube (Sweep.Search inst) 
+                                 srchDim (DemandAndControl.Var node) srchVec a b)))
 
 newtype FlowResult node inst demDim srchDim label demVec srchVec a b = 
   FlowResult
@@ -141,18 +141,16 @@ newtype OptimalFlowPerState node inst dim label vec a b =
 
 
 generateVariation :: 
-  (Eq label, 
-   DV.Walker vec,
+  (DV.Walker vec,Ord node,
    DV.Storage vec (ND.Data dim a),
    DV.Storage vec [a],
    DV.Storage vec a,
    DV.Storage vec (vec [a]),
-   DV.Storage vec (Collection.Collection label 
-                   (CubeMap.Cube (Sweep.Search inst) 
-                    dim1 label vec1 a (Interp.Val a))),
    DV.Singleton vec,
+   DV.Storage vec (Collection.Collection (DemandAndControl.Var node) 
+                   (CubeMap.Cube (Sweep.Search inst) dim1 
+                    (DemandAndControl.Var node) vec1 a (Interp.Val a))),
    Eq (vec1 a), 
-   Ord label,
    DV.Walker vec1,
    DV.Storage vec1 a,
    DV.Storage vec1 (ND.Data dim1 a),
@@ -163,17 +161,17 @@ generateVariation ::
    DV.Storage vec1 (Interp.Val a),
    DV.FromList vec) =>
   Caller ->
-  (CubeGrid.Grid (Sweep.Demand inst) dim label vec a) -> 
-  (CubeGrid.Grid (Sweep.Search inst) dim1 label vec1 a) -> 
-  Variation inst dim dim1 label vec vec1 a (Interp.Val a)
-generateVariation caller demandGrid searchGrid = 
-  if CubeGrid.haveNoCommonAxes demandGrid searchGrid then Variation result else err
+  (CubeGrid.Grid (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a) -> 
+  (CubeGrid.Grid (Sweep.Search inst) dim1 (DemandAndControl.Var node) vec1 a) -> 
+  Variation node inst dim dim1 vec vec1 a (Interp.Val a)
+-- Todo :: check for similar variables
+generateVariation caller demandGrid searchGrid = Variation result
   where 
-    err = merror (caller |> nc "generateWithGrid")  modul "generateWithGrid"
-          "Demand and search grid must not have the same Variables"
+--    err = merror (caller |> nc "generateWithGrid")  modul "generateWithGrid"
+--          "Demand and search grid must not have the same Variables"
     result = CubeMap.generateWithGrid (makeCollection) demandGrid
-    makeCollection demandCoord = Collection.fromList  (nc "generateWithGrid") $ 
-                                 ND.toList demandCubes ++ ND.toList searchCubes
+    makeCollection demandCoord = Collection.fromList  (nc "generateVariation") $ 
+                                 (ND.toList demandCubes) ++ (ND.toList searchCubes)
        where
         demandCubes = ND.imap (\dimIdx axis -> (Strict.getLabel axis, 
                                                 CubeMap.map Interp.Inter $
@@ -188,9 +186,9 @@ generateVariation caller demandGrid searchGrid =
 
 solve:: 
   (DV.Walker vec,
-   DV.Storage vec (Collection.Collection (TopoIdx.Position node) 
+   DV.Storage vec (Collection.Collection (DemandAndControl.Var node) 
                    (CubeMap.Cube (Sweep.Search inst) dim1 
-                    (TopoIdx.Position node) vec1 a (Interp.Val a))),
+                    (DemandAndControl.Var node) vec1 a (Interp.Val a))),
    Eq a,
    Arith.Constant a,
    Node.C node,
@@ -206,8 +204,8 @@ solve::
                                    (Sweep.Search inst) dim1 vec1 (Interp.Val a))))) =>
   Topo.Topology node -> 
   EtaFunctions.FunctionMap node a ->  
-  Variation inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a) ->
-  FlowResult node inst dim dim1 (TopoIdx.Position node) vec vec1 a (Interp.Val a)
+  Variation node inst dim dim1 vec vec1 a (Interp.Val a) ->
+  FlowResult node inst dim dim1 (DemandAndControl.Var node) vec vec1 a (Interp.Val a)
 solve topology etaFunctions (Variation varCube) = 
   FlowResult $ CubeMap.map (CubeSolve.solve topology etaFunctions) varCube
 
@@ -592,7 +590,20 @@ combine3PerStateOptimality m m1 m2 =  ValueState.zipWith3 f  m m1 m2
              (FlowOpt.TotalBalanceForce $ g fo fo1 fo2 ))  
         g = Interp.combine3   
 
-        
+{-        
+       
+haveNoCommonAxes :: (Eq label) =>
+  CubeGrid.Grid (Sweep.Demand inst) dim (ControlAndDemand.DemandVar node) vec a  -> 
+  CubeGrid.Grid (Sweep.Search inst) dim1 (ControlAndDemand.ControlVar node) vec1 a1  ->
+  Bool
+haveNoCommonAxes demandGrid searchGrid = (List.intersect (f demandGrid) (g searchGrid) == []) 
+  where 
+    f gr = ND.toList $ ND.map Strict.getLabel gr
+    g (ControlAndDemand.DemandPower 
+    h 
+--    f gr = ND.toList $ ND.map (ControlAndDemand.unControlVar . Strict.getLabel) gr
+    
+-}
         
 
 

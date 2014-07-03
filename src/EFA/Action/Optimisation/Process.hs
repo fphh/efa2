@@ -77,7 +77,7 @@ import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 import qualified EFA.Value.Type as Type
 -- import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
-
+import qualified EFA.Action.DemandAndControl as DemandAndControl
 --import qualified Data.Maybe as Maybe
 --import Control.Applicative as Applicative
 
@@ -89,41 +89,46 @@ modul = ModuleName "Demo.Optimisation.Process"
 nc :: FunctionName -> Caller
 nc = genCaller modul
                                
--- TODO :: Insert Control and Demand Variables into label !! -> Variation labels will differ !
-data SweepAndDemandCycleData inst demDim srchDim label demVec srchVec sigVec a b = 
-  SweepAndDemandCycleData 
-  {accessDemandVariation :: [(label,Type.Dynamic,demVec b)],
-   accessSearchVariation :: [(label,Type.Dynamic,srchVec b)],  
-   accessDemandGrid ::  CubeGrid.Grid inst demDim label demVec b,
-   accessSearchGrid ::  CubeGrid.Grid inst srchDim label srchVec b,
-   accessVariation :: CubeSweep.Variation inst demDim srchDim label demVec srchVec a b,
-   accessDemandCycle ::  OptSignal.DemandCycle inst demDim label sigVec a b,
-   accessSupportSignal :: OptSignal.SupportSignal inst demDim label sigVec a b} 
 
-data SweepResults node inst demandDim searchDim label demandVec searchVec a b = 
+--data SystemDescription node inst =  SystemDescription {accessTopology :: }
+-- data SystemInputData node inst = 
+-- data OptimisationSettings = OptimisationSettings {}
+-- data OutputSettings = 
+
+data SweepAndDemandCycleData node inst demDim srchDim demVec srchVec sigVec a = 
+  SweepAndDemandCycleData 
+  {accessDemandVariation :: [(DemandAndControl.Var node,Type.Dynamic,demVec a)],
+   accessSearchVariation :: [(DemandAndControl.Var node,Type.Dynamic,srchVec a)],  
+   accessDemandGrid ::  CubeGrid.Grid inst demDim (DemandAndControl.Var node) demVec a,
+   accessSearchGrid ::  CubeGrid.Grid inst srchDim (DemandAndControl.Var node) srchVec a,
+   accessVariation :: CubeSweep.Variation node inst demDim srchDim demVec srchVec a (Interp.Val a),
+   accessDemandCycle ::  OptSignal.DemandCycle inst demDim (DemandAndControl.Var node) sigVec a a,
+   accessSupportSignal :: OptSignal.SupportSignal inst demDim (DemandAndControl.Var node) sigVec a a} 
+
+data SweepResults node inst demandDim searchDim demandVec searchVec a = 
   SweepResults 
-  {accessSweepFlow :: CubeSweep.FlowResult node inst demandDim searchDim label demandVec searchVec a b,
-   accessSweepFlowStatus :: CubeSweep.FlowStatus inst demandDim searchDim label demandVec searchVec a,
-   accessSweepEndNodePowers:: CubeSweep.EndNodeFlows node inst demandDim searchDim label demandVec searchVec a b
+  {accessSweepFlow :: CubeSweep.FlowResult node inst demandDim searchDim (DemandAndControl.Var node) demandVec searchVec a a,
+   accessSweepFlowStatus :: CubeSweep.FlowStatus inst demandDim searchDim (DemandAndControl.Var node) demandVec searchVec a,
+   accessSweepEndNodePowers:: CubeSweep.EndNodeFlows node inst demandDim searchDim (DemandAndControl.Var node) demandVec searchVec a a
   }
 
-data SweepEvaluationResults node inst demandDim searchDim label demandVec searchVec a b = 
+data SweepEvaluationResults node inst demandDim searchDim demandVec searchVec a = 
   SweepEvaluationResults {accessSweepOptimality :: 
-                             CubeSweep.OptimalityMeasure node inst demandDim searchDim label demandVec searchVec a b}
+                             CubeSweep.OptimalityMeasure node inst demandDim searchDim (DemandAndControl.Var node) demandVec searchVec a a}
 
 
-data OptimisationPerStateResults node inst dim label vec a b = OptimisationPerStateResults {
-  accessOptimalChoicePerState :: CubeSweep.OptimalChoicePerState inst dim label vec a b,
-  accessOptimalFlowPerState :: CubeSweep.OptimalFlowPerState node inst dim label vec a b, 
-  accessOptimalControlSignalsPerState :: OptSignal.OptimalControlSignalsPerState node inst label vec a b,
-  accessOptimalStoragePowersPerState :: OptSignal.OptimalStoragePowersPerState node inst label vec a b}
+data OptimisationPerStateResults node inst dim vec a = OptimisationPerStateResults {
+  accessOptimalChoicePerState :: CubeSweep.OptimalChoicePerState inst dim (DemandAndControl.Var node) vec a a,
+  accessOptimalFlowPerState :: CubeSweep.OptimalFlowPerState node inst dim (DemandAndControl.Var node) vec a a, 
+  accessOptimalControlSignalsPerState :: OptSignal.OptimalControlSignalsPerState node inst (DemandAndControl.Var node) vec a a,
+  accessOptimalStoragePowersPerState :: OptSignal.OptimalStoragePowersPerState node inst (DemandAndControl.Var node) vec a a}
 
 
-data OptimalOperation node inst label vec a b = OptimalOperation {
-  accessOptimalStateChoice :: OptSignal.OptimalStateChoice inst label vec a b,
-  accessOptimalControlSignals :: OptSignal.OptimalControlSignals node inst label vec a b,
-  accessOptimalStorageSignals :: OptSignal.OptimalStoragePowers node inst label vec a b,
-  accessBalance :: Balance.Balance node (Maybe (Interp.Val b))}
+data OptimalOperation node inst vec a = OptimalOperation {
+  accessOptimalStateChoice :: OptSignal.OptimalStateChoice inst (DemandAndControl.Var node) vec a a,
+  accessOptimalControlSignals :: OptSignal.OptimalControlSignals node inst (DemandAndControl.Var node) vec a a,
+  accessOptimalStorageSignals :: OptSignal.OptimalStoragePowers node inst (DemandAndControl.Var node) vec a a,
+  accessBalance :: Balance.Balance node (Maybe (Interp.Val a))}
 
 
 
@@ -159,14 +164,18 @@ prepare ::
    DV.Find vec2,
    ND.Dimensions dim,
    ND.Dimensions dim1) =>
-  [(label1,Type.Dynamic,vec2 a)] ->
-  [(label1,Type.Dynamic,vec1 a)] ->
-  SignalFlow.Signal inst1 label vec a (ND.Data dim a) ->
-  (CubeGrid.Grid inst2 dim label1 vec2 a,
+  [(DemandAndControl.Var node,Type.Dynamic,demVec a)] ->
+  [(DemandAndControl.Var node,Type.Dynamic,srchVec a)] ->
+--  SignalFlow.Signal inst1 label vec a (ND.Data dim a) ->
+  OptSignal.DemandCycle inst dim label sigVec a a ->
+  SweepAndDemandCycleData node inst demDim srchDim demVec srchVec sigVec a
+{-  (CubeGrid.Grid inst2 dim label1 vec2 a,
    CubeGrid.Grid inst3 dim1 label1 vec1 a,
    CubeSweep.Variation inst dim dim1 label1 vec2 vec1 a (Interp.Val a),
-   SignalFlow.Signal inst1 label vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,a))))
-prepare demandVariation searchVariation demandCycle = (demandGrid,searchGrid,sweepVariation,supportSignal)
+   SignalFlow.Signal inst1 label vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,a))))-}
+prepare demandVariation searchVariation demandCycle = 
+  SweepAndDemandCycleData demandVariation searchVariation demandGrid searchGrid 
+   sweepVariation demandCycle supportSignal
   where
     demandGrid = CubeGrid.create (nc "Main") demandVariation
     searchGrid = CubeGrid.create (nc "Main") searchVariation

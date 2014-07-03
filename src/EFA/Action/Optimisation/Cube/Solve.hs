@@ -5,10 +5,11 @@
 
 module EFA.Action.Optimisation.Cube.Solve where
 
-import EFA.Action.EtaFunctions as EtaFunctions
+import qualified EFA.Action.EtaFunctions as EtaFunctions
+import qualified EFA.Action.DemandAndControl as DemandAndControl
 
 import qualified EFA.Data.Interpolation as Interp
-import EFA.Data.Vector as DV
+import qualified EFA.Data.Vector as DV
 --import EFA.Data.ND as ND
 -- import EFA.Data.Axis.Strict as Strict
 import qualified EFA.Flow.Topology.Record as TopoRecord
@@ -63,17 +64,17 @@ import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 solve ::
   (Eq a,
    Arith.Constant a,
-   Storage vec a,
+   DV.Storage vec a,
    Node.C node,
-   Zipper vec,
-   Walker vec,
-   Storage vec (Interp.Val a),
-   Storage vec Bool,
-   Singleton vec,
-   Length vec) =>
+   DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec (Interp.Val a),
+   DV.Storage vec Bool,
+   DV.Singleton vec,
+   DV.Length vec) =>
   Topo.Topology node -> 
   EtaFunctions.FunctionMap node a ->  
-  Collection.Collection (TopoIdx.Position node) (CubeMap.Cube inst dim label vec a (Interp.Val a)) -> 
+  Collection.Collection (DemandAndControl.Var node) (CubeMap.Cube inst dim label vec a (Interp.Val a)) -> 
   FlowTopo.Section node (Result.Result (CubeMap.Data inst dim vec (Interp.Val a)))
 solve topology etaFunctions powerCollection =
    EqSys.solve (quantityTopology topology) $
@@ -82,27 +83,28 @@ solve topology etaFunctions powerCollection =
 given :: 
   (Verify.GlobalVar mode (CubeMap.Data inst dim vec (Interp.Val a)) (RecIdx.Record RecIdx.Absolute (Variable.Signal node)), 
    ULSystem.Value mode (CubeMap.Data inst dim vec a),
-   Arith.Constant a,Storage vec (Interp.Val a),
-   Storage vec a, Zipper vec,Walker vec,
-   Length vec, 
+   Arith.Constant a,DV.Storage vec (Interp.Val a),
+   DV.Storage vec a, DV.Zipper vec,DV.Walker vec,
+   DV.Length vec, 
    Node.C node, 
-   Singleton vec)=>
+   DV.Singleton vec)=>
   EtaFunctions.FunctionMap node a ->
-  Collection.Collection (TopoIdx.Position node) (CubeMap.Cube inst dim label vec a (Interp.Val a)) -> 
+  Collection.Collection (DemandAndControl.Var node) (CubeMap.Cube inst dim label vec a (Interp.Val a)) -> 
   EqSys.EquationSystem mode node s (CubeMap.Data inst dim vec (Interp.Val a))
 given etaFunctions  (Collection.Collection grid mp) =
    (XIdx.dTime .= (CubeMap.Data $ DV.replicate (CubeGrid.linearLength grid) Arith.one))
    <> EqSys.withExpressionGraph (makeEtaFuncGiven etaFunctions)
    <> Fold.fold (Map.mapWithKey f mp)
    where
-     f ppos p  =  XIdx.powerFromPosition ppos .= p
+     f (DemandAndControl.Power (XIdx.Power ppos)) p  =  XIdx.powerFromPosition ppos .= p
+     f (DemandAndControl.Ratio ppos) p  =  error "Error in Action.Optimisation.Cube.Solve - Ratios not yet implemented"
 
 
 makeEtaFuncGiven:: 
   (ULSystem.Value
-   mode (CubeMap.Data inst dim vec (Interp.Val a)), Walker vec, Storage vec (Interp.Val a),
+   mode (CubeMap.Data inst dim vec (Interp.Val a)), DV.Walker vec, DV.Storage vec (Interp.Val a),
    Ord node,
-   Arith.Sum a, Zipper vec) =>
+   Arith.Sum a, DV.Zipper vec) =>
   EtaFunctions.FunctionMap node a ->  
   FlowTopo.Section node (EqAbs.Expression mode vars s (CubeMap.Data inst dim vec (Interp.Val a))) ->
   EqAbs.VariableSystem mode vars s
