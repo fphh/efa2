@@ -89,42 +89,42 @@ modul = ModuleName "DoubleSweep"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-newtype Variation inst demandDim searchDim label demandVec searchVec a b = 
+newtype Variation inst demDim srchDim label demVec srchVec a b = 
   Variation 
-  (CubeMap.Cube (Sweep.Demand inst) demandDim label demandVec a 
+  (CubeMap.Cube (Sweep.Demand inst) demDim label demVec a 
    (Collection.Collection label (CubeMap.Cube (Sweep.Search inst) 
-                                 searchDim label searchVec a b)))
+                                 srchDim label srchVec a b)))
 
-newtype FlowResult node inst demandDim searchDim label demandVec searchVec a b = 
+newtype FlowResult node inst demDim srchDim label demVec srchVec a b = 
   FlowResult
-  (CubeMap.Cube (Sweep.Demand inst) demandDim label demandVec a 
+  (CubeMap.Cube (Sweep.Demand inst) demDim label demVec a 
    (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                                         searchDim searchVec b))))
+                                         srchDim srchVec b))))
 
-newtype FlowStatus inst demandDim searchDim label demandVec searchVec a = 
+newtype FlowStatus inst demDim srchDim label demVec srchVec a = 
   FlowStatus 
-   (CubeMap.Cube (Sweep.Demand inst) demandDim label demandVec a 
+   (CubeMap.Cube (Sweep.Demand inst) demDim label demVec a 
     (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                    searchDim searchVec ActFlowCheck.EdgeFlowStatus)))
+                    srchDim srchVec ActFlowCheck.EdgeFlowStatus)))
 
    
-newtype EndNodeFlows node inst demandDim searchDim label demandVec searchVec a b =  
+newtype EndNodeFlows node inst demDim srchDim label demVec srchVec a b =  
   EndNodeFlows
-  (CubeMap.Cube (Sweep.Demand inst) demandDim label demandVec a 
+  (CubeMap.Cube (Sweep.Demand inst) demDim label demVec a 
   (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                                                    searchDim searchVec b))))  
+                                                    srchDim srchVec b))))  
 
 
-newtype OptimalityMeasure node inst demandDim searchDim label demandVec searchVec a b = 
+newtype OptimalityMeasure node inst demDim srchDim label demVec srchVec a b = 
   OptimalityMeasure
- (CubeMap.Cube (Sweep.Demand inst) demandDim label demandVec a 
-  (Result.Result (CubeMap.Data (Sweep.Search inst) searchDim searchVec 
+ (CubeMap.Cube (Sweep.Demand inst) demDim label demVec a 
+  (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
                   (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityMeasure  b)))))
  
-newtype ObjectiveFunctionValues inst demandDim searchDim label demandVec searchVec a b = 
+newtype ObjectiveFunctionValues inst demDim srchDim label demVec srchVec a b = 
   ObjectiveFunctionValues 
-  (CubeMap.Cube (Sweep.Demand inst) demandDim label demandVec a 
-   (Result.Result (CubeMap.Data (Sweep.Search inst) searchDim searchVec 
+  (CubeMap.Cube (Sweep.Demand inst) demDim label demVec a 
+   (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
    (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityValues  b)))))
 
 newtype OptimalChoicePerState inst dim label vec a b = 

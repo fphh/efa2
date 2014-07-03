@@ -90,20 +90,22 @@ nc :: FunctionName -> Caller
 nc = genCaller modul
                                
 -- TODO :: Insert Control and Demand Variables into label !! -> Variation labels will differ !
-data SweepAndDemandCycleData inst demandDim searchDim label demandVec searchVec sigVec a b = 
-  SweepAndDemandCycleData {accessDemandVariation :: [(label,Type.Dynamic,demandVec b)],
-                           accessSearchVariation :: [(label,Type.Dynamic,searchVec b)],  
-                           accessDemandGrid ::  CubeGrid.Grid inst demandDim label demandVec b,
-                           accessSearchGrid ::  CubeGrid.Grid inst searchDim label searchVec b,
-                           accessVariation :: CubeSweep.Variation inst demandDim searchDim label demandVec searchVec a b,
-                           accessDemandCycle ::  OptSignal.DemandCycle inst demandDim label sigVec a b,
-                           accessSupportSignal :: OptSignal.SupportSignal inst demandDim label sigVec a b} 
+data SweepAndDemandCycleData inst demDim srchDim label demVec srchVec sigVec a b = 
+  SweepAndDemandCycleData 
+  {accessDemandVariation :: [(label,Type.Dynamic,demVec b)],
+   accessSearchVariation :: [(label,Type.Dynamic,srchVec b)],  
+   accessDemandGrid ::  CubeGrid.Grid inst demDim label demVec b,
+   accessSearchGrid ::  CubeGrid.Grid inst srchDim label srchVec b,
+   accessVariation :: CubeSweep.Variation inst demDim srchDim label demVec srchVec a b,
+   accessDemandCycle ::  OptSignal.DemandCycle inst demDim label sigVec a b,
+   accessSupportSignal :: OptSignal.SupportSignal inst demDim label sigVec a b} 
 
 data SweepResults node inst demandDim searchDim label demandVec searchVec a b = 
-  SweepResults {accessSweepFlow :: CubeSweep.FlowResult node inst demandDim searchDim label demandVec searchVec a b,
-                accessSweepFlowStatus :: CubeSweep.FlowStatus inst demandDim searchDim label demandVec searchVec a,
-                accessSweepEndNodePowers:: CubeSweep.EndNodeFlows node inst demandDim searchDim label demandVec searchVec a b
-               }
+  SweepResults 
+  {accessSweepFlow :: CubeSweep.FlowResult node inst demandDim searchDim label demandVec searchVec a b,
+   accessSweepFlowStatus :: CubeSweep.FlowStatus inst demandDim searchDim label demandVec searchVec a,
+   accessSweepEndNodePowers:: CubeSweep.EndNodeFlows node inst demandDim searchDim label demandVec searchVec a b
+  }
 
 data SweepEvaluationResults node inst demandDim searchDim label demandVec searchVec a b = 
   SweepEvaluationResults {accessSweepOptimality :: 
@@ -120,7 +122,7 @@ data OptimisationPerStateResults node inst dim label vec a b = OptimisationPerSt
 data OptimalOperation node inst label vec a b = OptimalOperation {
   accessOptimalStateChoice :: OptSignal.OptimalStateChoice inst label vec a b,
   accessOptimalControlSignals :: OptSignal.OptimalControlSignals node inst label vec a b,
-  accessOptimalStorageSignals :: OptSignal.OptimalStorageSignals node inst label vec a b,
+  accessOptimalStorageSignals :: OptSignal.OptimalStoragePowers node inst label vec a b,
   accessBalance :: Balance.Balance node (Maybe (Interp.Val b))}
 
 
