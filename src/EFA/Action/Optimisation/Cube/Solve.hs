@@ -55,7 +55,7 @@ import qualified Data.Foldable as Fold
 --import Data.Map (Map)
 import Data.Monoid((<>))
 
-import qualified EFA.Flow.Topology.Index as TopoIdx
+--import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.ND.Cube.Map as CubeMap
@@ -97,7 +97,7 @@ given etaFunctions  (Collection.Collection grid mp) =
    <> Fold.fold (Map.mapWithKey f mp)
    where
      f (DemandAndControl.Power (XIdx.Power ppos)) p  =  XIdx.powerFromPosition ppos .= p
-     f (DemandAndControl.Ratio ppos) p  =  error "Error in Action.Optimisation.Cube.Solve - Ratios not yet implemented"
+     f (DemandAndControl.Ratio _) _  =  error "Error in Action.Optimisation.Cube.Solve - Ratios not yet implemented"
 
 
 makeEtaFuncGiven:: 

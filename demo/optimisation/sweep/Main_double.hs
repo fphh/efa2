@@ -136,12 +136,6 @@ instance Node.C Node where
          LocalNetwork -> Node.Crossing
          LocalRest -> Node.AlwaysSink
          
-topology :: Topo.Topology Node
-topology = Topo.plainFromLabeled labeledTopology
-
-labeledTopology :: Topo.LabeledTopology Node
-labeledTopology = AppUt.topologyFromLabeledEdges edgeList
-
 edgeList :: AppUt.LabeledEdgeList Node
 edgeList = [(Coal, Network, "Coal\\lPlant", "Coal","ElCoal"),
                (Water, Network, "Water\\lPlant","Water","ElWater"),
@@ -152,8 +146,9 @@ edgeList = [(Coal, Network, "Coal\\lPlant", "Coal","ElCoal"),
                (Gas, LocalNetwork,"Gas\\lPlant","Gas","ElGas"),
                (LocalNetwork, LocalRest, "100%", "toResidualLV", "toResidualLV")]
 
+
 etaAssignMap :: EtaFunctions.EtaAssignMap Node Double
-etaAssignMap = Map.fromList $
+etaAssignMap = EtaFunctions.EtaAssignMap $ Map.fromList $
    (TopoIdx.Position Network Water,
     EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage"))) : 
    (TopoIdx.Position Network Coal ,
@@ -167,26 +162,30 @@ etaAssignMap = Map.fromList $
    (TopoIdx.Position Rest Network,
     EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "rest"))) : 
    []
-
+{-
 demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
 demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.5..1.1]), -- [-1.1,-0.6..(-0.1)]),
                     (TopoIdx.ppos Rest Network,Type.P,[0.1,0.5..1.1])] -- [-1.1,-0.6..(-0.1)])]
-
+-}
+{-
 controlVars :: [DemandAndControl.ControlVar Node]
 controlVars = [DemandAndControl.ControlPower $ TopoIdx.Power (TopoIdx.Position LocalNetwork Gas), 
                DemandAndControl.ControlPower $ TopoIdx.Power (TopoIdx.Position Network Water)]
 
 storageList :: [Node]              
 storageList = [Water]              
+-}
 
-searchGrid :: Grid.Grid (Sweep.Search Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
-searchGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalNetwork Gas,Type.P,[0.1,0.5..1.1]),
-                    (TopoIdx.ppos Network Water,Type.P,[0.1,0.5..1.1])]
+demandVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
+demandVariation  = 
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.5..1.1]), -- [-1.1,-0.6..(-0.1)]),
+   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Rest Network,Type.P,[0.1,0.5..1.1])] -- [-1.1,-0.6..(-0.1)])]
 
-given :: CubeSweep.Variation Base 
-         ND.Dim2 ND.Dim2  
-         (TopoIdx.Position Node) [] [] Double (Interp.Val Double)
-given = CubeSweep.generateVariation (nc "Main") demandGrid searchGrid
+searchVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
+searchVariation = 
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.1,0.5..1.1]),
+   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[0.1,0.5..1.1])]  
+
 
 lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
 lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [335,616,598]) $ replicate 3 $
@@ -195,25 +194,40 @@ lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState 
 balanceForcingMap :: FlowBal.Forcing Node (Interp.Val Double)
 balanceForcingMap = FlowBal.ForcingMap $ Map.fromList [(Water, FlowBal.ChargeDrive (Interp.Inter 0.5))]
 
+initialBalanceMap :: FlowBal.Balance Node Double
+initialBalanceMap = FlowBal.Balance $ Map.fromList [(Water, 0.5)]
+
+caller = nc "Main"
+
 main :: IO()
 main = do
-
+  
+  let system = Process.buildSystem edgeList
+      
+  let demandCycle = OptSignal.DemandCycle $ SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5])]
+        :: OptSignal.DemandCycle Node Base ND.Dim2 [] Double Double
+  
+  let testSet = Process.buildTestSet demandCycle initialBalanceMap 
+      
   tabEta <- Table.read "eta.txt"
   let rawEtaCurves = Curve.curvesfromParseTableMap (nc "etaCurves") tabEta 
                      :: Curve.Map String Base String  [] Double Double
                         
-  let etaFunctions = EtaFunctions.makeEtaFunctions (nc "Main") etaAssignMap rawEtaCurves                     
-        :: EtaFunctions.FunctionMap Node Double
-           
-  let etaCurves = EtaFunctions.toCurveMap (Strict.Axis "Power" Type.UT [-3,-2.9..3]) etaFunctions 
-                  :: Curve.Map (TopoIdx.Position Node) Base String  [] Double (Interp.Val Double)      
-                     
-  let demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5])]
-        :: DemandAndControl.DemandCycle Base ND.Dim2 String [] Double Double
+  let systemData = Process.buildSystemData rawEtaCurves etaAssignMap              
       
-  let (CubeSweep.FlowResult sweepCube) = CubeSweep.solve topology etaFunctions given    
+  let optiSet = Process.buildOptiSet demandVariation searchVariation demandCycle    
+       :: Process.OptiSet Node Base ND.Dim2 ND.Dim2 [] [] [] Double
+          
+  let sweep = Process.makeSweep system systemData optiSet     
+        :: Process.SweepResults Node Base ND.Dim2 ND.Dim2 [] [] Double
+                        
+  let evalSweep = Process.evaluateSweep caller lifeCycleMap sweep
+      
+  let     
+     
+  print "Hallo"    
   
-  let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) sweepCube
+{-  let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) sweepCube
   let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) sweepCube
       
   -- TODO :: Same as Control Signals ?     
@@ -324,3 +338,4 @@ main = do
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") powers
 -}
 
+-}

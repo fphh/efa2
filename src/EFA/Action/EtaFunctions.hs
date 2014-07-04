@@ -34,10 +34,20 @@ nc = genCaller modul
 
 data Conf a = Pair a a | Single a | Duplicate a | DuplicateCombine a
 
-type EtaAssignMap node a = Map.Map (TopoIdx.Position node) 
-                           (Conf ((Interp.Method a, Interp.ExtrapMethod a), ([Curve.ModifyOps a],String)))
+-- TODO :: Curve datentypen gerade ziehen
+type CurveName = String
+{-
+data EtaAssignMap node = EtaAssign (Map.Map (TopoIdx.Position node) CurveName)
+data Configuration a = InterpolationOpts (Map.Map CurveName (Interp.Method a, Interp.ExtrapMethod a))
+data Conditioning a = Conditioning (Map.Map CurveName ([Curve.ModifyOps a]))
+-}
+data EtaAssignMap node a = EtaAssignMap (Map.Map (TopoIdx.Position node) 
+                           (Conf ((Interp.Method a, Interp.ExtrapMethod a), ([Curve.ModifyOps a],CurveName))))
 
 type FunctionMap node a = Map.Map (TopoIdx.Position node) (Interp.Val a -> Interp.Val a)
+
+-- makeEtaAssignMap :: EtaAssign node -> Conditioning a -> Configuration a -> Conditioning a
+
 
 makeEtaFunctions :: 
   (Arith.Product a,
@@ -57,7 +67,7 @@ makeEtaFunctions ::
   EtaAssignMap node a -> 
   Curve.Map String inst String vec a a ->  
   FunctionMap node a
-makeEtaFunctions caller assignMap etaCurves = Map.mapWithKey f assignMap    
+makeEtaFunctions caller (EtaAssignMap assignMap) etaCurves = Map.mapWithKey f assignMap    
   where f _ assign = 
           let -- TODO:: Insert errror message as Map.lookup        
             g (ops,name) =  (Curve.modify ops $ 

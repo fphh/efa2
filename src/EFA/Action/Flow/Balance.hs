@@ -5,7 +5,7 @@
 module EFA.Action.Flow.Balance where
 
 import qualified EFA.Flow.State.Quantity as StateQty
-import qualified EFA.Flow.SequenceState.Index as Idx
+--import qualified EFA.Flow.SequenceState.Index as Idx
 --import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -17,6 +17,7 @@ import qualified Data.Map as Map; import Data.Map (Map)
 
 --import Data.Bimap (Bimap)
 import Data.Maybe(fromMaybe)
+import Text.Printf (printf, PrintfArg) --,IsChar)
 
 import EFA.Utility(Caller,
                  merror,
@@ -65,19 +66,8 @@ noforcing ::
   SocDrive v -> StateQty.Graph node b (Result v) -> v
 noforcing _ _ = Arith.zero
 
-{-
-
-type IndexConversionMap =
-  Bimap Idx.State Idx.AbsoluteState
-
-nocondition :: StateQty.Graph node b (Result v) -> Bool
-nocondition _ = True
-
-type OptimalPower node = Map Idx.State [(TopoIdx.Position node)]
-
-optimalPower :: [(Idx.State, [(TopoIdx.Position node)])] -> OptimalPower node
-optimalPower = Map.fromList
--}
+newtype Threshold a =
+  Threshold { unThreshold :: a } deriving Show
 
 newtype Balance node a = Balance (Map node a) deriving Show
 
@@ -97,11 +87,73 @@ type Forcing node a =
 type ForcingStep node a =
   ForcingMap Step (Map node (SocDrive a))
 
+--newtype BestForcingPair node a = BestForcingPair (Map node (Maybe (SocDrive a, a), Maybe (SocDrive a, a)))
+newtype BestForcingPair node a = BestForcingPair (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
 
-type BestBalance node a = Map node (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
+checkBalance ::
+  (Ord a, Arith.Sum a) =>
+  Threshold a ->
+  Balance node a ->
+  Bool
+checkBalance threshold (Balance bal) =
+  Map.foldl' (\acc v -> acc && Arith.abs v <= bt) True bal
+  where bt = unThreshold threshold
 
-type StateDurations a = Map Idx.AbsoluteState a
+checkBalanceSingle ::
+  (Ord a, Arith.Sum a, Ord node, Show node) =>
+  Caller ->
+  Threshold a ->
+  Balance node a ->
+  node ->
+  Bool
+checkBalanceSingle caller threshold bal sto =
+  Arith.abs x <= unThreshold threshold
+  where x = lookupStorageBalance (caller |> nc "checkBalanceSingle") bal sto
 
+-- | Rate Balance Deviation by sum of Standard Deviation and Overall Sum
+balanceDeviation ::
+  (Arith.Product a,
+   Ord a,
+   Arith.Constant a,
+   Arith.Sum a) =>
+  Balance node a -> a
+balanceDeviation (Balance m) =
+  Map.foldl (\acc x -> acc ~+ Arith.square x) Arith.zero m
+  ~+
+  Arith.abs (Map.foldl (~+) Arith.zero m)
+
+calculateNextBalanceStep ::
+  (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
+   Ord node, Show node) =>
+  Caller ->
+  Balance node a ->
+  BestForcingPair node a -> -- Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
+  (ForcingStep node a) ->
+  node ->
+  (ForcingStep node a)
+calculateNextBalanceStep caller balMap (BestForcingPair bestPair) stepMap sto =
+  updateForcingStep stepMap sto $ setSocDrive step1
+  where
+    bal = lookupStorageBalance (caller |> nc "calculateNextBalanceStep") balMap sto
+    step = lookupBalanceForcingStep (caller |> nc "calculateNextBalanceStep") stepMap sto
+    fact = Arith.fromRational 2.0
+    divi = Arith.fromRational 1.7
+    intervall = getForcingIntervall bestPair
+
+
+    step1 =
+      case (intervall, Arith.sign bal) of
+
+           -- Zero Crossing didn't occur so far -- increase step to search faster
+           (Nothing, Arith.Negative) -> Arith.abs $ (getSocDrive step) Arith.~* fact
+           (Nothing, Arith.Positive) -> Arith.negate $ (Arith.abs $ getSocDrive step) Arith.~* fact
+
+           -- The Zero Crossing is contained in the intervall
+           -- defined by bestPair - step just a little over the middle
+           (Just int, Arith.Negative) -> (getSocDrive int) Arith.~/ divi
+           (Just int, Arith.Positive) -> (Arith.negate $ getSocDrive  int) Arith.~/ divi
+           (_, Arith.Zero)  -> Arith.zero
+           
 
 rememberBestBalanceForcing ::
   (Arith.Constant a, Ord a, Ord node, Show node, Show a) =>
@@ -202,5 +254,29 @@ lookupStorageBalance caller (Balance balance) sto =
           (" - Storage not in Map: " ++ show sto)
 
 
+-- PrintF - Functions
 
+concatZipMapsWith :: ((k0, a) -> (k1, b) -> [c]) -> Map k0 a -> Map k1 b -> [c]
+concatZipMapsWith f s t = concat $ zipWith f (Map.toList s) (Map.toList t)
+
+printfMap :: (Show k, Show a) => Map k a -> String
+printfMap m = Map.foldWithKey f "" m
+  where f k v acc = printf "%16s\t%16s\n" (show k) (show v) ++ acc
+
+printfBalanceFMap ::
+  (Show node, PrintfArg a1, PrintfArg t1, Arith.Constant a1) =>
+  Forcing node a1 ->
+  Map t t1 ->
+  [Char]
+printfBalanceFMap forceMap balanceMap =
+  concatZipMapsWith f (unForcingMap forceMap) balanceMap
+  where f (k, x) (_, y) =
+          printf "   | Sto: %7s   | F: %10.15f   | B: %10.15f"
+                 (show k) (getSocDrive x) y
+
+printfBalanceMap ::
+  (Show a, PrintfArg t) =>
+  Map a t -> String
+printfBalanceMap balanceMap = Map.foldWithKey f "" balanceMap
+  where f k v acc = printf " Sto: %7s B: %5.3f" (show k) v ++ acc
 

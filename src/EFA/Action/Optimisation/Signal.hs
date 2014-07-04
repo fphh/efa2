@@ -41,28 +41,28 @@ nc = genCaller modul
 data StateForcing = StateForcingOn | StateForcingOff deriving (Show)
 
 newtype DemandCycle node inst dim vec a b = 
-  DemandCycle (SignalFlow.Signal inst (DemandAndControl.Var node) vec a (ND.Data dim b))
+  DemandCycle (SignalFlow.Signal inst String vec a (ND.Data dim b))
 
 newtype SupportSignal node inst dim  vec a b = 
-  SupportSignal (SignalFlow.Signal inst (DemandAndControl.Var node) vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b))))
+  SupportSignal (SignalFlow.Signal inst String vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b))))
   
 newtype OptimalityPerStateSignal node inst vec a b = OptimalityPerStateSignal
-        (SignalFlow.Signal inst (DemandAndControl.Var node) vec a (ValueState.Map (FlowOpt.OptimalityValues b)))
+        (SignalFlow.Signal inst String vec a (ValueState.Map (FlowOpt.OptimalityValues b)))
 
 newtype OptimalControlSignalsPerState node inst vec a b = OptimalControlSignalsPerState
-     (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst (DemandAndControl.Var node) vec a (ValueState.Map b)))
+     (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a (ValueState.Map b)))
 
 newtype OptimalStoragePowersPerState node inst  vec a b = 
-  OptimalStoragePowersPerState (Map.Map node (SignalFlow.Signal inst (DemandAndControl.Var node) vec a (ValueState.Map (Maybe b))))
+  OptimalStoragePowersPerState (Map.Map node (SignalFlow.Signal inst String vec a (ValueState.Map (Maybe b))))
 
 newtype OptimalStateChoice node inst vec a b = 
-  OptimalStateChoice (SignalFlow.Signal inst (DemandAndControl.Var node) vec a ([Maybe Idx.AbsoluteState],Maybe b))
+  OptimalStateChoice (SignalFlow.Signal inst String vec a ([Maybe Idx.AbsoluteState],Maybe b))
 
 newtype OptimalControlSignals node inst  vec a b = 
-  OptimalControlSignals (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst (DemandAndControl.Var node) vec a b))
+  OptimalControlSignals (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a b))
 
 newtype OptimalStoragePowers node inst vec a b = 
-  OptimalStoragePowers (Map.Map (node) (SignalFlow.Signal inst (DemandAndControl.Var node) vec a (Maybe b)))
+  OptimalStoragePowers (Map.Map (node) (SignalFlow.Signal inst String vec a (Maybe b)))
 
 
 -- | Signal Containing Indices and ccordinates of supporting points holding the interpolation tiles 
@@ -114,7 +114,8 @@ optimalStateSignals ::
    DV.LookupMaybe demVec (ValueState.Map (CubeGrid.LinIdx,
                                         (ActFlowCheck.EdgeFlowStatus,
                                          FlowOpt.OptimalityValues (Interp.Val b)))),
-   DV.Length demVec) =>
+   DV.Length demVec
+  ) =>
   Caller -> 
   CubeSweep.OptimalChoicePerState node inst dim demVec b (Interp.Val b) ->
   SupportSignal node inst dim sigVec a b ->
