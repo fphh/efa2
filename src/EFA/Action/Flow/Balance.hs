@@ -88,7 +88,10 @@ type ForcingStep node a =
   ForcingMap Step (Map node (SocDrive a))
 
 --newtype BestForcingPair node a = BestForcingPair (Map node (Maybe (SocDrive a, a), Maybe (SocDrive a, a)))
-newtype BestForcingPair node a = BestForcingPair (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
+newtype BestForcingPair a = BestForcingPair (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
+
+emptyBestForcingPair :: BestForcingPair a
+emptyBestForcingPair = BestForcingPair (Nothing,Nothing) 
 
 checkBalance ::
   (Ord a, Arith.Sum a) =>
@@ -122,12 +125,53 @@ balanceDeviation (Balance m) =
   ~+
   Arith.abs (Map.foldl (~+) Arith.zero m)
 
+
+newtype MaxIterationsPerStorage = MaxIterationsPerStorage Int
+
+data BalanceCounter node = BalanceCounter (Map.Map node Int)
+newtype MaxIterations = MaxIterations Int
+
+-- data BalanceCounter node = BalanceCounter (Map.Map node Int)
+
+initialiseBalanceCounter :: (Ord node) => [node] -> BalanceCounter node
+initialiseBalanceCounter storages = 
+  BalanceCounter $ Map.fromList $ zip storages $ map (\_ -> 0) storages
+
+
+incrementBalanceCounter :: (Ord node) => BalanceCounter node -> node -> BalanceCounter node
+incrementBalanceCounter (BalanceCounter m) sto =  
+  BalanceCounter (Map.adjust (+1) sto m)
+  
+checkBalanceCounterOne :: (Ord node,Show node) => Caller -> BalanceCounter node -> node -> MaxIterationsPerStorage -> Bool 
+checkBalanceCounterOne caller (BalanceCounter m) sto (MaxIterationsPerStorage ma) = f $ Map.lookup sto m
+  where f (Just cnt) = cnt > ma
+        f Nothing = merror caller modul  "checkBalanceCounterOne" $ "Storage not found: " ++ show sto 
+
+checkBalanceCounter :: (Ord node) => BalanceCounter node -> MaxIterations -> Bool 
+checkBalanceCounter (BalanceCounter m) (MaxIterations ma) = Map.foldl (+) 0 m > ma
+
+selectStorageToForce ::(Ord node, Ord a, Show node, Arith.Sum a) =>
+  Caller ->
+  Balance node a ->
+  Threshold a ->
+  BalanceCounter node ->
+  MaxIterationsPerStorage ->
+  node ->
+  node
+selectStorageToForce caller bal@(Balance b) threshold cnt maxIterationsPerStorage sto = if check then sto else nextSto 
+  where
+    check = (checkBalanceSingle (caller |> nc "selectStorageToForce") threshold bal sto) || 
+            checkBalanceCounterOne (caller |> nc "selectStorageToForce") cnt sto maxIterationsPerStorage
+    nextSto = if not $ null $ nextStos then head nextStos else head $ Map.keys b           
+    nextStos = tail $ snd $ break (==sto) $ Map.keys b  
+      
+
 calculateNextBalanceStep ::
   (Ord a, Arith.Constant a,Arith.Sum a,Arith.Product a, Show a,
    Ord node, Show node) =>
   Caller ->
   Balance node a ->
-  BestForcingPair node a -> -- Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
+  BestForcingPair a -> -- Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
   (ForcingStep node a) ->
   node ->
   (ForcingStep node a)
@@ -158,12 +202,14 @@ calculateNextBalanceStep caller balMap (BestForcingPair bestPair) stepMap sto =
 rememberBestBalanceForcing ::
   (Arith.Constant a, Ord a, Ord node, Show node, Show a) =>
   Caller ->
-   (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
+  BestForcingPair a ->
+   --(Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
   (Forcing node a, Balance node a) ->
   node ->
-  (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
-rememberBestBalanceForcing caller (neg, pos) (forceMap, balMap) sto =
-  if bal >= Arith.zero then (neg, g pos) else (h neg, pos)
+  BestForcingPair a
+--   (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
+rememberBestBalanceForcing caller (BestForcingPair (neg, pos)) (forceMap, balMap) sto = 
+  BestForcingPair $ if bal >= Arith.zero then (neg, g pos) else (h neg, pos)
   where
     bal = lookupStorageBalance (caller |> nc "rememberBestBalanceForcing") balMap sto
     force = lookupBalanceForcing (caller |> nc "rememberBestBalanceForcing") forceMap sto
