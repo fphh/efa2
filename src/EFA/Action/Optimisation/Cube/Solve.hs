@@ -73,7 +73,7 @@ solve ::
    DV.Singleton vec,
    DV.Length vec) =>
   Topo.Topology node -> 
-  EtaFunctions.FunctionMap node a ->  
+  EtaFunctions.FunctionMap node (Interp.Val a) ->  
   Collection.Collection (DemandAndControl.Var node) (CubeMap.Cube inst dim label vec a (Interp.Val a)) -> 
   FlowTopo.Section node (Result.Result (CubeMap.Data inst dim vec (Interp.Val a)))
 solve topology etaFunctions powerCollection =
@@ -88,7 +88,7 @@ given ::
    DV.Length vec, 
    Node.C node, 
    DV.Singleton vec)=>
-  EtaFunctions.FunctionMap node a ->
+  EtaFunctions.FunctionMap node (Interp.Val a) ->
   Collection.Collection (DemandAndControl.Var node) (CubeMap.Cube inst dim label vec a (Interp.Val a)) -> 
   EqSys.EquationSystem mode node s (CubeMap.Data inst dim vec (Interp.Val a))
 given etaFunctions  (Collection.Collection grid mp) =
@@ -105,10 +105,10 @@ makeEtaFuncGiven::
    mode (CubeMap.Data inst dim vec (Interp.Val a)), DV.Walker vec, DV.Storage vec (Interp.Val a),
    Ord node,
    Arith.Sum a, DV.Zipper vec) =>
-  EtaFunctions.FunctionMap node a ->  
+  EtaFunctions.FunctionMap node (Interp.Val a) ->  
   FlowTopo.Section node (EqAbs.Expression mode vars s (CubeMap.Data inst dim vec (Interp.Val a))) ->
   EqAbs.VariableSystem mode vars s
-makeEtaFuncGiven etaFunctions topo =
+makeEtaFuncGiven (EtaFunctions.FunctionMap etaFunctions) topo =
    Fold.fold $
    Map.mapWithKey
       (\position etaFunc ->

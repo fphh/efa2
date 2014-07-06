@@ -201,7 +201,7 @@ solve::
                    (Result.Result (CubeMap.Data 
                                    (Sweep.Search inst) dim1 vec1 (Interp.Val a))))) =>
   Topo.Topology node -> 
-  EtaFunctions.FunctionMap node a ->  
+  EtaFunctions.FunctionMap node (Interp.Val a) ->  
   Variation node inst dim dim1 vec vec1 a (Interp.Val a) ->
   FlowResult node inst dim dim1 vec vec1 a (Interp.Val a)
 solve topology etaFunctions (Variation varCube) = 

@@ -2,6 +2,7 @@
 
 module EFA.Action.Optimisation.Process where
 
+import qualified EFA.Action.Simulation as Simulation
 import qualified EFA.Action.Optimisation.Loop as Loop
 import qualified EFA.Action.Optimisation.Signal as OptSignal
 --import qualified EFA.Data.OD.Signal.Flow as SignalFlow
@@ -485,10 +486,13 @@ optimalOperation optimisationPerStateResults =
     balance = OptSignal.getBalance optimalStorageSignals 
   
   
-{-  
+ 
 -- | simulate and provide EFA with new LifeCycle-Efficiencies
-simulateAndAnalyse ::   
--}
+simulateAndAnalyse optimalOperation = 
+  where 
+    optimalOperation = accessControlSignals optimalOperation
+    sim = Simulation.solve optimalControlSignals
+
   
 
 

@@ -44,10 +44,12 @@ data Conditioning a = Conditioning (Map.Map CurveName ([Curve.ModifyOps a]))
 data EtaAssignMap node a = EtaAssignMap (Map.Map (TopoIdx.Position node) 
                            (Conf ((Interp.Method a, Interp.ExtrapMethod a), ([Curve.ModifyOps a],CurveName))))
 
-type FunctionMap node a = Map.Map (TopoIdx.Position node) (Interp.Val a -> Interp.Val a)
+newtype FunctionMap node a = FunctionMap (Map.Map (TopoIdx.Position node) (a -> a))
 
 -- makeEtaAssignMap :: EtaAssign node -> Conditioning a -> Configuration a -> Conditioning a
 
+lookupEtaFunction :: (Ord node) => FunctionMap node a -> TopoIdx.Position node -> Maybe (a -> a)
+lookupEtaFunction (FunctionMap m) pos = Map.lookup pos m
 
 makeEtaFunctions :: 
   (Arith.Product a,
@@ -66,8 +68,8 @@ makeEtaFunctions ::
   Caller ->
   EtaAssignMap node a -> 
   Curve.Map String inst String vec a a ->  
-  FunctionMap node a
-makeEtaFunctions caller (EtaAssignMap assignMap) etaCurves = Map.mapWithKey f assignMap    
+  FunctionMap node (Interp.Val a)
+makeEtaFunctions caller (EtaAssignMap assignMap) etaCurves = FunctionMap $ Map.mapWithKey f assignMap    
   where f _ assign = 
           let -- TODO:: Insert errror message as Map.lookup        
             g (ops,name) =  (Curve.modify ops $ 
@@ -121,6 +123,6 @@ etaFunctionWithOneCurve caller ((inmethod,exmethod),curve) x =
 
 toCurveMap :: 
   (DV.Walker vec, DV.Storage vec (Interp.Val a),DV.Storage vec a) => 
-  Strict.Axis inst label vec a -> FunctionMap node a -> Curve.Map (TopoIdx.Position node) inst label vec a (Interp.Val a)
-toCurveMap axis functionMap = Map.map f functionMap
+  Strict.Axis inst label vec a -> FunctionMap node (Interp.Val a) -> Curve.Map (TopoIdx.Position node) inst label vec a (Interp.Val a)
+toCurveMap axis (FunctionMap functionMap) = Map.map f functionMap
   where f function = Curve.Curve axis (DV.map function $ DV.map Interp.Inter $ Strict.getVec axis)
