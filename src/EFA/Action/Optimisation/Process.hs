@@ -2,15 +2,17 @@
 
 module EFA.Action.Optimisation.Process where
 
+import qualified EFA.Action.EenergyFlowAnalysis as EFA
 import qualified EFA.Action.Simulation as Simulation
 import qualified EFA.Action.Optimisation.Loop as Loop
 import qualified EFA.Action.Optimisation.Signal as OptSignal
---import qualified EFA.Data.OD.Signal.Flow as SignalFlow
+import qualified EFA.Data.OD.Signal.Flow as SignalFlow
 import qualified EFA.Data.OD.Curve as Curve
 import qualified EFA.Action.Flow.Balance as Balance
+import qualified EFA.Data.OD.Signal.Chop as DataChop
 
 import EFA.Utility(Caller,
-                  -- merror,(|>),
+                  merror,(|>),
                    ModuleName(..),FunctionName, genCaller)
 import qualified EFA.Action.Optimisation.Sweep as Sweep
 --import qualified EFA.Action.Optimisation.Signal as OptSignal
@@ -40,7 +42,7 @@ import qualified EFA.Action.DemandAndControl as DemandAndControl
 
 --import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as TopoQty
---import qualified EFA.Flow.Topology.Index as XIdx
+import qualified EFA.Flow.Topology.Index as XIdx
 --import qualified EFA.Flow.Topology.Variable as Variable
 --import EFA.Flow.Topology.Absolute ( (.=), 
 --                                    (=.=) )
@@ -59,7 +61,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
 
---import qualified EFA.Signal.Vector as SV
+import qualified EFA.Signal.Vector as SV
 --import qualified EFA.Signal.Signal as Sig
 --import qualified EFA.Signal.Record as Record
 --import qualified EFA.Signal.Data as Data
@@ -69,7 +71,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Action.Utility as ActUt
 import qualified Data.Map as Map
 --import qualified Data.Foldable as Fold
--- import Data.Map as (Map)
+
 --import Data.Monoid((<>))
 
 --import qualified EFA.Flow.Topology.Index as TopoIdx
@@ -82,7 +84,7 @@ import qualified EFA.Value.Type as Type
 -- import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 --import qualified EFA.Action.DemandAndControl as DemandAndControl
---import qualified Data.Maybe as Maybe
+import qualified Data.Maybe as Maybe
 --import Control.Applicative as Applicative
 -- import qualified EFA.Graph.Topology as Topo
 --import qualified EFA.Flow.Topology as FlowTopo
@@ -109,7 +111,7 @@ data SystemData inst node etaVec a =
   SystemData
   {accessRawEfficiencyCurves :: Curve.Map String inst String etaVec a a,
    accessEtaAssignMap :: EtaFunctions.EtaAssignMap node a,
-   accessFunctionMap :: EtaFunctions.FunctionMap node a
+   accessFunctionMap :: EtaFunctions.FunctionMap node (Interp.Val a)
   }
    
 data TestSet node inst demDim sigVec a = 
@@ -156,6 +158,12 @@ data OptimalOperation node inst vec a = OptimalOperation {
   accessOptimalControlSignals :: OptSignal.OptimalControlSignals node inst vec a (Interp.Val a),
   accessOptimalStorageSignals :: OptSignal.OptimalStoragePowers node inst vec a (Interp.Val a),
   accessBalance :: Balance.Balance node (Maybe (Interp.Val a))}
+
+
+data SimulationAndAnalysis node inst sigVec a = 
+  SimulationAndAnalysis
+  {accessSimulation :: Simulation.Simulation node inst sigVec a,
+   accessAnalysis :: EFA.EnergyFlowAnalysis node inst sigVec a}   
 
 data OutputSet = OutputSet {
   accessOutPutFolder :: String}
@@ -269,8 +277,6 @@ makeSweep ::
                       (CubeMap.Cube (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a (Interp.Val a))),
    DV.Singleton srchVec,
    DV.Length srchVec) =>
---  Topo.Topology node ->
---  EtaFunctions.FunctionMap node a ->
   System node ->
   SystemData inst node etaVec a ->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
@@ -488,11 +494,66 @@ optimalOperation optimisationPerStateResults =
   
  
 -- | simulate and provide EFA with new LifeCycle-Efficiencies
-simulateAndAnalyse optimalOperation = 
+simulateAndAnalyse :: 
+  (Arith.ZeroTestable
+   (SignalFlow.Data inst sigVec (Interp.Val a)),
+   Arith.Sum (SignalFlow.Data inst sigVec a),
+   Arith.Product (SignalFlow.Data inst sigVec (Interp.Val a)),
+   Arith.Constant a,
+   Node.C node,
+   DV.Walker sigVec,
+   DV.Storage sigVec a,
+   DV.Storage sigVec (Interp.Val a),
+   DV.Length sigVec,
+   DV.FromList sigVec, 
+   Ord a,
+   DV.Slice sigVec,
+   DV.Len (sigVec (Interp.Val a)), 
+   Eq (sigVec a),
+   Show (sigVec a),
+   Show a,
+   Show node,
+   SV.Zipper sigVec,
+   SV.Walker sigVec,
+   SV.Storage sigVec Bool,
+   SV.Storage sigVec a,
+   SV.Singleton sigVec,
+   SV.Convert [] sigVec,
+   SV.Convert sigVec [],
+   DV.Storage sigVec (ND.Data dim (Interp.Val a)),
+   Arith.ZeroTestable a) =>
+  Caller -> 
+  EFA.EFAParams node a ->
+  Topo.Topology node -> 
+  [DemandAndControl.DemandVar node] ->
+  EtaFunctions.FunctionMap node (Interp.Val a) -> 
+  OptimalOperation node inst sigVec a -> 
+  OptSignal.DemandCycle node inst dim sigVec a (Interp.Val a) ->
+  SimulationAndAnalysis  node inst sigVec a
+simulateAndAnalyse caller efaParams topology demandVars etaFunctions optimalOperation demandCycle = SimulationAndAnalysis sim efa
   where 
-    optimalOperation = accessControlSignals optimalOperation
-    sim = Simulation.solve optimalControlSignals
-
+    optimalControlSignals = accessOptimalControlSignals optimalOperation
+    given = makeGivenRecord (caller |> nc "simulateAndAnalyse") 
+            (OptSignal.convertToDemandCycleMap demandCycle demandVars) optimalControlSignals
+    sim = Simulation.simulation caller topology etaFunctions given
+    sequenceFlowRecord = DataChop.chopHRecord (caller |> nc "simulateAndAnalyse") (Simulation.accessPowerRecord sim)
+    sequenceFlowRecordOld = DataChop.convertToOld sequenceFlowRecord
+    efa = EFA.energyFlowAnalysisOld topology efaParams sequenceFlowRecordOld
   
 
-
+makeGivenRecord :: Ord node =>
+  Caller ->
+  OptSignal.DemandCycleMap node inst sigVec a (Interp.Val a) ->
+  OptSignal.OptimalControlSignals node inst sigVec a (Interp.Val a) ->
+  SignalFlow.HRecord (XIdx.Position node) inst String sigVec a (Interp.Val a) 
+makeGivenRecord caller (OptSignal.DemandCycleMap demand) (OptSignal.OptimalControlSignals control) = SignalFlow.HRecord time (Map.map SignalFlow.getData m)
+  where 
+    (SignalFlow.Signal time _, _) = Maybe.fromMaybe err $ Map.minView demand
+    err = merror caller modul "makeGivenRecord" "empty DemandCycle"
+    m = Map.union (Map.mapKeys g control)
+                  (Map.mapKeys h demand)
+    -- TODO:: Variablen in die Generierung des Simulationsgleichungssystems reinschleifen !!    
+    g (DemandAndControl.ControlPower (XIdx.Power x)) = x
+    g _ = error "makeGivenRecord -- not yet supported"
+    h (DemandAndControl.DemandPower (XIdx.Power x)) = x
+    h _ = error "makeGivenRecord -- not yet supported"

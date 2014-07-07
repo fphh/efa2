@@ -124,7 +124,6 @@ seqFlowGraphFromFlowTopos ::
 seqFlowGraphFromFlowTopos =
    SeqFlow.sequenceGraph . Sequ.fromList
 
-
 checkDetermined :: String -> Result a -> a
 checkDetermined name rx =
    case rx of

@@ -42,7 +42,7 @@ instance (Show label,Ref.ToData (vec a)) =>
 
 newtype Idx = Idx {getInt :: Int} deriving (Show,Ord,Eq)
 
-data Section = Section Idx Idx deriving (Show,Eq)
+data Range = Range Idx Idx deriving (Show,Eq)
 
 instance Ref.ToData Idx where
   toData (Idx x) = Ref.StringData "Idx" (show x)
@@ -74,6 +74,10 @@ len ::
   Axis inst label vec a -> Int
 len (Axis _ _ vec) = DV.length vec
 
+fromList :: 
+  (Ord a, DV.Zipper vec, DV.Storage vec a, DV.Storage vec Bool,
+   DV.Singleton vec, DV.FromList vec) =>
+  Caller -> label -> Type.Dynamic -> [a] -> Axis inst label vec a
 fromList caller label typ xs = fromVec caller label typ $ DV.fromList xs 
 
 fromVec ::

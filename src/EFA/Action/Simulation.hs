@@ -8,11 +8,13 @@ module EFA.Action.Simulation where
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.Vector as DV
+import qualified EFA.Value.Type as Type
 import EFA.Action.Utility (quantityTopology)
 -- import qualified EFA.Application.Optimisation.Sweep as Sweep
 -- import EFA.Application.Optimisation.Params (Name(Name))
 -- import qualified EFA.Application.Optimisation.Params as Params
-
+import qualified EFA.Flow.Topology.Quantity as TopoQty
+import qualified EFA.Flow.Topology.Record as TopoRecord
 import qualified EFA.Flow.Topology.Absolute as EqSys
 import qualified EFA.Flow.Topology.Quantity as FlowTopo
 import qualified EFA.Flow.Topology.Index as XIdx
@@ -28,8 +30,8 @@ import EFA.Equation.Result (Result)
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-
-
+import qualified EFA.Flow.Topology as FlowTopoPlain
+import qualified EFA.Action.Utility as ActUt
 --import qualified EFA.Signal.Vector as SV
 --import qualified EFA.Signal.Signal as Sig
 --import qualified EFA.Signal.Record as Record
@@ -58,6 +60,36 @@ modul = ModuleName "Simulation"
 
 nc :: FunctionName -> Caller
 nc = genCaller modul
+
+
+data Simulation node inst sigVec a = 
+  Simulation 
+  {accessFlowResult:: FlowTopo.Section node (EFA.Equation.Result.Result (SignalFlow.Data inst sigVec (Interp.Val a))),
+   accessPowerRecord :: SignalFlow.HRecord (XIdx.Position node) inst String sigVec a (Interp.Val a)}
+
+
+simulation ::
+  (Arith.ZeroTestable (SignalFlow.Data inst sigVec (Interp.Val a)),
+ Arith.Sum (SignalFlow.Data inst sigVec a),
+ Arith.Product (SignalFlow.Data inst sigVec (Interp.Val a)),
+ Arith.Constant a,
+ Node.C node,
+ DV.Walker sigVec,
+ DV.Storage sigVec a,
+ DV.Storage sigVec (Interp.Val a),
+ DV.Length sigVec,
+ DV.FromList sigVec) =>
+ Caller ->
+ Topo.Topology node ->
+ EtaFunctions.FunctionMap node (Interp.Val a) ->
+ SignalFlow.HRecord (XIdx.Position node) inst String sigVec a (Interp.Val a) ->
+ Simulation node inst sigVec a
+simulation caller topology etaFunctions given = Simulation flow powerRecord
+  where 
+    flow = solve caller topology etaFunctions given
+    powerRecord = envToPowerRecord flow
+  
+
 
 solve ::
   (Node.C node, 
@@ -133,3 +165,30 @@ makeEtaFuncGiven (EtaFunctions.FunctionMap etaFunctions) topo =
                (\flow -> (FlowTopo.flowEta flow, FlowTopo.flowPowerIn  flow))
                id position topo))
       etaFunctions
+
+-- TODO :: Move to better place ?
+envToPowerRecord ::
+  (DV.Walker vec,Arith.Constant a,
+   DV.Storage vec (Interp.Val a),
+   DV.Storage vec a,
+   Ord node) =>
+  TopoQty.Section node (Result (SignalFlow.Data inst vec (Interp.Val a))) ->
+  SignalFlow.HRecord (XIdx.Position node) inst String vec a (Interp.Val a)
+envToPowerRecord =
+  sectionToPowerRecord
+  . TopoQty.mapSection (ActUt.checkDetermined "envToPowerRecord")
+
+-- TODO :: Move to better place ?
+-- TODO :: Time has same format as Vectors hence has to be stored as signal Vector
+sectionToPowerRecord ::
+  (DV.Walker vec,
+   DV.Storage vec a,
+   Arith.Constant a,
+   DV.Storage vec (Interp.Val a)) =>
+   (Ord node) =>
+   FlowTopo.Section node (SignalFlow.Data inst vec (Interp.Val a)) ->
+   SignalFlow.HRecord (XIdx.Position node) inst String vec a (Interp.Val a)
+sectionToPowerRecord (FlowTopoPlain.Section (SignalFlow.Data time) topo) =
+   SignalFlow.HRecord (Strict.Axis "Time" Type.T (DV.map Interp.unpack time)) $
+   TopoRecord.topologyToPowerMap topo
+
