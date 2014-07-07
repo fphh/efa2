@@ -64,6 +64,13 @@ instance (Arith.Product a, Arith.Constant a) =>
   constOne _ = Inter $ Arith.one
   {-# INLINE constOne #-}
 
+instance (Eq a, Product a, Constant a) => Arith.ZeroTestable (Val a) where
+  allZeros (Invalid _) = False
+  allZeros x = Arith.zero == unpack x
+  coincidingZeros (Invalid _) _ = False
+  coincidingZeros _ (Invalid _) = False
+  coincidingZeros x y = Arith.zero == unpack x && Arith.zero == unpack y
+
 instance (Constant a) => Constant (Val a) where
    zero = (Inter Arith.zero)
    fromInteger x = Inter $ Arith.fromInteger x

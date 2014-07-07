@@ -105,19 +105,19 @@ data System node =
   {accessLabledEdgeList :: ActUt.LabeledEdgeList node,
    accessTopology :: Topo.Topology node, 
    accessLabledTopology :: Topo.LabeledTopology node
-  }
+  } deriving Show
 
 data SystemData inst node etaVec a = 
   SystemData
   {accessRawEfficiencyCurves :: Curve.Map String inst String etaVec a a,
    accessEtaAssignMap :: EtaFunctions.EtaAssignMap node a,
    accessFunctionMap :: EtaFunctions.FunctionMap node (Interp.Val a)
-  }
+  } 
    
 data TestSet node inst demDim sigVec a = 
   TestSet
   {accessDemandCycle ::  OptSignal.DemandCycle node inst demDim sigVec a a,
-   accessInitialSoc :: Balance.Balance node a}
+   accessInitialSoc :: Balance.Balance node a} 
       
 data OptiSet node inst demDim srchDim demVec srchVec sigVec a = 
   OptiSet 
@@ -497,6 +497,9 @@ optimalOperation optimisationPerStateResults =
 simulateAndAnalyse :: 
   (Arith.ZeroTestable
    (SignalFlow.Data inst sigVec (Interp.Val a)),
+   Eq (sigVec (Interp.Val a)),
+   SV.Storage sigVec (Interp.Val a),
+   Arith.ZeroTestable (Interp.Val a),
    Arith.Sum (SignalFlow.Data inst sigVec a),
    Arith.Product (SignalFlow.Data inst sigVec (Interp.Val a)),
    Arith.Constant a,
@@ -520,40 +523,35 @@ simulateAndAnalyse ::
    SV.Singleton sigVec,
    SV.Convert [] sigVec,
    SV.Convert sigVec [],
-   DV.Storage sigVec (ND.Data dim (Interp.Val a)),
+   DV.Storage sigVec (ND.Data dim a),
    Arith.ZeroTestable a) =>
   Caller -> 
-  EFA.EFAParams node a ->
-  Topo.Topology node -> 
+  System node ->
+  EFA.EFAParams node (Interp.Val a) ->
+  SystemData inst node etaVec a ->
   [DemandAndControl.DemandVar node] ->
-  EtaFunctions.FunctionMap node (Interp.Val a) -> 
   OptimalOperation node inst sigVec a -> 
-  OptSignal.DemandCycle node inst dim sigVec a (Interp.Val a) ->
+  OptSignal.DemandCycle node inst dim sigVec a a ->
   SimulationAndAnalysis  node inst sigVec a
-simulateAndAnalyse caller efaParams topology demandVars etaFunctions optimalOperation demandCycle = SimulationAndAnalysis sim efa
+simulateAndAnalyse caller system efaParams systemData demandVars optimalOperation demandCycle = SimulationAndAnalysis sim efa
   where 
+    topology = accessTopology system
+    etaFunctions = accessFunctionMap systemData
     optimalControlSignals = accessOptimalControlSignals optimalOperation
-    given = makeGivenRecord (caller |> nc "simulateAndAnalyse") 
+    given = OptSignal.makeGivenRecord (caller |> nc "simulateAndAnalyse") 
             (OptSignal.convertToDemandCycleMap demandCycle demandVars) optimalControlSignals
     sim = Simulation.simulation caller topology etaFunctions given
     sequenceFlowRecord = DataChop.chopHRecord (caller |> nc "simulateAndAnalyse") (Simulation.accessPowerRecord sim)
     sequenceFlowRecordOld = DataChop.convertToOld sequenceFlowRecord
     efa = EFA.energyFlowAnalysisOld topology efaParams sequenceFlowRecordOld
   
+{-
+balanceLoopFunction testSet optiSet sweepResults sweepEvaluationResults storageList balanceForcingMap controlVars = 
+  where
+    optimisationPerStateResults = optimisationPerState testSet optiSet sweepResults sweepEvaluationResults 
+                                  storageList balanceForcingMap controlVars
+    optimalOperation = optimalOperation optimisationPerStateResults
 
-makeGivenRecord :: Ord node =>
-  Caller ->
-  OptSignal.DemandCycleMap node inst sigVec a (Interp.Val a) ->
-  OptSignal.OptimalControlSignals node inst sigVec a (Interp.Val a) ->
-  SignalFlow.HRecord (XIdx.Position node) inst String sigVec a (Interp.Val a) 
-makeGivenRecord caller (OptSignal.DemandCycleMap demand) (OptSignal.OptimalControlSignals control) = SignalFlow.HRecord time (Map.map SignalFlow.getData m)
-  where 
-    (SignalFlow.Signal time _, _) = Maybe.fromMaybe err $ Map.minView demand
-    err = merror caller modul "makeGivenRecord" "empty DemandCycle"
-    m = Map.union (Map.mapKeys g control)
-                  (Map.mapKeys h demand)
-    -- TODO:: Variablen in die Generierung des Simulationsgleichungssystems reinschleifen !!    
-    g (DemandAndControl.ControlPower (XIdx.Power x)) = x
-    g _ = error "makeGivenRecord -- not yet supported"
-    h (DemandAndControl.DemandPower (XIdx.Power x)) = x
-    h _ = error "makeGivenRecord -- not yet supported"
+
+etaLoopFunction = 
+-}  

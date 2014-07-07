@@ -3,6 +3,7 @@
 
 module Main where
 
+import qualified EFA.Action.EenergyFlowAnalysis as EFA
 import qualified EFA.Action.Optimisation.Process as Process
 import qualified EFA.Action.Optimisation.Signal as OptSignal
 import qualified EFA.Action.DemandAndControl as DemandAndControl
@@ -162,19 +163,31 @@ etaAssignMap = EtaFunctions.EtaAssignMap $ Map.fromList $
    (TopoIdx.Position Rest Network,
     EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "rest"))) : 
    []
+
+efaParams :: EFA.EFAParams Node (Interp.Val Double)
+efaParams = EFA.EFAParams (EFA.InitStorageState $ Map.fromList [(Water,Interp.Inter 1.0)])
+                             (EFA.InitStorageSeq $ Map.fromList [(Water,Interp.Inter 1.0)])
+
 {-
 demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
 demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.5..1.1]), -- [-1.1,-0.6..(-0.1)]),
                     (TopoIdx.ppos Rest Network,Type.P,[0.1,0.5..1.1])] -- [-1.1,-0.6..(-0.1)])]
 -}
-{-
+
 controlVars :: [DemandAndControl.ControlVar Node]
 controlVars = [DemandAndControl.ControlPower $ TopoIdx.Power (TopoIdx.Position LocalNetwork Gas), 
                DemandAndControl.ControlPower $ TopoIdx.Power (TopoIdx.Position Network Water)]
 
+demandVars :: [DemandAndControl.DemandVar Node]
+demandVars = [DemandAndControl.DemandPower $ TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork), 
+               DemandAndControl.DemandPower $ TopoIdx.Power (TopoIdx.Position Rest Network)]
+
 storageList :: [Node]              
 storageList = [Water]              
--}
+
+demandCycle :: OptSignal.DemandCycle Node Base ND.Dim2 [] Double Double
+demandCycle = OptSignal.DemandCycle $ SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5])]
+
 
 demandVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 demandVariation  = 
@@ -203,9 +216,6 @@ main :: IO()
 main = do
   
   let system = Process.buildSystem edgeList
-      
-  let demandCycle = OptSignal.DemandCycle $ SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5])]
-        :: OptSignal.DemandCycle Node Base ND.Dim2 [] Double Double
   
   let testSet = Process.buildTestSet demandCycle initialBalanceMap 
       
@@ -223,9 +233,18 @@ main = do
                         
   let evalSweep = Process.evaluateSweep caller lifeCycleMap sweep
       
-  let     
+  let optPerState = Process.optimisationPerState testSet optiSet sweep evalSweep  storageList balanceForcingMap controlVars
+--        :: Process.OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a
      
-  print "Hallo"    
+  let optimalOperation = Process.optimalOperation optPerState
+      
+  let simEfa = Process.simulateAndAnalyse caller system efaParams systemData demandVars optimalOperation demandCycle    
+          :: Process.SimulationAndAnalysis Node Base [] Double
+             
+  let (Process.OptimalOperation _ _ _ balance)  = optimalOperation
+  let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
+  print balance
+  print rec
   
 {-  let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) sweepCube
   let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) sweepCube

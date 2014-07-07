@@ -2,6 +2,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE  FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-} 
+{-# LANGUAGE UndecidableInstances #-} 
+
 module EFA.Data.OD.Signal.Flow where
 
 --import qualified EFA.Value as Value
@@ -58,14 +60,18 @@ data Signal inst label vec a b = Signal {getTime :: Strict.Axis inst label vec a
                                                                               
 data HRecord key inst label vec a b = 
   HRecord {getHTime :: Strict.Axis inst label vec a,
-           getHMap :: Map.Map key (Data inst vec b)}
+           getHMap :: Map.Map key (Data inst vec b)} deriving Show
                                                
 data VRecord key inst label vec vec1 a b = 
   VRecord {getVRTime :: Strict.Axis inst label vec a,
            getVRMap ::  Map.Map key Signal.SampleIdx,
            getVRSignal :: Data inst vec (Signal.Samples vec1 b)}
                                                                               
-
+mapHRecord :: 
+  (Data inst vec b -> Data inst vec c) ->
+  HRecord key inst label vec a b ->
+  HRecord key inst label vec a c
+mapHRecord f (HRecord t m) = HRecord t $ Map.map f m   
 
 fromList :: 
   (Ord a,
@@ -109,6 +115,13 @@ apply2 :: ( vec b  ->  vec c ->  vec d) ->
             Signal inst label vec a d
 apply2 f (Signal axis (Data vec)) (Signal _ (Data vec1)) = Signal axis $ Data $ f vec vec1
 
+apply2Data :: (vec a  ->  vec b ->  vec c) ->
+              Data inst vec a ->
+              Data inst vec b ->
+              Data inst vec c
+apply2Data f (Data vec) (Data vec1) = Data $ f vec vec1
+
+
 happly' :: (Data inst vec b -> c) -> HRecord key inst label vec a b -> Map.Map key c
 happly' f (HRecord _ m) = Map.map f $ m 
 
@@ -137,6 +150,16 @@ zipWith ::
   Signal inst label vec a d
 zipWith f signal signal1 = apply2 (DV.zipWith f) signal signal1
 
+zipWithData ::  
+  (DV.Zipper vec,
+   DV.Storage vec c,
+   DV.Storage vec b,
+   DV.Storage vec a) =>
+  (a -> b -> c) ->
+  Data inst vec a ->
+  Data inst vec b ->
+  Data inst vec c
+zipWithData f dat dat1 = apply2Data (DV.zipWith f) dat dat1
 
 foldl :: 
   (DV.Walker vec, DV.Storage vec b) => 
@@ -240,3 +263,41 @@ signalMap2HRecord caller m = HRecord t $ Map.map getData m
  where
    ((Signal t _),_) = Maybe.fromMaybe err $ Map.minView m
    err = merror caller modul "signalMap2HRecord" "empty signal map"
+   
+   
+instance (DV.Zipper vec, DV.Storage vec a, Sum a, DV.Walker vec) => Arith.Sum (Data inst vec a) where
+  x ~+ y = zipWithData (~+) x y
+  {-# INLINE (~+) #-}
+  
+  x ~- y = zipWithData (~-) x y
+  {-# INLINE (~-) #-}
+
+  negate x = mapData Arith.negate x
+  {-# INLINE negate #-}
+
+instance (DV.Zipper vec, DV.Storage vec a, Sum a, Product a, DV.Walker vec,Constant a) =>
+         Arith.Product (Data inst vec a) where
+  x ~* y =  zipWithData (~*) x y
+  {-# INLINE (~*) #-}
+
+  x ~/ y =  zipWithData (~/) x y
+  {-# INLINE (~/) #-}
+
+  recip x = mapData Arith.recip x
+  {-# INLINE recip #-}
+
+  constOne x = mapData (\_ -> Arith.one) x
+  {-# INLINE constOne #-}
+
+instance 
+  (Eq a,
+   DV.Zipper vec,
+   Product a,
+   Constant a,
+   DV.Storage vec a,
+   DV.Singleton vec,
+   DV.Storage vec (a, a)) => 
+  Arith.ZeroTestable (Data inst vec a) where
+  allZeros (Data x) = DV.all (==Arith.zero) x  
+  coincidingZeros (Data x) (Data y) = DV.any (\(a,b)-> a==Arith.zero && b==Arith.zero) $ DV.zip x y
+  

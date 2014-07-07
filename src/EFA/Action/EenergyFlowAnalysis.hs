@@ -52,7 +52,7 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 --import qualified EFA.Flow.Sequence.QuantityNew as SeqQtyNew
 --import qualified EFA.Flow.Topology.RecordNew as TopoRecordNew
 
-
+import qualified EFA.Data.Interpolation as Interp
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
@@ -74,7 +74,7 @@ import Data.Monoid (Monoid, mempty, (<>))
 --import qualified EFA.Flow.State.Absolute as StateAbs
 --import qualified EFA.Flow.Storage.EquationSystem as StorageEqSys
 
-import qualified EFA.Signal.Vector as Vec
+-- import qualified EFA.Signal.Vector as Vec
                                       
 import EFA.Utility(Caller,
 --                   merror,(|>),
@@ -101,10 +101,10 @@ data EFAParams node a = EFAParams
   
 
 data EnergyFlowAnalysis node inst sigVec a = EnergyFlowAnalysis {
-    accessSeqFlowRecord :: Sequ.List (Record.FlowRecord node sigVec a),
+    accessSeqFlowRecord :: Sequ.List (Record.FlowRecord node sigVec (Interp.Val a)),
     accessSeqFlowGraph ::
-      SeqQty.Graph node (Result (Data Nil a)) (Result (Data (sigVec :> Nil) a)),
-    accessStateFlowGraph :: EnvResult node (Data Nil a)}
+      SeqQty.Graph node (Result (Data Nil (Interp.Val a))) (Result (Data (sigVec :> Nil) (Interp.Val a))),
+    accessStateFlowGraph :: EnvResult node (Data Nil (Interp.Val a))}
 
 
 energyFlowAnalysisOld ::
@@ -113,13 +113,15 @@ energyFlowAnalysisOld ::
    SV.Storage sigVec a, SV.Convert sigVec [],
    SV.Walker sigVec, SV.Singleton sigVec,
    SV.Zipper sigVec,
+   SV.Storage sigVec (Interp.Val a),
    Show a, Node.C node,
-   Arith.ZeroTestable a,
+   Arith.ZeroTestable (Interp.Val a),
    Show (sigVec a),
+   Eq (sigVec (Interp.Val a)),
    Arith.Constant a) =>
   Topo.Topology node ->
-  EFAParams node a ->
-  Sequ.List (Record.FlowRecord node sigVec a) ->
+  EFAParams node (Interp.Val a) ->
+  Sequ.List (Record.FlowRecord node sigVec (Interp.Val a)) ->
   EnergyFlowAnalysis node inst sigVec a
 energyFlowAnalysisOld topology efaParams sequenceFlowsFilt = 
     let 
@@ -146,9 +148,9 @@ energyFlowAnalysisOld topology efaParams sequenceFlowsFilt =
   in EnergyFlowAnalysis sequenceFlowsFilt sequenceFlowGraph stateFlowGraph
 
 external ::
-  (Eq (v a), Arith.Constant a, Vec.Zipper v,
-   Vec.Storage v Bool, Arith.ZeroTestable a,
-  Vec.Walker v, Vec.Singleton v, Vec.Storage v a, Node.C node) =>
+  (Eq (v a), Arith.Constant a, SV.Zipper v,
+   SV.Storage v Bool, Arith.ZeroTestable a,
+  SV.Walker v, SV.Singleton v, SV.Storage v a, Node.C node) =>
   InitStorageState node a ->
   SeqQty.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a)) ->
   SeqQty.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a))

@@ -1,13 +1,26 @@
+{-# LANGUAGE FlexibleContexts #-}
+  
 module EFA.Data.OD.Signal.Chop where
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Data.Vector as DV
 import qualified EFA.Data.Sequence as DataSequ
+import qualified EFA.Data.Interpolation as Interp
+
+import qualified EFA.Signal.Sequence as Sequ
+import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Data as Data
+
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.OD.Signal.Flow as SignalFlow
+--import qualified EFA.Data.Interpolation as Interp
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.NonEmpty.Set as NonEmptySet
+
+import qualified EFA.Flow.Topology.Index as TopoIdx
+
 --import qualified EFA.Flow.SequenceState.Index as Idx
 
 
@@ -79,9 +92,24 @@ sliceHRecord (SignalFlow.HRecord t m) sectioning = DataSequ.fromRangeList $ map 
   where
     f range = (range,SignalFlow.HRecord t (Map.map (getSignalSlice range) m))
 
-    
+
+convertHRecord2Old :: 
+  (DV.Walker sigVec,
+   DV.Storage sigVec (Interp.Val a),
+   DV.Storage sigVec a) =>
+  SignalFlow.HRecord (TopoIdx.Position node) inst label sigVec a (Interp.Val a) ->   
+  Record.FlowRecord node sigVec (Interp.Val a)
+convertHRecord2Old (SignalFlow.HRecord (Strict.Axis _ _ time) m) = 
+  Record.Record (S.TC (Data.Data $ DV.map Interp.Inter time)) (Map.map f m)
+  where f (SignalFlow.Data vec) = S.TC (Data.Data vec)
+
+
 convertToOld :: 
-  DataSequ.List (SignalFlow.HRecord key inst label vec a b) ->
-  t 
-convertToOld x = undefined
+  (DV.Walker sigVec,
+   DV.Storage sigVec a,
+   DV.Storage sigVec (Interp.Val a)) =>
+  DataSequ.List (SignalFlow.HRecord (TopoIdx.Position node) inst label sigVec a (Interp.Val a)) ->
+  Sequ.List (Record.FlowRecord node sigVec (Interp.Val a))
+convertToOld sequ = DataSequ.toOldSequence convertHRecord2Old sequ
+
 

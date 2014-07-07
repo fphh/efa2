@@ -4,14 +4,16 @@ module EFA.Data.Sequence where
 
 import qualified EFA.Flow.SequenceState.Index as Idx
 
---import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.Sequence as Sequ
+
 --import qualified EFA.Signal.Data as D
 --import qualified EFA.Signal.Vector as V
 --import qualified EFA.Signal.Record as Record
 -- import EFA.Signal.Signal (Range(Range))
 
 import EFA.Data.Axis.Strict (Range(Range))
-
+import qualified EFA.Data.Axis.Strict as Strict
 import EFA.Equation.Arithmetic (Constant)
 
 import qualified EFA.Report.Report as Report
@@ -30,7 +32,7 @@ import Data.Foldable (Foldable, foldMap)
 import Data.Tuple.HT (mapPair)
 
 import Prelude hiding (unzip, length, filter,zip)
-
+import qualified Prelude as P
 
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
@@ -46,7 +48,14 @@ newtype List a = List [Section a] deriving (Show, Eq)
 data Section a = Section Idx.Section Range a
    deriving (Eq, Show)
 
+toOldSequence :: (a -> b) -> List a -> Sequ.List b 
+toOldSequence f (List xs) = Sequ.List $ P.map g xs 
+ where g (Section idx range x) = Sequ.Section idx (toOldRange range) (f x)
 
+toOldRange :: Range -> S.Range
+toOldRange (Range (Strict.Idx idx) (Strict.Idx idx1)) = 
+  S.Range (S.SignalIdx idx) (S.SignalIdx idx1)                                            
+                                             
 -- type instance D.Value (List a) = D.Value a
 
 instance Functor List where

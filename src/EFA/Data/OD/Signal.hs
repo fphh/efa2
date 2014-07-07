@@ -3,7 +3,7 @@ module EFA.Data.OD.Signal where
 -- import qualified Data.NonEmpty as NonEmpty
 import qualified EFA.Data.Vector as DV
 
-newtype SampleIdx = SampleIdx Int
+newtype SampleIdx = SampleIdx Int deriving Show
 data Samples vec a = Samples (vec a) deriving Show
 
 mapSamples :: 

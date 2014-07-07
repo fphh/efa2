@@ -9,6 +9,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Action.Flow.Balance as Balance
+import qualified EFA.Flow.Topology.Index as XIdx
 
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Flow.SequenceState.Index as Idx
@@ -43,13 +44,14 @@ data StateForcing = StateForcingOn | StateForcingOff deriving (Show)
 newtype DemandCycle node inst dim vec a b = 
   DemandCycle (SignalFlow.Signal inst String vec a (ND.Data dim b))
 
-newtype DemandCycleRec node inst vec a b = DemandCycleRec (SignalFlow.HRecord (DemandAndControl.DemandVar node) inst String vec a b)
+newtype DemandCycleRec node inst vec a b = 
+  DemandCycleRec (SignalFlow.HRecord (DemandAndControl.DemandVar node) inst String vec a b) 
 
 newtype DemandCycleMap node inst vec a b = 
-  DemandCycleMap (Map.Map (DemandAndControl.DemandVar node) (SignalFlow.Signal inst String vec a b))
+  DemandCycleMap (Map.Map (DemandAndControl.DemandVar node) (SignalFlow.Signal inst String vec a b)) deriving Show
 
 newtype SupportSignal node inst dim  vec a b = 
-  SupportSignal (SignalFlow.Signal inst String vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b))))
+  SupportSignal (SignalFlow.Signal inst String vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b)))) 
   
 newtype OptimalityPerStateSignal node inst vec a b = OptimalityPerStateSignal
         (SignalFlow.Signal inst String vec a (ValueState.Map (FlowOpt.OptimalityValues b)))
@@ -355,3 +357,28 @@ convertToDemandCycleMap (DemandCycle sig) demandVars =
   DemandCycleMap (Map.fromList $ zip demandVars $ map f [0..(length demandVars)-1])
   where 
     f index = SignalFlow.map (flip ND.unsafeLookup (ND.Idx index)) sig
+    
+    
+makeGivenRecord :: 
+  (Ord node, 
+   DV.Walker sigVec,
+   DV.Storage sigVec a,
+   DV.Storage sigVec (Interp.Val a)) =>
+  Caller ->
+  DemandCycleMap node inst sigVec a a ->
+  OptimalControlSignals node inst sigVec a (Interp.Val a) ->
+  SignalFlow.HRecord (XIdx.Position node) inst String sigVec a (Interp.Val a) 
+makeGivenRecord caller (DemandCycleMap demand) (OptimalControlSignals control) = 
+  SignalFlow.HRecord time (Map.map SignalFlow.getData m)
+  where 
+    (SignalFlow.Signal time _, _) = Maybe.fromMaybe err $ Map.minView demand
+    err = merror caller modul "makeGivenRecord" "empty DemandCycle"
+    demandInter = Map.map (SignalFlow.map Interp.Inter) demand 
+    m = Map.union (Map.mapKeys g control)
+                  (Map.mapKeys h demandInter)
+    -- TODO:: Variablen in die Generierung des Simulationsgleichungssystems reinschleifen !!    
+    g (DemandAndControl.ControlPower (XIdx.Power x)) = x
+    g _ = error "makeGivenRecord -- not yet supported"
+    h (DemandAndControl.DemandPower (XIdx.Power x)) = x
+    h _ = error "makeGivenRecord -- not yet supported"
+   
