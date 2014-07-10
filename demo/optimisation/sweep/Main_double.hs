@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Main where
-
+import qualified EFA.Action.Optimisation.Output as OP
 import qualified EFA.Action.EenergyFlowAnalysis as EFA
 import qualified EFA.Action.Optimisation.Process as Process
 import qualified EFA.Action.Optimisation.Signal as OptSignal
@@ -14,6 +14,7 @@ import qualified EFA.Action.EtaFunctions as EtaFunctions
 --import qualified EFA.Data.OrdData as OrdData
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.Vector as DV
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 import qualified EFA.Data.Plot.D2 as PlotD2
 import qualified EFA.Data.Plot.D2.Curve as PlotCurve
@@ -34,6 +35,7 @@ import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Data.OD.Signal.Flow as SignalFlow
 
 --import qualified EFA.Data.OD.Signal.Record as SignalRecord
+import EFA.Utility.Async (concurrentlyMany_)
 
 import EFA.Utility(Caller,
                    --merror,(|>),
@@ -168,12 +170,6 @@ efaParams :: EFA.EFAParams Node (Interp.Val Double)
 efaParams = EFA.EFAParams (EFA.InitStorageState $ Map.fromList [(Water,Interp.Inter 1.0)])
                              (EFA.InitStorageSeq $ Map.fromList [(Water,Interp.Inter 1.0)])
 
-{-
-demandGrid :: Grid.Grid (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double 
-demandGrid = Grid.create (nc "Main") [(TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.5..1.1]), -- [-1.1,-0.6..(-0.1)]),
-                    (TopoIdx.ppos Rest Network,Type.P,[0.1,0.5..1.1])] -- [-1.1,-0.6..(-0.1)])]
--}
-
 controlVars :: [DemandAndControl.ControlVar Node]
 controlVars = [DemandAndControl.ControlPower $ TopoIdx.Power (TopoIdx.Position LocalNetwork Gas), 
                DemandAndControl.ControlPower $ TopoIdx.Power (TopoIdx.Position Network Water)]
@@ -186,7 +182,8 @@ storageList :: [Node]
 storageList = [Water]              
 
 demandCycle :: OptSignal.DemandCycle Node Base ND.Dim2 [] Double Double
-demandCycle = OptSignal.DemandCycle $ SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5])]
+demandCycle = OptSignal.DemandCycle $ SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5]),
+                                                                                     (1,ND.fromList (nc "Main") [0.2,0.4])]
 
 
 demandVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
@@ -210,7 +207,18 @@ balanceForcingMap = FlowBal.ForcingMap $ Map.fromList [(Water, FlowBal.ChargeDri
 initialBalanceMap :: FlowBal.Balance Node Double
 initialBalanceMap = FlowBal.Balance $ Map.fromList [(Water, 0.5)]
 
+showFunctionAxis ::  Strict.Axis Base String [] Double
+showFunctionAxis = Strict.Axis "Power" Type.P $ DV.fromList [-100 .. 100]                      
+
+
 caller = nc "Main"
+
+-- OutPut Settings
+
+sysAction = OP.SysDo {OP.topo = OP.DoP OP.Xterm OP.StdOut, OP.labTopo =  OP.DoP OP.Xterm OP.StdOut , OP.stateAnalysis = OP.Xterm}
+testAction = OP.TestDo {OP.demandCycle = OP.Dflt}
+sysDataAction = OP.SysDataDo {OP.rawCurves = OP.PoP OP.Dflt OP.StdOut, OP.etaFunctions = OP.Dflt}
+
 
 main :: IO()
 main = do
@@ -223,7 +231,8 @@ main = do
   let rawEtaCurves = Curve.curvesfromParseTableMap (nc "etaCurves") tabEta 
                      :: Curve.Map String Base String  [] Double Double
                         
-  let systemData = Process.buildSystemData rawEtaCurves etaAssignMap              
+                        
+  let systemData = Process.buildSystemData rawEtaCurves etaAssignMap showFunctionAxis             
       
   let optiSet = Process.buildOptiSet demandVariation searchVariation demandCycle    
        :: Process.OptiSet Node Base ND.Dim2 ND.Dim2 [] [] [] Double
@@ -243,8 +252,13 @@ main = do
              
   let (Process.OptimalOperation _ _ _ balance)  = optimalOperation
   let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
-  print balance
-  print rec
+  
+  concurrentlyMany_ $ OP.system sysAction system
+  concurrentlyMany_ $ OP.test testAction testSet demandVars
+  concurrentlyMany_ $ OP.sysData sysDataAction systemData
+  
+--  print balance
+--  print rec
   
 {-  let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) sweepCube
   let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) sweepCube

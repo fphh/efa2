@@ -92,6 +92,7 @@ data DisplayUnit = Unit_kWh
                  | Unit_Sec 
                  | Unit_UT 
                  | Unit_W 
+                 | Unit_s  
                  | Unit_Undefined deriving Show
 
 toDisplayUnit' :: (Arith.Constant a) => Dynamic -> a -> a
@@ -119,6 +120,7 @@ showUnit x = case x of
  Unit_Sec -> "s"
  Unit_UT -> "UT"
  Unit_W -> "W"
+ Unit_s -> "s"
  Unit_Undefined -> "#"
  -- _ -> error " EFA.Value.Type/showUnit - not implemented:" ++ show x
 
@@ -130,7 +132,8 @@ getDisplayUnit E = Unit_kWh
 getDisplayUnit UT = Unit_UT
 getDisplayUnit N = Unit_None
 getDisplayUnit UD = Unit_Undefined
--- getDisplayUnit x = (error $ "Error EFA.Value.Type/getDisplayUnit - not implemented: " ++ show x)
+getDisplayUnit T = Unit_s
+getDisplayUnit x = (error $ "Error EFA.Value.Type/getDisplayUnit - not implemented: " ++ show x)
 
 newtype UnitScale = UnitScale Rational
 
@@ -146,3 +149,4 @@ getUnitScale Unit_kW = UnitScale (1/1000)
 getUnitScale Unit_UT = UnitScale 1
 getUnitScale Unit_W = UnitScale 1
 getUnitScale Unit_Undefined = UnitScale 1
+getUnitScale Unit_s =  UnitScale 1

@@ -6,8 +6,10 @@ module EFA.Data.Plot.D2 where
 
 import qualified Graphics.Gnuplot.Frame.Option as Opt
 import qualified Graphics.Gnuplot.Terminal as Terminal
-import qualified Data.Foldable as Foldable
+import qualified Graphics.Gnuplot.Plot as Plot
 
+import qualified Data.Foldable as Foldable
+import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified Graphics.Gnuplot.Value.Atom as Atom
@@ -90,4 +92,12 @@ allInOneIO ::(Terminal.C terminal, Atom.C b,Atom.C a)=>
   IO()
 allInOneIO terminal makeFrameStyle setGraphStyle xs =
   DataPlot.run terminal (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
+  where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph2D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
+
+allInOne ::
+  ([PlotData info id label a b] ->  Opts.T (Graph2D.T a b)) ->
+  (Int -> PlotData info id label a b -> (LineSpec.T -> LineSpec.T)) ->
+  [PlotData info id label a b] -> 
+  Frame.T (Graph2D.T a b)
+allInOne makeFrameStyle setGraphStyle xs = Frame.cons  (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
   where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph2D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot

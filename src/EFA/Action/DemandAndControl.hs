@@ -15,10 +15,17 @@ unControlVar :: ControlVar node -> Var node
 unControlVar (ControlPower x) = (Power x)
 unControlVar (ControlRatio x) = (Ratio x)
 
+toControlVar :: Var node -> ControlVar node
+toControlVar (Power x) = (ControlPower x)
+toControlVar (Ratio x) = (ControlRatio x)
+
 unDemandVar :: DemandVar node -> Var node
 unDemandVar (DemandPower x) = (Power x)
 unDemandVar (DemandRatio x) = (Ratio x)
 
+toDemandVar :: Var node -> DemandVar node
+toDemandVar (Power x) = (DemandPower x)
+toDemandVar (Ratio x) = (DemandRatio x)
 
 type ControlMap node a = Map.Map (ControlVar node) a 
 type DemandMap node a = Map.Map (DemandVar node) a 

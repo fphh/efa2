@@ -53,7 +53,7 @@ modul = ModuleName "OD.Curve"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-data Data inst vec a = Data (vec a) deriving Show
+data Data inst vec a = Data {getVector :: vec a} deriving Show
 
 data Signal inst label vec a b = Signal {getTime :: Strict.Axis inst label vec a, 
                                          getData :: Data inst vec b} deriving Show

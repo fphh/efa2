@@ -44,7 +44,7 @@ data Conditioning a = Conditioning (Map.Map CurveName ([Curve.ModifyOps a]))
 data EtaAssignMap node a = EtaAssignMap (Map.Map (TopoIdx.Position node) 
                            (Conf ((Interp.Method a, Interp.ExtrapMethod a), ([Curve.ModifyOps a],CurveName))))
 
-newtype FunctionMap node a = FunctionMap (Map.Map (TopoIdx.Position node) (a -> a))
+newtype FunctionMap node a = FunctionMap {unFunctionMap :: (Map.Map (TopoIdx.Position node) (a -> a))}
 
 -- makeEtaAssignMap :: EtaAssign node -> Conditioning a -> Configuration a -> Conditioning a
 

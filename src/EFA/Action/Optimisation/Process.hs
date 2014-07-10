@@ -88,6 +88,7 @@ import qualified Data.Maybe as Maybe
 --import Control.Applicative as Applicative
 -- import qualified EFA.Graph.Topology as Topo
 --import qualified EFA.Flow.Topology as FlowTopo
+import qualified Data.Tuple.HT as TupleHT
 
 modul :: ModuleName
 modul = ModuleName "Demo.Optimisation.Process"
@@ -111,7 +112,8 @@ data SystemData inst node etaVec a =
   SystemData
   {accessRawEfficiencyCurves :: Curve.Map String inst String etaVec a a,
    accessEtaAssignMap :: EtaFunctions.EtaAssignMap node a,
-   accessFunctionMap :: EtaFunctions.FunctionMap node (Interp.Val a)
+   accessFunctionMap :: EtaFunctions.FunctionMap node (Interp.Val a),
+   accessFunctionPlotAxis :: Strict.Axis inst String etaVec a 
   } 
    
 data TestSet node inst demDim sigVec a = 
@@ -123,13 +125,12 @@ data OptiSet node inst demDim srchDim demVec srchVec sigVec a =
   OptiSet 
   {accessDemandVariation :: [(DemandAndControl.Var node,Type.Dynamic,demVec a)],
    accessSearchVariation :: [(DemandAndControl.Var node,Type.Dynamic,srchVec a)],  
+   accessDemandVars :: [DemandAndControl.DemandVar node],
+   accessControlVars :: [DemandAndControl.ControlVar node],  
    accessDemandGrid ::  CubeGrid.Grid inst demDim (DemandAndControl.Var node) demVec a,
    accessSearchGrid ::  CubeGrid.Grid inst srchDim (DemandAndControl.Var node) srchVec a,
    accessVariation :: CubeSweep.Variation node inst demDim srchDim demVec srchVec a (Interp.Val a),
    accessSupportSignal :: OptSignal.SupportSignal node inst demDim sigVec a a
---   accessStateForcing :: 
---   initialbalanceForcing
---   initialbalanceForcingStep   
      } 
 
 data SweepResults node inst demDim srchDim demVec srchVec a = 
@@ -198,8 +199,9 @@ buildSystemData ::
    DV.Find etaVec) =>
   Curve.Map String inst String etaVec a a ->
   EtaFunctions.EtaAssignMap node a ->
+  Strict.Axis inst String etaVec a ->
   SystemData inst node etaVec a
-buildSystemData rawCurves etaAssignMap = SystemData rawCurves etaAssignMap etaFunctions
+buildSystemData rawCurves etaAssignMap etaFunctionShowAxis = SystemData rawCurves etaAssignMap etaFunctions etaFunctionShowAxis
   where
   etaFunctions = EtaFunctions.makeEtaFunctions (nc "buildSystemData") etaAssignMap rawCurves
     
@@ -245,13 +247,16 @@ buildOptiSet ::
   OptSignal.DemandCycle node inst demDim sigVec a a ->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a
 buildOptiSet demandVariation searchVariation demandCycle = 
-  OptiSet demandVariation searchVariation demandGrid searchGrid 
+  OptiSet demandVariation searchVariation demandVars controlVars 
+   demandGrid searchGrid 
    sweepVariation supportSignal
   where
     demandGrid = CubeGrid.create (nc "Main") demandVariation
     searchGrid = CubeGrid.create (nc "Main") searchVariation
     sweepVariation = CubeSweep.generateVariation (nc "Main") demandGrid searchGrid
     supportSignal = OptSignal.getSupportPoints (nc "Main") demandGrid demandCycle 
+    demandVars  = map (DemandAndControl.toDemandVar . TupleHT.fst3) demandVariation
+    controlVars = map (DemandAndControl.toControlVar . TupleHT.fst3) searchVariation
 
 
 -- | Only has to be calculated once, unless efficiency curves change
