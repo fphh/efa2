@@ -19,7 +19,7 @@ import qualified EFA.Data.Axis.Strict as Strict
 import EFA.Utility.Trace(mytrace)
 
 import qualified Data.Map as Map
-import qualified Data.List as List
+--import qualified Data.List as List
 
 
 m :: ModuleName

@@ -41,6 +41,7 @@ import qualified EFA.Value.Type as Type
 --import EFA.Utility.Show (showNode)
 
 --import qualified Graphics.Gnuplot.Advanced as Plot
+import qualified Graphics.Gnuplot.Frame as Frame
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
 --import qualified Graphics.Gnuplot.Plot as Plt
@@ -174,6 +175,15 @@ allInOneIO terminal makeFrameStyle setGraphStyle xs =
   DataPlot.run terminal (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
   where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
 
+allInOne ::(Atom.C a, Atom.C b)=>
+  ([PlotData id label a b] ->  Opts.T (Graph3D.T a a b)) ->
+  (Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)) ->
+  [PlotData id label a b] ->
+  Frame.T (Graph3D.T a a b)
+allInOne makeFrameStyle setGraphStyle xs =
+  Frame.cons (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
+  where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
+
 eachIO :: (Terminal.C terminal, Atom.C a, Atom.C b)=>
   terminal ->
   ([PlotData id label a b] ->  Opts.T (Graph3D.T a a b)) ->
@@ -184,9 +194,10 @@ eachIO terminal makeFrameStyle setGraphStyle xs =
   mapM_ (DataPlot.run terminal (makeFrameStyle xs)) $ map g $ zip [0..] xs
   where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData $ LineSpec.deflt) plot
 
-
+{-
 class ToPlotData ndContainer dim label vec a b where
   toPlotData :: Caller ->
              Maybe id ->
              (ndContainer :: * -> * -> * -> (* -> *) -> * -> * -> *) inst dim label vec a b ->
              [PlotData id label a b]
+-}

@@ -60,7 +60,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Data.Plot.D3 as PlotD3
 import qualified EFA.Data.Plot as DataPlot
-import qualified EFA.Data.Plot.Collection as PlotCollection
+--import qualified EFA.Data.Plot.Collection as PlotCollection
 import qualified EFA.Data.Collection as Collection
 
 --import qualified EFA.Value as Value
@@ -161,6 +161,12 @@ getD3RangeInfo cube@(CubeMap.Cube grid _) =
 
 
 -- TODO: ist es unsauber die b mit UniScale zu multiplizieren ?
+    
+class ToPlotData ndContainer dim label vec a b where
+  toPlotData :: Caller ->
+             Maybe id ->
+             (ndContainer :: * -> * -> * -> (* -> *) -> * -> * -> *) inst dim label vec a b ->
+             [PlotD3.PlotData id label a b]
 
 basic ::(
    Atom.C b, Show a, Show b,Show label,Type.GetDynamicType a,
@@ -216,7 +222,7 @@ instance
    Tuple.C b,
    Atom.C a,
    Atom.C b) =>
-      PlotD3.ToPlotData CubeMap.Cube ND.Dim2 label vec a b where
+      ToPlotData CubeMap.Cube ND.Dim2 label vec a b where
    toPlotData caller ident cube = [basic caller ident Nothing cube]
 
 instance
@@ -249,7 +255,7 @@ instance
    DV.Storage vec Strict.Idx,
    DV.LookupUnsafe vec Type.Dynamic,
    DV.LookupUnsafe vec b)=>
-  PlotD3.ToPlotData CubeMap.Cube ND.Dim3 label vec a b where
+  ToPlotData CubeMap.Cube ND.Dim3 label vec a b where
    toPlotData caller ident cube = map f $ CubeMap.extractAll caller cube (ND.Data $ map ND.Idx [0,1])
      where f (cut, subCube) = basic caller ident (Just $ PlotD3.Cut cut) subCube
 
@@ -283,7 +289,7 @@ instance
    DV.Storage vec Strict.Idx,
    DV.LookupUnsafe vec Type.Dynamic,
    DV.LookupUnsafe vec b)=>
-  PlotD3.ToPlotData CubeMap.Cube ND.Dim4 label vec a b where
+  ToPlotData CubeMap.Cube ND.Dim4 label vec a b where
    toPlotData caller ident cube = map f $ CubeMap.extractAll caller cube (ND.Data $ map ND.Idx [0,1])
      where f (cut, subCube) = basic caller ident (Just $ PlotD3.Cut cut) subCube
 
@@ -317,10 +323,11 @@ instance
    DV.Storage vec Strict.Idx,
    DV.LookupUnsafe vec Type.Dynamic,
    DV.LookupUnsafe vec b)=>
-  PlotD3.ToPlotData CubeMap.Cube ND.Dim5 label vec a b where
+  ToPlotData CubeMap.Cube ND.Dim5 label vec a b where
    toPlotData caller ident cube = map f $ CubeMap.extractAll caller cube (ND.Data $ map ND.Idx [0,1])
      where f (cut, subCube) = basic caller ident (Just $ PlotD3.Cut cut) subCube
 
+{-
 -- TODO : create the right labelling, how to deal with labels on different levels ? 
 instance 
   (PlotD3.ToPlotData ndContainer dim label vec a b,
@@ -329,3 +336,15 @@ instance
    Collection.Unpack (ndContainer inst dim label vec a b)) =>
   PlotCollection.ToD3PlotData id key ndContainer inst dim label vec a b where
   toD3PlotData caller _ collection = concat $ map (\(label,x) -> PlotD3.toPlotData caller (Just label) x) $ Collection.toList collection
+-}
+
+plotCollection ::
+  (Eq (Collection.OrdData (ndContainer inst dim label vec a b)),
+ Ord id,
+ Collection.Unpack (ndContainer inst dim label vec a b),
+ ToPlotData ndContainer dim label vec a b) =>
+ Caller ->
+ Collection.Collection id (ndContainer inst dim label vec a b) ->
+ [PlotD3.PlotData id label a b]
+
+plotCollection caller collection = concat $ map (\(label,x) -> toPlotData caller (Just label) x) $ Collection.toList collection

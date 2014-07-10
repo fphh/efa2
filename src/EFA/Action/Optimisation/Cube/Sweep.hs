@@ -96,10 +96,10 @@ newtype Variation node inst demDim srchDim demVec srchVec a b =
                                  srchDim (DemandAndControl.Var node) srchVec a b)))
 
 newtype FlowResult node inst demDim srchDim demVec srchVec a b = 
-  FlowResult
+  FlowResult {unFlowResult :: 
   (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
    (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                                         srchDim srchVec b))))
+                                         srchDim srchVec b))))}
 
 newtype FlowStatus node inst demDim srchDim demVec srchVec a = 
   FlowStatus 
@@ -126,11 +126,11 @@ newtype ObjectiveFunctionValues node inst demDim srchDim demVec srchVec a b =
    (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityValues  b)))))
 
 newtype OptimalChoicePerState node inst dim vec a b = 
-  OptimalChoicePerState                                                              
+  OptimalChoicePerState {unOptimalChoicePerState ::                                                            
   (CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a 
    (ValueState.Map (CubeGrid.LinIdx,
                     (ActFlowCheck.EdgeFlowStatus,
-                     FlowOpt.OptimalityValues  b))))
+                     FlowOpt.OptimalityValues  b))))}
 
 newtype OptimalFlowPerState node inst dim vec a b = 
   OptimalFlowPerState

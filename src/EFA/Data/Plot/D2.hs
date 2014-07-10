@@ -99,5 +99,6 @@ allInOne ::
   (Int -> PlotData info id label a b -> (LineSpec.T -> LineSpec.T)) ->
   [PlotData info id label a b] -> 
   Frame.T (Graph2D.T a b)
-allInOne makeFrameStyle setGraphStyle xs = Frame.cons  (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
+allInOne makeFrameStyle setGraphStyle xs = 
+  Frame.cons  (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
   where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph2D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot

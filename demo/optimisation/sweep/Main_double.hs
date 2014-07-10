@@ -51,7 +51,7 @@ import qualified EFA.Flow.Draw as Draw
 --import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified EFA.Data.ND.Cube.Map as CubeMap 
-import qualified EFA.Data.ND.Cube.Grid as Grid 
+import qualified EFA.Data.ND.Cube.Grid as CubeGrid 
 --import qualified EFA.Data.Plot as DataPlot 
 import qualified EFA.Data.Plot.D3.Cube as CubePlot 
 
@@ -215,10 +215,14 @@ caller = nc "Main"
 
 -- OutPut Settings
 
-sysAction = OP.SysDo {OP.topo = OP.DoP OP.Xterm OP.StdOut, OP.labTopo =  OP.DoP OP.Xterm OP.StdOut , OP.stateAnalysis = OP.Xterm}
-testAction = OP.TestDo {OP.demandCycle = OP.Dflt}
-sysDataAction = OP.SysDataDo {OP.rawCurves = OP.PoP OP.Dflt OP.StdOut, OP.etaFunctions = OP.Dflt}
-
+sysCtrl = OP.SysDo {OP.topo = OP.DoP OP.Xterm OP.StdOut, OP.labTopo =  OP.DoP OP.Xterm OP.StdOut , OP.stateAnalysis = OP.Xterm}
+testCtrl = OP.TestDo {OP.demandCycle = OP.Dflt}
+sysDataCtrl = OP.SysDataDo {OP.rawCurves = OP.PoP OP.Dflt OP.StdOut, OP.etaFunctions = OP.Dflt}
+optiSetCtrl = OP.OptiSetDo {OP.variation = OP.Dflt }
+sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm}
+optCtrl = OP.OptiDo {OP.plotOptEtaPerState = OP.Dflt, 
+                     OP.plotEtaOptPerState= OP.Dflt, 
+                     OP.plotOptIndexPerState= OP.Dflt}
 
 main :: IO()
 main = do
@@ -253,10 +257,13 @@ main = do
   let (Process.OptimalOperation _ _ _ balance)  = optimalOperation
   let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
   
-  concurrentlyMany_ $ OP.system sysAction system
-  concurrentlyMany_ $ OP.test testAction testSet demandVars
-  concurrentlyMany_ $ OP.sysData sysDataAction systemData
-  
+  concurrentlyMany_ $ OP.system sysCtrl system
+  concurrentlyMany_ $ OP.test testCtrl testSet demandVars
+  concurrentlyMany_ $ OP.sysData sysDataCtrl systemData
+  concurrentlyMany_ $ OP.optiSet (nc "Main") optiSetCtrl optiSet
+  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 0) sweepCtrl sweep
+  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState
+
 --  print balance
 --  print rec
   
@@ -348,11 +355,7 @@ main = do
     $ Draw.title "Sequence Flow Graph from Simulation"
     $ Draw.flowSection Draw.optionsDefault flow_00
     
-  PlotD2.allInOneIO DefaultTerm.cons (PlotD2.labledFrame "EtaCurves")  PlotD2.plotInfo3lineTitles $ PlotCurve.toPlotDataMap  rawEtaCurves
-  
---  print etaCurves
-  PlotD2.allInOneIO DefaultTerm.cons (PlotD2.labledFrame "EtaCurves")  PlotD2.plotInfo3lineTitles $ PlotCurve.toPlotDataMap  etaCurves
-    
+   
   PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "P_Coal") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") 
     (Just "Test") p_CoalDemand
     

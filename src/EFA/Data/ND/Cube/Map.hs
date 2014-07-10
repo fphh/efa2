@@ -52,6 +52,53 @@ data Cube inst dim label vec a b = Cube {
   getGrid :: Grid inst dim label vec a,
   getData :: Data inst dim vec b } deriving (Show,Eq)
 
+{-
+data CollectionMap key inst dim label vec a b = 
+  CollectionMap (Map.Map key (Cube inst dim label vec a b))
+
+data Collection key inst dim label vec a b = 
+  Collection (Grid inst dim label vec a) (Map.Map key (Data inst dim vec b)) 
+
+data ResultCollection key inst dim label vec a b = 
+  ResultCollection (Grid inst dim label vec a) (Map.Map key (Result.Result(Data inst dim vec b))) 
+
+class GetKeys (coll :: * -> * -> * -> * -> (* -> *) -> * -> * -> *) key inst dim label vec a b where 
+  getKeys :: coll  key inst dim label vec a b -> [key]
+  
+instance GetKeys CollectionMap key inst dim label vec a b where 
+  getKeys (CollectionMap m) = Map.keys m
+
+instance GetKeys Collection key inst dim label vec a b where 
+  getKeys (Collection _ m) = Map.keys m
+
+instance GetKeys ResultCollection key inst dim label vec a b where 
+  getKeys (ResultCollection _ m) = Map.keys m
+
+
+class LookupCollection  (coll :: * -> * -> * -> * -> (* -> *) -> * -> * -> *) key inst dim label vec a b where
+  lookupCollection :: key -> coll  key inst dim label vec a b -> Maybe (Cube inst dim label vec a b)
+
+instance (Ord key) => LookupCollection CollectionMap key inst dim label vec a b where
+  lookupCollection k (CollectionMap m) = Map.lookup k m
+
+instance (Ord key) => LookupCollection Collection key inst dim label vec a b where
+  lookupCollection k (Collection grid m) = fmap (Cube grid) $ Map.lookup k m
+
+class LookupResultCollection  (coll :: * -> * -> * -> * -> (* -> *) -> * -> * -> *) key inst dim label vec a b where
+  lookupResultCollection :: key -> coll  key inst dim label vec a b -> Maybe (Result.Result (Cube inst dim label vec a b))
+
+instance  (Ord key) => LookupResultCollection ResultCollection key inst dim label vec a b where
+  lookupResultCollection k (ResultCollection grid m)= fmap (fmap (Cube grid)) $ Map.lookup k m
+
+collectionFromList :: (Ord key) =>
+  Caller ->
+  [(key,Cube inst dim label vec a b)] -> 
+  Collection key inst dim label vec a b
+collectionFromList caller [] = merror caller modul "collectionFromList" "empty List"
+collectionFromList _ xs = Collection grid $ Map.fromList $ P.map (\(x,y) -> (x,getData y)) xs 
+  where grid = getGrid $ snd $ head xs
+-}
+
 type instance Collection.OrdData (Cube inst dim label vec a b) = 
   (Grid inst dim label vec a)
   

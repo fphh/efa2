@@ -19,6 +19,11 @@ map = fmap
 lookupUnsafe ::  Map a -> Maybe Idx.AbsoluteState -> a
 lookupUnsafe (Map m) idx = m Map.! idx 
 
+lookUp :: Map a -> Maybe Idx.AbsoluteState -> Maybe a
+lookUp (Map m) idx = Map.lookup idx m
+
+states :: Map a -> [Maybe Idx.AbsoluteState]
+states (Map m) = P.map fst $ Map.toList m 
 
 toList :: Map a -> [(Maybe Idx.AbsoluteState, a)]
 toList (Map m) = Map.toList m

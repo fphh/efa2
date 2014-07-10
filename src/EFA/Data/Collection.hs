@@ -42,38 +42,50 @@ modul = ModuleName "Collection"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
+mapOrdData ::
+ ValData a ~ ValData b =>
+ (OrdData a ->
+ OrdData b) ->
+ Collection key a ->
+ Collection key b
+mapOrdData f (Collection o m) = Collection (f o) m
 
-mapData :: (ValData a -> ValData a) -> Collection label a -> Collection label a
+mapWithKey :: (OrdData a ~ OrdData b, Unpack b, Unpack a) => (key -> a -> b) -> Collection key a -> Collection key b
+mapWithKey f (Collection o m) = Collection o $ Map.mapWithKey (\ k d -> snd $ unpack $ f k $ pack (o,d)) m
+
+mapData :: (ValData a -> ValData a) -> Collection key a -> Collection key a
 mapData f (Collection o m) = Collection o $ Map.map f m
 
-mapDataWithOrd :: (OrdData a -> ValData a -> ValData a) -> Collection label a -> Collection label a
+mapDataWithOrd :: (OrdData a -> ValData a -> ValData a) -> Collection key a -> Collection key a
 mapDataWithOrd f (Collection o m) = Collection o $ Map.map (f o) m
 
 
-map :: (Unpack a) => (a -> a) -> Collection label a -> Collection label a
+map :: (Unpack a, Unpack b,OrdData a ~ OrdData b) => (a -> b) -> Collection key a -> Collection key b
 map f (Collection o m) = Collection o $ Map.map (snd . unpack . f . pack . (,) o) m
 
-mapOrdAndData :: (OrdData a -> OrdData b) -> (ValData a -> ValData b) -> Collection label a -> Collection label b
+mapOrdAndData :: (OrdData a -> OrdData b) -> (ValData a -> ValData b) -> Collection key a -> Collection key b
 mapOrdAndData f g (Collection o m) = Collection (f o) (Map.map g m)
 
-
-getOrdData :: Collection label a -> OrdData a
+getOrdData :: Collection key a -> OrdData a
 getOrdData  (Collection o _) = o
 
-getValData :: Collection label a -> Map.Map label (ValData a)
+getValData :: Collection key a -> Map.Map key (ValData a)
 getValData  (Collection _ m) = m
 
+getKeys :: Collection key a -> [key]
+getKeys (Collection _ m) = Map.keys m
+
 fromList ::
-  (Unpack a,Ord label, Eq (OrdData a)) => Caller ->
-  [(label, a)] -> Collection label a
+  (Unpack a,Ord key, Eq (OrdData a)) => Caller ->
+  [(key, a)] -> Collection key a
 fromList caller xs = Collection o $ Map.fromList datList
    where xs' = P.map (\(x,y) -> (x,unpack y)) xs
          datList = P.map (\(x,y) -> (x, snd $ y)) xs'
          o = ordFromList caller $ P.map fst $ P.map snd xs' 
 
 toList ::
-  (Unpack a,Ord label, Eq (OrdData a)) =>
-  Collection label a -> [(label, a)]
+  (Unpack a,Ord key, Eq (OrdData a)) =>
+  Collection key a -> [(key, a)]
 toList (Collection o m) = P.map (\(x,y)-> (x, pack (o,y))) $ Map.toList m
 
 {-
@@ -89,29 +101,33 @@ ordFromList caller (x:xs) =
   else merror caller modul "getOrdFromList" "OrdData differs"
 
 lookupMaybe ::
-  (Ord label, Unpack a) =>
-  label -> Collection label a -> Maybe a
-lookupMaybe label (Collection o m) = case Map.lookup label m of
+  (Ord key, Unpack a) =>
+  key -> Collection key a -> Maybe a
+lookupMaybe key (Collection o m) = case Map.lookup key m of
   Just d -> Just $ pack(o,d)
   Nothing -> Nothing
 
 lookup ::
-  (Ord label, Show label,Unpack a) =>
-  Caller -> label -> Collection label a -> a
-lookup caller label collection = case lookupMaybe label collection of
+  (Ord key, Show key,Unpack a) =>
+  Caller -> key -> Collection key a -> a
+lookup caller key collection = case lookupMaybe key collection of
   Just x -> x 
-  Nothing -> merror caller modul "lookup" ("not in collection: " ++ show label)
+  Nothing -> merror caller modul "lookup" ("not in collection: " ++ show key)
+
+lookupUnsafe ::
+  (Ord key, Show key,Unpack a) =>
+  key -> Collection key a -> a
+lookupUnsafe key (Collection o m)  = pack (o,m Map.! key) 
 
 
-
-filter :: (Ord label) => (ValData a -> Bool) -> Collection label a -> Collection label a
+filter :: (Ord key) => (ValData a -> Bool) -> Collection key a -> Collection key a
 filter f (Collection o m) = Collection o (Map.filter f m)
 
--- getDetermined :: (Ord label) => Collection label (Result.Result a) -> Collection label a
+-- getDetermined :: (Ord key) => Collection key (Result.Result a) -> Collection key a
 getDetermined :: 
-  (Ord label, OrdData a ~ Result.Result (OrdData b),
+  (Ord key, OrdData a ~ Result.Result (OrdData b),
    ValData a ~ Result.Result (ValData b)) =>
-  Collection label a -> Collection label b
+  Collection key a -> Collection key b
 getDetermined collection =   
   mapOrdAndData 
   (\(Result.Determined x) -> x) 

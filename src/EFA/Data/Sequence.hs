@@ -14,19 +14,19 @@ import qualified EFA.Signal.Sequence as Sequ
 
 import EFA.Data.Axis.Strict (Range(Range))
 import qualified EFA.Data.Axis.Strict as Strict
-import EFA.Equation.Arithmetic (Constant)
+--import EFA.Equation.Arithmetic (Constant)
 
-import qualified EFA.Report.Report as Report
-import EFA.Report.Report (Table, toDoc, autoFormat)
-import EFA.Report.Typ (TDisp)
-import EFA.Report.Base (DispStorage1)
+--import qualified EFA.Report.Report as Report
+--import EFA.Report.Report (Table, toDoc, autoFormat)
+--import EFA.Report.Typ (TDisp)
+--import EFA.Report.Base (DispStorage1)
 
-import Text.Printf (PrintfArg)
+--import Text.Printf (PrintfArg)
 
 import qualified Data.List.HT as ListHT
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Foldable as Fold
+--import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Tuple.HT (mapPair)
