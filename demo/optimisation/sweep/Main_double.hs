@@ -5,6 +5,8 @@ module Main where
 import qualified EFA.Action.Optimisation.Output as OP
 import qualified EFA.Action.EenergyFlowAnalysis as EFA
 import qualified EFA.Action.Optimisation.Process as Process
+import qualified EFA.Action.Optimisation.Loop as Loop
+
 import qualified EFA.Action.Optimisation.Signal as OptSignal
 import qualified EFA.Action.DemandAndControl as DemandAndControl
 --import qualified EFA.Value.State as ValueState
@@ -25,7 +27,7 @@ import qualified EFA.Action.Optimisation.Sweep as Sweep
 
 --import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
-import qualified EFA.Action.Flow.Balance as FlowBal
+import qualified EFA.Action.Flow.Balance as Balance
 
 --import qualified EFA.Action.Flow as ActFlow
 import qualified EFA.Action.Flow.Optimality as FlowOpt
@@ -201,11 +203,6 @@ lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
 lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [335,616,598]) $ replicate 3 $
                Map.fromList [(Water,(FlowOpt.GenerationEfficiency $ Interp.Inter 1.0, FlowOpt.UsageEfficiency $ Interp.Inter 1.0))] 
 
-balanceForcingMap :: FlowBal.Forcing Node (Interp.Val Double)
-balanceForcingMap = FlowBal.ForcingMap $ Map.fromList [(Water, FlowBal.ChargeDrive (Interp.Inter 0.5))]
-
-initialBalanceMap :: FlowBal.Balance Node Double
-initialBalanceMap = FlowBal.Balance $ Map.fromList [(Water, 0.5)]
 
 showFunctionAxis ::  Strict.Axis Base String [] Double
 showFunctionAxis = Strict.Axis "Power" Type.P $ DV.fromList [-100 .. 100]                      
@@ -223,6 +220,33 @@ sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm}
 optCtrl = OP.OptiDo {OP.plotOptEtaPerState = OP.Dflt, 
                      OP.plotEtaOptPerState= OP.Dflt, 
                      OP.plotOptIndexPerState= OP.Dflt}
+
+opCtrl = OP.OpDo {OP.plotOptimalControlSignals = OP.Dflt, 
+                  OP.plotOptimalStoragePowers = OP.Dflt}
+simCtrl = OP.SimDo {OP.drawSimulationFlowGraph = OP.Xterm,
+                    OP.plotSimulationPowers = OP.Dflt,
+                    OP.drawSequenceFlowGraph = OP.Xterm, 
+                    OP.drawStateFlowGraph = OP.Xterm}
+
+balanceForcingMap :: Balance.Forcing Node (Interp.Val Double)
+balanceForcingMap = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.5))]
+
+initialBalanceMap :: Balance.Balance Node Double
+initialBalanceMap = Balance.Balance $ Map.fromList [(Water, 0.5)]
+
+etaLoopParams = 
+  Loop.EtaLoopParams
+  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 5}
+  
+balanceLoopParams =  
+  Loop.BalanceLoopParams 
+  {Loop.accessMaxIterationsPerStorage = Balance.MaxIterationsPerStorage 10 , 
+   Loop.accessMaxIterations = Balance.MaxIterations 100,
+   Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.1) , 
+   Loop.accessInitialForcing = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.5))], 
+   Loop.accessInitialStep = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.1))], 
+   Loop.accessInitialSto = Water}
+          
 
 main :: IO()
 main = do
@@ -254,8 +278,11 @@ main = do
   let simEfa = Process.simulateAndAnalyse caller system efaParams systemData demandVars optimalOperation demandCycle    
           :: Process.SimulationAndAnalysis Node Base [] Double
              
-  let (Process.OptimalOperation _ _ _ balance)  = optimalOperation
+  let (Process.OptimalOperation _ _ stoPowers balance)  = optimalOperation
   let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
+      
+  let loop = Process.loop (nc "Main") testSet optiSet sweep evalSweep storageList controlVars etaLoopParams balanceLoopParams  
+  
   
   concurrentlyMany_ $ OP.system sysCtrl system
   concurrentlyMany_ $ OP.test testCtrl testSet demandVars
@@ -263,8 +290,12 @@ main = do
   concurrentlyMany_ $ OP.optiSet (nc "Main") optiSetCtrl optiSet
   concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 0) sweepCtrl sweep
   concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState
-
---  print balance
+  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
+  concurrentlyMany_ $ OP.simulation simCtrl simEfa
+  
+--  print stoPowers
+  print balance
+  print loop
 --  print rec
   
 {-  let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) sweepCube

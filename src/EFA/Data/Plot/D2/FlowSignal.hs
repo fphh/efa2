@@ -86,3 +86,29 @@ toPlotDataMap ::
   Map.Map key (odContainer inst label vec a b) ->
   [PlotD2.PlotData key info label a b]
 toPlotDataMap signalMap = concatMap snd $ Map.toList $ Map.mapWithKey (\key x -> PlotD2.toPlotData (Just key) x) signalMap
+
+
+plotHRecord::
+  (Ord a,
+   Ord b,
+   Arith.Constant a,
+   Arith.Constant b,
+   Tuple.C b,
+   Tuple.C a,
+   Atom.C a,
+   Atom.C b,
+   Type.ToDisplayUnit b,
+   Type.GetDynamicType a,
+   Type.GetDynamicType b,
+   DV.Walker vec,
+   DV.Storage vec a,
+   DV.Storage vec b,
+   DV.Singleton vec,
+   DV.Length vec,
+   DV.FromList vec) =>
+  SignalFlow.HRecord key inst label vec a b ->
+   [PlotD2.PlotData key info label a b]
+plotHRecord record = map (\(key,sig) -> basic (Just key) sig) $ SignalFlow.hRecordToList record
+
+
+plotSignalMap m = map (\(key,sig) -> basic (Just key) sig) $ Map.toList m

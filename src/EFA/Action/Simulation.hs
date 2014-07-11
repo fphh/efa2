@@ -86,8 +86,9 @@ simulation ::
  Simulation node inst sigVec a
 simulation caller topology etaFunctions given = Simulation flow powerRecord
   where 
+    time = SignalFlow.getHTime given
     flow = solve caller topology etaFunctions given
-    powerRecord = envToPowerRecord flow
+    powerRecord = envToPowerRecord time flow
   
 
 
@@ -172,23 +173,26 @@ envToPowerRecord ::
    DV.Storage vec (Interp.Val a),
    DV.Storage vec a,
    Ord node) =>
+  Strict.Axis inst String vec a -> 
   TopoQty.Section node (Result (SignalFlow.Data inst vec (Interp.Val a))) ->
   SignalFlow.HRecord (XIdx.Position node) inst String vec a (Interp.Val a)
-envToPowerRecord =
-  sectionToPowerRecord
+envToPowerRecord time =
+  sectionToPowerRecord time
   . TopoQty.mapSection (ActUt.checkDetermined "envToPowerRecord")
 
 -- TODO :: Move to better place ?
 -- TODO :: Time has same format as Vectors hence has to be stored as signal Vector
+-- TODO :: Old Time axis given -- is that the best way ? 
 sectionToPowerRecord ::
   (DV.Walker vec,
    DV.Storage vec a,
    Arith.Constant a,
    DV.Storage vec (Interp.Val a)) =>
    (Ord node) =>
+   Strict.Axis inst String vec a -> 
    FlowTopo.Section node (SignalFlow.Data inst vec (Interp.Val a)) ->
    SignalFlow.HRecord (XIdx.Position node) inst String vec a (Interp.Val a)
-sectionToPowerRecord (FlowTopoPlain.Section (SignalFlow.Data time) topo) =
-   SignalFlow.HRecord (Strict.Axis "Time" Type.T (DV.map Interp.unpack time)) $
-   TopoRecord.topologyToPowerMap topo
+sectionToPowerRecord time (FlowTopoPlain.Section (SignalFlow.Data time1) topo) =
+   SignalFlow.HRecord (Strict.Axis "Time" Type.T $ DV.map Interp.unpack time1)
+   $ TopoRecord.topologyToPowerMap topo
 

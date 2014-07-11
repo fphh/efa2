@@ -123,6 +123,10 @@ lookupUnsafe key (Collection o m)  = pack (o,m Map.! key)
 filter :: (Ord key) => (ValData a -> Bool) -> Collection key a -> Collection key a
 filter f (Collection o m) = Collection o (Map.filter f m)
 
+filterWithKey ::(Ord key) =>  (key -> ValData a -> Bool) -> Collection key a -> Collection key a
+filterWithKey f (Collection o m) = Collection o (Map.filterWithKey f m)
+
+
 -- getDetermined :: (Ord key) => Collection key (Result.Result a) -> Collection key a
 getDetermined :: 
   (Ord key, OrdData a ~ Result.Result (OrdData b),

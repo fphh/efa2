@@ -14,6 +14,7 @@ import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result)
 
 import qualified Data.Map as Map; import Data.Map (Map)
+import qualified Data.Maybe as Maybe
 
 --import Data.Bimap (Bimap)
 import Data.Maybe(fromMaybe)
@@ -87,8 +88,13 @@ type Forcing node a =
 type ForcingStep node a =
   ForcingMap Step (Map node (SocDrive a))
 
+
+unMaybeBalance :: (Show node, Show a) => Caller -> Balance node (Maybe a) -> Balance node a
+unMaybeBalance caller (Balance m) = Balance (Map.map (Maybe.fromMaybe err) m)
+  where err = merror caller modul "unMaybeBalance" $ "Undefined SOC: " ++ show m  
+
 --newtype BestForcingPair node a = BestForcingPair (Map node (Maybe (SocDrive a, a), Maybe (SocDrive a, a)))
-newtype BestForcingPair a = BestForcingPair (Maybe (SocDrive a, a), Maybe (SocDrive a, a))
+newtype BestForcingPair a = BestForcingPair (Maybe (SocDrive a, a), Maybe (SocDrive a, a)) deriving Show
 
 emptyBestForcingPair :: BestForcingPair a
 emptyBestForcingPair = BestForcingPair (Nothing,Nothing) 
@@ -126,10 +132,10 @@ balanceDeviation (Balance m) =
   Arith.abs (Map.foldl (~+) Arith.zero m)
 
 
-newtype MaxIterationsPerStorage = MaxIterationsPerStorage Int
+newtype MaxIterationsPerStorage = MaxIterationsPerStorage Int deriving Show
 
-data BalanceCounter node = BalanceCounter (Map.Map node Int)
-newtype MaxIterations = MaxIterations Int
+newtype BalanceCounter node = BalanceCounter (Map.Map node Int) deriving Show
+newtype MaxIterations = MaxIterations Int deriving Show
 
 -- data BalanceCounter node = BalanceCounter (Map.Map node Int)
 

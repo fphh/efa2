@@ -18,16 +18,15 @@ modul = ModuleName "EFA.Action.Optimisation.Loop"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-newtype EtaCounter = EtaCounter Int
-newtype MaxEtaIterations = MaxEtaIterations Int
+newtype EtaCounter = EtaCounter Int deriving Show
+newtype MaxEtaIterations = MaxEtaIterations Int deriving Show
 
 incrementEtaCounter :: EtaCounter -> EtaCounter
 incrementEtaCounter (EtaCounter cnt) = EtaCounter $ cnt+1
 
 data EtaLoopParams = 
   EtaLoopParams
-  {
-    accessMaxEtaIterations :: MaxEtaIterations}
+  { accessMaxEtaIterations :: MaxEtaIterations}
   
   
 data BalanceLoopParams node a =  
@@ -41,6 +40,19 @@ data BalanceLoopParams node a =
 
 data EtaLoopItem node a z = 
   EtaLoopItem EtaCounter [BalanceLoopItem node a z]
+  
+instance (Show node, Show a) => Show (EtaLoopItem node a z) where  
+  show (EtaLoopItem etaCounter balLoop) = "Eta-Loop Counter: " ++ show etaCounter ++ "\n" ++ show balLoop 
+  
+instance (Show node, Show a) => Show (BalanceLoopItem node a z) where  
+  show (BalanceLoopItem cnt node force step balance bestPair _) = 
+    "balanceCounter: " ++ show cnt ++ 
+    "Node:" ++ show node ++
+    "Forcing:" ++ show force ++
+    "Step:" ++ show step ++
+    "Balance:" ++ show balance ++
+    "BestPair:" ++ show bestPair 
+
 
 data BalanceLoopItem node a z = 
   BalanceLoopItem (Balance.BalanceCounter node) node
@@ -55,7 +67,9 @@ etaLoop :: (Ord node,Ord a, Show a, Show node, Arith.Constant a) =>
   (Balance.Forcing node a -> z) ->
   (z -> Balance.Balance node a) ->
   [EtaLoopItem node a z]
-etaLoop caller storages etaParams balParams systemFunction getBalance =  UtList.takeUntil check $ 
+etaLoop caller storages etaParams balParams systemFunction getBalance =  
+  take 1 $
+  --UtList.takeUntil check $ 
   go [EtaLoopItem (EtaCounter 0)  [BalanceLoopItem initialCount initialSto initialForcing 
                                    initialStep initialBlance initialBestPair initialResult] ]
   where
@@ -82,7 +96,9 @@ balanceLoop ::
   (z -> Balance.Balance node a) ->
   BalanceLoopItem node a z ->
   [BalanceLoopItem node a z]
-balanceLoop caller balParams systemFunction getBalance lastBalItem = UtList.takeUntil check $ tail $ go [lastBalItem]
+balanceLoop caller balParams systemFunction getBalance lastBalItem = 
+  take 1 $ tail $ go [lastBalItem]
+  --UtList.takeUntil check $ tail $ go [lastBalItem]
   where
     check (BalanceLoopItem cnt _ _ _ bal _ _) = 
       (Balance.checkBalance threshold bal) || 

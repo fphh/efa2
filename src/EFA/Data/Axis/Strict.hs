@@ -66,6 +66,13 @@ imap ::
   (Idx -> a -> b) -> Axis inst label vec a -> Axis inst label vec b
 imap f (Axis label typ vec) = Axis label typ $ DV.imap (f . Idx) vec
 
+map ::
+  (DV.Walker vec,
+   DV.Storage vec b,
+   DV.Storage vec a) =>
+  (a -> b) -> Axis inst label vec a -> Axis inst label vec b
+map f (Axis label typ vec) = Axis label typ $ DV.map f vec
+
 indexAdd :: Idx -> Int -> Idx
 indexAdd (Idx idx) num = Idx $ (idx+num)
 

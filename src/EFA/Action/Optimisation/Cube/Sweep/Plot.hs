@@ -171,8 +171,10 @@ plotVariation caller (CubeSweep.Variation sweep) =
   where 
     newCaller = (caller |> nc "plotVariation")
     cubeCollection = SweepAccess.collectionCubeToCubeCollection sweep
-    demandCubes = Collection.map (CubeMap.map (flip CubeMap.lookupLinUnsafe (CubeGrid.LinIdx 0))) cubeCollection
-    searchCubes = CubeMap.lookupLinUnsafe sweep (CubeGrid.LinIdx 0)
+    demandCubes = -- Collection.filterWithKey (\k _ -> DemandAndControl.isDemandVar k) $ 
+                  Collection.map (CubeMap.map (flip CubeMap.lookupLinUnsafe (CubeGrid.LinIdx 0))) cubeCollection
+    searchCubes = -- Collection.filterWithKey (\k _ -> DemandAndControl.isControlVar k) $
+                  CubeMap.lookupLinUnsafe sweep (CubeGrid.LinIdx 0)
     
 plotOptimalOptimalityValuePerState ::
   (Arith.Sum b,

@@ -175,14 +175,23 @@ allInOneIO terminal makeFrameStyle setGraphStyle xs =
   DataPlot.run terminal (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
   where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
 
+allInOnePlain ::(Atom.C a, Atom.C b)=>
+  ([PlotData id label a b] ->  Opts.T (Graph3D.T a a b)) ->
+  (Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)) ->
+  [PlotData id label a b] ->
+  Frame.T (Graph3D.T a a b)
+allInOnePlain makeFrameStyle setGraphStyle xs =
+  Frame.cons (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
+  where g (idx,plotData@(PlotData _ _ plot)) =  fmap (Graph3D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
+
 allInOne ::(Atom.C a, Atom.C b)=>
   ([PlotData id label a b] ->  Opts.T (Graph3D.T a a b)) ->
   (Int -> PlotData id label a b -> (LineSpec.T -> LineSpec.T)) ->
   [PlotData id label a b] ->
   Frame.T (Graph3D.T a a b)
 allInOne makeFrameStyle setGraphStyle xs =
-  Frame.cons (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
-  where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph3D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
+  Frame.cons (makeFrameStyle xs) $ fmap (Graph3D.typ "lines") $ (Foldable.fold $ map g $ zip [0..] xs)
+  where g (idx,plotData@(PlotData _ _ plot)) =  fmap (Graph3D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
 
 eachIO :: (Terminal.C terminal, Atom.C a, Atom.C b)=>
   terminal ->

@@ -5,6 +5,8 @@ module EFA.Action.Optimisation.Output where
 import qualified EFA.Action.Optimisation.Cube.Sweep.Plot as SweepPlot
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Cube.Sweep.Access as SweepAccess
+import qualified EFA.Action.EenergyFlowAnalysis as EFA
+import qualified EFA.Action.Simulation as Simulation
 
 import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Action.Optimisation.Process as Process
@@ -22,9 +24,8 @@ import qualified EFA.Action.Flow.Optimality as ActFlowOpt
 
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.Collection as Collection
+import qualified EFA.Data.OD.Signal.Flow as SignalFlow
 
-
---import qualified EFA.Data.Plot.D2.FlowSignal as PlotFSignal
 import qualified EFA.Data.Plot.D2.FlowSignal as PlotFSignal
 import qualified EFA.Data.Plot.D2.Curve as PlotCurve
 import qualified EFA.Data.Plot.D2 as PlotD2
@@ -51,6 +52,7 @@ import qualified Graphics.Gnuplot.Terminal.PNG as PNG
 import qualified Graphics.Gnuplot.Terminal.SVG as SVG
 import qualified Graphics.Gnuplot.Terminal.PostScript as PS
 import qualified Graphics.Gnuplot.Advanced as Plot
+import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Frame as Frame
@@ -62,6 +64,7 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Equation.Result as Result
 
+import qualified Data.Maybe as Maybe
 import qualified Data.Map as Map
 import Control.Functor.HT (void)
 
@@ -216,12 +219,20 @@ optiSet ::
   OptiSetCtrl ->
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   [IO ()]
-optiSet caller ctrl optiSet = 
-  (plotAction (variation ctrl) (PlotD3.allInOne (PlotD3.labledFrame "DemandVariation") (\ _ _ -> id) . fst .
+optiSet caller ctrl optiSet = let
+  legend = Map.fromList $ zip [0..] $ 
+           map DemandAndControl.unDemandVar (Process.accessDemandVars optiSet) ++ 
+           map DemandAndControl.unControlVar (Process.accessControlVars optiSet)
+--  legendContr = Map.fromList $ zip [0..] $ Process.accessControlVars optiSet
+  in
+  (plotAction (variation ctrl) (PlotD3.allInOne (PlotD3.labledFrame "DemandVariation") 
+                                (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) . fst .
                                        SweepPlot.plotVariation caller ) 
    (Process.accessVariation optiSet)) ++
   
-  (plotAction (variation ctrl) (PlotD3.allInOne (PlotD3.labledFrame "SearchVariation") (\ _ _ -> id) . snd .
+  (plotAction (variation ctrl) (PlotD3.allInOne (PlotD3.labledFrame "SearchVariation") 
+                               -- (\ _ _ -> id) . snd .
+                                (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) . snd .
                                        SweepPlot.plotVariation caller ) 
    (Process.accessVariation optiSet))
 
@@ -310,3 +321,72 @@ optPerState caller ctrl opt =
       SweepPlot.plotOptimalOptimalityValuePerState newCaller 
       (\(CubeGrid.LinIdx idx,_) -> Interp.Inter $ Arith.fromInteger $ fromIntegral idx)) 
      (Process.accessOptimalChoicePerState opt))
+
+
+data OpCtrl = OpDont | OpDo 
+                       {plotOptimalControlSignals :: Plot, 
+                        plotOptimalStoragePowers :: Plot}  
+
+optimalOperation ::
+  (Ord a,
+   Show id,
+   Arith.Constant a,
+   Tuple.C a,
+   Atom.C a,
+   Type.ToDisplayUnit a,
+   Type.GetDynamicType a,
+   DV.Walker vec,
+   DV.Storage vec (Maybe (Interp.Val a)),
+   DV.Storage vec (Interp.Val a),
+   DV.Storage vec a,
+   DV.Singleton vec,
+   DV.Length vec,
+   DV.FromList vec) =>
+  OpCtrl ->
+  Process.OptimalOperation id inst vec a ->
+  [IO ()]
+optimalOperation ctrl opt = let
+  legend = Map.fromList $ zip [0..] $ Map.keys $ 
+           OptSignal.unOptimalControlSignals $ Process.accessOptimalControlSignals opt
+  in 
+   (plotAction (plotOptimalControlSignals ctrl) 
+    (PlotD2.allInOne (PlotD2.labledFrame "Optimal ControlSignals")
+     (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) .
+     PlotFSignal.plotSignalMap) 
+    (OptSignal.unOptimalControlSignals $ Process.accessOptimalControlSignals opt)) ++ 
+   
+   (plotAction (plotOptimalControlSignals ctrl) 
+    (PlotD2.allInOne (PlotD2.labledFrame "Optimal Storage Powers")
+     (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) .
+     PlotFSignal.plotSignalMap) 
+    (Map.map (SignalFlow.map (Maybe.fromMaybe (Interp.Invalid ["plotOptimalOperation"]))) $
+      OptSignal.unOptimalStoragePowers $ Process.accessOptimalStoragePowers opt))
+   
+
+data SimCtrl = 
+  SimDont |   
+  SimDo 
+  {drawSimulationFlowGraph :: Draw,
+   plotSimulationPowers :: Plot, 
+   drawSequenceFlowGraph :: Draw,               
+   drawStateFlowGraph :: Draw}    
+
+simulation ctrl sim =  let
+  legend = Map.fromList $ zip [0..] $ SignalFlow.getHRecordKeys $ 
+           Simulation.accessPowerRecord $ Process.accessSimulation sim
+  in 
+  
+  (drawAction (drawSimulationFlowGraph ctrl) (Draw.flowSection Draw.optionsDefault) 
+      (Simulation.accessFlowResult $ Process.accessSimulation sim)) ++
+  
+  (plotAction (plotSimulationPowers ctrl)
+   (PlotD2.allInOne (PlotD2.labledFrame "Simulation Power Signals")
+     (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) .
+     PlotFSignal.plotHRecord) 
+      (Simulation.accessPowerRecord $ Process.accessSimulation sim)) ++
+  
+ (drawAction (drawSequenceFlowGraph ctrl) (Draw.seqFlowGraph Draw.optionsDefault) 
+      (EFA.accessSeqFlowGraph $ Process.accessAnalysis sim)) ++
+  
+ (drawAction (drawStateFlowGraph ctrl) (Draw.stateFlowGraph Draw.optionsDefault) 
+      (EFA.accessStateFlowGraph $ Process.accessAnalysis sim))

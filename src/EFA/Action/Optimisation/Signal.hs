@@ -68,10 +68,12 @@ newtype OptimalStateChoice node inst vec a b =
   OptimalStateChoice (SignalFlow.Signal inst String vec a ([Maybe Idx.AbsoluteState],Maybe b))
 
 newtype OptimalControlSignals node inst  vec a b = 
-  OptimalControlSignals (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a b))
+  OptimalControlSignals {unOptimalControlSignals :: 
+                         (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a b))}
 
 newtype OptimalStoragePowers node inst vec a b = 
-  OptimalStoragePowers (Map.Map (node) (SignalFlow.Signal inst String vec a (Maybe b)))
+  OptimalStoragePowers {unOptimalStoragePowers ::
+                           (Map.Map (node) (SignalFlow.Signal inst String vec a (Maybe b)))}
 
 
 -- | Signal Containing Indices and ccordinates of supporting points holding the interpolation tiles 

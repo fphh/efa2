@@ -157,7 +157,7 @@ data OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a = Opt
 data OptimalOperation node inst vec a = OptimalOperation {
   accessOptimalStateChoice :: OptSignal.OptimalStateChoice node inst vec a (Interp.Val a),
   accessOptimalControlSignals :: OptSignal.OptimalControlSignals node inst vec a (Interp.Val a),
-  accessOptimalStorageSignals :: OptSignal.OptimalStoragePowers node inst vec a (Interp.Val a),
+  accessOptimalStoragePowers :: OptSignal.OptimalStoragePowers node inst vec a (Interp.Val a),
   accessBalance :: Balance.Balance node (Maybe (Interp.Val a))}
 
 
@@ -550,13 +550,19 @@ simulateAndAnalyse caller system efaParams systemData demandVars optimalOperatio
     sequenceFlowRecordOld = DataChop.convertToOld sequenceFlowRecord
     efa = EFA.energyFlowAnalysisOld topology efaParams sequenceFlowRecordOld
   
-{-
-balanceLoopFunction testSet optiSet sweepResults sweepEvaluationResults storageList balanceForcingMap controlVars = 
+
+
+
+
+
+
+loop caller testSet optiSet sweepResults sweepEvaluationResults storageList controlVars etaParams balParams = Loop.etaLoop caller storageList etaParams balParams systemFunction getBalance
   where
-    optimisationPerStateResults = optimisationPerState testSet optiSet sweepResults sweepEvaluationResults 
+    getBalance = Balance.unMaybeBalance (caller |> nc "loop") . accessBalance . snd
+    systemFunction balanceForcingMap = (optimisationPerStateResults,optOperation)
+      where
+        optimisationPerStateResults = optimisationPerState testSet optiSet sweepResults sweepEvaluationResults 
                                   storageList balanceForcingMap controlVars
-    optimalOperation = optimalOperation optimisationPerStateResults
-
-
-etaLoopFunction = 
--}  
+        optOperation = optimalOperation optimisationPerStateResults
+ 
+    

@@ -17,7 +17,7 @@ import qualified EFA.Data.Vector as DV
 import qualified EFA.Equation.Arithmetic as Arith
 --import qualified Graphics.Gnuplot.Value.Atom as Atom
 --import qualified Graphics.Gnuplot.Value.Tuple as Tuple
-
+import qualified EFA.Report.FormatValue as FormatValue
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Value.Type as Type
 
@@ -55,6 +55,9 @@ nc = genCaller modul
 
 data Data inst vec a = Data {getVector :: vec a} deriving Show
 
+instance (FormatValue.FormatValue (vec a)) => FormatValue.FormatValue (Data inst vec a) where
+  formatValue (Data vec) = FormatValue.formatValue vec 
+
 data Signal inst label vec a b = Signal {getTime :: Strict.Axis inst label vec a, 
                                          getData :: Data inst vec b} deriving Show
                                                                               
@@ -72,6 +75,14 @@ mapHRecord ::
   HRecord key inst label vec a b ->
   HRecord key inst label vec a c
 mapHRecord f (HRecord t m) = HRecord t $ Map.map f m   
+
+hRecordToList :: HRecord key inst label vec a b -> [(key,Signal inst label vec a b)] 
+hRecordToList record = P.map (\(x,y)->(x,Signal time y)) xs 
+  where xs = Map.toList $ getHMap record
+        time = getHTime record
+
+getHRecordKeys :: HRecord key inst label vec a b -> [key]
+getHRecordKeys = P.map fst . hRecordToList 
 
 fromList :: 
   (Ord a,
