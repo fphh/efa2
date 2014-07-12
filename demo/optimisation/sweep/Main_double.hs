@@ -157,15 +157,15 @@ etaAssignMap = EtaFunctions.EtaAssignMap $ Map.fromList $
    (TopoIdx.Position Network Water,
     EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage"))) : 
    (TopoIdx.Position Network Coal ,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 4 0.7], "coal"))) : 
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 7 0.45], "coal"))) : 
    (TopoIdx.Position LocalNetwork Gas,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "gas"))) : 
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.7], "gas"))) : 
    (TopoIdx.Position LocalNetwork Network,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 3 0.9], "transformer"))) : 
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 3 0.95], "transformer"))) : 
    (TopoIdx.Position LocalRest LocalNetwork,
     EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 1], "local"))) : 
    (TopoIdx.Position Rest Network,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "rest"))) : 
+    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 1], "rest"))) : 
    []
 
 efaParams :: EFA.EFAParams Node (Interp.Val Double)
@@ -185,18 +185,47 @@ storageList = [Water]
 
 demandCycle :: OptSignal.DemandCycle Node Base ND.Dim2 [] Double Double
 demandCycle = OptSignal.DemandCycle $ SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5]),
-                                                                                     (1,ND.fromList (nc "Main") [0.2,0.4])]
+                                                                                     (1,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (2,ND.fromList (nc "Main") [0.21,0.42]),
+                                                                                     (3,ND.fromList (nc "Main") [2,0.4]),
+                                                                                     (4,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (5,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (6,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (7,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (8,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (9,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (10,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (11,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (12,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (13,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (14,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (15,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (16,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (17,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (18,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (19,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (20,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (21,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (22,ND.fromList (nc "Main") [0.2,0.4]),
+                                                                                     (23,ND.fromList (nc "Main") [0.2,0.4])]
 
+
+{-local = [0.1,0.6 .. 6.2]
+rest = [0.1,0.3 .. 2.1]
+
+water = [0.1, 0.2 .. 0.8]
+gas =   [0.1, 0.2 .. 0.8]
+-}
 
 demandVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 demandVariation  = 
-  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.5..1.1]), -- [-1.1,-0.6..(-0.1)]),
-   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Rest Network,Type.P,[0.1,0.5..1.1])] -- [-1.1,-0.6..(-0.1)])]
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.6..6.2]), -- [-1.1,-0.6..(-0.1)]),
+   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Rest Network,Type.P,[0.1,0.2..2.1])] -- [-1.1,-0.6..(-0.1)])]
 
 searchVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 searchVariation = 
-  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.1,0.5..1.1]),
-   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[0.1,0.5..1.1])]  
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.1,0.2..0.8]),
+   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[0.1,0.2..0.8])]  
 
 
 lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
@@ -234,6 +263,9 @@ balanceForcingMap = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDri
 initialBalanceMap :: Balance.Balance Node Double
 initialBalanceMap = Balance.Balance $ Map.fromList [(Water, 0.5)]
 
+initialBalanceMap' :: Balance.Balance Node (Interp.Val Double)
+initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))]
+
 etaLoopParams = 
   Loop.EtaLoopParams
   {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 5}
@@ -243,13 +275,18 @@ balanceLoopParams =
   {Loop.accessMaxIterationsPerStorage = Balance.MaxIterationsPerStorage 10 , 
    Loop.accessMaxIterations = Balance.MaxIterations 100,
    Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.1) , 
-   Loop.accessInitialForcing = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.5))], 
-   Loop.accessInitialStep = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.1))], 
+   Loop.accessInitialForcing = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0))], 
+   Loop.accessInitialStep = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (0.001)))], 
    Loop.accessInitialSto = Water}
           
 
+bestPair = 
+  Balance.rememberBestBalanceForcing (nc "Main") (Balance.BestForcingPair (Nothing, Nothing)) (balanceForcingMap, initialBalanceMap') Water
+
 main :: IO()
 main = do
+  
+  print bestPair
   
   let system = Process.buildSystem edgeList
   
@@ -283,7 +320,7 @@ main = do
       
   let loop = Process.loop (nc "Main") testSet optiSet sweep evalSweep storageList controlVars etaLoopParams balanceLoopParams  
   
-  
+{-  
   concurrentlyMany_ $ OP.system sysCtrl system
   concurrentlyMany_ $ OP.test testCtrl testSet demandVars
   concurrentlyMany_ $ OP.sysData sysDataCtrl systemData
@@ -292,7 +329,7 @@ main = do
   concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState
   concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
   concurrentlyMany_ $ OP.simulation simCtrl simEfa
-  
+-}  
 --  print stoPowers
   print balance
   print loop

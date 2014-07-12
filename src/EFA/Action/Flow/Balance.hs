@@ -164,7 +164,7 @@ selectStorageToForce ::(Ord node, Ord a, Show node, Arith.Sum a) =>
   MaxIterationsPerStorage ->
   node ->
   node
-selectStorageToForce caller bal@(Balance b) threshold cnt maxIterationsPerStorage sto = if check then sto else nextSto 
+selectStorageToForce caller bal@(Balance b) threshold cnt maxIterationsPerStorage sto = sto --if check then sto else nextSto 
   where
     check = (checkBalanceSingle (caller |> nc "selectStorageToForce") threshold bal sto) || 
             checkBalanceCounterOne (caller |> nc "selectStorageToForce") cnt sto maxIterationsPerStorage
@@ -181,7 +181,7 @@ calculateNextBalanceStep ::
   (ForcingStep node a) ->
   node ->
   (ForcingStep node a)
-calculateNextBalanceStep caller balMap (BestForcingPair bestPair) stepMap sto =
+calculateNextBalanceStep caller balMap (BestForcingPair bestPair) stepMap sto = -- stepMap
   updateForcingStep stepMap sto $ setSocDrive step1
   where
     bal = lookupStorageBalance (caller |> nc "calculateNextBalanceStep") balMap sto

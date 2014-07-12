@@ -1,11 +1,14 @@
+{-# LANGUAGE FlexibleInstances #-} 
+                  
 module EFA.Action.Optimisation.Loop where
 
 import qualified EFA.Action.Flow.Balance as Balance
-
+import Debug.Trace (trace)
 import qualified EFA.Equation.Arithmetic as Arith
 --import qualified Data.Map as Map
 import qualified EFA.Utility.List as UtList
 
+import qualified Data.Map as Map
 --import Text.Printf (printf, PrintfArg) --,IsChar)
 import EFA.Utility(Caller,
                    --merror,
@@ -23,6 +26,24 @@ newtype MaxEtaIterations = MaxEtaIterations Int deriving Show
 
 incrementEtaCounter :: EtaCounter -> EtaCounter
 incrementEtaCounter (EtaCounter cnt) = EtaCounter $ cnt+1
+
+class Display a where
+  disp :: a -> String
+
+instance (Show node, Show a) => Display (Balance.ForcingMap Balance.Absolute (Map.Map node (Balance.SocDrive a))) where
+  disp (Balance.ForcingMap m) = "Fo: " ++ show m
+
+instance (Show node, Show a) => Display (Balance.ForcingMap Balance.Step (Map.Map node (Balance.SocDrive a))) where
+  disp (Balance.ForcingMap m) = "St: " ++ show m
+
+instance (Show node, Show a) => Display (Balance.Balance node a) where
+  disp (Balance.Balance m) = "Bal: " ++show m
+
+instance (Show a) => Display (Balance.BalanceCounter a) where
+  disp (Balance.BalanceCounter m) = "Cnt: " ++ show m
+
+instance (Show a) => Display (Balance.BestForcingPair a) where
+  disp (Balance.BestForcingPair x) = "BP: " ++ show x
 
 data EtaLoopParams = 
   EtaLoopParams
@@ -46,12 +67,12 @@ instance (Show node, Show a) => Show (EtaLoopItem node a z) where
   
 instance (Show node, Show a) => Show (BalanceLoopItem node a z) where  
   show (BalanceLoopItem cnt node force step balance bestPair _) = 
-    "balanceCounter: " ++ show cnt ++ 
-    "Node:" ++ show node ++
-    "Forcing:" ++ show force ++
-    "Step:" ++ show step ++
-    "Balance:" ++ show balance ++
-    "BestPair:" ++ show bestPair 
+    disp cnt ++ " | " ++
+    "Node: " ++ show node ++" | " ++
+    disp force ++" | " ++
+    disp step ++ " | " ++
+    disp balance ++" | " ++
+    disp bestPair ++ "\n"
 
 
 data BalanceLoopItem node a z = 
@@ -66,12 +87,12 @@ etaLoop :: (Ord node,Ord a, Show a, Show node, Arith.Constant a) =>
   BalanceLoopParams node a ->
   (Balance.Forcing node a -> z) ->
   (z -> Balance.Balance node a) ->
-  [EtaLoopItem node a z]
+  EtaLoopItem node a z
 etaLoop caller storages etaParams balParams systemFunction getBalance =  
-  take 1 $
-  --UtList.takeUntil check $ 
-  go [EtaLoopItem (EtaCounter 0)  [BalanceLoopItem initialCount initialSto initialForcing 
-                                   initialStep initialBlance initialBestPair initialResult] ]
+  -- take 1 $
+  -- UtList.takeUntil check $ 
+   go (EtaLoopItem (EtaCounter 0)  [BalanceLoopItem initialCount initialSto initialForcing 
+                                   initialStep initialBlance initialBestPair initialResult] )
   where
     check (EtaLoopItem (EtaCounter count) _) = count > maxEtaIterations 
     (MaxEtaIterations maxEtaIterations) = accessMaxEtaIterations etaParams
@@ -82,11 +103,14 @@ etaLoop caller storages etaParams balParams systemFunction getBalance =
     initialResult = systemFunction initialForcing
     initialBlance = getBalance initialResult
     initialBestPair = Balance.emptyBestForcingPair
-    go xs = go $ xs ++ [EtaLoopItem count balLoop]
+    go (EtaLoopItem lastCount lastBalLoop) =  
+      (EtaLoopItem count balLoop) -- go $ xs ++ [EtaLoopItem count balLoop]
       where
         count = incrementEtaCounter lastCount
-        (EtaLoopItem lastCount lastBalLoop) = last xs
-        balLoop = balanceLoop (caller |> nc "etaLoop") balParams systemFunction getBalance (last lastBalLoop)
+        balLoop = balanceLoop (caller |> nc "etaLoop") balParams systemFunction getBalance (head lastBalLoop)
+
+-- f str x = trace (str ++": " ++ show x) x
+f str = id
 
 balanceLoop :: 
   (Ord a, Ord node, Show node, Arith.Constant a,Show a) =>
@@ -96,25 +120,33 @@ balanceLoop ::
   (z -> Balance.Balance node a) ->
   BalanceLoopItem node a z ->
   [BalanceLoopItem node a z]
-balanceLoop caller balParams systemFunction getBalance lastBalItem = 
-  take 1 $ tail $ go [lastBalItem]
+balanceLoop caller balParams systemFunction getBalance lastBalItem = UtList.takeUntil check $ 
+  go lastBalItem
   --UtList.takeUntil check $ tail $ go [lastBalItem]
   where
     check (BalanceLoopItem cnt _ _ _ bal _ _) = 
-      (Balance.checkBalance threshold bal) || 
+--      (Balance.checkBalance threshold bal) || 
       Balance.checkBalanceCounter cnt maxIterations
     threshold = accessThreshold balParams
     maxIterations = accessMaxIterations balParams   
     maxIterationsPerStorage = accessMaxIterationsPerStorage balParams
-    go xs = go $ xs ++ [BalanceLoopItem count sto forcing nextStep balance bestPair result]
+    go lastItem@(BalanceLoopItem lastCount lastSto lastForcing step lastBalance lastBestPair _) = [lastItem] ++ go 
+      (BalanceLoopItem 
+      (f "count" count) 
+      (f "sto" sto) 
+      (f "forcing" forcing)
+      (f "nextStep " nextStep) 
+      (f "balance" balance)
+      (f "bestPair" bestPair) 
+      (trace "result" result))
       where 
-        (BalanceLoopItem lastCount lastSto lastForcing step lastBalance lastBestPair _) = last xs
+--        (BalanceLoopItem lastCount lastSto lastForcing step lastBalance lastBestPair _) = last xs
         sto = Balance.selectStorageToForce (caller |> nc "balanceOneStorageLoop") 
-              lastBalance threshold lastCount maxIterationsPerStorage lastSto 
+               lastBalance threshold lastCount maxIterationsPerStorage lastSto 
         forcing = Balance.addForcingStep (caller |> nc "balanceOneStorageLoop") lastForcing step sto
         result = systemFunction forcing
         balance = getBalance result
-        nextStep = Balance.calculateNextBalanceStep caller balance bestPair step sto
+        nextStep = step -- trace ("balance" ++ show balance) $ Balance.calculateNextBalanceStep caller balance bestPair step sto
         count = Balance.incrementBalanceCounter lastCount sto
         bestPair = Balance.rememberBestBalanceForcing (caller |> nc "balanceOneStorageLoop") lastBestPair (forcing, balance) sto
         
