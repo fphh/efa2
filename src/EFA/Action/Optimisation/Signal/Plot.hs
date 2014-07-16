@@ -134,5 +134,5 @@ plotDemandCycleMap ::
    DV.FromList vec) =>
   OptSignal.DemandCycleMap node inst vec a b ->
   [PlotD2.PlotData (DemandAndControl.DemandVar node) info String a b]
-plotDemandCycleMap (OptSignal.DemandCycleMap cycle) = 
+plotDemandCycleMap cycle = 
   concat $ Map.elems $ Map.mapWithKey (\ident sig ->  PlotD2.toPlotData (Just ident) sig) cycle

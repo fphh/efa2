@@ -257,14 +257,14 @@ sweep ::
   [IO ()]
 sweep linIdxDem ctrl sweep = 
   let 
-    demGrid = CubeMap.getGrid $ CubeSweep.unFlowResult $ Process.accessSweepFlow sweep
+    demGrid = CubeMap.getGrid $ Process.accessSweepFlow sweep
     fromLin linIdx = CubeGrid.fromLinear demGrid linIdx
     toLin idx = CubeGrid.toLinear demGrid idx
   in 
    (drawAction (drawFlow ctrl)  
     (Draw.title ("LinIdx: " ++ show linIdxDem ++ "Idx: " ++ (show $ fromLin linIdxDem)) . 
      Draw.flowSection  Draw.optionsDefault) 
-   (flip CubeMap.lookupLinUnsafe linIdxDem $ CubeSweep.unFlowResult $ Process.accessSweepFlow sweep))
+   (flip CubeMap.lookupLinUnsafe linIdxDem $ Process.accessSweepFlow sweep))
    
 
 data EvalCtrl = EvalDont | 
@@ -362,7 +362,7 @@ optPerState ::
 optPerState caller ctrl opt = 
   let newCaller = caller |> nc "optPerState"
       states = Map.fromList $ zip [0..] $
-               SweepAccess.getAllStates $ CubeSweep.unOptimalChoicePerState $ 
+               SweepAccess.getAllStates $  
                Process.accessOptimalChoicePerState opt
   in (plotAction (plotOptEtaPerState ctrl) 
      (PlotD3.allInOne (PlotD3.labledFrame "Optimal Eta-Objective Per State") 
@@ -408,20 +408,20 @@ optimalOperation ::
   [IO ()]
 optimalOperation ctrl opt = let
   legend = Map.fromList $ zip [0..] $ Map.keys $ 
-           OptSignal.unOptimalControlSignals $ Process.accessOptimalControlSignals opt
+           Process.accessOptimalControlSignals opt
   in 
    (plotAction (plotOptimalControlSignals ctrl) 
     (PlotD2.allInOne (PlotD2.labledFrame "Optimal ControlSignals")
      (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) .
      PlotFSignal.plotSignalMap) 
-    (OptSignal.unOptimalControlSignals $ Process.accessOptimalControlSignals opt)) ++ 
+    (Process.accessOptimalControlSignals opt)) ++ 
    
    (plotAction (plotOptimalControlSignals ctrl) 
     (PlotD2.allInOne (PlotD2.labledFrame "Optimal Storage Powers")
      (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) .
      PlotFSignal.plotSignalMap) 
     (Map.map (SignalFlow.map (Maybe.fromMaybe (Interp.Invalid ["plotOptimalOperation"]))) $
-      OptSignal.unOptimalStoragePowers $ Process.accessOptimalStoragePowers opt))
+      Process.accessOptimalStoragePowers opt))
    
 
 data SimCtrl = 

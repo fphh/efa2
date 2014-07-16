@@ -1,10 +1,11 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE  TypeFamilies #-}<
+{-# LANGUAGE  TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module EFA.Action.Optimisation.Cube.Sweep where
+
 import EFA.Utility(Caller,
                    merror,(|>),
                    ModuleName(..),FunctionName, genCaller)
@@ -89,53 +90,45 @@ modul = ModuleName "DoubleSweep"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-newtype Variation node inst demDim srchDim demVec srchVec a b = 
-  Variation 
-  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+type Variation node inst demDim srchDim demVec srchVec a b = 
+  CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
    (Collection.Collection (DemandAndControl.Var node) (CubeMap.Cube (Sweep.Search inst) 
-                                 srchDim (DemandAndControl.Var node) srchVec a b)))
+                                 srchDim (DemandAndControl.Var node) srchVec a b))
 
-newtype FlowResult node inst demDim srchDim demVec srchVec a b = 
-  FlowResult {unFlowResult :: 
+type FlowResult node inst demDim srchDim demVec srchVec a b = 
   (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
    (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                                         srchDim srchVec b))))}
+                                         srchDim srchVec b))))
 
-newtype FlowStatus node inst demDim srchDim demVec srchVec a = 
-  FlowStatus 
-   (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+type FlowStatus node inst demDim srchDim demVec srchVec a = 
+   CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
     (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                    srchDim srchVec ActFlowCheck.EdgeFlowStatus)))
+                    srchDim srchVec ActFlowCheck.EdgeFlowStatus))
 
    
-newtype EndNodeFlows node inst demDim srchDim demVec srchVec a b =  
-  EndNodeFlows
-  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+type EndNodeFlows node inst demDim srchDim demVec srchVec a b =  
+  CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
   (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                                                    srchDim srchVec b))))  
-newtype OptimalityMeasure node inst demDim srchDim demVec srchVec a b = 
-  OptimalityMeasure
- (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+                                                    srchDim srchVec b)))  
+type OptimalityMeasure node inst demDim srchDim demVec srchVec a b = 
+ CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
   (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
-                  (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityMeasure  b)))))
+                  (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityMeasure  b))))
  
-newtype ObjectiveFunctionValues node inst demDim srchDim demVec srchVec a b = 
-  ObjectiveFunctionValues 
-  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+type ObjectiveFunctionValues node inst demDim srchDim demVec srchVec a b = 
+  CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
    (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
-   (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityValues  b)))))
+   (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityValues  b))))
 
-newtype OptimalChoicePerState node inst dim vec a b = 
-  OptimalChoicePerState {unOptimalChoicePerState ::                                                            
-  (CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a 
+type OptimalChoicePerState node inst dim vec a b = 
+  CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a 
    (ValueState.Map (CubeGrid.LinIdx,
                     (ActFlowCheck.EdgeFlowStatus,
-                     FlowOpt.OptimalityValues  b))))}
+                     FlowOpt.OptimalityValues  b)))
 
-newtype OptimalFlowPerState node inst dim vec a b = 
-  OptimalFlowPerState
-  (CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a 
-   (ValueState.Map (TopoQty.Section node b)))
+type OptimalFlowPerState node inst dim vec a b = 
+  CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a 
+   (ValueState.Map (TopoQty.Section node b))
 
 
 generateVariation :: 
@@ -163,7 +156,7 @@ generateVariation ::
   (CubeGrid.Grid (Sweep.Search inst) dim1 (DemandAndControl.Var node) vec1 a) -> 
   Variation node inst dim dim1 vec vec1 a (Interp.Val a)
 -- Todo :: check for similar variables
-generateVariation caller demandGrid searchGrid = Variation result
+generateVariation caller demandGrid searchGrid = result
   where 
 --    err = merror (caller |> nc "generateWithGrid")  modul "generateWithGrid"
 --          "Demand and search grid must not have the same Variables"
@@ -204,8 +197,8 @@ solve::
   EtaFunctions.FunctionMap node (Interp.Val a) ->  
   Variation node inst dim dim1 vec vec1 a (Interp.Val a) ->
   FlowResult node inst dim dim1 vec vec1 a (Interp.Val a)
-solve topology etaFunctions (Variation varCube) = 
-  FlowResult $ CubeMap.map (CubeSolve.solve topology etaFunctions) varCube
+solve topology etaFunctions varCube = 
+  CubeMap.map (CubeSolve.solve topology etaFunctions) varCube
 
 
 
@@ -218,8 +211,7 @@ getEndNodeFlows ::
                    (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 b)))) =>
   FlowResult node inst dim dim1 vec vec1 a b ->
   EndNodeFlows node inst dim dim1 vec vec1 a b
-getEndNodeFlows (FlowResult result) = EndNodeFlows $ 
-                                      CubeMap.map FlowTopoOpt.getEndNodeFlows result 
+getEndNodeFlows flowResult = CubeMap.map FlowTopoOpt.getEndNodeFlows flowResult 
 
 getFlowStatus ::
   (Ord b,Arith.NaNTestable b,
@@ -242,9 +234,9 @@ getFlowStatus ::
   Caller ->
   FlowResult node inst dim dim1 vec vec1 a (Interp.Val b) ->
   FlowStatus node inst dim dim1 vec vec1 a
-getFlowStatus caller (FlowResult result) = 
-  FlowStatus $ CubeMap.map (FlowTopoCheck.getFlowStatus 
-                            (caller |> nc "getEndNodeFlows")) result
+getFlowStatus caller flowResult = 
+  CubeMap.map (FlowTopoCheck.getFlowStatus 
+                            (caller |> nc "getEndNodeFlows")) flowResult
 
 calculateOptimalityMeasure ::
   (
@@ -287,8 +279,7 @@ calculateOptimalityMeasure ::
   EndNodeFlows node inst dim dim1 vec vec1 a b ->
   FlowStatus node inst dim dim1 vec vec1 a ->
   OptimalityMeasure node inst dim dim1 vec vec1 a b
-calculateOptimalityMeasure caller lifeCycleMap (EndNodeFlows endNodeValues) (FlowStatus status) = 
-  OptimalityMeasure $
+calculateOptimalityMeasure caller lifeCycleMap endNodeValues status = 
   CubeMap.zipWith (caller |> nc "calculateOptimalityMeasuregetEndNodeFlows") 
   (\ x st -> FlowTopoOpt.calculateOptimalityMeasure 
              (caller |> nc "calculateOptimalityMeasure") 
@@ -341,8 +332,7 @@ objectiveFunctionValues ::
   EndNodeFlows node inst dim dim1 vec vec1 a b ->
   OptimalityMeasure node inst dim dim1 vec vec1 a b ->
   ObjectiveFunctionValues node inst dim dim1 vec vec1 a b 
-objectiveFunctionValues caller balanceForcingMap (EndNodeFlows endNodeValues) (OptimalityMeasure optimalityMeasure) = 
-  ObjectiveFunctionValues $
+objectiveFunctionValues caller balanceForcingMap endNodeValues optimalityMeasure = 
   CubeMap.zipWith (caller |> nc "objectiveFunctionValues") 
   (\ endNodeFlows optiMeasure -> FlowTopoOpt.objectiveFunctionValues 
                                  (caller |> nc "objectiveFunctionValues") 
@@ -371,8 +361,7 @@ findMaximumEtaPerState ::
  Caller ->
  ObjectiveFunctionValues node inst dim dim1 vec vec1 a (Interp.Val  b) ->
  OptimalChoicePerState node inst dim vec a (Interp.Val b)
-findMaximumEtaPerState caller (ObjectiveFunctionValues objFunctionValues) = 
-  OptimalChoicePerState $
+findMaximumEtaPerState caller objFunctionValues = 
   CubeMap.map (FlowTopoOpt.findMaximumEta 
                (caller |> nc "findMaximumEtaPerState")) objFunctionValues
 
@@ -392,8 +381,7 @@ getOptimalFlowPerStateCube ::
    OptimalChoicePerState node inst dim vec a (Interp.Val  b) ->
    FlowResult node inst dim dim1 vec vec1 a (Interp.Val  b) ->
   OptimalFlowPerState node inst dim vec a (Result.Result (Interp.Val b))
-getOptimalFlowPerStateCube caller (OptimalChoicePerState optimalityCube) (FlowResult sweepCube) = 
-  OptimalFlowPerState $
+getOptimalFlowPerStateCube caller optimalityCube sweepCube = 
   CubeMap.zipWith (caller |> nc "getOptimalValueCube") f  optimalityCube  sweepCube
   where f stateMap flowSection = 
           ValueState.map (\(linIdx,_) -> 
@@ -410,8 +398,8 @@ unresultOptimalFlowPerStateCube ::
   Caller ->
   OptimalFlowPerState node inst dim vec a (Result.Result (Interp.Val b)) ->
   OptimalFlowPerState node inst dim vec a (Interp.Val b)
-unresultOptimalFlowPerStateCube caller (OptimalFlowPerState cube) = 
-  OptimalFlowPerState $ CubeMap.map (ValueState.map (TopoQty.mapSection f)) cube 
+unresultOptimalFlowPerStateCube caller cube = 
+  CubeMap.map (ValueState.map (TopoQty.mapSection f)) cube 
   where f (Result.Determined x) = x 
         f Result.Undetermined = 
           merror caller modul "unresultOptimalFlowPerStateCube" "Undetermined Values in Sweep"
@@ -535,7 +523,7 @@ interpolateOptimalityValuesWithSupportPerState ::
   ND.Data dim (Strict.SupportingPoints (Strict.Idx,a)) ->
   (ND.Data dim a) ->
   ValueState.Map (FlowOpt.OptimalityValues(Interp.Val a))
-interpolateOptimalityValuesWithSupportPerState caller inmethod (OptimalChoicePerState cube) support coordinates = 
+interpolateOptimalityValuesWithSupportPerState caller inmethod cube support coordinates = 
   g (ND.getFirst newCaller support) 
   where 
     faccess = snd . snd
@@ -544,7 +532,7 @@ interpolateOptimalityValuesWithSupportPerState caller inmethod (OptimalChoicePer
     f idx = if ND.len coordinates >=2 
             then
                interpolateOptimalityValuesWithSupportPerState newCaller 
-               inmethod (OptimalChoicePerState $ CubeMap.getSubCube newCaller cube idx) 
+               inmethod (CubeMap.getSubCube newCaller cube idx) 
                (ND.dropFirst (caller |> 
                               (nc "interpolateOptimalityValuesWithSupportPerState-support")) 
                 support) 
@@ -621,7 +609,7 @@ getSearchSweepFlow::
   CubeGrid.DimIdx dim ->
   Maybe (TopoQty.Section node (Result.Result 
                                (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a))))  
-getSearchSweepFlow (FlowResult result) ndIdx = CubeMap.lookupMaybe ndIdx result
+getSearchSweepFlow flowResult ndIdx = CubeMap.lookupMaybe ndIdx flowResult
 
 -- | Delivers the energy flow at one location in the demand room and one location in the search room
 getSearchSweepPowers :: 
@@ -659,8 +647,8 @@ getFlowAtSingleSweepPoint::
   CubeGrid.DimIdx dim ->
   CubeGrid.DimIdx dim1 ->
   Maybe (TopoQty.Section node (Result.Result  (Maybe (Interp.Val a))))  
-getFlowAtSingleSweepPoint (FlowResult result) sweepGrid demandIdx searchIdx = 
-  f $ CubeMap.lookupMaybe demandIdx result
+getFlowAtSingleSweepPoint flowResult sweepGrid demandIdx searchIdx = 
+  f $ CubeMap.lookupMaybe demandIdx flowResult
   where f (Just sweepFlow) = Just $ TopoQty.mapSection g sweepFlow
         f Nothing = Nothing  
         g (Result.Determined cubeData) = Result.Determined $ 

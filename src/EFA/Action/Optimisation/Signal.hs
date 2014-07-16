@@ -41,39 +41,34 @@ nc = genCaller modul
 
 data StateForcing = StateForcingOn | StateForcingOff deriving (Show)
 
-newtype DemandCycle node inst dim vec a b = 
-  DemandCycle (SignalFlow.Signal inst String vec a (ND.Data dim b))
+type DemandCycle node inst dim vec a b = SignalFlow.Signal inst String vec a (ND.Data dim b)
 
-newtype DemandCycleRec node inst vec a b = 
-  DemandCycleRec (SignalFlow.HRecord (DemandAndControl.DemandVar node) inst String vec a b) 
+type DemandCycleRec node inst vec a b = SignalFlow.HRecord (DemandAndControl.DemandVar node) inst String vec a b
 
-newtype DemandCycleMap node inst vec a b = 
-  DemandCycleMap (Map.Map (DemandAndControl.DemandVar node) (SignalFlow.Signal inst String vec a b)) deriving Show
+type DemandCycleMap node inst vec a b = 
+  Map.Map (DemandAndControl.DemandVar node) (SignalFlow.Signal inst String vec a b)
 
-newtype SupportSignal node inst dim  vec a b = 
-  SupportSignal (SignalFlow.Signal inst String vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b)))) 
+type SupportSignal node inst dim  vec a b = 
+  SignalFlow.Signal inst String vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b))) 
   
-newtype OptimalityPerStateSignal node inst vec a b = OptimalityPerStateSignal
-        (SignalFlow.Signal inst String vec a (ValueState.Map (FlowOpt.OptimalityValues b)))
+type OptimalityPerStateSignal node inst vec a b = 
+  SignalFlow.Signal inst String vec a (ValueState.Map (FlowOpt.OptimalityValues b))
 
-newtype OptimalControlSignalsPerState node inst vec a b = 
-  OptimalControlSignalsPerState (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a (ValueState.Map b)))
+type OptimalControlSignalsPerState node inst vec a b = 
+  Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a (ValueState.Map b))
 --  OptimalControlSignalsPerState (SignalFlow.HRecord (DemandAndControl.ControlVar node) inst String vec a (ValueState.Map b))
 
-newtype OptimalStoragePowersPerState node inst  vec a b = 
-   OptimalStoragePowersPerState (Map.Map node (SignalFlow.Signal inst String vec a (ValueState.Map (Maybe b))))
+type OptimalStoragePowersPerState node inst  vec a b = 
+  Map.Map node (SignalFlow.Signal inst String vec a (ValueState.Map (Maybe b)))
 --   OptimalStoragePowersPerState (SignalFlow.HRecord node inst String vec a (ValueState.Map (Maybe b)))
 
-newtype OptimalStateChoice node inst vec a b = 
-  OptimalStateChoice (SignalFlow.Signal inst String vec a ([Maybe Idx.AbsoluteState],Maybe b))
+type OptimalStateChoice node inst vec a b = 
+  SignalFlow.Signal inst String vec a ([Maybe Idx.AbsoluteState],Maybe b)
 
-newtype OptimalControlSignals node inst  vec a b = 
-  OptimalControlSignals {unOptimalControlSignals :: 
-                         (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a b))}
+type OptimalControlSignals node inst  vec a b = 
+  Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a b)
 
-newtype OptimalStoragePowers node inst vec a b = 
-  OptimalStoragePowers {unOptimalStoragePowers ::
-                           (Map.Map (node) (SignalFlow.Signal inst String vec a (Maybe b)))}
+type OptimalStoragePowers node inst vec a b = Map.Map (node) (SignalFlow.Signal inst String vec a (Maybe b))
 
 
 -- | Signal Containing Indices and ccordinates of supporting points holding the interpolation tiles 
@@ -91,8 +86,8 @@ getSupportPoints ::
   DemandCycle node inst dim vec a b ->
 --  SignalFlow.Signal inst (DemandAndControl.Var node) vec a (ND.Data dim b) ->
   SupportSignal node inst dim vec a b
-getSupportPoints caller demandGrid (DemandCycle demandCycle) = 
-  SupportSignal $ SignalFlow.map (CubeGrid.getSupportingPoints (caller |> nc "getSupportPoints") demandGrid) demandCycle
+getSupportPoints caller demandGrid demandCycle = 
+  SignalFlow.map (CubeGrid.getSupportingPoints (caller |> nc "getSupportPoints") demandGrid) demandCycle
 
 optimalStateSignals ::
   (Ord b,Show node,
@@ -132,8 +127,8 @@ optimalStateSignals ::
   SupportSignal node inst dim sigVec a b ->
   DemandCycle node inst dim sigVec a b ->
   OptimalityPerStateSignal node inst sigVec a (Interp.Val b)
-optimalStateSignals caller optimumResultCube (SupportSignal supportPoints)(DemandCycle  demandCycle) = 
-  OptimalityPerStateSignal $ SignalFlow.zipWith 
+optimalStateSignals caller optimumResultCube supportPoints demandCycle = 
+  SignalFlow.zipWith 
   (CubeSweep.interpolateOptimalityValuesWithSupportPerState (caller |> nc "optimalStateSignals") 
                             Interp.Linear
                             optimumResultCube) 
@@ -152,20 +147,20 @@ findOptimalStatesUsingMaxEta ::
  StateForcing ->
  OptimalityPerStateSignal inst label vec a (Interp.Val b) ->
  OptimalStateChoice inst label vec a (Interp.Val b)
-findOptimalStatesUsingMaxEta _ StateForcingOff (OptimalityPerStateSignal optimalitySignalPerState) = 
-  OptimalStateChoice $ SignalFlow.map (ValueState.getBest Interp.compareMaxWithInvalid . 
+findOptimalStatesUsingMaxEta _ StateForcingOff optimalitySignalPerState = 
+  SignalFlow.map (ValueState.getBest Interp.compareMaxWithInvalid . 
                                        ValueState.map FlowOpt.getOptEtaVal) optimalitySignalPerState
 
 -- | in Case of Stateforcing each State has to occur at least one
 -- get total maximum
 -- get minimal difference from maximum per state and correct the signals with that value before maxing
-findOptimalStatesUsingMaxEta caller StateForcingOn (OptimalityPerStateSignal optimalitySignalPerState) = 
-  OptimalStateChoice $ SignalFlow.map (ValueState.getBest Interp.compareMaxWithInvalid) conditionedSignal 
+findOptimalStatesUsingMaxEta caller StateForcingOn optimalitySignalPerState = 
+  SignalFlow.map (ValueState.getBest Interp.compareMaxWithInvalid) conditionedSignal 
   where 
     etaOptSignal = SignalFlow.map (ValueState.map FlowOpt.getOptEtaVal) optimalitySignalPerState
     etaOptSignalMax = SignalFlow.map (Maybe.fromMaybe err2 . snd) maxSig 
-    (OptimalStateChoice maxSig) = findOptimalStatesUsingMaxEta (caller |> nc "findOptimalStatesUsingMaxEta") 
-                      StateForcingOff (OptimalityPerStateSignal optimalitySignalPerState) 
+    maxSig = findOptimalStatesUsingMaxEta (caller |> nc "findOptimalStatesUsingMaxEta") 
+                      StateForcingOff optimalitySignalPerState 
     diffSignal = SignalFlow.zipWith (\m x -> ValueState.map (Arith.~- x) m) etaOptSignal etaOptSignalMax              
     minDifferencePerState = Maybe.fromMaybe err $ SignalFlow.foldl f (Nothing) diffSignal
     f (Nothing) y = Just y
@@ -204,10 +199,10 @@ interpolateControlSignalsPerState ::
   DemandCycle node inst dim sigVec a a ->
   [DemandAndControl.ControlVar node] ->
   OptimalControlSignalsPerState node inst sigVec a (Interp.Val a) 
-interpolateControlSignalsPerState caller inmethod (CubeSweep.OptimalFlowPerState flowCube) 
-  (SupportSignal supportSig) (DemandCycle coordinateSig) controlVars = 
-  OptimalControlSignalsPerState $ Map.fromList $ zip controlVars $ map f controlVars
-  where f var = SignalFlow.zipWith g supportSig coordinateSig
+interpolateControlSignalsPerState caller inmethod flowCube 
+  supportSig demandCycle controlVars = 
+  Map.fromList $ zip controlVars $ map f controlVars
+  where f var = SignalFlow.zipWith g supportSig demandCycle
           where 
             g support coordinates = CubeSweep.interpolateWithSupportPerState caller inmethod varCube support coordinates
             varCube = CubeMap.map (\ x -> CubeSweep.lookupControlVariablePerState caller x var) flowCube
@@ -240,9 +235,9 @@ interpolateStoragePowersPerState ::
   DemandCycle node inst dim sigVec a a ->
   [node] ->
   OptimalStoragePowersPerState node inst sigVec a (Interp.Val a)
-interpolateStoragePowersPerState caller inmethod (CubeSweep.OptimalFlowPerState flowCube) 
-  (SupportSignal supportSig) (DemandCycle coordinateSig) storageList = 
-  OptimalStoragePowersPerState $ Map.fromList $ zip storageList $ map f storageList
+interpolateStoragePowersPerState caller inmethod flowCube 
+  supportSig demandCycle storageList = 
+  Map.fromList $ zip storageList $ map f storageList
    where stoCube = CubeMap.map (ValueState.map getStoragePowers) flowCube
          getStoragePowers flowSection = let 
                 topo = TopoQty.topology flowSection
@@ -250,7 +245,7 @@ interpolateStoragePowersPerState caller inmethod (CubeSweep.OptimalFlowPerState 
                 storages = Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
                            $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
                 in Map.map (fmap FlowTopoOpt.getStoragePowerWithSign) storages 
-         f sto = SignalFlow.zipWith g supportSig coordinateSig
+         f sto = SignalFlow.zipWith g supportSig demandCycle
            where 
              g support coordinates = CubeSweep.interpolateWithSupportPerStateMaybe (caller |> nc "interpolateStoragePowersPerState") 
                                      inmethod stoPowerCube support coordinates
@@ -271,8 +266,8 @@ generateOptimalControl ::
   OptimalStateChoice node inst vec a (Interp.Val b) ->
   OptimalControlSignalsPerState node inst vec a (Interp.Val b) ->
   OptimalControlSignals node inst vec a (Interp.Val b)
-generateOptimalControl (OptimalStateChoice optimalStateSignal) (OptimalControlSignalsPerState optimalControlSignalsPerState) = 
-  OptimalControlSignals $ Map.map f optimalControlSignalsPerState 
+generateOptimalControl optimalStateSignal optimalControlSignalsPerState = 
+  Map.map f optimalControlSignalsPerState 
   where f sig = generateOptimalSignal optimalStateSignal sig
         
 generateOptimalStorageSignals :: 
@@ -290,8 +285,8 @@ generateOptimalStorageSignals ::
   OptimalStateChoice node inst vec a (Interp.Val a) ->
   OptimalStoragePowersPerState node inst vec a (Interp.Val a) ->
   OptimalStoragePowers node inst vec a (Interp.Val a)
-generateOptimalStorageSignals (OptimalStateChoice optimalStateSignal) (OptimalStoragePowersPerState storagePowerSignalPerState) = 
-  OptimalStoragePowers $ Map.map f storagePowerSignalPerState
+generateOptimalStorageSignals optimalStateSignal storagePowerSignalPerState = 
+  Map.map f storagePowerSignalPerState
   where f sig =  generateOptimalSignal optimalStateSignal sig
         
         
@@ -305,7 +300,7 @@ getBalance ::
 --  Map.Map (node) (SignalFlow.Signal inst label vec a (Maybe (Interp.Val a))) ->
   OptimalStoragePowers node inst vec a (Interp.Val a) ->
   Balance.Balance node (Maybe (Interp.Val a))
-getBalance (OptimalStoragePowers storageSignals) = Balance.Balance $ Map.map f storageSignals
+getBalance storageSignals = Balance.Balance $ Map.map f storageSignals
   where f storageSignal = SignalFlow.foldlWithTime g Nothing storageSignal
         g _ (_,Nothing) = Nothing
         g Nothing (t,Just x) = Just ((Interp.Inter t) Arith.~* x)
@@ -342,8 +337,8 @@ convertToDemandCycleRecord ::
   DemandCycle node inst dim vec a b ->
   [DemandAndControl.DemandVar node] ->
   DemandCycleRec node inst vec a b
-convertToDemandCycleRecord (DemandCycle (SignalFlow.Signal t dat)) demandVars = 
-  DemandCycleRec (SignalFlow.HRecord t (Map.fromList $ zip demandVars $ map f [0..(length demandVars)-1]))
+convertToDemandCycleRecord (SignalFlow.Signal t dat) demandVars = 
+  SignalFlow.HRecord t (Map.fromList $ zip demandVars $ map f [0..(length demandVars)-1])
   where 
     f index = SignalFlow.mapData (flip ND.unsafeLookup (ND.Idx index)) dat
 
@@ -355,8 +350,8 @@ convertToDemandCycleMap ::
   DemandCycle node inst dim vec a b ->
   [DemandAndControl.DemandVar node] ->
   DemandCycleMap node inst vec a b
-convertToDemandCycleMap (DemandCycle sig) demandVars = 
-  DemandCycleMap (Map.fromList $ zip demandVars $ map f [0..(length demandVars)-1])
+convertToDemandCycleMap sig demandVars = 
+  Map.fromList $ zip demandVars $ map f [0..(length demandVars)-1]
   where 
     f index = SignalFlow.map (flip ND.unsafeLookup (ND.Idx index)) sig
     
@@ -370,7 +365,7 @@ makeGivenRecord ::
   DemandCycleMap node inst sigVec a a ->
   OptimalControlSignals node inst sigVec a (Interp.Val a) ->
   SignalFlow.HRecord (XIdx.Position node) inst String sigVec a (Interp.Val a) 
-makeGivenRecord caller (DemandCycleMap demand) (OptimalControlSignals control) = 
+makeGivenRecord caller demand control = 
   SignalFlow.HRecord time (Map.map SignalFlow.getData m)
   where 
     (SignalFlow.Signal time _, _) = Maybe.fromMaybe err $ Map.minView demand

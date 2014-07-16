@@ -115,7 +115,7 @@ plotVariation ::
   CubeSweep.Variation node inst demDim srchDim demVec srchVec a b ->
   ([PlotD3.PlotData (DemandAndControl.Var node) (DemandAndControl.Var node) a b],
    [PlotD3.PlotData (DemandAndControl.Var node) (DemandAndControl.Var node) a b])
-plotVariation caller (CubeSweep.Variation sweep) = 
+plotVariation caller sweep = 
   (PlotCube.plotCollection newCaller demandCubes, PlotCube.plotCollection newCaller searchCubes)
   where 
     newCaller = (caller |> nc "plotVariation")
@@ -155,7 +155,7 @@ plotEvalSweepStackValue ::
    c) ->
   CubeSweep.OptimalityMeasure node inst dim srchDim vec srchVec a b ->
   [PlotD3.PlotData (CubeGrid.DimIdx srchDim) (DemandAndControl.Var node) a c]
-plotEvalSweepStackValue caller searchGrid faccess (CubeSweep.OptimalityMeasure sweepCube) = 
+plotEvalSweepStackValue caller searchGrid faccess sweepCube = 
   concatMap f $ SweepAccess.sweepCubeToDemandCubeList searchGrid $ CubeMap.map (ActUt.checkDetermined "plotSweepStackValue") sweepCube
   where 
     f (dimIdx,cube) = PlotCube.toPlotData caller (Just dimIdx) $ CubeMap.map faccess cube
@@ -218,7 +218,7 @@ plotOptimalOptimalityValuePerState ::
     (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val b))) -> Interp.Val b) ->
   CubeSweep.OptimalChoicePerState node inst dim vec a (Interp.Val b) ->
   [PlotD3.PlotData [Char] (DemandAndControl.Var node) a (Interp.Val b)]    
-plotOptimalOptimalityValuePerState caller faccess (CubeSweep.OptimalChoicePerState optPerState) = 
+plotOptimalOptimalityValuePerState caller faccess optPerState = 
   concatMap f stateCubes
   where  
     f (_,cube) = PlotCube.toPlotData caller (Just "OpimalObjectivePerState") $ 
