@@ -79,7 +79,7 @@ import qualified EFA.Data.Plot.D3.Cube as PlotCube
 import qualified EFA.Data.Plot.D3 as PlotD3
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
 
--- import qualified EFA.Action.Optimisation.Sweep as Sweep
+import qualified EFA.Action.Utility as ActUt
 import qualified EFA.Action.Optimisation.Cube.Solve as CubeSolve
 
 import qualified Data.Maybe as Maybe
@@ -93,57 +93,6 @@ modul = ModuleName "DoubleSweep"
 
 nc :: FunctionName -> Caller
 nc = genCaller modul
-
-{-
-newtype Variation node inst demDim srchDim demVec srchVec a b = 
-  Variation 
-  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-   (Collection.Collection (DemandAndControl.Var node) (CubeMap.Cube (Sweep.Search inst) 
-                                 srchDim (DemandAndControl.Var node) srchVec a b)))
-
-newtype FlowResult node inst demDim srchDim demVec srchVec a b = 
-  FlowResult
-  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-   (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                                         srchDim srchVec b))))
-
-newtype FlowStatus node inst demDim srchDim demVec srchVec a = 
-  FlowStatus 
-   (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-    (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                    srchDim srchVec ActFlowCheck.EdgeFlowStatus)))
-
-   
-newtype EndNodeFlows node inst demDim srchDim demVec srchVec a b =  
-  EndNodeFlows
-  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-  (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                                                    srchDim srchVec b))))  
-newtype OptimalityMeasure node inst demDim srchDim demVec srchVec a b = 
-  OptimalityMeasure
- (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-  (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
-                  (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityMeasure  b)))))
- 
-newtype ObjectiveFunctionValues node inst demDim srchDim demVec srchVec a b = 
-  ObjectiveFunctionValues 
-  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-   (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
-   (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityValues  b)))))
-
-newtype OptimalChoicePerState node inst dim vec a b = 
-  OptimalChoicePerState                                                              
-  (CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a 
-   (ValueState.Map (CubeGrid.LinIdx,
-                    (ActFlowCheck.EdgeFlowStatus,
-                     FlowOpt.OptimalityValues  b))))
-
-newtype OptimalFlowPerState node inst dim vec a b = 
-  OptimalFlowPerState
-  (CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a 
-   (ValueState.Map (TopoQty.Section node b)))
--}
-
 
 plotVariation :: 
   (Eq node,
@@ -176,6 +125,72 @@ plotVariation caller (CubeSweep.Variation sweep) =
     searchCubes = -- Collection.filterWithKey (\k _ -> DemandAndControl.isControlVar k) $
                   CubeMap.lookupLinUnsafe sweep (CubeGrid.LinIdx 0)
     
+plotEvalSweepStackValue ::
+  (DV.Walker srchVec, 
+   DV.Walker vec,
+   DV.Storage vec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                                    FlowOpt.OptimalityMeasure b))),
+   DV.Storage srchVec (CubeGrid.DimIdx srchDim,
+                       CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a (ActFlowCheck.EdgeFlowStatus,
+                                                                                               FlowOpt.OptimalityMeasure b)),
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                     FlowOpt.OptimalityMeasure b)),
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                       FlowOpt.OptimalityMeasure b),
+   DV.Storage srchVec a,
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
+                   FlowOpt.OptimalityMeasure b),
+   DV.Storage vec c,
+   DV.LookupUnsafe vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                          FlowOpt.OptimalityMeasure b)),
+   DV.LookupUnsafe srchVec (ActFlowCheck.EdgeFlowStatus,
+                            FlowOpt.OptimalityMeasure b),
+   DV.Length srchVec,
+   DV.FromList srchVec,
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a c) =>
+  Caller ->
+  CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
+  ((ActFlowCheck.EdgeFlowStatus,
+    FlowOpt.OptimalityMeasure b) ->
+   c) ->
+  CubeSweep.OptimalityMeasure node inst dim srchDim vec srchVec a b ->
+  [PlotD3.PlotData (CubeGrid.DimIdx srchDim) (DemandAndControl.Var node) a c]
+plotEvalSweepStackValue caller searchGrid faccess (CubeSweep.OptimalityMeasure sweepCube) = 
+  concatMap f $ SweepAccess.sweepCubeToDemandCubeList searchGrid $ CubeMap.map (ActUt.checkDetermined "plotSweepStackValue") sweepCube
+  where 
+    f (dimIdx,cube) = PlotCube.toPlotData caller (Just dimIdx) $ CubeMap.map faccess cube
+
+plotStates ::
+  (DV.Walker vec,
+   DV.Walker srchVec,
+   DV.Storage vec (Maybe Idx.AbsoluteState),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
+                   FlowOpt.OptimalityMeasure b),
+   DV.Storage srchVec a,
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                       FlowOpt.OptimalityMeasure b),
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                     FlowOpt.OptimalityMeasure b)),
+   DV.Storage srchVec (CubeGrid.DimIdx srchDim,
+                       CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a (ActFlowCheck.EdgeFlowStatus,
+                                                                                               FlowOpt.OptimalityMeasure b)),
+   DV.Storage vec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                                    FlowOpt.OptimalityMeasure b))),
+   DV.LookupUnsafe srchVec (ActFlowCheck.EdgeFlowStatus,
+                            FlowOpt.OptimalityMeasure b),
+   DV.LookupUnsafe vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                          FlowOpt.OptimalityMeasure b)),
+   DV.Length srchVec,
+   DV.FromList srchVec,
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Maybe Idx.AbsoluteState)) =>
+  Caller ->
+  CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
+  CubeSweep.OptimalityMeasure node inst dim srchDim vec srchVec a b ->
+  [PlotD3.PlotData (CubeGrid.DimIdx srchDim) (DemandAndControl.Var node) a (Maybe Idx.AbsoluteState)]
+plotStates caller searchGrid sweepCube = plotEvalSweepStackValue (caller |> nc "plotStates") searchGrid (ActFlowCheck.getState . fst)  sweepCube
+
+
+
 plotOptimalOptimalityValuePerState ::
   (Arith.Sum b,
    DV.Walker vec,
@@ -196,13 +211,13 @@ plotOptimalOptimalityValuePerState ::
                                     FlowOpt.OptimalityValues b))),
    DV.Storage vec (CubeGrid.LinIdx, (ActFlowCheck.EdgeFlowStatus,
                                      FlowOpt.OptimalityValues b)),
-   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var t) vec a (Interp.Val b),
-   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var t) vec a b) =>
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val b),
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a b) =>
   Caller ->
   ((CubeGrid.LinIdx, 
     (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val b))) -> Interp.Val b) ->
-  CubeSweep.OptimalChoicePerState t t1 dim vec a (Interp.Val b) ->
-  [PlotD3.PlotData [Char] (DemandAndControl.Var t) a (Interp.Val b)]    
+  CubeSweep.OptimalChoicePerState node inst dim vec a (Interp.Val b) ->
+  [PlotD3.PlotData [Char] (DemandAndControl.Var node) a (Interp.Val b)]    
 plotOptimalOptimalityValuePerState caller faccess (CubeSweep.OptimalChoicePerState optPerState) = 
   concatMap f stateCubes
   where  

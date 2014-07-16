@@ -59,13 +59,14 @@ newtype SinkMap node a = SinkMap (Map.Map node a) deriving Show
 newtype SourceMap node a = SourceMap (Map.Map node a) deriving Show  
 newtype StorageMap node a =  StorageMap (Map.Map node a) deriving Show  
 
-data Eta2Optimise a = EtaSys a deriving Show -- TODO add | SelectedEta a deriving Show
+data Eta2Optimise a = EtaSys {unEta2Optimise :: a} deriving (Show,Eq,Ord) -- TODO add | SelectedEta a deriving Show
 data Loss2Optimise a = LossSys a deriving Show -- TODO add | SelectedLoss a deriving Show
 newtype TotalBalanceForce a = TotalBalanceForce a deriving Show
 
 data OptimalityValues a = OptimalityValues (OptimalityMeasure a) (TotalBalanceForce a) deriving Show
 
-data OptimalityMeasure a = OptimalityMeasure (Eta2Optimise a) (Loss2Optimise a) deriving Show
+data OptimalityMeasure a = OptimalityMeasure {getEta :: Eta2Optimise a, 
+                                              getLoss:: Loss2Optimise a} deriving Show
 
 -- TODO :: pretty ugly
 instance Functor OptimalityValues where

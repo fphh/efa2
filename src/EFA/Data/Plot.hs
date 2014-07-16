@@ -171,7 +171,8 @@ run ::
 run terminal frameAttr plt =
    void $ Plot.plotSync terminal $ Frame.cons frameAttr plt
 
-data PlotInfo id a = PlotInfo (Maybe id) (Maybe a)
+data PlotInfo id a = PlotInfo {accessId :: Maybe id,  
+                               accessInfo :: Maybe a}
 
 
 

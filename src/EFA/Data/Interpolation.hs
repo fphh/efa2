@@ -34,35 +34,9 @@ nc = genCaller modul
 
 data Pos = HitLeft | Inside | HitRight | Outside | Undefined deriving (Show)
 
--- TODO: Problems showing the string -> double quotes and wrong unit scaling, no numer format
 data Val a = Inter a
                  | Extra a
                  | Invalid [String] deriving (Show)
-
-
-instance (Arith.Sum a) => Arith.Sum (Val a) where
-  x ~+ y = combineWith (~+) x y
-  {-# INLINE (~+) #-}
-  
-  x ~- y = combineWith (~-) x y
-  {-# INLINE (~-) #-}
-
-  negate x = Arith.negate x
-  {-# INLINE negate #-}
-
-instance (Arith.Product a, Arith.Constant a) =>
-         Arith.Product (Val a) where
-  x ~* y =  combineWith (~*) x y
-  {-# INLINE (~*) #-}
-
-  x ~/ y =  combineWith (~/) x y
-  {-# INLINE (~/) #-}
-
-  recip x = Arith.recip x
-  {-# INLINE recip #-}
-
-  constOne _ = Inter $ Arith.one
-  {-# INLINE constOne #-}
 
 instance (Eq a, Product a, Constant a) => Arith.ZeroTestable (Val a) where
   allZeros (Invalid _) = False
@@ -125,6 +99,8 @@ instance Applicative Val where
   Invalid xs <*> _ = Invalid xs
   _ <*> Invalid xs = Invalid xs
   
+
+-- TODO :: CombineWith & Co ersetzen mit Functor
 combineWith :: (a -> a -> a) -> Val a -> Val a -> Val a  
 combineWith f x y = case (x,y) of 
  (Inter v,Inter v1) -> Inter (f v v1)
@@ -143,9 +119,9 @@ combine x y = combineWith (\v _ -> v) x y
 combine3 :: Val a -> Val a -> Val a -> Val a
 combine3 x y z = combine (combine x y) z  
 
-{-
 
-TODO - funktor definierte Arith und Test klassen wieder reaktivieren
+
+-- TODO - funktor definierte Arith und Test klassen wieder reaktivieren
 instance (Arith.Sum a) => Arith.Sum (Val a) where
   x ~+ y = liftA2 (~+) x y
   {-# INLINE (~+) #-}
@@ -170,7 +146,7 @@ instance (Arith.Product a, Arith.Constant a) =>
 
   constOne _ = Inter $ Arith.one
   {-# INLINE constOne #-}
--}
+
 
 {-
 
@@ -418,9 +394,11 @@ dim1PerStateWithMaybe caller inmethod label (x0,x1) (y0,y1) x = ValueState.zipWi
         f _ _ = Nothing
         
 -- TODO: correct logic behind greaterThanWithInvalid to correspond with >
--- | Invalid is always smaller
+-- | Invalid is always smaller, deliver first Index with maximum Value
 greaterThanWithInvalid :: (Arith.Constant a,Ord a) => Val a -> Val a -> Bool
-greaterThanWithInvalid (Invalid _) _ = True 
+greaterThanWithInvalid (Invalid _) x = case x of
+                                          (Invalid _) -> False
+                                          _ -> True
 greaterThanWithInvalid _ (Invalid _) = False
 greaterThanWithInvalid x y = (unpack y) > (unpack x)
 

@@ -16,7 +16,7 @@ import qualified EFA.Flow.Topology.Index as TopoIdx
 import qualified  EFA.Data.OD.Curve as Curve
 
 import EFA.Utility(Caller,
-                 --  merror,
+                   merror,
                    (|>),
                    ModuleName(..),FunctionName, genCaller)
 
@@ -25,6 +25,7 @@ import EFA.Utility(Caller,
 
 --import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 
 modul :: ModuleName
 modul = ModuleName "OD.Curve"
@@ -42,10 +43,11 @@ data Configuration a = InterpolationOpts (Map.Map CurveName (Interp.Method a, In
 data Conditioning a = Conditioning (Map.Map CurveName ([Curve.ModifyOps a]))
 -}
 data EtaAssignMap node a = EtaAssignMap (Map.Map (TopoIdx.Position node) 
-                           (Conf ((Interp.Method a, Interp.ExtrapMethod a), ([Curve.ModifyOps a],CurveName))))
+                           (CalculationDirection,Conf ((Interp.Method a, Interp.ExtrapMethod a), ([Curve.ModifyOps a],CurveName))))
 
 newtype FunctionMap node a = FunctionMap {unFunctionMap :: (Map.Map (TopoIdx.Position node) (a -> a))}
 
+data CalculationDirection = DownStream | UpStream
 -- makeEtaAssignMap :: EtaAssign node -> Conditioning a -> Configuration a -> Conditioning a
 
 lookupEtaFunction :: (Ord node) => FunctionMap node a -> TopoIdx.Position node -> Maybe (a -> a)
@@ -71,14 +73,15 @@ makeEtaFunctions ::
   FunctionMap node (Interp.Val a)
 makeEtaFunctions caller (EtaAssignMap assignMap) etaCurves = FunctionMap $ Map.mapWithKey f assignMap    
   where f _ assign = 
-          let -- TODO:: Insert errror message as Map.lookup        
-            g (ops,name) =  (Curve.modify ops $ 
-                             (\(Just x) -> x) $ Map.lookup name etaCurves) 
+          let
+            g (ops,name) =  (Curve.modify ops $ Maybe.fromMaybe (err name) $ Map.lookup name etaCurves) 
+            err n = merror caller modul "makeEtaFunctions" ("Curve not found in Map: " ++ show n)
             in case assign of 
-          (Pair (m,x) (n,y)) ->  etaFunctionWithTwoCurves (caller |> nc "makeEtaFunction") (m,g x) (n,g y)
-          (Single (m,x)) -> etaFunctionWithOneCurve (caller |> nc "makeEtaFunction")  (m,g x)
-          (Duplicate (m,x)) -> etaFunctionWithTwoCurves (caller |> nc "makeEtaFunction")(m,Curve.recipY $ Curve.flipX $ g x) (m,g x) 
-          (DuplicateCombine (m,x)) -> etaFunctionWithOneCurve (caller |> nc "makeEtaFunction") 
+          (calcDir, Pair (m,x) (n,y)) ->  etaFunctionWithTwoCurves (caller |> nc "makeEtaFunction") calcDir (m,g x) (n,g y)
+          (calcDir, Single (m,x)) -> etaFunctionWithOneCurve (caller |> nc "makeEtaFunction")  calcDir (m,g x)
+          (calcDir, Duplicate (m,x)) -> etaFunctionWithTwoCurves (caller |> nc "makeEtaFunction") calcDir 
+                                        (m,Curve.recipY $ Curve.flipX $ g x) (m,g x) 
+          (calcDir, DuplicateCombine (m,x)) -> etaFunctionWithOneCurve (caller |> nc "makeEtaFunction") calcDir
                                       (m ,Curve.combine (caller |> nc "makeEtaFunction") (Curve.recipY $ Curve.flipX $ g x) (g x))
             
 
@@ -94,15 +97,20 @@ etaFunctionWithTwoCurves ::
    DV.Find vec, 
    Arith.Constant (Interp.Val a)) =>
   Caller -> 
+  CalculationDirection ->
   ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) -> 
   ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) -> 
   Interp.Val a ->
-  Interp.Val  a     
-etaFunctionWithTwoCurves caller ((inmethodNeg,exmethodNeg),curveNeg) ((inmethodPos,exmethodPos),curvePos) x = 
-  case x>= Arith.zero of 
-     False -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodNeg exmethodNeg curveNeg x
-     True -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodPos exmethodPos curvePos x
-
+  Interp.Val a     
+etaFunctionWithTwoCurves caller calculationDirection ((inmethodNeg,exmethodNeg),curveNeg) ((inmethodPos,exmethodPos),curvePos) xx = let 
+  f x = case x>= Arith.zero of 
+    True -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodPos exmethodPos curvePos x
+    False -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodNeg exmethodNeg curveNeg x
+  in case calculationDirection of 
+    DownStream -> f xx
+    UpStream -> f (Arith.negate xx)
+      
+     
 etaFunctionWithOneCurve ::
   (Ord a,
    Show a,
@@ -110,14 +118,16 @@ etaFunctionWithOneCurve ::
    Arith.Constant a,
    DV.Storage vec a,
    DV.LookupUnsafe vec a,
-   DV.Length vec,
+   DV.Length vec,DV.Walker vec,DV.Reverse vec,
    DV.Find vec) =>
   Caller -> 
+  CalculationDirection ->
   ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) ->   
   Interp.Val a ->
   Interp.Val a         
-etaFunctionWithOneCurve caller ((inmethod,exmethod),curve) x = 
-  Curve.interpolate (caller |> nc "etaFunctionWithOneCurve") inmethod exmethod curve x
+etaFunctionWithOneCurve caller calculationDirection ((inmethod,exmethod),curve) x = case calculationDirection of
+  DownStream -> Curve.interpolate (caller |> nc "etaFunctionWithOneCurve") inmethod exmethod curve x
+  UpStream -> Curve.interpolate (caller |> nc "etaFunctionWithOneCurve") inmethod exmethod (Curve.recipY $ Curve.flipX curve) x
   
       
 

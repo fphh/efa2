@@ -130,7 +130,6 @@ checkDetermined name rx =
       Undetermined -> error $ "undetermined " ++ name
       Determined x -> x
 
-
 maxBy :: (Ord b) => (a -> b) -> a -> a -> a
 maxBy f x y = if f y > f x then y else x
 

@@ -122,10 +122,9 @@ balanceLoop ::
   [BalanceLoopItem node a z]
 balanceLoop caller balParams systemFunction getBalance lastBalItem = UtList.takeUntil check $ 
   go lastBalItem
-  --UtList.takeUntil check $ tail $ go [lastBalItem]
   where
     check (BalanceLoopItem cnt _ _ _ bal _ _) = 
---      (Balance.checkBalance threshold bal) || 
+      (Balance.checkBalance threshold bal) || 
       Balance.checkBalanceCounter cnt maxIterations
     threshold = accessThreshold balParams
     maxIterations = accessMaxIterations balParams   
@@ -140,46 +139,8 @@ balanceLoop caller balParams systemFunction getBalance lastBalItem = UtList.take
       (f "bestPair" bestPair) 
       (trace "result" result))
       where 
---        (BalanceLoopItem lastCount lastSto lastForcing step lastBalance lastBestPair _) = last xs
         sto = Balance.selectStorageToForce (caller |> nc "balanceOneStorageLoop") 
                lastBalance threshold lastCount maxIterationsPerStorage lastSto 
-        forcing = Balance.addForcingStep (caller |> nc "balanceOneStorageLoop") lastForcing step sto
-        result = systemFunction forcing
-        balance = getBalance result
-        nextStep = step -- trace ("balance" ++ show balance) $ Balance.calculateNextBalanceStep caller balance bestPair step sto
-        count = Balance.incrementBalanceCounter lastCount sto
-        bestPair = Balance.rememberBestBalanceForcing (caller |> nc "balanceOneStorageLoop") lastBestPair (forcing, balance) sto
-        
-        
---  in UtList.takeUntil check $ go [BalanceLoopItem initialCount initialSto initialForcing initialStep 
---                                   initialBalance Balance.emptyBestForcingPair intialResult] 
-{-
-balanceLoop :: 
-  (Ord a, Ord node, Show node, Arith.Constant a,Show a) =>
-  Caller ->                               
-  BalanceLoopParams node a ->
-  (Balance.Forcing node a -> z) ->
-  (z -> Balance.Balance node a) ->
-  Balance.BalanceCounter node ->
-  (Balance.Forcing node a) ->
-  (Balance.ForcingStep node a) -> 
-  node ->
-  [BalanceLoopItem node a z]
-balanceLoop caller balParams systemFunction getBalance initialCount initialForcing initialStep initialSto = 
-  let  
-    intialResult = systemFunction initialForcing
-    initialBalance = getBalance intialResult
-    check (BalanceLoopItem cnt _ _ _ bal _ _) = 
-      (Balance.checkBalance threshold bal) || 
-      Balance.checkBalanceCounter cnt maxIterations
-    threshold = accessThreshold balParams
-    maxIterations = accessMaxIterations balParams   
-    maxIterationsPerStorage = accessMaxIterationsPerStorage balParams
-    go xs = go $ xs ++ [BalanceLoopItem count sto forcing nextStep balance bestPair result]
-      where 
-        (BalanceLoopItem lastCount lastSto lastForcing step lastBalance lastBestPair _) = last xs
-        sto = Balance.selectStorageToForce (caller |> nc "balanceOneStorageLoop") 
-              lastBalance threshold lastCount maxIterationsPerStorage sto 
         forcing = Balance.addForcingStep (caller |> nc "balanceOneStorageLoop") lastForcing step sto
         result = systemFunction forcing
         balance = getBalance result
@@ -188,10 +149,6 @@ balanceLoop caller balParams systemFunction getBalance initialCount initialForci
         bestPair = Balance.rememberBestBalanceForcing (caller |> nc "balanceOneStorageLoop") lastBestPair (forcing, balance) sto
         
         
-  in UtList.takeUntil check $ go [BalanceLoopItem initialCount initialSto initialForcing initialStep 
-                                   initialBalance Balance.emptyBestForcingPair intialResult] 
-
--}
 
 {-
 balanceOneStorageLoopM :: 

@@ -395,7 +395,19 @@ mapWithGrid ::
   DV.Storage vec (ND.Data dim a, b)) =>
  (ND.Data dim a -> b -> c) -> Cube inst dim label vec a b -> Cube inst dim label vec a c
 mapWithGrid f (Cube grid (Data vec))  = (Cube grid $ Data $ DV.map (\(x,y) -> f x y) $
-                                  DV.zip (Grid.toVector grid) $ vec)
+                                  DV.zip (Grid.toVector grid) vec)
+mapDataWithIndex ::
+  (DV.Walker vec,
+   DV.Storage vec a, 
+   DV.Length vec,
+   DV.Storage vec c,
+   DV.Storage vec b) =>
+ (Grid.LinIdx -> b -> c) ->
+ Data inst label vec b ->
+ Data inst dim vec c
+mapDataWithIndex f (Data vec) = 
+  Data $ DV.imap (\ linIdx y -> f (Grid.LinIdx linIdx) y) vec
+
 
 foldl ::(DV.Walker vec, DV.Storage vec b)=>
  (acc -> b -> acc) -> acc -> Cube inst dim label vec a b -> acc

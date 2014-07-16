@@ -127,7 +127,7 @@ showUnit x = case x of
 
 
 getDisplayUnit :: Dynamic -> DisplayUnit
-getDisplayUnit P = Unit_kW
+getDisplayUnit P = Unit_W
 getDisplayUnit E = Unit_kWh
 getDisplayUnit UT = Unit_UT
 getDisplayUnit N = Unit_None

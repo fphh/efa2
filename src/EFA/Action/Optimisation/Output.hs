@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
   
 module EFA.Action.Optimisation.Output where
 
@@ -7,7 +8,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Cube.Sweep.Access as SweepAccess
 import qualified EFA.Action.EenergyFlowAnalysis as EFA
 import qualified EFA.Action.Simulation as Simulation
-
+import qualified EFA.Flow.Part.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Action.Optimisation.Process as Process
 import EFA.Utility.Async (concurrentlyMany_)
@@ -31,7 +32,7 @@ import qualified EFA.Data.Plot.D2.Curve as PlotCurve
 import qualified EFA.Data.Plot.D2 as PlotD2
 import qualified EFA.Data.Plot.D3 as PlotD3
 import qualified EFA.Data.Plot.D3.Cube as PlotCube
-
+import qualified EFA.Signal.Vector as SV
 import qualified EFA.Value.State as ValueState
 
 import qualified EFA.Data.Axis.Strict as Strict
@@ -243,7 +244,7 @@ data SweepCtrl = SweepDont |
                           
 --TODO:: Type-Safe Indx (using inst)
 sweep ::
-  (Show a,
+  (Show a,DV.Storage vec a, DV.Length vec,
    Node.C node,
    FormatValue.FormatValue a,
    DV.Storage srchVec (Interp.Val a),
@@ -255,8 +256,68 @@ sweep ::
   Process.SweepResults node inst dim srchDim vec srchVec a ->
   [IO ()]
 sweep linIdxDem ctrl sweep = 
-  (drawAction (drawFlow ctrl)  (Draw.flowSection Draw.optionsDefault) 
+  let 
+    demGrid = CubeMap.getGrid $ CubeSweep.unFlowResult $ Process.accessSweepFlow sweep
+    fromLin linIdx = CubeGrid.fromLinear demGrid linIdx
+    toLin idx = CubeGrid.toLinear demGrid idx
+  in 
+   (drawAction (drawFlow ctrl)  
+    (Draw.title ("LinIdx: " ++ show linIdxDem ++ "Idx: " ++ (show $ fromLin linIdxDem)) . 
+     Draw.flowSection  Draw.optionsDefault) 
    (flip CubeMap.lookupLinUnsafe linIdxDem $ CubeSweep.unFlowResult $ Process.accessSweepFlow sweep))
+   
+
+data EvalCtrl = EvalDont | 
+                 EvalDo { plotEta :: Plot }
+                          
+evalSweep :: forall node vec srchVec srchDim dim label inst a b.
+  (Ord a,
+   Show node,
+   Arith.Constant a,
+   Atom.C a,
+   DV.Walker vec,
+   DV.Walker srchVec,
+   DV.Storage vec (Interp.Val a),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
+                   ActFlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Storage srchVec a,
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                       ActFlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                     ActFlowOpt.OptimalityMeasure (Interp.Val a))),
+   DV.Storage srchVec (CubeGrid.DimIdx srchDim,
+                       CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a (ActFlowCheck.EdgeFlowStatus,
+                                                                                               ActFlowOpt.OptimalityMeasure (Interp.Val a))),
+   DV.Storage vec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                                    ActFlowOpt.OptimalityMeasure (Interp.Val a)))),
+   DV.LookupUnsafe srchVec (ActFlowCheck.EdgeFlowStatus,
+                            ActFlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.LookupUnsafe vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                          ActFlowOpt.OptimalityMeasure (Interp.Val a))),
+   DV.Length srchVec,
+   DV.FromList srchVec,
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val a)) =>
+  Caller ->
+  CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
+  EvalCtrl ->
+  Process.SweepEvaluation node inst dim srchDim vec srchVec a ->
+  [IO ()]
+evalSweep caller srchGrid ctrl sweep = let  
+  newCaller = caller |> nc "evalSweep"
+  in 
+   (plotAction (plotEta ctrl)
+    (PlotD3.allInOne (PlotD3.labledFrame "SweepEta") 
+      (\ _ _ -> LineSpec.title "") . 
+      SweepPlot.plotEvalSweepStackValue newCaller srchGrid (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd)) 
+     (Process.accessSweepOptimality sweep))
+   
+ {-  (plotAction (plotEta ctrl)
+    (PlotD3.allInOne (PlotD3.labledFrame "FlowState") 
+      (\ _ _ -> LineSpec.title "") .  
+      SweepPlot.plotStates newCaller srchGrid) 
+      (Process.accessSweepOptimality sweep)) -}
+   
+   
 
 -- data EvalCtrl = EvalDont | EvalDo {variation :: Plot}
  
@@ -371,6 +432,29 @@ data SimCtrl =
    drawSequenceFlowGraph :: Draw,               
    drawStateFlowGraph :: Draw}    
 
+simulation :: 
+  (Ord a,
+   Show a,
+   Show node,
+   SV.Storage sigVec (Interp.Val a),
+   SV.FromList sigVec,
+   Arith.Constant a,
+   Node.C node,
+   Tuple.C a,
+   Atom.C a,
+   Type.ToDisplayUnit a,
+   Type.GetDynamicType a,
+   FormatValue.FormatValue a,
+   FormatValue.FormatValue (sigVec (Interp.Val a)),
+   DV.Walker sigVec,
+   DV.Storage sigVec (Interp.Val a),
+   DV.Storage sigVec a,
+   DV.Singleton sigVec,
+   DV.Length sigVec,
+   DV.FromList sigVec) =>
+  SimCtrl ->
+  Process.SimulationAndAnalysis node inst sigVec a ->
+ [IO ()]
 simulation ctrl sim =  let
   legend = Map.fromList $ zip [0..] $ SignalFlow.getHRecordKeys $ 
            Simulation.accessPowerRecord $ Process.accessSimulation sim

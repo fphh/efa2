@@ -1,7 +1,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE  TypeFamilies #-}
+{-# LANGUAGE  TypeFamilies #-}<
 {-# LANGUAGE UndecidableInstances #-}
 
 module EFA.Action.Optimisation.Cube.Sweep where
@@ -222,7 +222,7 @@ getEndNodeFlows (FlowResult result) = EndNodeFlows $
                                       CubeMap.map FlowTopoOpt.getEndNodeFlows result 
 
 getFlowStatus ::
-  (Ord b,
+  (Ord b,Arith.NaNTestable b,
   Ord node,
   Arith.Constant b,
   DV.Zipper vec1,

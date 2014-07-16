@@ -104,6 +104,27 @@ collectionCubeToCubeCollection cube = Collection.Collection grid (Map.mapWithKey
   grid = CubeMap.getGrid cube
         
 
+sweepCubeToDemandCubeList ::
+  (DV.Storage srchVec a,
+   DV.Length srchVec,DV.Walker srchVec, DV.Storage srchVec b,
+   DV.Walker demVec,
+   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec b),
+   DV.Storage demVec b,
+   DV.LookupUnsafe srchVec b,
+   DV.Storage srchVec (CubeGrid.DimIdx srchDim,CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a b),
+   DV.FromList srchVec,
+   DV.LookupUnsafe demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec b))=>
+  CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
+  CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+  (CubeMap.Data (Sweep.Search inst) srchDim srchVec b) ->
+  [(CubeGrid.DimIdx srchDim, CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a b)]         
+sweepCubeToDemandCubeList grid sweepCube = DV.toList $ DV.imap f srchVec
+  where (CubeMap.Data srchVec)= CubeMap.lookupLinUnsafe sweepCube (CubeGrid.LinIdx 0) 
+        f linIdx _ = (CubeGrid.fromLinear grid $ CubeGrid.LinIdx linIdx, 
+                      CubeMap.map (flip CubeMap.lookupLinUnsafeData (CubeGrid.LinIdx linIdx)) sweepCube)
+        g (Result.Determined vec) idx = CubeMap.lookupLinUnsafeData vec (CubeGrid.LinIdx idx)        
+
+
 stateCubeToStateCubes ::
   (DV.Storage vec b,DV.Walker vec, DV.Storage vec (ValueState.Map b),DV.Storage vec (Maybe b)) =>
   CubeMap.Cube node inst dim vec a (ValueState.Map b) ->

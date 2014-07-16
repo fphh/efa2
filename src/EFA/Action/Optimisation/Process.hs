@@ -127,8 +127,8 @@ data OptiSet node inst demDim srchDim demVec srchVec sigVec a =
    accessSearchVariation :: [(DemandAndControl.Var node,Type.Dynamic,srchVec a)],  
    accessDemandVars :: [DemandAndControl.DemandVar node],
    accessControlVars :: [DemandAndControl.ControlVar node],  
-   accessDemandGrid ::  CubeGrid.Grid inst demDim (DemandAndControl.Var node) demVec a,
-   accessSearchGrid ::  CubeGrid.Grid inst srchDim (DemandAndControl.Var node) srchVec a,
+   accessDemandGrid ::  CubeGrid.Grid (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a,
+   accessSearchGrid ::  CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a,
    accessVariation :: CubeSweep.Variation node inst demDim srchDim demVec srchVec a (Interp.Val a),
    accessSupportSignal :: OptSignal.SupportSignal node inst demDim sigVec a a
      } 
@@ -262,7 +262,7 @@ buildOptiSet demandVariation searchVariation demandCycle =
 -- | Only has to be calculated once, unless efficiency curves change
 makeSweep ::
   (Ord a,
-   Arith.Constant a,
+   Arith.Constant a,Arith.NaNTestable a,
    Node.C node,
    DV.Zipper srchVec,
    DV.Walker srchVec,

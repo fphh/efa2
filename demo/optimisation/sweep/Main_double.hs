@@ -155,17 +155,17 @@ edgeList = [(Coal, Network, "Coal\\lPlant", "Coal","ElCoal"),
 etaAssignMap :: EtaFunctions.EtaAssignMap Node Double
 etaAssignMap = EtaFunctions.EtaAssignMap $ Map.fromList $
    (TopoIdx.Position Network Water,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage"))) : 
+    (EtaFunctions.UpStream, EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage")))) : 
    (TopoIdx.Position Network Coal ,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 7 0.45], "coal"))) : 
+    (EtaFunctions.DownStream, EtaFunctions.Single ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 7 0.45], "coal")))) : 
    (TopoIdx.Position LocalNetwork Gas,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.7], "gas"))) : 
+    (EtaFunctions.DownStream, EtaFunctions.Single ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.7], "gas")))) : 
    (TopoIdx.Position LocalNetwork Network,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 3 0.95], "transformer"))) : 
+    (EtaFunctions.UpStream,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 3 0.95], "transformer")))) : 
    (TopoIdx.Position LocalRest LocalNetwork,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 1], "local"))) : 
+    (EtaFunctions.DownStream,EtaFunctions.Single ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 10 1], "local")))) : 
    (TopoIdx.Position Rest Network,
-    EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 1], "rest"))) : 
+    (EtaFunctions.DownStream,EtaFunctions.Single ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 10 1], "rest")))) : 
    []
 
 efaParams :: EFA.EFAParams Node (Interp.Val Double)
@@ -219,22 +219,22 @@ gas =   [0.1, 0.2 .. 0.8]
 
 demandVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 demandVariation  = 
-  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.1,0.6..6.2]), -- [-1.1,-0.6..(-0.1)]),
-   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Rest Network,Type.P,[0.1,0.2..2.1])] -- [-1.1,-0.6..(-0.1)])]
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.01,1.01 .. 6.01]), -- [-1.1,-0.6..(-0.1)]),
+   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Rest Network,Type.P,[0.01,1.01 .. 6.01])] -- [-1.1,-0.6..(-0.1)])]
 
 searchVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 searchVariation = 
-  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.1,0.2..0.8]),
-   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[0.1,0.2..0.8])]  
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.01,0.21 .. 0.91]),
+   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[0.01,0.21 .. 0.91])]  
 
 
 lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
-lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [335,616,598]) $ replicate 3 $
+lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0..10000]) $ replicate 3 $
                Map.fromList [(Water,(FlowOpt.GenerationEfficiency $ Interp.Inter 1.0, FlowOpt.UsageEfficiency $ Interp.Inter 1.0))] 
 
 
 showFunctionAxis ::  Strict.Axis Base String [] Double
-showFunctionAxis = Strict.Axis "Power" Type.P $ DV.fromList [-100 .. 100]                      
+showFunctionAxis = Strict.Axis "Power" Type.P $ DV.fromList $ [-12,-11.9 .. -0.1] ++ [0,0.1..12]                      
 
 
 caller = nc "Main"
@@ -245,7 +245,11 @@ sysCtrl = OP.SysDo {OP.topo = OP.DoP OP.Xterm OP.StdOut, OP.labTopo =  OP.DoP OP
 testCtrl = OP.TestDo {OP.demandCycle = OP.Dflt}
 sysDataCtrl = OP.SysDataDo {OP.rawCurves = OP.PoP OP.Dflt OP.StdOut, OP.etaFunctions = OP.Dflt}
 optiSetCtrl = OP.OptiSetDo {OP.variation = OP.Dflt }
-sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm}
+evalCtrl = OP.EvalDo { OP.plotEta = OP.Dflt }
+
+sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm, 
+                        OP.plotState = OP.Dflt,
+                        OP.plotStatus = OP.Dflt}
 optCtrl = OP.OptiDo {OP.plotOptEtaPerState = OP.Dflt, 
                      OP.plotEtaOptPerState= OP.Dflt, 
                      OP.plotOptIndexPerState= OP.Dflt}
@@ -259,6 +263,9 @@ simCtrl = OP.SimDo {OP.drawSimulationFlowGraph = OP.Xterm,
 
 balanceForcingMap :: Balance.Forcing Node (Interp.Val Double)
 balanceForcingMap = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.5))]
+
+balanceForcingMap1 :: Balance.Forcing Node (Interp.Val Double)
+balanceForcingMap1 = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.1))]
 
 initialBalanceMap :: Balance.Balance Node Double
 initialBalanceMap = Balance.Balance $ Map.fromList [(Water, 0.5)]
@@ -306,12 +313,18 @@ main = do
         :: Process.SweepResults Node Base ND.Dim2 ND.Dim2 [] [] Double
                         
   let evalSweep = Process.evaluateSweep caller lifeCycleMap sweep
+        :: Process.SweepEvaluation Node Base ND.Dim2 ND.Dim2 [] [] Double
       
   let optPerState = Process.optimisationPerState testSet optiSet sweep evalSweep  storageList balanceForcingMap controlVars
 --        :: Process.OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a
      
   let optimalOperation = Process.optimalOperation optPerState
       
+  let optPerState1 = Process.optimisationPerState testSet optiSet sweep evalSweep  storageList balanceForcingMap1 controlVars
+--        :: Process.OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a
+     
+  let optimalOperation1 = Process.optimalOperation optPerState1
+   
   let simEfa = Process.simulateAndAnalyse caller system efaParams systemData demandVars optimalOperation demandCycle    
           :: Process.SimulationAndAnalysis Node Base [] Double
              
@@ -320,18 +333,25 @@ main = do
       
   let loop = Process.loop (nc "Main") testSet optiSet sweep evalSweep storageList controlVars etaLoopParams balanceLoopParams  
   
-{-  
-  concurrentlyMany_ $ OP.system sysCtrl system
-  concurrentlyMany_ $ OP.test testCtrl testSet demandVars
-  concurrentlyMany_ $ OP.sysData sysDataCtrl systemData
-  concurrentlyMany_ $ OP.optiSet (nc "Main") optiSetCtrl optiSet
-  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 0) sweepCtrl sweep
+  
+--  concurrentlyMany_ $ OP.system sysCtrl system
+--  concurrentlyMany_ $ OP.test testCtrl testSet demandVars
+--  concurrentlyMany_ $ OP.sysData sysDataCtrl systemData
+--  concurrentlyMany_ $ OP.optiSet (nc "Main") optiSetCtrl optiSet
+  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 0) sweepCtrl sweep  
+  concurrentlyMany_ $ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep
+  
+--  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 1) sweepCtrl sweep
+--  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 2) sweepCtrl sweep
+--  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 3) sweepCtrl sweep
   concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState
-  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
-  concurrentlyMany_ $ OP.simulation simCtrl simEfa
--}  
+--  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
+--  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState1
+--  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation1
+--  concurrentlyMany_ $ OP.simulation simCtrl simEfa
+  
 --  print stoPowers
-  print balance
+--  print balance
   print loop
 --  print rec
   

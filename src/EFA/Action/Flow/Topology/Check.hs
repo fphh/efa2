@@ -4,7 +4,11 @@ module EFA.Action.Flow.Topology.Check where
 
 --import qualified EFA.Action.Flow as ActFlow
 import qualified EFA.Action.Flow.Check as ActFlowCheck
--- import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Action.Flow.Topology.Optimality as ActFlowTopoOpt
+import qualified EFA.Action.Flow.Optimality as ActFlowOpt
+import qualified EFA.Action.Optimisation.Sweep as Sweep
+
+import qualified EFA.Graph.Topology.Node as Node
 import EFA.Equation.Result (Result(Determined,Undetermined))
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph as Graph
@@ -15,6 +19,7 @@ import qualified EFA.Data.ND.Cube.Map as CubeMap
 import qualified EFA.Data.Vector as DV
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Flow.Topology as FlowTopo
+
 
 -- import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
@@ -36,7 +41,7 @@ nc = genCaller modul
 
    
 getFlowStatus :: 
-  (Ord node, Ord (edge node), Ord a, Arith.Constant a,
+  (Ord node, Ord (edge node), Ord a, Arith.Constant a,Arith.NaNTestable a,
    DV.Zipper vec, DV.Walker vec, DV.Storage vec ActFlowCheck.EdgeFlowStatus,
    DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
    DV.Storage vec ActFlowCheck.Validity) =>
@@ -63,7 +68,7 @@ combineStatusResults expo (Determined s) (Determined s1) =
 combineStatusResults _ _ _ = Undetermined  
 
 getEdgeFlowStatus :: 
-  (Ord a, Arith.Constant a, DV.Zipper vec, DV.Walker vec,
+  (Ord a, Arith.Constant a, DV.Zipper vec, DV.Walker vec,Arith.NaNTestable a,
    DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
    DV.Storage vec ActFlowCheck.Validity, DV.Storage vec ActFlowCheck.EdgeFlowStatus) =>
   TopoQty.Flow (Result (CubeMap.Data inst dim vec (Interp.Val a))) -> 
@@ -88,13 +93,31 @@ getEdgeState p =
           (Interp.Invalid _) -> Nothing
           (Interp.Extra x) -> g x 
 
-edgeFlowCheck ::  (Arith.Product a, Ord a, Arith.Constant a) => a -> a -> ActFlowCheck.EdgeFlowConsistency 
+edgeFlowCheck ::  (Arith.Product a, Ord a, Arith.Constant a, Arith.NaNTestable a) => a -> a -> ActFlowCheck.EdgeFlowConsistency 
 edgeFlowCheck x y = ActFlowCheck.EFC signCheck etaCheck
   where
     eta = if x >= Arith.zero then y Arith.~/ x else x Arith.~/ y
-    etaCheck = ActFlowCheck.etaCheckFromBool $ eta > Arith.zero && eta < Arith.one 
-    signCheck = ActFlowCheck.signCheckFromBool $ Arith.sign x == Arith.sign y
+    etaCheck = ActFlowCheck.etaCheckFromBool $ eta > Arith.zero && eta <= Arith.one
+                                               -- True -- if x >= Arith.zero 
+                                               -- then eta > Arith.zero && eta <= Arith.one 
+                                               -- else eta >= Arith.one  
+    signCheck = ActFlowCheck.signCheckFromBool $ Arith.sign x == Arith.sign y && nanCheck
+    -- TODO: nanCheck nochmal gesondert einbauen 
+    nanCheck = if Arith.checkIsNaN x || Arith.checkIsNaN y then error "NaN detected" else True
 
 
+{-
+TODO :: Check Flow Graphs for correct sink / source flow
 
-
+sinkSourceFlowCheck ::  
+  ActFlowTopoOpt.EndNodeEnergies node (Result (CubeMap.Data (Sweep.Search inst) dim vec a)) ->
+  Bool
+sinkSourceFlowCheck (ActFlowTopoOpt.EndNodeEnergies (ActFlowOpt.SinkMap sinks) (ActFlowOpt.SourceMap sources) _) =  
+  alwaysSinksOK && sinksOK && sourcesOK && alwaysSourcesOK
+  where 
+    alwaysSinksOK = all (> Arith.zero) $ Map.elems $ Map.filterWithKey (\k _ -> Node.typ k == Node.AlwaysSink) sinks
+    sinksOK = all (>= Arith.zero) $ Map.elems $ Map.filterWithKey (\k _ -> Node.typ k == Node.Sink) sinks
+    sourcesOK = all (>= Arith.zero) $ Map.elems $ Map.filterWithKey (\k _ -> Node.typ k == Node.Source) sources
+    alwaysSourcesOK = all (> Arith.zero) $ Map.elems $ Map.filterWithKey (\k _ -> Node.typ k == Node.AlwaysSource) sources
+    greaterThan x = fmap  
+-}

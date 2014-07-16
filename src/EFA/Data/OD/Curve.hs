@@ -93,7 +93,7 @@ data ModifyOps a =
   FlipY |
   RecipY |
   Scale a a |
---  Offset a a |
+  Offset a a |
   AddPntsL [(a,a)] |
   AddPntsR [(a,a)] 
 --  AddAtZero b 
@@ -119,6 +119,7 @@ modi FlipX  curve = flipX  curve
 modi FlipY  curve = flipY  curve
 modi RecipY  curve = recipY  curve
 modi (Scale x y)  curve = scale x y  curve
+modi (Offset x y)  curve = offset x y curve
 modi (AddPntsL xs)  curve = addPntsL xs  curve
 modi (AddPntsR xs)  curve = addPntsR xs  curve
 -- modi (ModifLabel f) curve = modifyLabelWith f curve
@@ -146,6 +147,12 @@ scale ::
    DV.Storage vec a) =>
   a -> b -> Curve inst label vec a b -> Curve inst label vec a b
 scale x y (Curve axis vec) = Curve (Strict.scale x axis) (DV.map (Arith.~*y) vec)
+
+offset :: 
+  (Arith.Sum b, DV.Walker vec, DV.Storage vec b,DV.Storage vec a, Arith.Sum a) =>
+  a -> b -> Curve inst label vec a b -> Curve inst label vec a b
+offset x y (Curve axis vec) = Curve (Strict.offset x axis) (DV.map (Arith.~+y) vec)
+
 
 addPntsL :: 
   (DV.Storage vec b, DV.Storage vec a, DV.Singleton vec,

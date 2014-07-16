@@ -22,13 +22,19 @@ import qualified EFA.Data.Plot as DataPlot
 --                   ModuleName(..),FunctionName, genCaller)
 
 data PlotData id info label a b =
-  PlotData (DataPlot.PlotInfo id info) (RangeInfo label a b) (Plot2D.T a b)
+  PlotData 
+  {
+    accessPlotInfo :: DataPlot.PlotInfo id info,  
+    accessRange :: RangeInfo label a b, 
+    accessPlot ::  Plot2D.T a b}
 
 class ToPlotData odContainer info label vec a b where
   toPlotData :: Maybe id ->
              odContainer inst label (vec :: * -> *)  a b ->
              [PlotData id info label a b]
 
+getId :: PlotData id info label a b -> Maybe id
+getId plotData = DataPlot.accessId $ accessPlotInfo plotData
 
 class GetRangeInfo d2data label vec a b where
   getRangeInfo ::

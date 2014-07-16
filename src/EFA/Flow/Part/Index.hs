@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module EFA.Flow.Part.Index where
 
 import qualified EFA.Report.Format as Format
@@ -7,7 +9,17 @@ import Data.Word (Word)
 import qualified Prelude as P
 import Prelude hiding (init, flip)
 
+import qualified Graphics.Gnuplot.Value.Atom as Atom
+import qualified Graphics.Gnuplot.Value.Tuple as Tuple
+
 newtype AbsoluteState = AbsoluteState Integer deriving (Show, Eq, Ord)
+
+instance Atom.C (Maybe AbsoluteState) where
+  
+instance Tuple.C (Maybe AbsoluteState) where
+  text (Just (AbsoluteState x)) = Tuple.text x
+  text Nothing = Tuple.text (0/0::Double)
+
 
 newtype State = State Word deriving (Show, Eq, Ord)
 

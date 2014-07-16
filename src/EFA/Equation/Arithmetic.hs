@@ -92,7 +92,20 @@ instance (Integral a) => ZeroTestable (Ratio a) where
    allZeros = (0==)
    coincidingZeros x y = x==0 && y==0
 
-
+class NaNTestable a where
+  checkIsNaN :: a -> Bool
+  
+instance NaNTestable Double where  
+  checkIsNaN = isNaN
+  
+instance NaNTestable (Ratio a) where  
+  checkIsNaN _ = False
+  
+instance NaNTestable Integer where  
+  checkIsNaN _ = False
+  
+instance NaNTestable Float where  
+  checkIsNaN = isNaN
 
 ruleAdd ::
    (Sys.Value t a, Sum a) =>
