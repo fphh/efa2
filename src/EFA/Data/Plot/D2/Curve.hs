@@ -22,20 +22,21 @@ import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 
 import qualified Data.Map as Map 
 
-instance 
+getRangeInfo::
   (Ord a,
-   Arith.Constant a,
-   Type.GetDynamicType a,
-   DV.Storage vec a,
-   DV.Length vec,
-   DV.FromList vec, 
    Ord b,
+   Arith.Constant a,
    Arith.Constant b,
+   Type.GetDynamicType a,
    Type.GetDynamicType b,
+   DV.Storage vec a,
    DV.Storage vec b,
-   DV.Singleton vec) =>
-  PlotD2.GetRangeInfo Curve.Curve label vec a b where
-  getRangeInfo curve = PlotD2.RangeInfo axRange valRange
+   DV.Singleton vec,
+   DV.Length vec,
+   DV.FromList vec) =>
+  Curve.Curve inst label vec a b ->
+  PlotD2.RangeInfo label a b 
+getRangeInfo curve = PlotD2.RangeInfo axRange valRange
     where axRange = DataPlot.fromAxis $ Curve.getAxis curve
           valRange = DataPlot.fromRange $ Curve.getData curve
 
@@ -56,7 +57,7 @@ basic ::
   PlotD2.PlotData id info label a b 
 basic ident curve = PlotD2.PlotData info range  (Plot2D.list Graph2D.lines $ zip xdata ydata)
   where info = DataPlot.PlotInfo ident Nothing
-        range = PlotD2.getRangeInfo curve
+        range = getRangeInfo curve
         axis = Curve.getAxis curve
         xdata = DV.toList $ DV.map (Type.toDisplayUnit' (Strict.getType axis)) $ Strict.getVec axis
         ydata = DV.toList $ DV.map Type.toDisplayUnit $ Curve.getData curve                         
@@ -103,7 +104,6 @@ toPlotDataMap ::
    DV.Singleton vec,
    DV.Length vec,
    DV.FromList vec)=>
- (PlotD2.ToPlotData Curve.Curve info label vec a b) =>
   Map.Map key (Curve.Curve inst label vec a b) ->
   [PlotD2.PlotData key info label a b]
 toPlotDataMap curveMap = concatMap snd $ Map.toList $ Map.mapWithKey (\key x -> toPlotData (Just key) x) curveMap

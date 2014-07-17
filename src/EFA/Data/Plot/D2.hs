@@ -6,7 +6,7 @@ module EFA.Data.Plot.D2 where
 
 import qualified Graphics.Gnuplot.Frame.Option as Opt
 import qualified Graphics.Gnuplot.Terminal as Terminal
-import qualified Graphics.Gnuplot.Plot as Plot
+--import qualified Graphics.Gnuplot.Plot as Plot
 
 import qualified Data.Foldable as Foldable
 import qualified Graphics.Gnuplot.Frame as Frame
@@ -28,20 +28,8 @@ data PlotData id info label a b =
     accessRange :: RangeInfo label a b, 
     accessPlot ::  Plot2D.T a b}
 
-class ToPlotData odContainer info label vec a b where
-  toPlotData :: Maybe id ->
-             odContainer inst label (vec :: * -> *)  a b ->
-             [PlotData id info label a b]
-
 getId :: PlotData id info label a b -> Maybe id
 getId plotData = DataPlot.accessId $ accessPlotInfo plotData
-
-class GetRangeInfo d2data label vec a b where
-  getRangeInfo ::
-    (d2data :: * -> * -> (* -> *) -> * -> * -> *) typ label vec a b
---    d2data typ dim label vec a b
-    -> RangeInfo label a b
-
 
 data RangeInfo label a b = RangeInfo
   (DataPlot.AxisInfo label a)

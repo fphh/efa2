@@ -76,7 +76,6 @@ plotDemandCycle ::
   [PlotD2.PlotData (DemandAndControl.DemandVar node) info String a b]
 plotDemandCycle demandVars cycle = plotDemandCycleMap $ OptSignal.convertToDemandCycleMap demandVars cycle 
 
--- plotDemandCycleMap :: 
 plotDemandCycleMap ::
   (Ord b,
    Ord a,
@@ -98,4 +97,4 @@ plotDemandCycleMap ::
   OptSignal.DemandCycleMap node inst vec a b ->
   [PlotD2.PlotData (DemandAndControl.DemandVar node) info String a b]
 plotDemandCycleMap cycle = 
-  concat $ Map.elems $ Map.mapWithKey (\ident sig ->  PlotD2.toPlotData (Just ident) sig) cycle
+  concat $ Map.elems $ Map.mapWithKey (\ident sig ->  SignalFlowPlot.toPlotData (Just ident) sig) cycle
