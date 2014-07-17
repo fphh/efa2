@@ -50,43 +50,6 @@ nc :: FunctionName -> Caller
 nc = genCaller modul
 
 
-{-
-
-newtype DemandCycle node inst dim vec a b = 
-  DemandCycle (SignalFlow.Signal inst String vec a (ND.Data dim b))
-
-newtype DemandCycleRec node inst vec a b = 
-  DemandCycleRec (SignalFlow.HRecord (DemandAndControl.DemandVar node) inst String vec a b) 
-
-newtype DemandCycleMap node inst vec a b = 
-  DemandCycleMap (Map.Map (DemandAndControl.DemandVar node) (SignalFlow.Signal inst String vec a b)) deriving Show
-
-newtype SupportSignal node inst dim  vec a b = 
-  SupportSignal (SignalFlow.Signal inst String vec a (ND.Data dim (Strict.SupportingPoints (Strict.Idx,b)))) 
-  
-newtype OptimalityPerStateSignal node inst vec a b = OptimalityPerStateSignal
-        (SignalFlow.Signal inst String vec a (ValueState.Map (FlowOpt.OptimalityValues b)))
-
-newtype OptimalControlSignalsPerState node inst vec a b = 
-  OptimalControlSignalsPerState (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a (ValueState.Map b)))
---  OptimalControlSignalsPerState (SignalFlow.HRecord (DemandAndControl.ControlVar node) inst String vec a (ValueState.Map b))
-
-newtype OptimalStoragePowersPerState node inst  vec a b = 
-   OptimalStoragePowersPerState (Map.Map node (SignalFlow.Signal inst String vec a (ValueState.Map (Maybe b))))
---   OptimalStoragePowersPerState (SignalFlow.HRecord node inst String vec a (ValueState.Map (Maybe b)))
-
-newtype OptimalStateChoice node inst vec a b = 
-  OptimalStateChoice (SignalFlow.Signal inst String vec a ([Maybe Idx.AbsoluteState],Maybe b))
-
-newtype OptimalControlSignals node inst  vec a b = 
-  OptimalControlSignals (Map.Map (DemandAndControl.ControlVar node) (SignalFlow.Signal inst String vec a b))
-
-newtype OptimalStoragePowers node inst vec a b = 
-  OptimalStoragePowers (Map.Map (node) (SignalFlow.Signal inst String vec a (Maybe b)))
-
--}
-
-
 -- class ToPlotData  
 plotDemandCycle ::
   (Ord node,

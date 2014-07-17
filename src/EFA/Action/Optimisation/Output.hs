@@ -268,7 +268,8 @@ sweep linIdxDem ctrl sweep =
    
 
 data EvalCtrl = EvalDont | 
-                 EvalDo { plotEta :: Plot }
+                 EvalDo { plotEta :: Plot,  
+                          plotEtaAt :: Plot }
                           
 evalSweep :: forall node vec srchVec srchDim dim label inst a b.
   (Ord a,
@@ -309,7 +310,7 @@ evalSweep caller srchGrid ctrl sweep = let
     (PlotD3.allInOne (PlotD3.labledFrame "SweepEta") 
       (\ _ _ -> LineSpec.title "") . 
       SweepPlot.plotEvalSweepStackValue newCaller srchGrid (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd)) 
-     (Process.accessSweepOptimality sweep))
+     (Process.accessSweepOptimality sweep)) ++
    
  {-  (plotAction (plotEta ctrl)
     (PlotD3.allInOne (PlotD3.labledFrame "FlowState") 
@@ -317,7 +318,13 @@ evalSweep caller srchGrid ctrl sweep = let
       SweepPlot.plotStates newCaller srchGrid) 
       (Process.accessSweepOptimality sweep)) -}
    
+   (plotAction (plotEtaAt ctrl)
+    (PlotD3.allInOne (PlotD3.labledFrame "SweepEtaAt") 
+      (\ _ _ -> LineSpec.title "") . 
+      SweepPlot.plotEvalSweepStackValueAt newCaller srchGrid (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd) (CubeGrid.LinIdx 0) ) 
+     (Process.accessSweepOptimality sweep))
    
+--   plotEvalSweepStackValueAt caller searchGrid faccess sweepCube (CubeGrid.LinIdx 0)
 
 -- data EvalCtrl = EvalDont | EvalDo {variation :: Plot}
  

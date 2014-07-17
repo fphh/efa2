@@ -61,11 +61,37 @@ basic ident curve = PlotD2.PlotData info range  (Plot2D.list Graph2D.lines $ zip
         xdata = DV.toList $ DV.map (Type.toDisplayUnit' (Strict.getType axis)) $ Strict.getVec axis
         ydata = DV.toList $ DV.map Type.toDisplayUnit $ Curve.getData curve                         
               
-instance 
-  (Ord b,Atom.C a, Atom.C b,
+
+toPlotData :: 
+  (Ord a,
+   Ord b,
+   Arith.Constant a,
+   Arith.Constant b,
+   Atom.C a,
+   Atom.C b,
+   Tuple.C b,
+   Tuple.C a,
+   Type.ToDisplayUnit b,
+   Type.GetDynamicType a,
+   Type.GetDynamicType b,
+   DV.Walker vec,
+   DV.Storage vec a,
+   DV.Storage vec b,
+   DV.Singleton vec,
+   DV.Length vec,
+   DV.FromList vec) =>
+  Maybe id ->
+  Curve.Curve inst label vec a b ->
+  [PlotD2.PlotData id info label a b]
+toPlotData ident curve = [basic ident curve]
+
+toPlotDataMap ::
+  (Ord b,
    Ord a,
    Arith.Constant b,
    Arith.Constant a,
+   Atom.C b,
+   Atom.C a,
    Tuple.C a,
    Tuple.C b,
    Type.ToDisplayUnit b,
@@ -76,12 +102,8 @@ instance
    DV.Storage vec a,
    DV.Singleton vec,
    DV.Length vec,
-   DV.FromList vec)=> 
-  PlotD2.ToPlotData Curve.Curve info label vec a b where
-  toPlotData ident curve = [basic ident curve]
-
-toPlotDataMap ::
- ( PlotD2.ToPlotData odContainer info label vec a b) =>
-  Map.Map key (odContainer inst label vec a b) ->
+   DV.FromList vec)=>
+ (PlotD2.ToPlotData Curve.Curve info label vec a b) =>
+  Map.Map key (Curve.Curve inst label vec a b) ->
   [PlotD2.PlotData key info label a b]
-toPlotDataMap curveMap = concatMap snd $ Map.toList $ Map.mapWithKey (\key x -> PlotD2.toPlotData (Just key) x) curveMap
+toPlotDataMap curveMap = concatMap snd $ Map.toList $ Map.mapWithKey (\key x -> toPlotData (Just key) x) curveMap

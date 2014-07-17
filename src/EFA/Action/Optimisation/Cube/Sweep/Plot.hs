@@ -160,6 +160,15 @@ plotEvalSweepStackValue caller searchGrid faccess sweepCube =
   where 
     f (dimIdx,cube) = PlotCube.toPlotData caller (Just dimIdx) $ CubeMap.map faccess cube
 
+
+
+plotEvalSweepStackValueAt caller searchGrid faccess linIdx sweepCube =
+  f $ CubeMap.map (flip CubeMap.lookupLinUnsafeData linIdx . ActUt.checkDetermined "plotSweepStackValue") sweepCube
+  where 
+    f cube = PlotCube.toPlotData caller (Just linIdx) $ CubeMap.map faccess cube
+  
+
+
 plotStates ::
   (DV.Walker vec,
    DV.Walker srchVec,

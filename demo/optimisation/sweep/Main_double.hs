@@ -155,7 +155,7 @@ edgeList = [(Coal, Network, "Coal\\lPlant", "Coal","ElCoal"),
 etaAssignMap :: EtaFunctions.EtaAssignMap Node Double
 etaAssignMap = EtaFunctions.EtaAssignMap $ Map.fromList $
    (TopoIdx.Position Network Water,
-    (EtaFunctions.UpStream, EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage")))) : 
+    (EtaFunctions.DownStream, EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.9], "storage")))) : 
    (TopoIdx.Position Network Coal ,
     (EtaFunctions.DownStream, EtaFunctions.Single ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 7 0.45], "coal")))) : 
    (TopoIdx.Position LocalNetwork Gas,
@@ -187,7 +187,7 @@ demandCycle :: OptSignal.DemandCycle Node Base ND.Dim2 [] Double Double
 demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5]),
                                                              (1,ND.fromList (nc "Main") [0.2,0.4]),
                                                              (2,ND.fromList (nc "Main") [0.21,0.42]),
-                                                             (3,ND.fromList (nc "Main") [2,0.4]),
+                                                             (3,ND.fromList (nc "Main") [0.3,0.4]),
                                                              (4,ND.fromList (nc "Main") [0.2,0.4]),
                                                              (5,ND.fromList (nc "Main") [0.2,0.4]),
                                                              (6,ND.fromList (nc "Main") [0.2,0.4]),
@@ -219,13 +219,13 @@ gas =   [0.1, 0.2 .. 0.8]
 
 demandVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 demandVariation  = 
-  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.01,1.01 .. 6.01]), -- [-1.1,-0.6..(-0.1)]),
-   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Rest Network,Type.P,[0.01,1.01 .. 6.01])] -- [-1.1,-0.6..(-0.1)])]
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.01,0.11 .. 1.01]),  -- .. 2.01]), -- [-1.1,-0.6..(-0.1)]),
+   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Rest Network,Type.P,[0.01,0.11 .. 1.01])] -- .. 2.01])] -- [-1.1,-0.6..(-0.1)])]
 
 searchVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 searchVariation = 
-  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.01,0.21 .. 0.91]),
-   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[0.01,0.21 .. 0.91])]  
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.01,0.21]),  -- .. 0.91]),
+   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[0.01,0.91])]  --  .. 0.91])]  
 
 
 lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
@@ -245,11 +245,13 @@ sysCtrl = OP.SysDo {OP.topo = OP.DoP OP.Xterm OP.StdOut, OP.labTopo =  OP.DoP OP
 testCtrl = OP.TestDo {OP.demandCycle = OP.Dflt}
 sysDataCtrl = OP.SysDataDo {OP.rawCurves = OP.PoP OP.Dflt OP.StdOut, OP.etaFunctions = OP.Dflt}
 optiSetCtrl = OP.OptiSetDo {OP.variation = OP.Dflt }
-evalCtrl = OP.EvalDo { OP.plotEta = OP.Dflt }
+evalCtrl = OP.EvalDo { OP.plotEta = OP.Dflt, 
+                       OP.plotEtaAt = OP.Dflt }
 
 sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm, 
                         OP.plotState = OP.Dflt,
                         OP.plotStatus = OP.Dflt}
+            
 optCtrl = OP.OptiDo {OP.plotOptEtaPerState = OP.Dflt, 
                      OP.plotEtaOptPerState= OP.Dflt, 
                      OP.plotOptIndexPerState= OP.Dflt}
@@ -339,11 +341,11 @@ main = do
 --  concurrentlyMany_ $ OP.sysData sysDataCtrl systemData
 --  concurrentlyMany_ $ OP.optiSet (nc "Main") optiSetCtrl optiSet
   concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 0) sweepCtrl sweep  
+  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 1) sweepCtrl sweep
+  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 2) sweepCtrl sweep
+  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 3) sweepCtrl sweep
   concurrentlyMany_ $ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep
   
---  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 1) sweepCtrl sweep
---  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 2) sweepCtrl sweep
---  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 3) sweepCtrl sweep
   concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState
 --  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
 --  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState1
@@ -352,6 +354,7 @@ main = do
   
 --  print stoPowers
 --  print balance
+  print $ Process.accessSweepOptimality evalSweep
   print loop
 --  print rec
   
@@ -463,3 +466,5 @@ main = do
 -}
 
 -}
+
+
