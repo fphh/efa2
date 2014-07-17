@@ -413,6 +413,15 @@ foldl ::(DV.Walker vec, DV.Storage vec b)=>
  (acc -> b -> acc) -> acc -> Cube inst dim label vec a b -> acc
 foldl f acc (Cube _ (Data vec)) = DV.foldl f acc vec
 
+foldlData ::
+  (DV.Walker vec, DV.Storage vec a) =>
+  (acc -> a -> acc) ->
+  acc ->
+  Data inst dim vec a ->
+  acc 
+foldlData  f acc (Data vec) = DV.foldl f acc vec
+
+
 foldlWithGrid ::
   (DV.Walker vec,
    DV.Storage vec (vec [a]),

@@ -147,6 +147,7 @@ plotEvalSweepStackValue ::
                             FlowOpt.OptimalityMeasure b),
    DV.Length srchVec,
    DV.FromList srchVec,
+   ND.Dimensions srchDim,
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a c) =>
   Caller ->
   CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
@@ -156,7 +157,9 @@ plotEvalSweepStackValue ::
   CubeSweep.OptimalityMeasure node inst dim srchDim vec srchVec a b ->
   [PlotD3.PlotData (CubeGrid.DimIdx srchDim) (DemandAndControl.Var node) a c]
 plotEvalSweepStackValue caller searchGrid faccess sweepCube = 
-  concatMap f $ SweepAccess.sweepCubeToDemandCubeList searchGrid $ CubeMap.map (ActUt.checkDetermined "plotSweepStackValue") sweepCube
+  concatMap f $ SweepAccess.extractSearchData (caller |> nc "plotEvalSweepStackValue") 
+  searchGrid  (CubeMap.map (ActUt.checkDetermined "plotSweepStackValue") sweepCube)
+  CubeGrid.All
   where 
     f (dimIdx,cube) = PlotCube.toPlotData caller (Just dimIdx) $ CubeMap.map faccess cube
 
@@ -190,7 +193,7 @@ plotStates ::
    DV.LookupUnsafe vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
                                                                           FlowOpt.OptimalityMeasure b)),
    DV.Length srchVec,
-   DV.FromList srchVec,
+   DV.FromList srchVec,ND.Dimensions srchDim,
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Maybe Idx.AbsoluteState)) =>
   Caller ->
   CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->

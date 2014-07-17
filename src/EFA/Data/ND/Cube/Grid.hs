@@ -22,11 +22,11 @@ import qualified Data.Map as Map
 --import qualified Data.List as List
 
 
-m :: ModuleName
-m = ModuleName "Grid"
+modul :: ModuleName
+modul = ModuleName "Grid"
 
 nc :: FunctionName -> Caller
-nc = genCaller m
+nc = genCaller modul
 
 -- newtype Idx = Idx {getInt :: Int} deriving Show
 
@@ -211,4 +211,26 @@ getSupportingPointLinearIndices caller grid supp = convertToLinear $ foldl f [] 
     
     convertToLinear acc = map (toLinear grid . ND.fromList (caller |> nc "supportingPoints2ND")) acc
 
-    
+
+data ExtractInfo dim = All | Edges | EdgesAndStep Int | Linear [LinIdx] | Dim [DimIdx dim]  | ReduceDims (Map.Map ND.Idx [Strict.Idx])
+  
+extractIndexList ::
+  (DV.Storage vec a,
+   DV.Length vec,
+   ND.Dimensions dim) =>
+  Caller ->
+  Grid inst dim label vec a ->
+  ExtractInfo dim ->
+ [LinIdx] 
+extractIndexList _ grid All = map LinIdx [0..(linearLength grid-1)]
+extractIndexList caller grid Edges = map (toLinear grid) $ map (ND.fromList (caller |> nc "extractIndexList")) 
+                                $ sequence $ map (\x->[Strict.Idx 0, Strict.Idx x]) $ ND.toList $ sizes grid
+extractIndexList caller grid (EdgesAndStep st) = map (toLinear grid) $ map (ND.fromList  (caller |> nc "extractIndexList")) 
+                                            $ sequence $ map (\x->map Strict.Idx [0,st .. x]) $ ND.toList $ sizes grid
+extractIndexList _ _ (Linear xs) = xs 
+extractIndexList _ grid (Dim xs) = map (toLinear grid) xs 
+extractIndexList caller grid (ReduceDims m) = map (toLinear grid) $ map (ND.fromList  (caller |> nc "extractIndexList")) 
+                                            $ sequence $ ND.toList $ ND.imap f grid
+  where f idx axis = case Map.lookup idx m of  
+          (Just idxList) -> idxList
+          Nothing -> map Strict.Idx [0 .. (Strict.len axis -1)] 

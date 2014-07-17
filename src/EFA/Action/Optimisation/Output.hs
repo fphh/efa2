@@ -295,7 +295,7 @@ evalSweep :: forall node vec srchVec srchDim dim label inst a b.
                             ActFlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.LookupUnsafe vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
                                                                           ActFlowOpt.OptimalityMeasure (Interp.Val a))),
-   DV.Length srchVec,
+   DV.Length srchVec,ND.Dimensions srchDim,
    DV.FromList srchVec,
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val a)) =>
   Caller ->

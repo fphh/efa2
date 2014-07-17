@@ -90,6 +90,19 @@ modul = ModuleName "DoubleSweep"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
+-- Generic Types
+{-
+flowCube
+
+type ValueCube inst demDim srchDim label demVec srchVec a b = 
+  CubeMap.Cube (Sweep.Demand inst) demDim label demVec a (CubeMap.Data (Sweep.Search inst) srchDim srchVec b)
+
+type ValueStateCube inst demDim srchDim label demVec srchVec a b = 
+  CubeMap.Cube (Sweep.Demand inst) demDim label demVec a (CubeMap.Data (Sweep.Search inst) srchDim srchVec b)
+-}
+
+
+-- Specific Types
 type Variation node inst demDim srchDim demVec srchVec a b = 
   CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
    (Collection.Collection (DemandAndControl.Var node) (CubeMap.Cube (Sweep.Search inst) 
