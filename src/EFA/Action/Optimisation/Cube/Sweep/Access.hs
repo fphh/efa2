@@ -9,7 +9,7 @@ import EFA.Utility(Caller,
                    --merror,
                    (|>),
                    ModuleName(..),FunctionName, genCaller)
-import qualified EFA.Action.Optimisation.Sweep as Sweep
+--import qualified EFA.Action.Optimisation.Sweep as Sweep
 --import qualified EFA.Graph as Graph 
 --import qualified EFA.Data.Interpolation as Interp  
 import qualified EFA.Value.State as ValueState

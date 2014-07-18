@@ -37,7 +37,7 @@ import qualified EFA.Data.Interpolation as DataInterp
 import qualified Test.QuickCheck as QC
 
 import qualified Prelude as P
-import Prelude hiding (zipWith, map, foldl)
+import Prelude hiding (zipWith, map, foldl,filter)
 import Data.Maybe(fromMaybe, fromJust)
 
 import EFA.Utility.Trace(mytrace)
@@ -737,24 +737,6 @@ findBestWithIndexBy fselect dat = fromJust $ DV.foldl g Nothing indexedVec
     g Nothing  (idx,val) = Just (idx, val)
     g (Just (oldIdx,oldVal)) (idx,val) = if (fselect oldVal val) then Just (idx, val)
                                                          else Just (oldIdx, oldVal)
-{-
-findBestWithIndexByPerCategory :: 
-  (DV.Walker vec,Ord category,
-   DV.Storage vec (Grid.LinIdx, a),
-   DV.Storage vec a) =>
-  (a -> category) ->
-  (a -> a -> Bool) -> 
-  Data inst dim vec a -> 
-  Map.Map category (Grid.LinIdx,a)
-findBestWithIndexByPerCategory getCategory fselect dat = DV.foldl g (Map.fromList []) indexedVec
-  where 
-    indexedVec = DV.imap (\i x ->(Grid.LinIdx i, x)) $ getVector $ dat
-    g m (idx,val) = f $ Map.lookup (getCategory val) m
-        where f (Just (_,oldVal)) = 
-                if fselect oldVal val then Map.insert (getCategory val) (idx, val) m else m
-              f Nothing = Map.insert (getCategory val) (idx, val) m                                                     
--}
-
 findBestWithIndexByPerState :: 
   (DV.Walker vec,
    DV.Storage vec (Grid.LinIdx, a),
@@ -770,3 +752,25 @@ findBestWithIndexByPerState getState fselect dat = ValueState.Map $ DV.foldl g (
         where f (Just (_,oldVal)) = 
                 if fselect oldVal val then Map.insert (getState val) (idx, val) m else m
               f Nothing = Map.insert (getState val) (idx, val) m                                                     
+
+
+filter :: 
+  (DV.Storage vec a,
+   DV.Storage vec b,
+   DV.Length vec,
+   DV.FromList vec) =>
+  (b -> Bool) ->
+  Cube inst dim label vec a b ->
+  [(Grid.DimIdx dim,b)]
+filter f (Cube grid dat)  = filterData f grid dat 
+        
+filterData ::
+  (DV.Storage vec1 b,
+   DV.Storage vec a,
+   DV.Length vec,
+   DV.FromList vec1) =>
+  (b -> Bool) ->
+  Grid inst dim label vec a ->
+  Data t t1 vec1 b ->
+  [(Grid.DimIdx dim, b)] 
+filterData f grid (Data vec) = P.filter (f . snd) $ P.zip (P.map (Grid.fromLinear grid . Grid.LinIdx) [0 ..]) $ DV.toList vec

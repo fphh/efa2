@@ -172,6 +172,7 @@ permute xss = mytrace 1 "grid" "permute" $ foldl f [] xss
        f xs (dimIdx, axIndices) = concat $ map (\ newItem -> map (++ [newItem]) xs) $ zip (repeat dimIdx) axIndices
        
 {-       
+TODO:
 haveNoCommonAxes :: (Eq label) =>
   Grid inst dim label vec a  -> 
   Grid inst1 dim1 label vec1 a1  ->
