@@ -4,7 +4,7 @@ module EFA.Action.Flow.Check where
 
 --import qualified EFA.Action.Flow as ActFlow
 --import qualified EFA.Graph.Topology.Node as Node
-import EFA.Equation.Result (Result(Determined,Undetermined))
+--import EFA.Equation.Result (Result(Determined,Undetermined))
 import qualified EFA.Equation.Arithmetic as Arith
 --import qualified EFA.Graph as Graph
 import qualified EFA.Flow.SequenceState.Index as Idx
@@ -53,14 +53,14 @@ getEdgeFlowStatus ::
    DV.Storage vec Validity, DV.Storage vec EdgeFlowStatus) =>
   (Interp.Val a -> Maybe Idx.AbsoluteState) -> 
   (a -> a -> EdgeFlowConsistency) ->
-  TopoQty.Flow (Result (CubeMap.Data inst dim vec (Interp.Val a))) -> 
-  Result (CubeMap.Data inst dim vec EdgeFlowStatus)
+  TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)) -> 
+  CubeMap.Data inst dim vec EdgeFlowStatus
 getEdgeFlowStatus getEdgeState edgeFlowCheck fl = f (TopoQty.flowPowerIn fl) (TopoQty.flowPowerOut fl)
   where 
-     f (Determined p)  (Determined p1) = Determined (CubeMap.zipWithData (\x y -> EdgeFlowStatus x y) validity state) 
+     f p  p1 = (CubeMap.zipWithData (\x y -> EdgeFlowStatus x y) validity state) 
                            where validity = CubeMap.zipWithData (validityCheck edgeFlowCheck) p p1
                                  state = CubeMap.mapData getEdgeState p
-     f _ _ = Undetermined
+
 
 validityCheck :: 
   (Ord a, Arith.Constant a) => 

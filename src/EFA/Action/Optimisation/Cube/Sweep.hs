@@ -113,25 +113,31 @@ type FlowResult node inst demDim srchDim demVec srchVec a b =
    (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) 
                                          srchDim srchVec b))))
 
+type Flow node inst demDim srchDim demVec srchVec a b = 
+  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+   (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) 
+                                         srchDim srchVec b)))
+
 type FlowStatus node inst demDim srchDim demVec srchVec a = 
    CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-    (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                    srchDim srchVec ActFlowCheck.EdgeFlowStatus))
+    (CubeMap.Data (Sweep.Search inst) 
+                    srchDim srchVec ActFlowCheck.EdgeFlowStatus)
 
    
 type EndNodeFlows node inst demDim srchDim demVec srchVec a b =  
   CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-  (FlowTopoOpt.EndNodeEnergies node (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                                                    srchDim srchVec b)))  
+  (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) 
+                                                    srchDim srchVec b))
+  
 type OptimalityMeasure node inst demDim srchDim demVec srchVec a b = 
  CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-  (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
-                  (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityMeasure  b))))
+  (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
+                  (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityMeasure  b)))
  
 type ObjectiveFunctionValues node inst demDim srchDim demVec srchVec a b = 
   CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-   (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
-   (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityValues  b))))
+   (CubeMap.Data (Sweep.Search inst) srchDim srchVec 
+   (ActFlowCheck.EdgeFlowStatus, (FlowOpt.OptimalityValues  b)))
 
 type OptimalChoicePerState node inst dim vec a b = 
   CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a 
@@ -169,7 +175,7 @@ generateVariation ::
   (CubeGrid.Grid (Sweep.Search inst) dim1 (DemandAndControl.Var node) vec1 a) -> 
   Variation node inst dim dim1 vec vec1 a (Interp.Val a)
 -- Todo :: check for similar variables
-generateVariation caller demandGrid searchGrid = result
+generateVariation _ demandGrid searchGrid = result
   where 
 --    err = merror (caller |> nc "generateWithGrid")  modul "generateWithGrid"
 --          "Demand and search grid must not have the same Variables"
@@ -219,10 +225,10 @@ getEndNodeFlows ::
   (Node.C node,
    DV.Walker vec,
    DV.Storage vec (TopoQty.Section node 
-                   (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))),
+                   (CubeMap.Data (Sweep.Search inst) dim1 vec1 b)),
    DV.Storage vec (FlowTopoOpt.EndNodeEnergies node 
-                   (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 b)))) =>
-  FlowResult node inst dim dim1 vec vec1 a b ->
+                   (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))) =>
+  Flow node inst dim dim1 vec vec1 a b ->
   EndNodeFlows node inst dim dim1 vec vec1 a b
 getEndNodeFlows flowResult = CubeMap.map FlowTopoOpt.getEndNodeFlows flowResult 
 
@@ -239,13 +245,12 @@ getFlowStatus ::
   DV.Storage vec1 ActFlowCheck.EdgeFlowStatus,
   DV.Storage vec (TopoQty.Section node 
                   (Maybe (TopoQty.Flow 
-                          (Result.Result (CubeMap.Data 
-                                          (Sweep.Search inst) dim1 vec1 (Interp.Val b)))))),
-  DV.Storage vec (Result.Result 
-                  (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus)),
-  DV.Storage vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b))))) =>
+                          (CubeMap.Data 
+                                          (Sweep.Search inst) dim1 vec1 (Interp.Val b))))),
+  DV.Storage vec (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus),
+  DV.Storage vec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b)))) =>
   Caller ->
-  FlowResult node inst dim dim1 vec vec1 a (Interp.Val b) ->
+  Flow node inst dim dim1 vec vec1 a (Interp.Val b) ->
   FlowStatus node inst dim dim1 vec vec1 a
 getFlowStatus caller flowResult = 
   CubeMap.map (FlowTopoCheck.getFlowStatus 
@@ -266,7 +271,7 @@ calculateOptimalityMeasure ::
    DV.Storage vec1 b,
    DV.Storage vec1 ActFlowCheck.EdgeFlowStatus,
    DV.Storage vec1 (FlowOpt.Eta2Optimise b),
-   DV.Storage  vec (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 
+   DV.Storage  vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 
                                    (ActFlowCheck.EdgeFlowStatus, 
                                     FlowOpt.OptimalityMeasure b))),
    DV.Storage vec1 (FlowOpt.TotalBalanceForce b),
@@ -276,11 +281,9 @@ calculateOptimalityMeasure ::
    DV.Storage vec1 (FlowOpt.Eta2Optimise b,
                     FlowOpt.Loss2Optimise b),
    DV.Storage vec (FlowTopoOpt.EndNodeEnergies node (
-                      Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))),
-   DV.Storage vec (Result.Result 
-                   (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus)),
-   DV.Storage vec (Result.Result 
-                   (CubeMap.Data (Sweep.Search inst) dim1 vec1 
+                      (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))),
+   DV.Storage vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus)),
+   DV.Storage vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 
                     (ActFlowCheck.EdgeFlowStatus,
                      (FlowOpt.TotalBalanceForce b,
                       (FlowOpt.Eta2Optimise b,
@@ -298,7 +301,7 @@ calculateOptimalityMeasure caller lifeCycleMap endNodeValues status =
              (caller |> nc "calculateOptimalityMeasure") 
              st lifeCycleMap x) 
   endNodeValues status
-  
+   
 objectiveFunctionValues ::
   (
   Eq (vec a),
@@ -317,10 +320,10 @@ objectiveFunctionValues ::
                    FlowOpt.OptimalityMeasure b),
   DV.Storage vec1 (FlowOpt.OptimalityMeasure b),
   DV.Storage vec1 (FlowOpt.Eta2Optimise b),
-  DV.Storage vec (Result.Result (CubeMap.Data 
+  DV.Storage vec ((CubeMap.Data 
                                  (Sweep.Search inst) dim1 vec1 
                                  (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure b))),
-  DV.Storage  vec (Result.Result 
+  DV.Storage  vec ( 
                    (CubeMap.Data (Sweep.Search inst) dim1 vec1 
                     (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues b))),
   DV.Storage vec1 (FlowOpt.TotalBalanceForce b),
@@ -330,10 +333,10 @@ objectiveFunctionValues ::
   DV.Storage vec1 (FlowOpt.Eta2Optimise b,
   FlowOpt.Loss2Optimise b),
   DV.Storage vec (FlowTopoOpt.EndNodeEnergies node 
-                  (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))),
-  DV.Storage vec (Result.Result (CubeMap.Data 
+                  ((CubeMap.Data (Sweep.Search inst) dim1 vec1 b))),
+  DV.Storage vec ((CubeMap.Data 
                                  (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus)),
-  DV.Storage vec (Result.Result (CubeMap.Data 
+  DV.Storage vec ((CubeMap.Data 
                                  (Sweep.Search inst) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
  (FlowOpt.TotalBalanceForce b,
   (FlowOpt.Eta2Optimise b,
@@ -361,7 +364,7 @@ findMaximumEtaPerState ::
  (ActFlowCheck.EdgeFlowStatus,
  (Interp.Val  b,
  Interp.Val  b))),
- DV.Storage vec (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 
+ DV.Storage vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 
                                 (ActFlowCheck.EdgeFlowStatus,
                                  FlowOpt.OptimalityValues (Interp.Val b)))),
  DV.Storage vec1 (CubeGrid.LinIdx, (ActFlowCheck.EdgeFlowStatus, 

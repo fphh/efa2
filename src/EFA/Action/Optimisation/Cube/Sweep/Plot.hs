@@ -9,22 +9,23 @@ module EFA.Action.Optimisation.Cube.Sweep.Plot where
 
 import qualified EFA.Action.Optimisation.Cube.Sweep.Access as SweepAccess
 import EFA.Utility(Caller,
-                   merror,(|>),
+                   --merror,
+                   (|>),
                    ModuleName(..),FunctionName, genCaller)
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 --import qualified EFA.Graph as Graph 
 import qualified EFA.Data.Interpolation as Interp  
 import qualified EFA.Value.State as ValueState
-import qualified EFA.Action.EtaFunctions as EtaFunctions
+--import qualified EFA.Action.EtaFunctions as EtaFunctions
 import qualified EFA.Action.Flow.Optimality as FlowOpt
-import qualified EFA.Action.Flow.Balance as FlowBal
+--import qualified EFA.Action.Flow.Balance as FlowBal
 import qualified EFA.Data.Vector as DV
 import qualified EFA.Data.ND as ND
-import qualified EFA.Data.Axis.Strict as Strict
-import qualified EFA.Flow.Topology.Record as TopoRecord
+--import qualified EFA.Data.Axis.Strict as Strict
+--import qualified EFA.Flow.Topology.Record as TopoRecord
 --import qualified EFA.Flow.Topology as FlowTopoPlain
-import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
-import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
+--import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+--import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 -- import qualified EFA.Flow.Topology as FlowTopo
 --import qualified EFA.Data.Interpolation as Interp
@@ -38,7 +39,7 @@ import qualified EFA.Action.Optimisation.Sweep as Sweep
 --import qualified EFA.Application.Optimisation.Params as Params
 
 --import qualified EFA.Flow.Topology.Absolute as EqSys
-import qualified EFA.Flow.Topology.Quantity as TopoQty
+--import qualified EFA.Flow.Topology.Quantity as TopoQty
 --import qualified EFA.Flow.Topology.Index as XIdx
 --import qualified EFA.Flow.Topology.Variable as Variable
 --import EFA.Flow.Topology.Absolute ( (.=), 
@@ -53,8 +54,8 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Result as Result
 --import qualified EFA.Flow.Topology.Record as TopoRecord
 
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
+--import qualified EFA.Graph.Topology.Node as Node
+--import qualified EFA.Graph.Topology as Topo
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
 
 --import qualified EFA.Signal.Vector as SV
@@ -65,12 +66,12 @@ import qualified EFA.Graph.Topology as Topo
 
 --import qualified  UniqueLogic.ST.TF.System as ULSystem
 
-import qualified Data.Map as Map
+--import qualified Data.Map as Map
 --import qualified Data.Foldable as Fold
 -- import Data.Map as (Map)
 --import Data.Monoid((<>))
 --import qualified EFA.Data.OrdData as OrdData
-import qualified EFA.Flow.Topology.Index as TopoIdx
+--import qualified EFA.Flow.Topology.Index as TopoIdx
 --import qualified EFA.Equation.Result as Result
 import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.ND.Cube.Map as CubeMap
@@ -79,8 +80,8 @@ import qualified EFA.Data.Plot.D3.Cube as PlotCube
 import qualified EFA.Data.Plot.D3 as PlotD3
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
 
-import qualified EFA.Action.Utility as ActUt
-import qualified EFA.Action.Optimisation.Cube.Solve as CubeSolve
+--import qualified EFA.Action.Utility as ActUt
+--import qualified EFA.Action.Optimisation.Cube.Solve as CubeSolve
 
 import qualified Data.Maybe as Maybe
 --import Control.Applicative as Applicative
@@ -158,15 +159,25 @@ plotEvalSweepStackValue ::
   [PlotD3.PlotData (CubeGrid.DimIdx srchDim) (DemandAndControl.Var node) a c]
 plotEvalSweepStackValue caller searchGrid faccess sweepCube = 
   concatMap f $ SweepAccess.extractSearchData (caller |> nc "plotEvalSweepStackValue") 
-  searchGrid  (CubeMap.map (ActUt.checkDetermined "plotSweepStackValue") sweepCube)
+  searchGrid  sweepCube
   CubeGrid.All
   where 
     f (dimIdx,cube) = PlotCube.toPlotData caller (Just dimIdx) $ CubeMap.map faccess cube
 
-
-
+plotEvalSweepStackValueAt ::
+  (DV.Walker vec,
+   DV.Storage vec (CubeMap.Data inst1 dim1 vec1 b1),
+   DV.Storage vec b1,
+   DV.Storage vec b,
+   DV.LookupUnsafe vec1 b1,
+   PlotCube.ToPlotData CubeMap.Cube dim label vec a b) =>
+  Caller ->
+  t -> (b1 -> b) ->
+  CubeGrid.LinIdx ->
+  CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 b1) ->
+  [PlotD3.PlotData CubeGrid.LinIdx label a b] 
 plotEvalSweepStackValueAt caller searchGrid faccess linIdx sweepCube =
-  f $ CubeMap.map (flip CubeMap.lookupLinUnsafeData linIdx . ActUt.checkDetermined "plotSweepStackValue") sweepCube
+  f $ CubeMap.map (flip CubeMap.lookupLinUnsafeData linIdx) sweepCube
   where 
     f cube = PlotCube.toPlotData caller (Just linIdx) $ CubeMap.map faccess cube
   

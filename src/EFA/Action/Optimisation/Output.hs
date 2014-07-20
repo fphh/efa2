@@ -4,19 +4,19 @@
 module EFA.Action.Optimisation.Output where
 
 import qualified EFA.Action.Optimisation.Cube.Sweep.Plot as SweepPlot
-import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
+--import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Cube.Sweep.Access as SweepAccess
 import qualified EFA.Action.EenergyFlowAnalysis as EFA
 import qualified EFA.Action.Simulation as Simulation
-import qualified EFA.Flow.Part.Index as Idx
+--import qualified EFA.Flow.Part.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Action.Optimisation.Process as Process
-import EFA.Utility.Async (concurrentlyMany_)
+--import EFA.Utility.Async (concurrentlyMany_)
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Action.EtaFunctions as EtaFunctions
 import qualified EFA.Action.DemandAndControl as DemandAndControl
-import qualified EFA.Action.Optimisation.Signal as OptSignal
+--import qualified EFA.Action.Optimisation.Signal as OptSignal
 import qualified EFA.Action.Optimisation.Signal.Plot as OptSignalPlot
 import qualified EFA.Action.Optimisation.Sweep as Sweep
 
@@ -35,7 +35,7 @@ import qualified EFA.Data.Plot.D3.Cube as PlotCube
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Value.State as ValueState
 
-import qualified EFA.Data.Axis.Strict as Strict
+--import qualified EFA.Data.Axis.Strict as Strict
 import qualified Data.GraphViz.Types.Canonical as Canonical
 
 import qualified Data.Text.Lazy as LazyText
@@ -53,10 +53,10 @@ import qualified Graphics.Gnuplot.Terminal.PNG as PNG
 import qualified Graphics.Gnuplot.Terminal.SVG as SVG
 import qualified Graphics.Gnuplot.Terminal.PostScript as PS
 import qualified Graphics.Gnuplot.Advanced as Plot
-import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
+--import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Graphics.Gnuplot.Value.Atom as Atom
-import qualified Graphics.Gnuplot.Frame as Frame
+--import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Display as Display
 import qualified EFA.Report.FormatValue as FormatValue
 import qualified EFA.Graph.Topology.Node as Node
@@ -70,7 +70,8 @@ import qualified Data.Map as Map
 import Control.Functor.HT (void)
 
 import EFA.Utility(Caller,
-                   merror,(|>),
+                   --merror,
+                   (|>),
                    ModuleName(..),FunctionName, genCaller)
 
 modul :: ModuleName

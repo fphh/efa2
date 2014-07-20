@@ -4,12 +4,12 @@ module EFA.Action.Flow.Topology.Check where
 
 --import qualified EFA.Action.Flow as ActFlow
 import qualified EFA.Action.Flow.Check as ActFlowCheck
-import qualified EFA.Action.Flow.Topology.Optimality as ActFlowTopoOpt
-import qualified EFA.Action.Flow.Optimality as ActFlowOpt
-import qualified EFA.Action.Optimisation.Sweep as Sweep
+--import qualified EFA.Action.Flow.Topology.Optimality as ActFlowTopoOpt
+--import qualified EFA.Action.Flow.Optimality as ActFlowOpt
+--import qualified EFA.Action.Optimisation.Sweep as Sweep
 
 import qualified EFA.Graph.Topology.Node as Node
-import EFA.Equation.Result (Result(Determined,Undetermined))
+--import EFA.Equation.Result (Result(Determined,Undetermined))
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph as Graph
 import qualified EFA.Flow.SequenceState.Index as Idx
@@ -46,8 +46,8 @@ getFlowStatus ::
    DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
    DV.Storage vec ActFlowCheck.Validity) =>
   Caller ->
-  FlowTopo.Section node edge sectionLabel nodeLabel (Maybe (TopoQty.Flow (Result (CubeMap.Data inst dim vec (Interp.Val a))))) -> 
-  Result (CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus)
+  FlowTopo.Section node edge sectionLabel nodeLabel (Maybe (TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)))) -> 
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus
 getFlowStatus caller flowGraph = 
   Maybe.fromJust $ snd $ Map.fold f (0,Nothing) $ Graph.edgeLabels $ TopoQty.topology flowGraph
   where           
@@ -59,26 +59,25 @@ getFlowStatus caller flowGraph =
 combineStatusResults :: 
   (DV.Zipper vec, DV.Storage vec ActFlowCheck.EdgeFlowStatus) => 
   Int ->
-  Result (CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus) -> 
-  Result (CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus) ->   
-  Result (CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus)
-combineStatusResults expo (Determined s) (Determined s1) = 
-  Determined $ CubeMap.zipWithData 
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus -> 
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus ->   
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus
+combineStatusResults expo s s1 = 
+  CubeMap.zipWithData 
   (ActFlowCheck.combineEdgeFlowStatus expo) s s1   
-combineStatusResults _ _ _ = Undetermined  
+
 
 getEdgeFlowStatus :: 
   (Ord a, Arith.Constant a, DV.Zipper vec, DV.Walker vec,Arith.NaNTestable a,
    DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
    DV.Storage vec ActFlowCheck.Validity, DV.Storage vec ActFlowCheck.EdgeFlowStatus) =>
-  TopoQty.Flow (Result (CubeMap.Data inst dim vec (Interp.Val a))) -> 
-  Result (CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus)
+  TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)) -> 
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus
 getEdgeFlowStatus fl = f (TopoQty.flowPowerIn fl) (TopoQty.flowPowerOut fl)
   where 
-     f (Determined p)  (Determined p1) = Determined (CubeMap.zipWithData (\x y -> ActFlowCheck.EdgeFlowStatus x y) validity state) 
+     f p  p1 = CubeMap.zipWithData (\x y -> ActFlowCheck.EdgeFlowStatus x y) validity state
                            where validity = CubeMap.zipWithData (ActFlowCheck.validityCheck edgeFlowCheck) p p1
                                  state = CubeMap.mapData getEdgeState p
-     f _ _ = Undetermined
 
 getEdgeState :: 
   (Ord a, Arith.Constant a) => 
