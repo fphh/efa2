@@ -5,7 +5,7 @@ module EFA.Action.Optimisation.Output where
 
 import qualified EFA.Action.Optimisation.Cube.Sweep.Plot as SweepPlot
 --import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
-import qualified EFA.Action.Optimisation.Cube.Sweep.Access as SweepAccess
+--import qualified EFA.Action.Optimisation.Cube.Sweep.Access as SweepAccess
 import qualified EFA.Action.EenergyFlowAnalysis as EFA
 import qualified EFA.Action.Simulation as Simulation
 --import qualified EFA.Flow.Part.Index as Idx
@@ -61,6 +61,7 @@ import qualified Graphics.Gnuplot.Display as Display
 import qualified EFA.Report.FormatValue as FormatValue
 import qualified EFA.Graph.Topology.Node as Node
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+--import qualified EFA.Action.Flow.Optimality as ActFlowOpt
 
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Equation.Result as Result
@@ -108,6 +109,7 @@ drawAction DontDraw _ _ = []
 drawAction Xterm toDotFunction diagram = [Draw.xterm $ toDotFunction diagram]
 
 printAction :: Show a => Print -> a -> [IO ()]
+printAction (Print _) _ = error "PrintAction Print to File not implemented yet"
 printAction DontPrint _ = []
 printAction StdOut x = [print x]
 
@@ -132,10 +134,10 @@ system ::
   (Show node,
   Node.C node) =>
   SysCtrl -> Process.System node -> [IO ()]
-system sysAction system = 
-    (drawOrPrintAction  (topo sysAction) Draw.topology  $ Process.accessTopology system) ++
-    (drawOrPrintAction (labTopo sysAction) Draw.labeledTopology $ Process.accessLabledTopology system) ++
-    (drawAction (stateAnalysis sysAction) (\ x -> Draw.flowTopologies $ StateAnalysis.advanced x) $ Process.accessTopology system)
+system sysAction sys = 
+    (drawOrPrintAction  (topo sysAction) Draw.topology  $ Process.accessTopology sys) ++
+    (drawOrPrintAction (labTopo sysAction) Draw.labeledTopology $ Process.accessLabledTopology sys) ++
+    (drawAction (stateAnalysis sysAction) (\ x -> Draw.flowTopologies $ StateAnalysis.advanced x) $ Process.accessTopology sys)
     
 data SysDataCtrl = SysDataDont | 
                SysDataDo {rawCurves :: PlotOrPrint,
@@ -193,8 +195,7 @@ test ::(Ord a, Show node, Atom.C a,
   [IO ()]
  
 test testCtrl testData demandVars =  
-  (plotAction (demandCycle testCtrl) (\x -> PlotD2.allInOne (PlotD2.labledFrame "DemandCycle")  (\ _ _ -> id) 
-   $ OptSignalPlot.plotDemandCycle x demandVars) (Process.accessDemandCycle testData))
+  (plotAction (demandCycle testCtrl) (flip OptSignalPlot.plotDemandCycle demandVars) (Process.accessDemandCycle testData))
 
 
 data OptiSetCtrl = OptiSetDont | OptiSetDo {variation :: Plot}
@@ -221,29 +222,28 @@ optiSet ::
   OptiSetCtrl ->
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   [IO ()]
-optiSet caller ctrl optiSet = let
+optiSet caller ctrl oSet = let
   legend = Map.fromList $ zip [0..] $ 
-           map DemandAndControl.unDemandVar (Process.accessDemandVars optiSet) ++ 
-           map DemandAndControl.unControlVar (Process.accessControlVars optiSet)
---  legendContr = Map.fromList $ zip [0..] $ Process.accessControlVars optiSet
+           map DemandAndControl.unDemandVar (Process.accessDemandVars oSet) ++ 
+           map DemandAndControl.unControlVar (Process.accessControlVars oSet)
+--  legendContr = Map.fromList $ zip [0..] $ Process.accessControlVars oSet
   in
   (plotAction (variation ctrl) (PlotD3.allInOne (PlotD3.labledFrame "DemandVariation") 
                                 (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) . fst .
                                        SweepPlot.plotVariation caller ) 
-   (Process.accessVariation optiSet)) ++
+   (Process.accessVariation oSet)) ++
   
   (plotAction (variation ctrl) (PlotD3.allInOne (PlotD3.labledFrame "SearchVariation") 
                                -- (\ _ _ -> id) . snd .
                                 (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) . snd .
                                        SweepPlot.plotVariation caller ) 
-   (Process.accessVariation optiSet))
+   (Process.accessVariation oSet))
 
 data SweepCtrl = SweepDont | 
                  SweepDo {drawFlow :: Draw, 
                           plotState :: Plot,
                           plotStatus :: Plot}
                           
---TODO:: Type-Safe Indx (using inst)
 sweep ::
   (Show a,DV.Storage vec a, DV.Length vec,
    Node.C node,
@@ -256,23 +256,23 @@ sweep ::
   SweepCtrl ->
   Process.SweepResults node inst dim srchDim vec srchVec a ->
   [IO ()]
-sweep linIdxDem ctrl sweep = 
+sweep linIdxDem ctrl swp = 
   let 
-    demGrid = CubeMap.getGrid $ Process.accessSweepFlow sweep
+    demGrid = CubeMap.getGrid $ Process.accessSweepFlow swp
     fromLin linIdx = CubeGrid.fromLinear demGrid linIdx
-    toLin idx = CubeGrid.toLinear demGrid idx
+--    toLin idx = CubeGrid.toLinear demGrid idx
   in 
    (drawAction (drawFlow ctrl)  
     (Draw.title ("LinIdx: " ++ show linIdxDem ++ "Idx: " ++ (show $ fromLin linIdxDem)) . 
      Draw.flowSection  Draw.optionsDefault) 
-   (flip CubeMap.lookupLinUnsafe linIdxDem $ Process.accessSweepFlow sweep))
+   (flip CubeMap.lookupLinUnsafe linIdxDem $ Process.accessSweepFlow swp))
    
 
 data EvalCtrl = EvalDont | 
                  EvalDo { plotEta :: Plot,  
                           plotEtaAt :: Plot }
                           
-evalSweep :: forall node vec srchVec srchDim dim label inst a b.
+evalSweep ::
   (Ord a,
    Show node,
    Arith.Constant a,
@@ -304,33 +304,21 @@ evalSweep :: forall node vec srchVec srchDim dim label inst a b.
   EvalCtrl ->
   Process.SweepEvaluation node inst dim srchDim vec srchVec a ->
   [IO ()]
-evalSweep caller srchGrid ctrl sweep = let  
+evalSweep caller srchGrid ctrl swp = let  
   newCaller = caller |> nc "evalSweep"
   in 
    (plotAction (plotEta ctrl)
-    (PlotD3.allInOne (PlotD3.labledFrame "SweepEta") 
-      (\ _ _ -> LineSpec.title "") . 
-      SweepPlot.plotEvalSweepStackValue newCaller srchGrid (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd)) 
-     (Process.accessSweepOptimality sweep)) ++
+    (SweepPlot.plotEvalSweepStackValue newCaller "Eta" srchGrid (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd)) 
+     (Process.accessSweepOptimality swp)) ++
    
- {-  (plotAction (plotEta ctrl)
-    (PlotD3.allInOne (PlotD3.labledFrame "FlowState") 
-      (\ _ _ -> LineSpec.title "") .  
-      SweepPlot.plotStates newCaller srchGrid) 
-      (Process.accessSweepOptimality sweep)) -}
-   
-   (plotAction (plotEtaAt ctrl)
-    (PlotD3.allInOne (PlotD3.labledFrame "SweepEtaAt") 
-      (\ _ _ -> LineSpec.title "") . 
-      SweepPlot.plotEvalSweepStackValueAt newCaller srchGrid (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd) (CubeGrid.LinIdx 0) ) 
-     (Process.accessSweepOptimality sweep))
-   
---   plotEvalSweepStackValueAt caller searchGrid faccess sweepCube (CubeGrid.LinIdx 0)
-
--- data EvalCtrl = EvalDont | EvalDo {variation :: Plot}
- 
--- eval ctrl eval =                            
+   (plotAction (plotEta ctrl)
+    (SweepPlot.plotEvalSweepStackValue newCaller  "Loss" srchGrid (ActFlowOpt.unLoss2Optimise . ActFlowOpt.getLoss . snd)) 
+     (Process.accessSweepOptimality swp)) ++
   
+   (plotAction (plotEtaAt ctrl)
+    (SweepPlot.plotEvalSweepStackValueAt newCaller "Eta" (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd) (CubeGrid.LinIdx 0) ) 
+     (Process.accessSweepOptimality swp))
+   
                            
 data OptiCtrl = OptiDont | 
                 OptiDo 
@@ -369,25 +357,16 @@ optPerState ::
   [IO ()]
 optPerState caller ctrl opt = 
   let newCaller = caller |> nc "optPerState"
-      states = Map.fromList $ zip [0..] $
-               SweepAccess.getAllStates $  
-               Process.accessOptimalChoicePerState opt
   in (plotAction (plotOptEtaPerState ctrl) 
-     (PlotD3.allInOne (PlotD3.labledFrame "Optimal Eta-Objective Per State") 
-      (\ idx _ -> LineSpec.title $ show $ states Map.! idx) . 
-      SweepPlot.plotOptimalOptimalityValuePerState newCaller (ActFlowOpt.getOptEtaVal . snd . snd)) 
+     (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Eta-Objective Per State" (ActFlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt))  ++  
     
-     (plotAction (plotEtaOptPerState ctrl) 
-     (PlotD3.allInOne (PlotD3.labledFrame "Optimal Eta Per State") 
-      (\ idx _ -> LineSpec.title $ show $ states Map.! idx) . 
-      SweepPlot.plotOptimalOptimalityValuePerState newCaller (ActFlowOpt.getOptEtaVal . snd . snd)) 
+     (plotAction (plotOptEtaPerState ctrl)
+      (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Eta Per State" (ActFlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt)) ++
                                
-     (plotAction (plotOptIndexPerState ctrl) 
-     (PlotD3.allInOne (PlotD3.labledFrame "Optimal Index Per State") 
-      (\ idx _ -> LineSpec.title $ show $ states Map.! idx) . 
-      SweepPlot.plotOptimalOptimalityValuePerState newCaller 
+     (plotAction (plotOptIndexPerState ctrl)
+      (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Index Per State"
       (\(CubeGrid.LinIdx idx,_) -> Interp.Inter $ Arith.fromInteger $ fromIntegral idx)) 
      (Process.accessOptimalChoicePerState opt))
 
@@ -414,21 +393,14 @@ optimalOperation ::
   OpCtrl ->
   Process.OptimalOperation id inst vec a ->
   [IO ()]
-optimalOperation ctrl opt = let
-  legend = Map.fromList $ zip [0..] $ Map.keys $ 
-           Process.accessOptimalControlSignals opt
-  in 
+optimalOperation ctrl opt = 
    (plotAction (plotOptimalControlSignals ctrl) 
-    (PlotD2.allInOne (PlotD2.labledFrame "Optimal ControlSignals")
-     (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) .
-     PlotFSignal.plotSignalMap) 
+   (OptSignalPlot.plotOptimalSignals "Optimal ControlSignals")
     (Process.accessOptimalControlSignals opt)) ++ 
    
    (plotAction (plotOptimalControlSignals ctrl) 
-    (PlotD2.allInOne (PlotD2.labledFrame "Optimal Storage Powers")
-     (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) .
-     PlotFSignal.plotSignalMap) 
-    (Map.map (SignalFlow.map (Maybe.fromMaybe (Interp.Invalid ["plotOptimalOperation"]))) $
+   (OptSignalPlot.plotOptimalSignals "Optimal Storage Powers")
+   (Map.map (SignalFlow.map (Maybe.fromMaybe (Interp.Invalid ["plotOptimalOperation"]))) $
       Process.accessOptimalStoragePowers opt))
    
 

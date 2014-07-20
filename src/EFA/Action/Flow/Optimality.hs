@@ -60,7 +60,7 @@ newtype SourceMap node a = SourceMap (Map.Map node a) deriving Show
 newtype StorageMap node a =  StorageMap (Map.Map node a) deriving Show  
 
 data Eta2Optimise a = EtaSys {unEta2Optimise :: a} deriving (Show,Eq,Ord) -- TODO add | SelectedEta a deriving Show
-data Loss2Optimise a = LossSys a deriving Show -- TODO add | SelectedLoss a deriving Show
+data Loss2Optimise a = LossSys {unLoss2Optimise :: a} deriving Show -- TODO add | SelectedLoss a deriving Show
 newtype TotalBalanceForce a = TotalBalanceForce a deriving Show
 
 data OptimalityValues a = OptimalityValues (OptimalityMeasure a) (TotalBalanceForce a) deriving Show
