@@ -130,7 +130,7 @@ surfaceLineSpec =
    LineSpec.pointType 7 $
    LineSpec.lineWidth 1 $
    LineSpec.deflt
-
+{-
 frameAttr ::
    (Graph.C graph) => String -> tcX -> tcY -> Opts.T graph
 frameAttr ti _ _ =
@@ -138,7 +138,7 @@ frameAttr ti _ _ =
    Opts.add (Opt.custom "hidden3d" "") ["back offset 1 trianglepattern 3 undefined 1 altdiagonal bentover"] $
    Opts.grid True $
    Opts.deflt
-
+-}
 getD3RangeInfo ::
   (Show label, Ord a, Arith.Constant a, Arith.Constant b,
    Type.GetDynamicType a,DV.Length vec,

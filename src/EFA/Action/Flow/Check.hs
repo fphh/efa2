@@ -34,7 +34,8 @@ nc :: FunctionName -> Caller
 nc = genCaller modul
 
 combineEdgeFlowStatus :: Int -> EdgeFlowStatus -> EdgeFlowStatus -> EdgeFlowStatus
-combineEdgeFlowStatus expo (EdgeFlowStatus v s) (EdgeFlowStatus v1 s1) = EdgeFlowStatus (combineValidity v v1) (combineFlowState expo s s1) 
+combineEdgeFlowStatus expo (EdgeFlowStatus v s) (EdgeFlowStatus v1 s1) = 
+  EdgeFlowStatus (combineValidity v v1) (combineFlowState expo s s1) 
 
 combineFlowState :: Int -> Maybe Idx.AbsoluteState -> Maybe Idx.AbsoluteState -> Maybe Idx.AbsoluteState
 combineFlowState expo (Just (Idx.AbsoluteState x)) (Just (Idx.AbsoluteState y)) = Just $ Idx.AbsoluteState $ x + y*3^expo 
@@ -51,7 +52,7 @@ getEdgeFlowStatus ::
   (Ord a, Arith.Constant a, DV.Zipper vec, DV.Walker vec,
    DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
    DV.Storage vec Validity, DV.Storage vec EdgeFlowStatus) =>
-  (Interp.Val a -> Maybe Idx.AbsoluteState) -> 
+  (Interp.Val a -> Interp.Val a -> Maybe Idx.AbsoluteState) -> 
   (a -> a -> EdgeFlowConsistency) ->
   TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)) -> 
   CubeMap.Data inst dim vec EdgeFlowStatus
@@ -59,7 +60,7 @@ getEdgeFlowStatus getEdgeState edgeFlowCheck fl = f (TopoQty.flowPowerIn fl) (To
   where 
      f p  p1 = (CubeMap.zipWithData (\x y -> EdgeFlowStatus x y) validity state) 
                            where validity = CubeMap.zipWithData (validityCheck edgeFlowCheck) p p1
-                                 state = CubeMap.mapData getEdgeState p
+                                 state = CubeMap.zipWithData getEdgeState p p1
 
 
 validityCheck :: 

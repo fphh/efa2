@@ -47,6 +47,8 @@ import qualified Data.Maybe as Maybe
 --import Control.Monad(join)
 --import Data.Foldable (Foldable, foldMap)
 
+import Debug.Trace(trace)
+
 import EFA.Utility(Caller,
                  merror,
                    (|>),
@@ -92,10 +94,9 @@ absoluteStateIndex topo flowTopo =
   in toTernary $ map g tlabels
 
 data EndNodeEnergies node v = EndNodeEnergies 
-                              (FlowOpt.SinkMap node v)
-                              (FlowOpt.SourceMap node v)
-                              (FlowOpt.StorageMap node (Maybe (TopoQty.Sums v)))
-
+                              {getSinkMap:: (FlowOpt.SinkMap node v),
+                              getSourceMap :: FlowOpt.SourceMap node v,
+                              getStorageMap :: FlowOpt.StorageMap node (Maybe (TopoQty.Sums v))} deriving Show
 
 getEndNodeFlows :: 
   Node.C node =>
@@ -129,7 +130,7 @@ calcEtaLossSys ::
    DV.Length vec,
    Ord a,
    Show node,
-   Arith.Constant a,
+   Arith.Constant a,Show (vec a),
    DV.Walker vec,
    DV.Storage vec (FlowOpt.Eta2Optimise a),
    DV.Storage vec (FlowOpt.Loss2Optimise a), 
@@ -148,10 +149,10 @@ calcEtaLossSys caller state lifeCycleEfficiencies (EndNodeEnergies (FlowOpt.Sink
           (applyGenerationEfficiency caller state lifeCycleEfficiencies node) x)  storages
   
   makeSum = foldl1 (Arith.~+) . Map.elems
-  term = (Arith.~+) (makeSum sinks)  (makeSum chargeStorages)
-  term1 = (Arith.~+) (makeSum sources) (makeSum dischargeStorages)
-  eta = (CubeMap.mapData FlowOpt.EtaSys) $ (Arith.~/) term term1
-  loss = (CubeMap.mapData FlowOpt.LossSys) $ (Arith.~-) term1 term
+  sinkTerm =  (makeSum sinks)  Arith.~+ (makeSum chargeStorages)
+  sourceTerm = (makeSum sources) Arith.~+ (makeSum dischargeStorages)
+  eta = (CubeMap.mapData FlowOpt.EtaSys) $ sinkTerm Arith.~/ sourceTerm
+  loss = (CubeMap.mapData FlowOpt.LossSys) $ sourceTerm Arith.~- sinkTerm
   in (CubeMap.zipWithData ((,))) eta loss
 
 -- TODO: move to right place -- use in applyGenerationEfficiency,applyUsageEfficiency
@@ -186,7 +187,7 @@ applyGenerationEfficiency caller state lifeCycleEfficiencies node (Just sums) = 
   where
     e2 = merror caller modul "applyGenerationEfficiency" 
          ("Storage-Sums Variable contains values in positive and negative part-node: " ++ show node)
-    f x st = if x < Arith.zero then x Arith.~/ eta else Arith.zero
+    f x st = if x > Arith.zero then x Arith.~/ eta else Arith.zero
       where
         (FlowOpt.GenerationEfficiency eta,_) = 
           Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (Maybe.fromMaybe e3 $ ActFlowCheck.getState st) node 
@@ -213,14 +214,14 @@ applyUsageEfficiency ::
  Maybe (CubeMap.Data (Sweep.Search inst) dim vec a)
 applyUsageEfficiency _ _ _ _ Nothing = Nothing
 applyUsageEfficiency caller state lifeCycleEfficiencies node (Just sums) = case sums of
-  TopoQty.Sums Nothing (Just energy) -> Just $ (CubeMap.zipWithData f) energy state
-  TopoQty.Sums  (Just energy) Nothing -> Just $ (CubeMap.zipWithData (f. Arith.negate)) energy state
+  TopoQty.Sums Nothing (Just energy) -> Just $ (CubeMap.zipWithData (f. Arith.negate)) energy state
+  TopoQty.Sums  (Just energy) Nothing -> Just $ (CubeMap.zipWithData f) energy state
   TopoQty.Sums Nothing Nothing -> Nothing 
   _ -> e2  
   where
     e2 = merror caller modul "applyUsageEfficiency" 
          ("Storage-Sums Variable contains values in positive and negative part-node: " ++ show node)
-    f x st = if x < Arith.zero then x Arith.~/ eta else Arith.zero
+    f x st = if x > Arith.zero then x Arith.~* eta else Arith.zero
       where 
         (_,FlowOpt.UsageEfficiency eta) = 
           Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (Maybe.fromMaybe e3 $ ActFlowCheck.getState st) node 
@@ -230,7 +231,7 @@ applyUsageEfficiency caller state lifeCycleEfficiencies node (Just sums) = case 
                     ("Undefined State")
                     
 calculateOptimalityMeasure :: 
-  (Ord node, Ord a, Show node, Arith.Constant a, DV.Zipper vec,
+  (Ord node, Ord a, Show node, Arith.Constant a, DV.Zipper vec,Show (vec a),
    DV.Storage vec (FlowOpt.Eta2Optimise a, FlowOpt.Loss2Optimise a), 
    DV.Storage vec (FlowOpt.Loss2Optimise a), 
    DV.Storage vec (FlowOpt.TotalBalanceForce a),

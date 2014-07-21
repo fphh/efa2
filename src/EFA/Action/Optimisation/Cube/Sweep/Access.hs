@@ -118,11 +118,11 @@ extractDemandData::
   Caller ->
   CubeMap.Cube inst dim label vec a b ->
   CubeGrid.ExtractInfo dim ->
-  [b] 
+  [(CubeGrid.DimIdx dim,b)] 
 extractDemandData caller sweepCube extractInfo = map f  (CubeGrid.extractIndexList (caller |> nc "extractDemandData") grid extractInfo)
   where
     grid = CubeMap.getGrid sweepCube
-    f linIdx = CubeMap.lookupLinUnsafe sweepCube linIdx
+    f linIdx = (CubeGrid.fromLinear grid linIdx,CubeMap.lookupLinUnsafe sweepCube linIdx)
 
 
 extractSearchData ::
@@ -171,3 +171,4 @@ findSweepOccurences ::
   Set.Set b 
 findSweepOccurences sweepCube = 
   CubeMap.foldl (\acc xs -> CubeMap.foldlData (\a x -> flip Set.insert a x) acc xs ) Set.empty sweepCube
+  

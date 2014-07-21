@@ -173,8 +173,12 @@ run terminal frameAttr plt =
 
 data PlotInfo id a = PlotInfo {accessId :: Maybe id,  
                                accessInfo :: Maybe a}
-
-
+{-
+missing ::
+  String -> Opts.T graph -> Opts.T graph
+missing str =
+  Opts.add (Opt.custom "datafile" "") ["missing " ++ show str]
+-}
 
 {-
 

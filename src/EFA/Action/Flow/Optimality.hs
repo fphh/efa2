@@ -55,9 +55,9 @@ lookupLifeCycleEta :: (Ord node, Ord a, Arith.Constant a, Arith.Product a) =>
   Maybe (GenerationEfficiency a, UsageEfficiency a) 
 lookupLifeCycleEta (LifeCycleMap m) state node = join $ fmap (Map.lookup node) $ Map.lookup state m 
   
-newtype SinkMap node a = SinkMap (Map.Map node a) deriving Show  
-newtype SourceMap node a = SourceMap (Map.Map node a) deriving Show  
-newtype StorageMap node a =  StorageMap (Map.Map node a) deriving Show  
+newtype SinkMap node a = SinkMap {unSinkMap :: (Map.Map node a)} deriving Show  
+newtype SourceMap node a = SourceMap {unSourceMap :: (Map.Map node a)} deriving Show  
+newtype StorageMap node a =  StorageMap {unStorageMap :: (Map.Map node a)} deriving Show  
 
 data Eta2Optimise a = EtaSys {unEta2Optimise :: a} deriving (Show,Eq,Ord) -- TODO add | SelectedEta a deriving Show
 data Loss2Optimise a = LossSys {unLoss2Optimise :: a} deriving Show -- TODO add | SelectedLoss a deriving Show

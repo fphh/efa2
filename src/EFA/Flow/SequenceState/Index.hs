@@ -8,6 +8,7 @@ module EFA.Flow.SequenceState.Index (
    PartIdx.Section(PartIdx.Section),
    PartIdx.State(PartIdx.State),
    PartIdx.AbsoluteState(PartIdx.AbsoluteState),
+   PartIdx.unAbsoluteState,
    PartIdx.section0, PartIdx.state0,
    PartIdx.initial, PartIdx.afterSection,
    PartIdx.augment,

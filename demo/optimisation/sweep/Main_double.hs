@@ -161,7 +161,7 @@ etaAssignMap = EtaFunctions.EtaAssignMap $ Map.fromList $
    (TopoIdx.Position LocalNetwork Gas,
     (EtaFunctions.DownStream, EtaFunctions.Single ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 1 0.7], "gas")))) : 
    (TopoIdx.Position LocalNetwork Network,
-    (EtaFunctions.UpStream,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 3 0.95], "transformer")))) : 
+    (EtaFunctions.DownStream,EtaFunctions.Duplicate ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 3 0.95], "transformer")))) : 
    (TopoIdx.Position LocalRest LocalNetwork,
     (EtaFunctions.DownStream,EtaFunctions.Single ((Interp.Linear,Interp.ExtrapNone),([Curve.Scale 10 1], "local")))) : 
    (TopoIdx.Position Rest Network,
@@ -219,7 +219,7 @@ gas =   [0.1, 0.2 .. 0.8]
 
 demandVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 demandVariation  = 
-  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.01,0.11 .. 1.01]),  -- .. 2.01]), -- [-1.1,-0.6..(-0.1)]),
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalRest LocalNetwork,Type.P,[0.01, 0.11 .. 1.01]),  -- .. 2.01]), -- [-1.1,-0.6..(-0.1)]),
    (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Rest Network,Type.P,[0.01,0.11 .. 1.01])] -- .. 2.01])] -- [-1.1,-0.6..(-0.1)])]
 
 searchVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
@@ -229,8 +229,8 @@ searchVariation =
 
 
 lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
-lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0..10000]) $ replicate 3 $
-               Map.fromList [(Water,(FlowOpt.GenerationEfficiency $ Interp.Inter 1.0, FlowOpt.UsageEfficiency $ Interp.Inter 1.0))] 
+lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0..10000]) $ repeat $ 
+               Map.fromList [(Water,(FlowOpt.GenerationEfficiency $ Interp.Inter 0.3, FlowOpt.UsageEfficiency $ Interp.Inter 1.0))] 
 
 
 showFunctionAxis ::  Strict.Axis Base String [] Double
@@ -248,9 +248,10 @@ optiSetCtrl = OP.OptiSetDo {OP.variation = OP.Dflt }
 evalCtrl = OP.EvalDo { OP.plotEta = OP.Dflt, 
                        OP.plotEtaAt = OP.Dflt }
 
-sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm, 
+sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm,
                         OP.plotState = OP.Dflt,
-                        OP.plotStatus = OP.Dflt}
+                        OP.plotStatus = OP.Dflt, 
+                        OP.plotFlowVariables = OP.Dflt} -- OP.DontPlot} -- OP.Dflt}
             
 optCtrl = OP.OptiDo {OP.plotOptEtaPerState = OP.Dflt, 
                      OP.plotEtaOptPerState= OP.Dflt, 
@@ -340,23 +341,46 @@ main = do
 --  concurrentlyMany_ $ OP.test testCtrl testSet demandVars
 --  concurrentlyMany_ $ OP.sysData sysDataCtrl systemData
 --  concurrentlyMany_ $ OP.optiSet (nc "Main") optiSetCtrl optiSet
-  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 0) sweepCtrl sweep  
-  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 1) sweepCtrl sweep
-  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 2) sweepCtrl sweep
-  concurrentlyMany_ $ OP.sweep (CubeGrid.LinIdx 3) sweepCtrl sweep
+  let flowVars = [--TopoIdx.Power (TopoIdx.Position Water Network)] 
+                  --TopoIdx.Power (TopoIdx.Position Gas LocalNetwork), 
+                  TopoIdx.Power (TopoIdx.Position Coal Network)] 
+                  --TopoIdx.Power (TopoIdx.Position Rest Network),
+                  --TopoIdx.Power (TopoIdx.Position Network LocalNetwork)]
+                  --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]                      
+      
+  let flowVars2 = [--TopoIdx.Eta (TopoIdx.Position Coal Network),                
+                  --TopoIdx.Eta (TopoIdx.Position Water Network)]
+                  --TopoIdx.Eta (TopoIdx.Position Gas LocalNetwork)] 
+                  TopoIdx.Eta (TopoIdx.Position Network LocalNetwork)]
+                  --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]                      
+   
+  concurrentlyMany_ $ OP.sweep  (nc "Main") flowVars [Water]
+    (Process.accessSearchGrid optiSet) sweepCtrl sweep  
+  
   concurrentlyMany_ $ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep
   
   concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState
---  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
---  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState1
---  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation1
---  concurrentlyMany_ $ OP.simulation simCtrl simEfa
+  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
+  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState1
+  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation1
+  concurrentlyMany_ $ OP.simulation simCtrl simEfa
   
 --  print stoPowers
 --  print balance
-  print $ Process.accessSweepOptimality evalSweep
-  print loop
+--  print $ Process.accessSweepEndNodePowers sweep
+--  print $ Process.accessSweepOptimality evalSweep
+--  print loop
 --  print rec
+  let flow00= flip CubeMap.lookupLinUnsafe (CubeGrid.LinIdx 0) $ Process.accessSweepFlow sweep
+  print $ FlowTopoCheck.getFlowStatus  (nc "Main") flow00 
+  const Draw.xterm "simulationGraphsSequence"
+    $ Draw.bgcolour DarkSeaGreen2
+    $ Draw.title "Sequence Flow Graph from Simulation"
+    $ Draw.flowSection Draw.optionsDefault flow00
+   
+--  print $ CubeMap.lookUp (nc "Main") (ND.fromList (nc "Main") $ map Strict.Idx [3,7]) $ Process.accessSweepEndNodePowers sweep
+--  print $ CubeMap.lookUp (nc "Main") (ND.fromList (nc "Main") $ map Strict.Idx [3,7]) $ Process.accessSweepOptimality evalSweep
+  
   
 {-  let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) sweepCube
   let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) sweepCube
@@ -467,4 +491,35 @@ main = do
 
 -}
 
+{-
+getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}},
+                         
+getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}},
+                         
+getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}},
+                         
+getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}}]}}
+-}
+{-
+EndNodeEnergies {
+  getSinkMap = SinkMap {unSinkMap = fromList [(Rest,Data {getVector = [Inter 0.71,Inter 0.71,Inter 0.71,Inter 0.71]}),(LocalRest,Data {getVector = [Inter 0.31,Inter 0.31,Inter 0.31,Inter 0.31]})]}, 
+  
+  getSourceMap = SourceMap {unSourceMap = fromList [(Coal,Data {getVector = [Inter 8.811755918354903,Inter 0.3189222965160629,Inter 8.138573730990792,Invalid ["\"\\\"coal\\\"\"@-0.13189759036144577"]]}),(Gas,Data {getVector = [Inter 0.11904761904761907,Inter 0.11904761904761907,Inter 0.48387096774193544,Inter 0.48387096774193544]})]}, 
+  
+  getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}}
+-}
 
+{-
+Data {getVector = [EdgeFlowStatus {
+                      getvalidity = Valid (EFC SignsOK EtaNotOK), 
+                      getState = Just (AbsoluteState {unAbsoluteState = 112})},
+                   EdgeFlowStatus {
+                     getvalidity = Invalid, 
+                     getState = Just (AbsoluteState {unAbsoluteState = 598})},
+                   EdgeFlowStatus {
+                     getvalidity = Invalid, 
+                     getState = Just (AbsoluteState {unAbsoluteState = 616})},
+                   EdgeFlowStatus {
+                     getvalidity = Invalid, 
+                     getState = Just (AbsoluteState {unAbsoluteState = 616})}]}
+-}

@@ -77,20 +77,22 @@ getEdgeFlowStatus fl = f (TopoQty.flowPowerIn fl) (TopoQty.flowPowerOut fl)
   where 
      f p  p1 = CubeMap.zipWithData (\x y -> ActFlowCheck.EdgeFlowStatus x y) validity state
                            where validity = CubeMap.zipWithData (ActFlowCheck.validityCheck edgeFlowCheck) p p1
-                                 state = CubeMap.mapData getEdgeState p
+                                 state = CubeMap.zipWithData getEdgeState p p1
 
 getEdgeState :: 
   (Ord a, Arith.Constant a) => 
-  Interp.Val a -> Maybe Idx.AbsoluteState
-getEdgeState p = 
+  Interp.Val a -> 
+  Interp.Val a -> 
+  Maybe Idx.AbsoluteState
+getEdgeState p p1 = 
   let g x = Just $ case (Arith.sign x) of 
           (Arith.Zero)  -> Idx.AbsoluteState 0
           (Arith.Positive) -> Idx.AbsoluteState 1 
           (Arith.Negative) -> Idx.AbsoluteState 2
-  in case p of
-          (Interp.Inter x) -> g x 
-          (Interp.Invalid _) -> Nothing
-          (Interp.Extra x) -> g x 
+  in case (p,p1) of
+          (Interp.Invalid _,_) -> Nothing 
+          (_,Interp.Invalid _) -> Nothing
+          (x,_) -> g $ Interp.unpack x 
 
 edgeFlowCheck ::  (Arith.Product a, Ord a, Arith.Constant a, Arith.NaNTestable a) => a -> a -> ActFlowCheck.EdgeFlowConsistency 
 edgeFlowCheck x y = ActFlowCheck.EFC signCheck etaCheck

@@ -288,7 +288,7 @@ calculateOptimalityMeasure ::
                      (FlowOpt.TotalBalanceForce b,
                       (FlowOpt.Eta2Optimise b,
                        FlowOpt.Loss2Optimise b))))),
-   DV.Singleton vec1,
+   DV.Singleton vec1,Show (vec1 b),
    DV.Length vec1) =>
   Caller ->
   FlowOpt.LifeCycleMap node b ->

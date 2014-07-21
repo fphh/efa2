@@ -225,9 +225,9 @@ extractIndexList ::
  [LinIdx] 
 extractIndexList _ grid All = map LinIdx [0..(linearLength grid-1)]
 extractIndexList caller grid Edges = map (toLinear grid) $ map (ND.fromList (caller |> nc "extractIndexList")) 
-                                $ sequence $ map (\x->[Strict.Idx 0, Strict.Idx x]) $ ND.toList $ sizes grid
+                                $ sequence $ map (\x->[Strict.Idx 0, Strict.Idx (x-1)]) $ ND.toList $ sizes grid
 extractIndexList caller grid (EdgesAndStep st) = map (toLinear grid) $ map (ND.fromList  (caller |> nc "extractIndexList")) 
-                                            $ sequence $ map (\x->map Strict.Idx [0,st .. x]) $ ND.toList $ sizes grid
+                                            $ sequence $ map (\x->map Strict.Idx [0,st .. (x-1)]) $ ND.toList $ sizes grid
 extractIndexList _ _ (Linear xs) = xs 
 extractIndexList _ grid (Dim xs) = map (toLinear grid) xs 
 extractIndexList caller grid (ReduceDims m) = map (toLinear grid) $ map (ND.fromList  (caller |> nc "extractIndexList")) 

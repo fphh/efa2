@@ -99,7 +99,12 @@ showCut  (Cut xs) = "Cut" ++ (concat $ map f $ map snd $ Map.toList xs)
 
 -- | Datatype extracting r
 data PlotData id label a b =
-  PlotData (DataPlot.PlotInfo id (Cut label a)) (D3RangeInfo label a b) (Plot3D.T a a b)
+  PlotData {accessPlotInfo :: DataPlot.PlotInfo id (Cut label a), 
+            accessPlotRange :: D3RangeInfo label a b,  
+            accessPlotData :: Plot3D.T a a b}
+
+getId :: PlotData id label a b -> Maybe id
+getId = DataPlot.accessId . accessPlotInfo
 
 data D3RangeInfo label a b = D3RangeInfo
   (DataPlot.AxisInfo label a)
@@ -131,6 +136,7 @@ class GetD3RangeInfo d3data where
 defaultFrameAttr :: (Atom.C a, Atom.C b) => Opts.T (Graph3D.T a a b)
 defaultFrameAttr =
    Opts.add (Opt.custom "hidden3d" "") ["back offset 1 trianglepattern 3 undefined 1 altdiagonal bentover"] $
+   Opts.add (Opt.custom "datafile" "") ["missing " ++ show "NaN"] $
    Opts.grid True $
    Opts.deflt
 
@@ -155,6 +161,7 @@ labledFrame ::
   (Ord a, Ord b, Show label, Show id, Atom.C a, Atom.C b) =>
   String -> [PlotData id label a b] -> Opts.T (Graph3D.T a a b)
 labledFrame title xs =
+--  Opts.add (Opt.custom "datafile" "") ["missing NaN"] $
   Opts.xLabel (DataPlot.makeAxisLabel ax1) $
   Opts.yLabel (DataPlot.makeAxisLabel ax2) $
   Opts.zLabel (DataPlot.makeAxisLabelWithIds plotIds ax3) $

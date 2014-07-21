@@ -2,13 +2,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
   
 module EFA.Action.Optimisation.Output where
-
 import qualified EFA.Action.Optimisation.Cube.Sweep.Plot as SweepPlot
+import qualified EFA.Action.Optimisation.Cube.Sweep.Draw as SweepDraw
 --import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 --import qualified EFA.Action.Optimisation.Cube.Sweep.Access as SweepAccess
 import qualified EFA.Action.EenergyFlowAnalysis as EFA
 import qualified EFA.Action.Simulation as Simulation
---import qualified EFA.Flow.Part.Index as Idx
+import qualified EFA.Flow.Part.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Action.Optimisation.Process as Process
 --import EFA.Utility.Async (concurrentlyMany_)
@@ -35,7 +35,7 @@ import qualified EFA.Data.Plot.D3.Cube as PlotCube
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Value.State as ValueState
 
---import qualified EFA.Data.Axis.Strict as Strict
+import qualified EFA.Data.Axis.Strict as Strict
 import qualified Data.GraphViz.Types.Canonical as Canonical
 
 import qualified Data.Text.Lazy as LazyText
@@ -90,7 +90,7 @@ data File = RelativeFilePath | AbsoluteFilePath
 --4 Optionen übergeben 
 
 data Draw = DontDraw | Xterm
-data Plot = Dflt | PNG FilePath | SVG FilePath | PS FilePath
+data Plot = DontPlot | Dflt | PNG FilePath | SVG FilePath | PS FilePath
 data Print = DontPrint | StdOut | Print FilePath
   
 data DrawOrPrint = DoP Draw Print
@@ -102,21 +102,23 @@ plotAction Dflt toPlotData plot = [void $ Plot.plotSync DefaultTerm.cons  $ toPl
 plotAction (PNG file) toPlotData plot = [void $ Plot.plotSync (PNG.cons file)  $ toPlotData plot] 
 plotAction (SVG file) toPlotData plot = [void $ Plot.plotSync (SVG.cons file) $ toPlotData plot] 
 plotAction (PS file) toPlotData plot = [void $ Plot.plotSync (PS.cons file) $ toPlotData plot] 
-
+plotAction DontPlot _ _ = []
 drawAction :: 
-  Draw -> (t -> Canonical.DotGraph LazyText.Text) -> t -> [IO ()]
+  Draw -> (t -> [Canonical.DotGraph LazyText.Text]) -> t -> [IO ()]
 drawAction DontDraw _ _ = []
-drawAction Xterm toDotFunction diagram = [Draw.xterm $ toDotFunction diagram]
+drawAction Xterm toDotFunction diagram = map Draw.xterm $ toDotFunction diagram
 
 printAction :: Show a => Print -> a -> [IO ()]
 printAction (Print _) _ = error "PrintAction Print to File not implemented yet"
 printAction DontPrint _ = []
 printAction StdOut x = [print x]
 
+
 drawOrPrintAction ::
   Show a =>
-  DrawOrPrint -> (a -> Canonical.DotGraph LazyText.Text) -> a -> [IO ()]
-drawOrPrintAction (DoP dA pA) toDotFunction diagram= drawAction dA toDotFunction diagram ++ printAction pA diagram
+  DrawOrPrint -> (a -> [Canonical.DotGraph LazyText.Text]) -> a -> [IO ()]
+drawOrPrintAction (DoP dA pA) toDotFunction diagram = drawAction dA toDotFunction diagram ++ printAction pA diagram
+
 
 plotOrPrintAction :: 
   (Show a, Display.C gfx) =>
@@ -135,9 +137,9 @@ system ::
   Node.C node) =>
   SysCtrl -> Process.System node -> [IO ()]
 system sysAction sys = 
-    (drawOrPrintAction  (topo sysAction) Draw.topology  $ Process.accessTopology sys) ++
-    (drawOrPrintAction (labTopo sysAction) Draw.labeledTopology $ Process.accessLabledTopology sys) ++
-    (drawAction (stateAnalysis sysAction) (\ x -> Draw.flowTopologies $ StateAnalysis.advanced x) $ Process.accessTopology sys)
+    (drawOrPrintAction  (topo sysAction) (\x -> [Draw.topology x])  $ Process.accessTopology sys) ++
+    (drawOrPrintAction (labTopo sysAction) (\x -> [Draw.labeledTopology x]) $ Process.accessLabledTopology sys) ++
+    (drawAction (stateAnalysis sysAction) (\ x -> [Draw.flowTopologies $ StateAnalysis.advanced x]) $ Process.accessTopology sys)
     
 data SysDataCtrl = SysDataDont | 
                SysDataDo {rawCurves :: PlotOrPrint,
@@ -242,31 +244,57 @@ optiSet caller ctrl oSet = let
 data SweepCtrl = SweepDont | 
                  SweepDo {drawFlow :: Draw, 
                           plotState :: Plot,
-                          plotStatus :: Plot}
+                          plotStatus :: Plot, 
+                          plotFlowVariables :: Plot}
                           
 sweep ::
   (Show a,DV.Storage vec a, DV.Length vec,
-   Node.C node,
+   Node.C node,ND.Dimensions dim,DV.Storage srchVec (Interp.Val a),
    FormatValue.FormatValue a,
-   DV.Storage srchVec (Interp.Val a),
-   DV.LookupUnsafe vec (TopoQty.Section node (Result.Result 
-                                              (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)))),
-   DV.FromList srchVec) =>
-  CubeGrid.LinIdx ->
+   DV.LookupUnsafe vec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
+   DV.FromList srchVec, 
+   Ord a,
+   Show node,
+   Show (idx0 node),TopoQty.Lookup idx0,
+   Arith.Constant a,
+   Atom.C a,
+   DV.Walker vec,
+   DV.Storage vec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)),
+   DV.Storage vec (Interp.Val a),
+   DV.Storage srchVec a,
+   DV.LookupUnsafe srchVec (Interp.Val a),
+   DV.Length srchVec,
+   ND.Dimensions srchDim,
+   PlotCube.ToPlotData  CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val a)) =>
+  Caller ->
+  [idx0 node] ->
+  [node] ->
+   CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a ->
   SweepCtrl ->
   Process.SweepResults node inst dim srchDim vec srchVec a ->
   [IO ()]
-sweep linIdxDem ctrl swp = 
-  let 
-    demGrid = CubeMap.getGrid $ Process.accessSweepFlow swp
-    fromLin linIdx = CubeGrid.fromLinear demGrid linIdx
---    toLin idx = CubeGrid.toLinear demGrid idx
-  in 
+sweep caller keyList stoList searchGrid ctrl swp = let
+  newCaller = caller |> nc "sweep"
+  in
    (drawAction (drawFlow ctrl)  
-    (Draw.title ("LinIdx: " ++ show linIdxDem ++ "Idx: " ++ (show $ fromLin linIdxDem)) . 
-     Draw.flowSection  Draw.optionsDefault) 
-   (flip CubeMap.lookupLinUnsafe linIdxDem $ Process.accessSweepFlow swp))
+    (SweepDraw.drawDemandSelection newCaller "SweepFlow DemandEdges" (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
+    (Process.accessSweepFlow swp)) ++
    
+{-   (plotAction (plotState ctrl)
+   (SweepPlot.plotStates newCaller "State" searchGrid )
+    (Process.accessSweepFlowStatus swp)) ++ -}
+   
+   (plotAction (plotFlowVariables ctrl)
+    (SweepPlot.plotSweepFlowValues newCaller "FlowVariables" searchGrid 
+     TopoQty.lookup 
+     CubeGrid.All keyList)
+     (Process.accessSweepFlow swp))
+    
+--   (plotAction (plotFlowVariables ctrl)
+--    (SweepPlot.plotStoragePowers newCaller "FlowVariables" searchGrid 
+--     CubeGrid.All stoList)
+--     (Process.accessSweepEndNodePowers swp))
 
 data EvalCtrl = EvalDont | 
                  EvalDo { plotEta :: Plot,  
@@ -297,7 +325,10 @@ evalSweep ::
    DV.LookupUnsafe vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
                                                                           ActFlowOpt.OptimalityMeasure (Interp.Val a))),
    DV.Length srchVec,ND.Dimensions srchDim,
+   DV.Storage vec (Interp.Val (Interp.Val a)),
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val (Interp.Val a)),
    DV.FromList srchVec,
+   DV.Storage vec (Maybe Idx.AbsoluteState),
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val a)) =>
   Caller ->
   CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
@@ -308,16 +339,17 @@ evalSweep caller srchGrid ctrl swp = let
   newCaller = caller |> nc "evalSweep"
   in 
    (plotAction (plotEta ctrl)
-    (SweepPlot.plotEvalSweepStackValue newCaller "Eta" srchGrid (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd)) 
+    (SweepPlot.plotDemandSweepValue newCaller  "Eta" srchGrid (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd) CubeGrid.All) 
      (Process.accessSweepOptimality swp)) ++
    
    (plotAction (plotEta ctrl)
-    (SweepPlot.plotEvalSweepStackValue newCaller  "Loss" srchGrid (ActFlowOpt.unLoss2Optimise . ActFlowOpt.getLoss . snd)) 
+    (SweepPlot.plotStates newCaller "State" srchGrid )
      (Process.accessSweepOptimality swp)) ++
-  
-   (plotAction (plotEtaAt ctrl)
-    (SweepPlot.plotEvalSweepStackValueAt newCaller "Eta" (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd) (CubeGrid.LinIdx 0) ) 
+ 
+   (plotAction (plotEta ctrl)
+    (SweepPlot.plotDemandSweepValue newCaller  "Loss" srchGrid (ActFlowOpt.unLoss2Optimise . ActFlowOpt.getLoss . snd) CubeGrid.All) 
      (Process.accessSweepOptimality swp))
+   
    
                            
 data OptiCtrl = OptiDont | 
@@ -361,7 +393,7 @@ optPerState caller ctrl opt =
      (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Eta-Objective Per State" (ActFlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt))  ++  
     
-     (plotAction (plotOptEtaPerState ctrl)
+     (plotAction (plotEtaOptPerState ctrl)
       (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Eta Per State" (ActFlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt)) ++
                                
@@ -440,7 +472,7 @@ simulation ctrl sim =  let
            Simulation.accessPowerRecord $ Process.accessSimulation sim
   in 
   
-  (drawAction (drawSimulationFlowGraph ctrl) (Draw.flowSection Draw.optionsDefault) 
+  (drawAction (drawSimulationFlowGraph ctrl) (\x -> [Draw.flowSection Draw.optionsDefault x]) 
       (Simulation.accessFlowResult $ Process.accessSimulation sim)) ++
   
   (plotAction (plotSimulationPowers ctrl)
@@ -449,8 +481,8 @@ simulation ctrl sim =  let
      PlotFSignal.plotHRecord) 
       (Simulation.accessPowerRecord $ Process.accessSimulation sim)) ++
   
- (drawAction (drawSequenceFlowGraph ctrl) (Draw.seqFlowGraph Draw.optionsDefault) 
+ (drawAction (drawSequenceFlowGraph ctrl) (\x -> [Draw.seqFlowGraph Draw.optionsDefault x]) 
       (EFA.accessSeqFlowGraph $ Process.accessAnalysis sim)) ++
   
- (drawAction (drawStateFlowGraph ctrl) (Draw.stateFlowGraph Draw.optionsDefault) 
+ (drawAction (drawStateFlowGraph ctrl) (\x -> [Draw.stateFlowGraph Draw.optionsDefault x]) 
       (EFA.accessStateFlowGraph $ Process.accessAnalysis sim))

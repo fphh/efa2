@@ -9,7 +9,7 @@ module EFA.Action.Optimisation.Cube.Sweep.Plot where
 
 import qualified EFA.Action.Optimisation.Cube.Sweep.Access as SweepAccess
 import EFA.Utility(Caller,
-                   --merror,
+                   merror,
                    (|>),
                    ModuleName(..),FunctionName, genCaller)
 import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
@@ -24,7 +24,7 @@ import qualified EFA.Data.ND as ND
 --import qualified EFA.Data.Axis.Strict as Strict
 --import qualified EFA.Flow.Topology.Record as TopoRecord
 --import qualified EFA.Flow.Topology as FlowTopoPlain
---import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 --import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 -- import qualified EFA.Flow.Topology as FlowTopo
@@ -41,7 +41,7 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 import qualified Graphics.Gnuplot.Frame as Frame
 --import qualified EFA.Flow.Topology.Absolute as EqSys
---import qualified EFA.Flow.Topology.Quantity as TopoQty
+import qualified EFA.Flow.Topology.Quantity as TopoQty
 --import qualified EFA.Flow.Topology.Index as XIdx
 --import qualified EFA.Flow.Topology.Variable as Variable
 --import EFA.Flow.Topology.Absolute ( (.=), 
@@ -80,6 +80,7 @@ import qualified EFA.Data.ND.Cube.Map as CubeMap
 import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 import qualified EFA.Data.Plot.D3.Cube as PlotCube
 import qualified EFA.Data.Plot.D3 as PlotD3
+
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
 --import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Graphics.Gnuplot.Value.Atom as Atom
@@ -128,68 +129,99 @@ plotVariation caller sweep =
     demandCubes = Collection.map (CubeMap.map (flip CubeMap.lookupLinUnsafe (CubeGrid.LinIdx 0))) cubeCollection
     searchCubes = CubeMap.lookupLinUnsafe sweep (CubeGrid.LinIdx 0)
     
-plotEvalSweepStackValue ::
-  (DV.Walker srchVec, Atom.C c, Atom.C a,Ord c, Ord a, Show node,
-   DV.Walker vec,
-   DV.Storage vec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                                    FlowOpt.OptimalityMeasure b))),
-   DV.Storage srchVec (CubeGrid.DimIdx srchDim,
-                       CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a (ActFlowCheck.EdgeFlowStatus,
-                                                                                               FlowOpt.OptimalityMeasure b)),
-   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                     FlowOpt.OptimalityMeasure b)),
-   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
-                       FlowOpt.OptimalityMeasure b),
-   DV.Storage srchVec a,
-   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
-                   FlowOpt.OptimalityMeasure b),
-   DV.Storage vec c,
-   DV.LookupUnsafe vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                          FlowOpt.OptimalityMeasure b)),
-   DV.LookupUnsafe srchVec (ActFlowCheck.EdgeFlowStatus,
-                            FlowOpt.OptimalityMeasure b),
-   DV.Length srchVec,
-   DV.FromList srchVec,
-   ND.Dimensions srchDim,
-   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a c) =>
-  Caller ->
-  String ->
-  CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
-  ((ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure b) -> c) ->
-  CubeSweep.OptimalityMeasure node inst dim srchDim vec srchVec a b ->
-  Frame.T (Graph3D.T a a c)
-plotEvalSweepStackValue caller title searchGrid faccess sweepCube = 
-  PlotD3.allInOne (PlotD3.labledFrame title) (\ _ _ -> LineSpec.title "") $
-  concatMap f $ SweepAccess.extractSearchData (caller |> nc "plotEvalSweepStackValue") 
-  searchGrid  sweepCube
-  CubeGrid.All
-  where 
-    f (dimIdx,cube) = PlotCube.toPlotData caller (Just dimIdx) $ CubeMap.map faccess cube
-
-plotEvalSweepStackValueAt ::
+plotDemandSweepValue ::
   (Ord c,
    Ord a,
    Show label,
    Atom.C c,
    Atom.C a,
    DV.Walker vec,
+   DV.Storage vec2 a1,
    DV.Storage vec (CubeMap.Data inst1 dim1 vec1 b),
    DV.Storage vec b,
    DV.Storage vec c,
    DV.LookupUnsafe vec1 b,
+   DV.Length vec2,
+   ND.Dimensions dim2,
    PlotCube.ToPlotData CubeMap.Cube dim label vec a c) =>
   Caller ->
   String ->
-  (b ->c) ->
-  CubeGrid.LinIdx ->
+  CubeGrid.Grid inst2 dim2 label1 vec2 a1 ->
+  (b -> c) ->
+  CubeGrid.ExtractInfo dim2 ->
   CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 b) ->
   Frame.T (Graph3D.T a a c)
-plotEvalSweepStackValueAt caller title faccess linIdx sweepCube = 
-  PlotD3.allInOne (PlotD3.labledFrame title) (\ _ _ -> LineSpec.title "") 
-  $ f $ CubeMap.map (flip CubeMap.lookupLinUnsafeData linIdx) sweepCube
+plotDemandSweepValue caller title searchGrid faccess  extractData sweepCube = 
+  PlotD3.allInOne (PlotD3.labledFrame title) (\ _ plotData -> LineSpec.title (show $ PlotD3.getId $ plotData )) $ 
+  concatMap f $ SweepAccess.extractSearchData (caller |> nc "plotEvalSweepStackValue") searchGrid  sweepCube extractData
   where 
-    f cube = PlotCube.toPlotData caller (Just linIdx) $ CubeMap.map faccess cube
+    f (dimIdx,cube) = PlotCube.toPlotData caller (Just dimIdx) $ CubeMap.map faccess cube
+
+plotStoragePowers :: 
+ (Show node,
+  Ord node,
+  Atom.C b,
+  Atom.C a,
+  Ord b,
+  Ord a,
+  DV.Walker demVec,
+  DV.Storage demVec (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) srchDim srchVec b)),
+  DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec b),
+  DV.Storage srchVec a,
+  DV.Storage demVec b,
+  DV.LookupUnsafe srchVec b,
+  DV.Length srchVec,
+  ND.Dimensions srchDim,
+  PlotCube.ToPlotData CubeMap.Cube demDim (DemandAndControl.Var node) demVec a b) =>
+  Caller ->
+  String ->
+  CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a ->
+  CubeGrid.ExtractInfo srchDim ->
+  [node] ->
+  CubeSweep.EndNodeFlows node inst demDim srchDim demVec srchVec a b ->
+  --CubeMap.Cube inst dim label vec a (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data inst1 dim1 vec1 b)) ->
+  Frame.T (Graph3D.T a a b)
+plotStoragePowers caller title searchGrid extractData nodeList sweepCube = 
+  PlotD3.allInOne (PlotD3.labledFrame title) (\ _ plotData -> LineSpec.title (show $ PlotD3.getId $ plotData )) $ 
+  concatMap (\(k,swpCube) -> concatMap (f k) $ SweepAccess.extractSearchData 
+               (caller |> nc "plotEvalSweepStackValue") searchGrid  swpCube extractData) cubeList
+  where 
+    f k (dimIdx,cube) = PlotCube.toPlotData caller (Just (k,dimIdx)) cube
+    cubeList = zip nodeList $ map (\k -> CubeMap.map (Maybe.fromJust . TopoQty.sumOut . Maybe.fromJust . Maybe.fromMaybe (err k) . Map.lookup k . 
+                                                      FlowOpt.unStorageMap . FlowTopoOpt.getStorageMap) 
+                                           sweepCube) nodeList
+    err k = merror caller modul "plotStoragePowers" $ "key not found " ++ show k 
+    
+
+plotSweepFlowValues ::  
+  (Show key, DV.Walker demVec,Ord b, Ord a, Atom.C b, Atom.C a,
+   DV.Storage srchVec a,Show node,
+   DV.Storage demVec b,
+   DV.LookupUnsafe srchVec b,
+   DV.Length srchVec,
+   ND.Dimensions srchDim,
+   PlotCube.ToPlotData CubeMap.Cube demDim (DemandAndControl.Var node) demVec a b,
+   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec b), 
+   DV.Storage demVec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec b))) =>
+  Caller ->
+  String ->
+  CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a ->
+  (key -> TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec b) -> Maybe (CubeMap.Data (Sweep.Search inst) srchDim srchVec b)) ->
+  CubeGrid.ExtractInfo srchDim ->
+  [key] ->
+  CubeSweep.Flow node inst demDim srchDim demVec srchVec a b ->
+  Frame.T (Graph3D.T a a b)
+plotSweepFlowValues caller title searchGrid faccess  extractData keyList sweepCube = 
+  PlotD3.allInOne (PlotD3.labledFrame title) (\ _ plotData -> LineSpec.title (show $ PlotD3.getId $ plotData )) $ 
+  concatMap (\(k,swpCube) -> concatMap (f k) $ SweepAccess.extractSearchData 
+               (caller |> nc "plotSweepValues") searchGrid  swpCube extractData) cubeList
+  where 
+    f k (dimIdx,cube) = PlotCube.toPlotData caller (Just (k,dimIdx)) cube
+    cubeList = zip keyList $ map (\k -> CubeMap.map (Maybe.fromMaybe (err k) . faccess k) sweepCube) keyList
+    err k = merror caller modul "plotSweepValues" $ "key not found " ++ show k 
   
+
+
 plotStates ::
   (DV.Walker vec,Ord a, Show node, Atom.C a,
    DV.Walker srchVec,
@@ -212,16 +244,23 @@ plotStates ::
                                                                           FlowOpt.OptimalityMeasure b)),
    DV.Length srchVec,
    DV.FromList srchVec,ND.Dimensions srchDim,
-   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Maybe Idx.AbsoluteState)) =>
+   Ord b,Arith.Constant b,
+  DV.Storage vec (Interp.Val (Interp.Val a)),
+  PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val (Interp.Val a)),
+  DV.Storage vec (Interp.Val b),
+  PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val b)) =>
   Caller ->
   String ->
   CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
   CubeSweep.OptimalityMeasure node inst dim srchDim vec srchVec a b ->
-  Frame.T (Graph3D.T a a (Maybe Idx.AbsoluteState))
-plotStates caller title searchGrid sweepCube = plotEvalSweepStackValue (caller |> nc "plotStates") title searchGrid (ActFlowCheck.getState . fst)  sweepCube
-
-
-
+  Frame.T (Graph3D.T a a (Interp.Val b))
+plotStates caller title searchGrid sweepCube = 
+  plotDemandSweepValue (caller |> nc "plotStates") title searchGrid 
+  (Maybe.maybe (Interp.Invalid ["plotStates"]) Interp.Inter . fmap (Arith.fromInteger . fromIntegral . Idx.unAbsoluteState) . 
+   ActFlowCheck.getState . fst)  
+  (CubeGrid.All) sweepCube
+  
+  
 plotOptimalOptimalityValuePerState ::
   (Arith.Sum b, Atom.C a,Ord b, Ord a, Show node, Arith.Constant b,
    DV.Walker vec,
