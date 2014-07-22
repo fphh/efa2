@@ -130,16 +130,6 @@ checkDetermined name rx =
       Undetermined -> error $ "undetermined " ++ name
       Determined x -> x
 
-maxBy :: (Ord b) => (a -> b) -> a -> a -> a
-maxBy f x y = if f y > f x then y else x
-
-
-maxByWithNaN :: (Ord b,RealFloat b) => (a -> b) -> a -> a -> a
-maxByWithNaN f x y = case (isNaN $ f x, isNaN $ f y) of
- (True, True) -> x
- (True,False) -> y
- (False,True) -> x
- (False,False) ->  if f y > f x then y else x
 
 
 unzipMap :: Map k (a, b) -> (Map k a, Map k b)
@@ -182,47 +172,7 @@ unzip4Map m = (Map.map fst4 m, Map.map snd4 m, Map.map thd4 m, Map.map frth4 m)
 mapQuadruple :: (a -> u, b -> v, c -> w, d -> x) -> (a,b,c,d) -> (u,v,w,x)
 mapQuadruple ~(f, g, h, i) ~(x, y, z, a) = (f x, g y, h z, i a)
 
-nan :: (Arith.Constant a, Arith.Product a) => a
-nan = Arith.zero Arith.~/ Arith.zero
 
-nothing2Nan :: (Arith.Constant v, Arith.Product v) => Maybe (Result v) -> v
-nothing2Nan (Just (Determined x)) = x
-nothing2Nan _ = nan
-
-resolveInvalidPts ::
-  b -> (a -> b) -> Map k0 (Map k1 (Maybe a)) -> Map k0 (Map k1 b)
-resolveInvalidPts dflt f m = Map.map (Map.map (maybe dflt f)) m
-
-getMaxObj, getMaxEta ::
-  (Arith.Constant a) =>
---  Map k0 (Map k1 (Maybe (a, a, Int,b))) -> Map k0 (Map k1 a)
-  Type.OptimalSolutionPerState node a -> Map Idx.State (Map [a] a)
-getMaxObj = resolveInvalidPts nan fst4
-getMaxEta = resolveInvalidPts nan snd4
-
-getMaxIndex ::  (Arith.Constant a, Num a) =>
-                Type.OptimalSolutionPerState node a -> Map Idx.State (Map [a] a)
-getMaxIndex = resolveInvalidPts nan (fromIntegral . thd4)
-
-getMaxPos ::
-  (Arith.Constant a, StateQty.Lookup (Idx.InPart part qty), Ord node) =>
-  Idx.InPart part qty node ->
-  Type.OptimalSolutionPerState node a --Map k0 (Map k1 (Maybe (a, a, Int, Type.EnvResult node a)))
-  -> Map Idx.State (Map [a] a)
-getMaxPos pos = resolveInvalidPts nan (f . StateQty.lookup pos . frth4)
-  where f (Just (Determined x)) = x
-        f _ = nan
-
-to2DMatrix ::
-  (Vec.Storage v1 a, Vec.Storage v2 (v1 a),
-   Vec.FromList v1, Vec.FromList v2, Ord b) =>
-  Map [b] a ->
-  Sig.TC tr (Typ x y z) (Data (v2 :> v1 :> Nil) a)
-to2DMatrix =
-  Sig.fromList2 . Map.elems  -- . List.transpose . Map.elems
-  . Map.mapKeysWith (\xs ys -> ys ++ xs) f . fmap (:[])
-  where f (x:_) = x
-        f [] = error "to2DMatrix: empty list"
 
 getFlowTopology ::
   Idx.State ->
@@ -231,11 +181,6 @@ getFlowTopology ::
   Maybe (Graph.Graph node edge nodeLabel edgeLabel)
 getFlowTopology state =
   fmap FlowTopo.topology . Map.lookup state . State.states
-
-toPowerMatrix ::
-  (Arith.Constant a) =>
-  Map k0 (Map k1 (Maybe a)) -> Map k0 (Map k1 a)
-toPowerMatrix = resolveInvalidPts nan id
 
 
 flipPower ::
@@ -255,38 +200,8 @@ absoluteStateIndex ::
   (Node.C node) =>
   Graph node Graph.DirEdge nodeLabel1 a1 ->
   Graph node Graph.EitherEdge nodeLabel a ->
-  Idx.AbsoluteState
-absoluteStateIndex topo flowTopo =
-  let tlabels = map unEitherEDir $ Map.keys $ Graph.edgeLabels topo
-
-      flabels = Map.fromList $ map unEDir $ Map.keys $ Graph.edgeLabels flowTopo
-
-      unEDir (Graph.EDirEdge (Graph.DirEdge f t)) = ((f, t), Dir)
-      unEDir (Graph.EUnDirEdge (Graph.UnDirEdge f t)) = ((f, t), UnDir)
-
-      unEitherEDir (Graph.DirEdge f t) = (f, t)
-
-      g k@(f, t) =
-        case (Map.lookup k flabels, Map.lookup (t, f) flabels) of
-             (Just Dir, _) -> 0
-             (Just UnDir, _) -> 1
-             (_, Just Dir) -> 2
-             (_, Just UnDir) -> 1
-             _ -> error $ "EFA.Graph.Topology.flowNumber: edge not found "
-                          ++ Format.showRaw (Node.display f :: Format.ASCII)
-                          ++ "->"
-                          ++ Format.showRaw (Node.display t :: Format.ASCII)
-
-      toTernary xs = Idx.AbsoluteState $ sum $ zipWith (*) xs $ map (3^) [0 :: Int ..]
-
-  in toTernary $ map g tlabels
-
-absoluteStateIndex' ::
-  (Node.C node) =>
-  Graph node Graph.DirEdge nodeLabel1 a1 ->
-  Graph node Graph.EitherEdge nodeLabel a ->
   Idx.State
-absoluteStateIndex' topo flowTopo =
+absoluteStateIndex topo flowTopo =
   let tlabels = map unEitherEDir $ Map.keys $ Graph.edgeLabels topo
 
       flabels = Map.fromList $ map unEDir $ Map.keys $ Graph.edgeLabels flowTopo
@@ -311,31 +226,16 @@ absoluteStateIndex' topo flowTopo =
 
   in toTernary $ map g tlabels
 
+
 absoluteFlowStateGraph ::
   Node.C node =>
   Graph node Graph.DirEdge nodeLabel1 a1->
   State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel ->
   State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel
 absoluteFlowStateGraph topo sfg = sfg {StateQty.states = Map.fromList $
-  map (\(_,x) -> (absoluteStateIndex' topo $ FlowTopo.topology x,x)) $
+  map (\(_,x) -> (absoluteStateIndex topo $ FlowTopo.topology x,x)) $
            Map.toList $ StateQty.states sfg}
 
-
-{-
-indexConversionMap ::
-  (Node.C node) =>
-  Topo.Topology node -> StateQty.Graph node a v -> Balance.IndexConversionMap
-indexConversionMap topo =
-  Bimap.fromList . Map.toList . Map.map (absoluteStateIndex topo . FlowTopo.topology) . StateQty.states
-
-state2absolute ::
-  Idx.State -> Balance.IndexConversionMap -> Maybe Idx.AbsoluteState
-state2absolute = Bimap.lookup
-
-absolute2State ::
-  Idx.AbsoluteState -> Balance.IndexConversionMap -> Maybe Idx.State
-absolute2State = Bimap.lookupR
--}
 
 ifNull :: b -> ([a] -> b) -> [a] -> b
 ifNull x _ [] = x

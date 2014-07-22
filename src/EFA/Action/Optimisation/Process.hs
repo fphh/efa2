@@ -90,6 +90,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 -- import qualified EFA.Graph.Topology as Topo
 --import qualified EFA.Flow.Topology as FlowTopo
 import qualified Data.Tuple.HT as TupleHT
+import qualified Data.List as List
 
 modul :: ModuleName
 modul = ModuleName "Demo.Optimisation.Process"

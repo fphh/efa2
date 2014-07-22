@@ -64,9 +64,10 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 --import EFA.Utility.Async (concurrentlyMany_)
---import qualified EFA.Flow.Topology.Quantity as FlowTopo
+import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Data.ND as ND
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph as Graph
 import qualified EFA.Application.Utility as AppUt
 
 --import Text.Printf (printf)
@@ -133,7 +134,7 @@ instance Node.C Node where
    dotId = Node.dotIdDefault
    typ t =
       case t of
-         Coal -> Node.AlwaysSource
+         Coal -> Node.Source
          Gas -> Node.Source
          Water -> Node.storage
          Network -> Node.Crossing
@@ -337,7 +338,7 @@ main = do
   let loop = Process.loop (nc "Main") testSet optiSet sweep evalSweep storageList controlVars etaLoopParams balanceLoopParams  
   
   
---  concurrentlyMany_ $ OP.system sysCtrl system
+  concurrentlyMany_ $ OP.system sysCtrl system
 --  concurrentlyMany_ $ OP.test testCtrl testSet demandVars
 --  concurrentlyMany_ $ OP.sysData sysDataCtrl systemData
 --  concurrentlyMany_ $ OP.optiSet (nc "Main") optiSetCtrl optiSet
@@ -366,17 +367,18 @@ main = do
   concurrentlyMany_ $ OP.simulation simCtrl simEfa
   
 --  print stoPowers
---  print balance
+  print balance
 --  print $ Process.accessSweepEndNodePowers sweep
 --  print $ Process.accessSweepOptimality evalSweep
 --  print loop
 --  print rec
-  let flow00= flip CubeMap.lookupLinUnsafe (CubeGrid.LinIdx 0) $ Process.accessSweepFlow sweep
-  print $ FlowTopoCheck.getFlowStatus  (nc "Main") flow00 
-  const Draw.xterm "simulationGraphsSequence"
-    $ Draw.bgcolour DarkSeaGreen2
-    $ Draw.title "Sequence Flow Graph from Simulation"
-    $ Draw.flowSection Draw.optionsDefault flow00
+--  let flow00= flip CubeMap.lookupLinUnsafe (CubeGrid.LinIdx 0) $ Process.accessSweepFlow sweep
+--  print $ FlowTopoCheck.getFlowStatus  (nc "Main") flow00 
+--  print $ Graph.edges $ TopoQty.topology flow00
+--  const Draw.xterm "simulationGraphsSequence"
+--    $ Draw.bgcolour DarkSeaGreen2
+--    $ Draw.title "Sequence Flow Graph from Simulation"
+--    $ Draw.flowSection Draw.optionsDefault flow00
    
 --  print $ CubeMap.lookUp (nc "Main") (ND.fromList (nc "Main") $ map Strict.Idx [3,7]) $ Process.accessSweepEndNodePowers sweep
 --  print $ CubeMap.lookUp (nc "Main") (ND.fromList (nc "Main") $ map Strict.Idx [3,7]) $ Process.accessSweepOptimality evalSweep
@@ -491,35 +493,3 @@ main = do
 
 -}
 
-{-
-getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}},
-                         
-getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}},
-                         
-getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}},
-                         
-getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}}]}}
--}
-{-
-EndNodeEnergies {
-  getSinkMap = SinkMap {unSinkMap = fromList [(Rest,Data {getVector = [Inter 0.71,Inter 0.71,Inter 0.71,Inter 0.71]}),(LocalRest,Data {getVector = [Inter 0.31,Inter 0.31,Inter 0.31,Inter 0.31]})]}, 
-  
-  getSourceMap = SourceMap {unSourceMap = fromList [(Coal,Data {getVector = [Inter 8.811755918354903,Inter 0.3189222965160629,Inter 8.138573730990792,Invalid ["\"\\\"coal\\\"\"@-0.13189759036144577"]]}),(Gas,Data {getVector = [Inter 0.11904761904761907,Inter 0.11904761904761907,Inter 0.48387096774193544,Inter 0.48387096774193544]})]}, 
-  
-  getStorageMap = StorageMap {unStorageMap = fromList [(Water,Just (Sums {sumIn = Nothing, sumOut = Just (Data {getVector = [Inter 0.1111111111111111,Inter 1.0802469135802468,Inter 0.1111111111111111,Inter 1.0802469135802468]})}))]}}
--}
-
-{-
-Data {getVector = [EdgeFlowStatus {
-                      getvalidity = Valid (EFC SignsOK EtaNotOK), 
-                      getState = Just (AbsoluteState {unAbsoluteState = 112})},
-                   EdgeFlowStatus {
-                     getvalidity = Invalid, 
-                     getState = Just (AbsoluteState {unAbsoluteState = 598})},
-                   EdgeFlowStatus {
-                     getvalidity = Invalid, 
-                     getState = Just (AbsoluteState {unAbsoluteState = 616})},
-                   EdgeFlowStatus {
-                     getvalidity = Invalid, 
-                     getState = Just (AbsoluteState {unAbsoluteState = 616})}]}
--}

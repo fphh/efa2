@@ -20,6 +20,9 @@ import qualified EFA.Data.Vector as DV
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Flow.Topology as FlowTopo
 
+import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph as Graph
+
 
 -- import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
@@ -49,13 +52,34 @@ getFlowStatus ::
   FlowTopo.Section node edge sectionLabel nodeLabel (Maybe (TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)))) -> 
   CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus
 getFlowStatus caller flowGraph = 
-  Maybe.fromJust $ snd $ Map.fold f (0,Nothing) $ Graph.edgeLabels $ TopoQty.topology flowGraph
+  Maybe.fromJust $ snd $ Map.foldl (flip f) (0,Nothing) $ Graph.edgeLabels $ TopoQty.topology flowGraph
   where           
     f (Just flow) (expo,Just status) = (expo+1,Just $ combineStatusResults expo status (getEdgeFlowStatus flow))
     f (Just flow) (expo,Nothing) = (expo+1,Just $ getEdgeFlowStatus flow)
     f Nothing (_,_) = merror caller modul "getFlowStatus" "Flow not defined"
-
-
+{-
+getFlowStatus' :: 
+  (Ord node, Ord (edge node), Ord a, Arith.Constant a,Arith.NaNTestable a,
+   DV.Zipper vec, DV.Walker vec, DV.Storage vec ActFlowCheck.EdgeFlowStatus,
+   DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
+   DV.Storage vec ActFlowCheck.Validity) =>
+  Caller ->
+  Topo.Topology node ->
+  FlowTopo.Section node edge sectionLabel nodeLabel (Maybe (TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)))) -> 
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus
+getFlowStatus' caller topo flowGraph = let 
+    flabels = Graph.edgeLabels $ TopoQty.topology flowGraph
+    flipEdge (f,t) = (t,f)
+    getFlow e = case (Map.lookup e flabels,Map.lookup (flipEdge e) flabels) of
+                (Nothing,Just fl) -> f
+                (Just fl,f) -> f
+                
+    f edge (expo,Just status) = (expo+1,Just $ combineStatusResults expo status (getEdgeFlowStatus (getFlow edge)))
+    f edge (expo,Nothing) = (expo+1,Just $ getEdgeFlowStatus (getFlow edge))
+    f _ (_,_) = merror caller modul "getFlowStatus" "Flow not defined or inconsistent"
+                
+    in Maybe.fromJust $ snd $ foldl f (0,Nothing) $ Graph.edges topo --TopoQty.topology flowGraph            
+-}
 combineStatusResults :: 
   (DV.Zipper vec, DV.Storage vec ActFlowCheck.EdgeFlowStatus) => 
   Int ->
@@ -86,22 +110,21 @@ getEdgeState ::
   Maybe Idx.AbsoluteState
 getEdgeState p p1 = 
   let g x = Just $ case (Arith.sign x) of 
-          (Arith.Zero)  -> Idx.AbsoluteState 0
-          (Arith.Positive) -> Idx.AbsoluteState 1 
+          (Arith.Zero)  -> Idx.AbsoluteState 1
+          (Arith.Positive) -> Idx.AbsoluteState 0 
           (Arith.Negative) -> Idx.AbsoluteState 2
   in case (p,p1) of
           (Interp.Invalid _,_) -> Nothing 
           (_,Interp.Invalid _) -> Nothing
           (x,_) -> g $ Interp.unpack x 
 
+
+-- TODO: ETA-Check prüfen
 edgeFlowCheck ::  (Arith.Product a, Ord a, Arith.Constant a, Arith.NaNTestable a) => a -> a -> ActFlowCheck.EdgeFlowConsistency 
 edgeFlowCheck x y = ActFlowCheck.EFC signCheck etaCheck
   where
     eta = if x >= Arith.zero then y Arith.~/ x else x Arith.~/ y
     etaCheck = ActFlowCheck.etaCheckFromBool $ eta > Arith.zero && eta <= Arith.one
-                                               -- True -- if x >= Arith.zero 
-                                               -- then eta > Arith.zero && eta <= Arith.one 
-                                               -- else eta >= Arith.one  
     signCheck = ActFlowCheck.signCheckFromBool $ Arith.sign x == Arith.sign y && nanCheck
     -- TODO: nanCheck nochmal gesondert einbauen 
     nanCheck = if Arith.checkIsNaN x || Arith.checkIsNaN y then error "NaN detected" else True

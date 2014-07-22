@@ -139,7 +139,8 @@ system ::
 system sysAction sys = 
     (drawOrPrintAction  (topo sysAction) (\x -> [Draw.topology x])  $ Process.accessTopology sys) ++
     (drawOrPrintAction (labTopo sysAction) (\x -> [Draw.labeledTopology x]) $ Process.accessLabledTopology sys) ++
-    (drawAction (stateAnalysis sysAction) (\ x -> [Draw.flowTopologies $ StateAnalysis.advanced x]) $ Process.accessTopology sys)
+    (drawAction (stateAnalysis sysAction) (\ x -> [Draw.flowTopologiesAbsolute (Process.accessTopology sys) $ 
+                                                   StateAnalysis.bruteForce x]) $ Process.accessTopology sys)
     
 data SysDataCtrl = SysDataDont | 
                SysDataDo {rawCurves :: PlotOrPrint,

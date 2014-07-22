@@ -24,6 +24,7 @@ module EFA.Flow.Draw (
    flowSection,
    flowTopology,
    flowTopologies,
+   flowTopologiesAbsolute
    ) where
 
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
@@ -567,6 +568,17 @@ flowTopologies ::
 flowTopologies ts =
    DotGraph False True Nothing $
    DotStmts [] (zipWith dotFromFlowTopology [0..] ts) [] []
+
+-- TODO:: Auspacken von AbsoluteState und Rückkonversion von Integer to Int fürs Zeichnen noch nicht optimal 
+flowTopologiesAbsolute ::
+   (Node.C node,Show node) =>
+   Topo.Topology node ->
+   [FlowTopology node] -> DotGraph T.Text
+flowTopologiesAbsolute topo ts =
+   DotGraph False True Nothing $
+   DotStmts [] (zipWith dotFromFlowTopology states ts) [] []
+   where   
+     states = map (fromIntegral . Idx.unAbsoluteState . Topo.getAbsoluteStateIndex topo) ts
 
 dotFromFlowTopology ::
    (Node.C node) =>
