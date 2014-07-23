@@ -122,25 +122,27 @@ lookupControlVar :: Ord node => TopoQty.Section node v -> DemandAndControl.Contr
 lookupControlVar flowSection (DemandAndControl.ControlPower idx) = TopoQty.lookupPower idx flowSection
 lookupControlVar flowSection (DemandAndControl.ControlRatio idx) = TopoQty.lookupX idx flowSection
 
-calcEtaLossSys :: 
-  (Ord node,DV.Zipper vec, 
-   DV.Storage vec (a, a),
-   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Singleton vec, 
-   DV.Length vec,
-   Ord a,
+calcEtaLossSys ::
+  (Ord a,
+   Ord node,
    Show node,
-   Arith.Constant a,Show (vec a),
+   Arith.Constant a,
+   DV.Zipper vec,
    DV.Walker vec,
-   DV.Storage vec (FlowOpt.Eta2Optimise a),
-   DV.Storage vec (FlowOpt.Loss2Optimise a), 
-   DV.Storage vec a, 
-   DV.Storage vec (FlowOpt.Eta2Optimise a, FlowOpt.Loss2Optimise a)) =>
+   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a),
+                   FlowOpt.Loss2Optimise (Interp.Val a)),
+   DV.Storage vec (FlowOpt.Loss2Optimise (Interp.Val a)),
+   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a)),
+   DV.Storage vec (Interp.Val a),
+   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
+   DV.Singleton vec,
+   DV.Length vec) =>
   Caller ->
   CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->
-   FlowOpt.LifeCycleMap node a -> 
-   EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec a) -> 
-   CubeMap.Data (Sweep.Search inst) dim vec (FlowOpt.Eta2Optimise a,FlowOpt.Loss2Optimise a)
+  FlowOpt.LifeCycleMap node a ->
+  EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
+  CubeMap.Data inst dim vec (FlowOpt.Eta2Optimise (Interp.Val a),
+                             FlowOpt.Loss2Optimise (Interp.Val a))
 calcEtaLossSys caller state lifeCycleEfficiencies (EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) = let 
   chargeStorages = Map.mapMaybeWithKey (\node x -> 
           (applyUsageEfficiency caller state lifeCycleEfficiencies node) x) storages
@@ -163,21 +165,20 @@ getStoragePowerWithSign sums = case sums of
   TopoQty.Sums  (Just energy) Nothing -> Just $ Arith.negate energy
   TopoQty.Sums Nothing Nothing -> Nothing 
 
-applyGenerationEfficiency :: 
-  (DV.Walker vec, 
+applyGenerationEfficiency ::
+  (Ord a,
+   Ord node,
+   Show node,
+   Arith.Constant a,
    DV.Zipper vec,
    DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec a,
-   Arith.Sum a,
-   Ord a, 
-   Ord node, Show node,
-   Arith.Constant a)=>
- Caller ->  
- CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->
- FlowOpt.LifeCycleMap node a -> 
- node -> 
- Maybe (TopoQty.Sums (CubeMap.Data (Sweep.Search inst) dim vec a)) ->
- Maybe (CubeMap.Data (Sweep.Search inst) dim vec a)
+   DV.Storage vec (Interp.Val a)) =>
+  Caller ->
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus ->
+  FlowOpt.LifeCycleMap node a ->
+  node ->
+  Maybe (TopoQty.Sums (CubeMap.Data inst dim vec (Interp.Val a))) ->
+  Maybe (CubeMap.Data inst dim vec (Interp.Val a))
 applyGenerationEfficiency _ _ _ _ Nothing = Nothing
 applyGenerationEfficiency caller state lifeCycleEfficiencies node (Just sums) = case sums of
   TopoQty.Sums Nothing (Just energy) -> Just $ (CubeMap.zipWithData f) energy state
@@ -190,28 +191,25 @@ applyGenerationEfficiency caller state lifeCycleEfficiencies node (Just sums) = 
     f x st = if x > Arith.zero then x Arith.~/ eta else Arith.zero
       where
         (FlowOpt.GenerationEfficiency eta,_) = 
-          Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (Maybe.fromMaybe e3 $ ActFlowCheck.getState st) node 
+          Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (ActFlowCheck.getState st) node 
         e = merror caller modul "applyGenerationEfficiency" 
                     ("Node not in LifeCycleEfficiencyMap: " ++ show node)
-        e3 = merror caller modul "applyGenerationEfficiency" "Undefined State"
                     
 
-
-applyUsageEfficiency :: 
-  (DV.Walker vec, Show node,
+applyUsageEfficiency ::
+  (Ord a,
+   Ord node,
+   Show node,
+   Arith.Constant a,
    DV.Zipper vec,
    DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec a,
-   Arith.Sum a,
-   Ord a, 
-   Ord node, 
-   Arith.Constant a)=> 
-  Caller ->  
- CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->
- FlowOpt.LifeCycleMap node a -> 
- node -> 
- Maybe (TopoQty.Sums (CubeMap.Data (Sweep.Search inst) dim vec a)) ->
- Maybe (CubeMap.Data (Sweep.Search inst) dim vec a)
+   DV.Storage vec (Interp.Val a)) =>
+  Caller ->
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus ->
+  FlowOpt.LifeCycleMap node a ->
+  node ->
+  Maybe (TopoQty.Sums (CubeMap.Data inst dim vec (Interp.Val a))) ->
+  Maybe (CubeMap.Data inst dim vec (Interp.Val a))
 applyUsageEfficiency _ _ _ _ Nothing = Nothing
 applyUsageEfficiency caller state lifeCycleEfficiencies node (Just sums) = case sums of
   TopoQty.Sums Nothing (Just energy) -> Just $ (CubeMap.zipWithData (f. Arith.negate)) energy state
@@ -224,11 +222,11 @@ applyUsageEfficiency caller state lifeCycleEfficiencies node (Just sums) = case 
     f x st = if x > Arith.zero then x Arith.~* eta else Arith.zero
       where 
         (_,FlowOpt.UsageEfficiency eta) = 
-          Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (Maybe.fromMaybe e3 $ ActFlowCheck.getState st) node 
+          Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (ActFlowCheck.getState st) node 
     e = merror caller modul "applyUsageEfficiency" 
                     ("Node not in LifeCycleEfficiencyMap: " ++ show node)
-    e3 = merror caller modul "applyUsageEfficiency" 
-                    ("Undefined State")
+--    e3 = merror caller modul "applyUsageEfficiency" 
+--                    ("Undefined State")
                     
 calculateOptimalityMeasure :: 
   (Ord node, Ord a, Show node, Arith.Constant a, DV.Zipper vec,Show (vec a),
@@ -241,13 +239,21 @@ calculateOptimalityMeasure ::
    DV.Storage vec ActFlowCheck.EdgeFlowStatus,
    DV.Walker vec, DV.Storage vec a, DV.Singleton vec,
    DV.Storage vec (a, a),
+   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a),
+                   FlowOpt.Loss2Optimise (Interp.Val a)),
+   DV.Storage vec (Interp.Val a),
+   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a)),
+   DV.Storage vec (FlowOpt.Loss2Optimise (Interp.Val a)),
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, (a, a)),
+   DV.Storage vec (FlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
+                         FlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.Length vec) =>
    Caller -> 
    CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->
    FlowOpt.LifeCycleMap node a -> 
-    EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec a) ->
-   CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure a)
+    EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
+   CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure (Interp.Val a))
 calculateOptimalityMeasure caller state lifeCycleEfficiencies endNodeEnergies = let
     etaLossSys = calcEtaLossSys caller state lifeCycleEfficiencies endNodeEnergies
   in CubeMap.zipWithData ((,)) state $ (CubeMap.mapData (\(x,y) -> FlowOpt.OptimalityMeasure x y)) etaLossSys

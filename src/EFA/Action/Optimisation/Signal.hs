@@ -303,8 +303,8 @@ getBalance ::
 getBalance storageSignals = Balance.Balance $ Map.map f storageSignals
   where f storageSignal = SignalFlow.foldlWithTime g Nothing storageSignal
         g _ (_,Nothing) = Nothing
-        g Nothing (t,Just x) = Just ((Interp.Inter t) Arith.~* x)
-        g (Just acc) (t, Just x) = Just $ ((Interp.Inter t) Arith.~* x)  Arith.~+ acc        
+        g Nothing (t,Just x) = Just x --Just ((Interp.Inter t) Arith.~* x)
+        g (Just acc) (t, Just x) = Just $ x Arith.~+ acc  -- ++ Just $ ((Interp.Inter t) Arith.~* x)  Arith.~+ acc        
         
 ---- Helper Function
 

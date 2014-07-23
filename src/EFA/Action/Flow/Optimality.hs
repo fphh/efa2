@@ -46,14 +46,17 @@ newtype UsageEfficiency a = UsageEfficiency a deriving Show
 newtype StorageFlow a = StorageFlow a deriving Show 
 
 newtype LifeCycleMap node a = 
-  LifeCycleMap (Map.Map Idx.AbsoluteState (Map.Map node (GenerationEfficiency a,UsageEfficiency a))) deriving Show
+  LifeCycleMap (Map.Map (Idx.AbsoluteState) (Map.Map node (GenerationEfficiency a,UsageEfficiency a))) deriving Show
 
 lookupLifeCycleEta :: (Ord node, Ord a, Arith.Constant a, Arith.Product a) =>
   LifeCycleMap node a -> 
-  Idx.AbsoluteState -> 
+  Maybe Idx.AbsoluteState -> 
   node -> 
-  Maybe (GenerationEfficiency a, UsageEfficiency a) 
-lookupLifeCycleEta (LifeCycleMap m) state node = join $ fmap (Map.lookup node) $ Map.lookup state m 
+  Maybe (GenerationEfficiency (Interp.Val a), UsageEfficiency (Interp.Val a)) 
+lookupLifeCycleEta (LifeCycleMap m) (Just state) node = fmap g $ join $ fmap (Map.lookup node) $ Map.lookup state m 
+  where g (GenerationEfficiency x, UsageEfficiency y) = (GenerationEfficiency (Interp.Inter x), UsageEfficiency (Interp.Inter y))
+lookupLifeCycleEta (LifeCycleMap m) Nothing node = Just (GenerationEfficiency $ Interp.Invalid ["lookupLifeCycleEta"], 
+                                                         UsageEfficiency $ Interp.Invalid ["lookupLifeCycleEta"])
   
 newtype SinkMap node a = SinkMap {unSinkMap :: (Map.Map node a)} deriving Show  
 newtype SourceMap node a = SourceMap {unSourceMap :: (Map.Map node a)} deriving Show  

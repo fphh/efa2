@@ -255,10 +255,9 @@ getFlowStatus ::
 getFlowStatus caller flowResult = 
   CubeMap.map (FlowTopoCheck.getFlowStatus 
                             (caller |> nc "getEndNodeFlows")) flowResult
-
+{-
 calculateOptimalityMeasure ::
-  (
-   Eq (vec a),
+  (Eq (vec a),
    Ord b,
    Ord node,
    Show node,
@@ -270,31 +269,77 @@ calculateOptimalityMeasure ::
    DV.Storage vec1 (b,b),
    DV.Storage vec1 b,
    DV.Storage vec1 ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec1 (FlowOpt.Eta2Optimise b),
+   DV.Storage vec1 (FlowOpt.Eta2Optimise (Interp.Val b)),
    DV.Storage  vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 
                                    (ActFlowCheck.EdgeFlowStatus, 
-                                    FlowOpt.OptimalityMeasure b))),
-   DV.Storage vec1 (FlowOpt.TotalBalanceForce b),
-   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure b),
-   DV.Storage vec1 (FlowOpt.OptimalityMeasure b),
-   DV.Storage vec1 (FlowOpt.Loss2Optimise b),
-   DV.Storage vec1 (FlowOpt.Eta2Optimise b,
-                    FlowOpt.Loss2Optimise b),
+                                    FlowOpt.OptimalityMeasure (Interp.Val b)))),
+   DV.Storage vec1 (FlowOpt.TotalBalanceForce (Interp.Val b)),
+   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure (Interp.Val b)),
+   DV.Storage vec1 (FlowOpt.OptimalityMeasure (Interp.Val b)),
+   DV.Storage vec1 (FlowOpt.Loss2Optimise (Interp.Val b)),
+   DV.Storage vec1 (FlowOpt.Eta2Optimise (Interp.Val b),
+                    FlowOpt.Loss2Optimise (Interp.Val b)),
    DV.Storage vec (FlowTopoOpt.EndNodeEnergies node (
-                      (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))),
+                      (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b)))),
    DV.Storage vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus)),
    DV.Storage vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 
                     (ActFlowCheck.EdgeFlowStatus,
-                     (FlowOpt.TotalBalanceForce b,
-                      (FlowOpt.Eta2Optimise b,
-                       FlowOpt.Loss2Optimise b))))),
-   DV.Singleton vec1,Show (vec1 b),
+                     (FlowOpt.TotalBalanceForce (Interp.Val b),
+                      (FlowOpt.Eta2Optimise (Interp.Val b),
+                       FlowOpt.Loss2Optimise (Interp.Val b)))))),
+   DV.Singleton vec1,Show (vec1 (Interp.Val b)),
    DV.Length vec1) =>
   Caller ->
   FlowOpt.LifeCycleMap node b ->
-  EndNodeFlows node inst dim dim1 vec vec1 a b ->
+  EndNodeFlows node inst dim dim1 vec vec1 a (Interp.Val b) ->
   FlowStatus node inst dim dim1 vec vec1 a ->
-  OptimalityMeasure node inst dim dim1 vec vec1 a b
+  OptimalityMeasure node inst dim dim1 vec vec1 a (Interp.Val b) -}
+calculateOptimalityMeasure ::
+  (Eq label,
+   Eq (vec a),
+   Ord b,
+   Ord node,
+   Show (vec1 b),
+   Show node,
+   Arith.Constant b,
+   DV.Zipper vec1,
+   DV.Zipper vec,
+   DV.Walker vec1,
+   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
+                    FlowOpt.OptimalityMeasure (Interp.Val b)),
+   DV.Storage vec1 (FlowOpt.OptimalityMeasure (Interp.Val b)),
+   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
+                    (b,
+                     b)),
+   DV.Storage vec1 (FlowOpt.Loss2Optimise (Interp.Val b)),
+   DV.Storage vec1 (FlowOpt.Eta2Optimise (Interp.Val b)),
+   DV.Storage vec1 (Interp.Val b),
+   DV.Storage vec1 (FlowOpt.Eta2Optimise (Interp.Val b),
+                    FlowOpt.Loss2Optimise (Interp.Val b)),
+   DV.Storage vec1 (b,
+                    b),
+   DV.Storage vec1 b,
+   DV.Storage vec1 ActFlowCheck.EdgeFlowStatus,
+   DV.Storage vec1 (FlowOpt.Eta2Optimise b),
+   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
+                    FlowOpt.OptimalityMeasure b),
+   DV.Storage vec1 (FlowOpt.OptimalityMeasure b),
+   DV.Storage vec1 (FlowOpt.TotalBalanceForce b),
+   DV.Storage vec1 (FlowOpt.Loss2Optimise b),
+   DV.Storage vec1 (FlowOpt.Eta2Optimise b,
+                    FlowOpt.Loss2Optimise b),
+   DV.Storage vec (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b))),
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus),
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
+                                                                FlowOpt.OptimalityMeasure (Interp.Val b))),
+   DV.Singleton vec1,
+   DV.Length vec1) =>
+  Caller ->
+  FlowOpt.LifeCycleMap node b ->
+  CubeMap.Cube (Sweep.Demand inst) dim label vec a (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b))) ->
+  CubeMap.Cube (Sweep.Demand inst) dim label vec a (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus) ->
+  CubeMap.Cube (Sweep.Demand inst) dim label vec a (CubeMap.Data (Sweep.Search inst) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
+                                                                                  FlowOpt.OptimalityMeasure (Interp.Val b)))
 calculateOptimalityMeasure caller lifeCycleMap endNodeValues status = 
   CubeMap.zipWith (caller |> nc "calculateOptimalityMeasuregetEndNodeFlows") 
   (\ x st -> FlowTopoOpt.calculateOptimalityMeasure 

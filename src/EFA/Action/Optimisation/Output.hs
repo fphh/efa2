@@ -351,16 +351,24 @@ evalSweep caller srchGrid ctrl swp = let
     (SweepPlot.plotDemandSweepValue newCaller  "Loss" srchGrid (ActFlowOpt.unLoss2Optimise . ActFlowOpt.getLoss . snd) CubeGrid.All) 
      (Process.accessSweepOptimality swp))
    
-   
-                           
 data OptiCtrl = OptiDont | 
                 OptiDo 
-                {plotOptEtaPerState :: Plot, 
+                {plotOptimality :: Plot,
+                 plotOptEtaPerState :: Plot, 
                  plotEtaOptPerState :: Plot,
                  plotOptIndexPerState :: Plot}
 
 optPerState ::
-  (Ord a,
+  (Ord a,DV.Storage
+         vec (ActFlowCheck.EdgeFlowStatus,
+              ActFlowOpt.OptimalityValues (Interp.Val a)),
+   DV.Storage vec (CubeMap.Data (Sweep.Search t1) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                   ActFlowOpt.OptimalityValues (Interp.Val a))),
+   DV.Storage srchVec a,
+   DV.LookupUnsafe srchVec (ActFlowCheck.EdgeFlowStatus,
+                            ActFlowOpt.OptimalityValues (Interp.Val a)),
+   DV.Length srchVec,
+   ND.Dimensions srchDim,
    DV.Storage vec (CubeGrid.LinIdx,
                    (ActFlowCheck.EdgeFlowStatus,
                     ActFlowOpt.OptimalityValues a)),
@@ -385,12 +393,17 @@ optPerState ::
    DV.Storage vec (Interp.Val a),
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var t) vec a (Interp.Val a)) =>
   Caller ->
+  CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
   OptiCtrl ->
   Process.OptimisationPerState t t1 dim srchDim vec srchVec sigVec a ->
   [IO ()]
-optPerState caller ctrl opt = 
+optPerState caller srchGrid ctrl opt = 
   let newCaller = caller |> nc "optPerState"
-  in (plotAction (plotOptEtaPerState ctrl) 
+  in (plotAction (plotOptimality ctrl)
+     (SweepPlot.plotDemandSweepValue newCaller  "EtaBasedOptimalityValue" srchGrid (ActFlowOpt.getOptEtaVal . snd) CubeGrid.All) 
+     (Process.accessObjectiveFunctionValues opt)) ++
+
+     (plotAction (plotOptEtaPerState ctrl) 
      (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Eta-Objective Per State" (ActFlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt))  ++  
     
@@ -402,6 +415,8 @@ optPerState caller ctrl opt =
       (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Index Per State"
       (\(CubeGrid.LinIdx idx,_) -> Interp.Inter $ Arith.fromInteger $ fromIntegral idx)) 
      (Process.accessOptimalChoicePerState opt))
+     
+
 
 
 data OpCtrl = OpDont | OpDo 

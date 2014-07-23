@@ -190,33 +190,26 @@ demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc 
                                                              (2,ND.fromList (nc "Main") [0.21,0.42]),
                                                              (3,ND.fromList (nc "Main") [0.3,0.4]),
                                                              (4,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (5,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (6,ND.fromList (nc "Main") [0.2,0.4]),
+                                                             (5,ND.fromList (nc "Main") [0.22,0.4]),
+                                                             (6,ND.fromList (nc "Main") [0.3,0.45]),
                                                              (7,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (8,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (9,ND.fromList (nc "Main") [0.2,0.4]),
+                                                             (8,ND.fromList (nc "Main") [0.7,0.7]),
+                                                             (9,ND.fromList (nc "Main") [0.2,0.8]),
                                                              (10,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (11,ND.fromList (nc "Main") [0.2,0.4]),
+                                                             (11,ND.fromList (nc "Main") [0.7,0.1]),
                                                              (12,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (13,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (14,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (15,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (16,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (17,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (18,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (19,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (20,ND.fromList (nc "Main") [0.2,0.4]),
+                                                             (13,ND.fromList (nc "Main") [0.8,0.4]),
+                                                             (14,ND.fromList (nc "Main") [0.2,0.9]),
+                                                             (15,ND.fromList (nc "Main") [0.8,0.4]),
+                                                             (16,ND.fromList (nc "Main") [0.9,0.5]),
+                                                             (17,ND.fromList (nc "Main") [0.5,0.4]),
+                                                             (18,ND.fromList (nc "Main") [0.23,0.4]),
+                                                             (19,ND.fromList (nc "Main") [0.25,0.6]),
+                                                             (20,ND.fromList (nc "Main") [0.28,0.4]),
                                                              (21,ND.fromList (nc "Main") [0.2,0.4]),
-                                                             (22,ND.fromList (nc "Main") [0.2,0.4]),
+                                                             (22,ND.fromList (nc "Main") [0.29,0.4]),
                                                              (23,ND.fromList (nc "Main") [0.2,0.4])]
 
-
-{-local = [0.1,0.6 .. 6.2]
-rest = [0.1,0.3 .. 2.1]
-
-water = [0.1, 0.2 .. 0.8]
-gas =   [0.1, 0.2 .. 0.8]
--}
 
 demandVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 demandVariation  = 
@@ -226,12 +219,12 @@ demandVariation  =
 searchVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 searchVariation = 
   [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.01,0.21]),  -- .. 0.91]),
-   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[0.01,0.91])]  --  .. 0.91])]  
+   (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[-0.91,-0.71 .. -0.01]++[0.01,0.21 .. 0.91])]  --  .. 0.91])]  
 
 
-lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
+lifeCycleMap :: FlowOpt.LifeCycleMap Node Double
 lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0..10000]) $ repeat $ 
-               Map.fromList [(Water,(FlowOpt.GenerationEfficiency $ Interp.Inter 0.3, FlowOpt.UsageEfficiency $ Interp.Inter 1.0))] 
+               Map.fromList [(Water,(FlowOpt.GenerationEfficiency 0.3, FlowOpt.UsageEfficiency 1.0))] 
 
 
 showFunctionAxis ::  Strict.Axis Base String [] Double
@@ -254,19 +247,21 @@ sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm,
                         OP.plotStatus = OP.Dflt, 
                         OP.plotFlowVariables = OP.Dflt} -- OP.DontPlot} -- OP.Dflt}
             
-optCtrl = OP.OptiDo {OP.plotOptEtaPerState = OP.Dflt, 
+optCtrl = OP.OptiDo {OP.plotOptimality = OP.Dflt,
+                     OP.plotOptEtaPerState = OP.Dflt, 
                      OP.plotEtaOptPerState= OP.Dflt, 
                      OP.plotOptIndexPerState= OP.Dflt}
 
 opCtrl = OP.OpDo {OP.plotOptimalControlSignals = OP.Dflt, 
                   OP.plotOptimalStoragePowers = OP.Dflt}
+         
 simCtrl = OP.SimDo {OP.drawSimulationFlowGraph = OP.Xterm,
                     OP.plotSimulationPowers = OP.Dflt,
                     OP.drawSequenceFlowGraph = OP.Xterm, 
                     OP.drawStateFlowGraph = OP.Xterm}
 
 balanceForcingMap :: Balance.Forcing Node (Interp.Val Double)
-balanceForcingMap = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.5))]
+balanceForcingMap = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (-1.0)))]
 
 balanceForcingMap1 :: Balance.Forcing Node (Interp.Val Double)
 balanceForcingMap1 = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.1))]
@@ -285,7 +280,7 @@ balanceLoopParams =
   Loop.BalanceLoopParams 
   {Loop.accessMaxIterationsPerStorage = Balance.MaxIterationsPerStorage 10 , 
    Loop.accessMaxIterations = Balance.MaxIterations 100,
-   Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.1) , 
+   Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.4) , 
    Loop.accessInitialForcing = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0))], 
    Loop.accessInitialStep = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (0.001)))], 
    Loop.accessInitialSto = Water}
@@ -333,12 +328,13 @@ main = do
           :: Process.SimulationAndAnalysis Node Base [] Double
              
   let (Process.OptimalOperation _ _ stoPowers balance)  = optimalOperation
+  let (Process.OptimalOperation _ _ stoPowers balance1)  = optimalOperation1
   let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
       
   let loop = Process.loop (nc "Main") testSet optiSet sweep evalSweep storageList controlVars etaLoopParams balanceLoopParams  
   
   
-  concurrentlyMany_ $ OP.system sysCtrl system
+--  concurrentlyMany_ $ OP.system sysCtrl system
 --  concurrentlyMany_ $ OP.test testCtrl testSet demandVars
 --  concurrentlyMany_ $ OP.sysData sysDataCtrl systemData
 --  concurrentlyMany_ $ OP.optiSet (nc "Main") optiSetCtrl optiSet
@@ -358,19 +354,24 @@ main = do
   concurrentlyMany_ $ OP.sweep  (nc "Main") flowVars [Water]
     (Process.accessSearchGrid optiSet) sweepCtrl sweep  
   
-  concurrentlyMany_ $ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep
-  
-  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState
-  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
-  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState1
-  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation1
-  concurrentlyMany_ $ OP.simulation simCtrl simEfa
+  concurrentlyMany_ $ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
+--                      OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
+--  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
+--  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState1
+--  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation1
+--  concurrentlyMany_ $ OP.simulation simCtrl simEfa
   
 --  print stoPowers
   print balance
+  print balance1
+  print $ Process.accessOptimalStoragePowers optimalOperation
+  print $ Process.accessOptimalStoragePowers optimalOperation1
+  
+  
+  
 --  print $ Process.accessSweepEndNodePowers sweep
 --  print $ Process.accessSweepOptimality evalSweep
---  print loop
+  print loop
 --  print rec
 --  let flow00= flip CubeMap.lookupLinUnsafe (CubeGrid.LinIdx 0) $ Process.accessSweepFlow sweep
 --  print $ FlowTopoCheck.getFlowStatus  (nc "Main") flow00 
