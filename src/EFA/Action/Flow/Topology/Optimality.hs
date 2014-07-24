@@ -141,7 +141,7 @@ calcEtaLossSys ::
   CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->
   FlowOpt.LifeCycleMap node a ->
   EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
-  CubeMap.Data inst dim vec (FlowOpt.Eta2Optimise (Interp.Val a),
+  CubeMap.Data (Sweep.Search inst) dim vec (FlowOpt.Eta2Optimise (Interp.Val a),
                              FlowOpt.Loss2Optimise (Interp.Val a))
 calcEtaLossSys caller state lifeCycleEfficiencies (EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) = let 
   chargeStorages = Map.mapMaybeWithKey (\node x -> 

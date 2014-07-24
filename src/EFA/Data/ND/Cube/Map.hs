@@ -368,8 +368,8 @@ map f (Cube grid (Data vec)) = (Cube grid $ Data $ DV.map f vec)
 
 -- TODO not very elegant, how about some functor Stuff later
 mapData :: 
-  (DV.Walker vec, DV.Storage vec a, DV.Storage vec a1) =>
-  (a1 -> a) -> Data t t1 vec a1 -> Data inst dim vec a
+  (DV.Walker vec, DV.Storage vec a, DV.Storage vec b) =>
+  (a -> b) -> Data inst dim vec a -> Data inst dim vec b
 mapData f (Data vec) = Data $ DV.map f vec
 
 zipWithData :: 

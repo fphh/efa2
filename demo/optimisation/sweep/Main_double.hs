@@ -351,10 +351,9 @@ main = do
                   TopoIdx.Eta (TopoIdx.Position Network LocalNetwork)]
                   --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]                      
    
-  concurrentlyMany_ $ OP.sweep  (nc "Main") flowVars [Water]
-    (Process.accessSearchGrid optiSet) sweepCtrl sweep  
-  
-  concurrentlyMany_ $ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
+  concurrentlyMany_ $ 
+    OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
+     ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
 --                      OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
 --  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
 --  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState1

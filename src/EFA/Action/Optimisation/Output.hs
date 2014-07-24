@@ -249,31 +249,43 @@ data SweepCtrl = SweepDont |
                           plotFlowVariables :: Plot}
                           
 sweep ::
-  (Show a,DV.Storage vec a, DV.Length vec,
+  (Show a,DV.Storage demVec a, DV.Length demVec,
    Node.C node,ND.Dimensions dim,DV.Storage srchVec (Interp.Val a),
    FormatValue.FormatValue a,
-   DV.LookupUnsafe vec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
-   DV.FromList srchVec, 
+   DV.LookupUnsafe demVec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
+   DV.FromList srchVec,
+   Eq (demVec a),
+   DV.Zipper srchVec,
+   DV.Zipper demVec,
+   DV.Walker srchVec,
+   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec a),
+   DV.Storage demVec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec a)),
+   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Maybe Idx.AbsoluteState)),
+   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus),
+   DV.Storage srchVec ActFlowCheck.EdgeFlowStatus,
+   DV.Storage srchVec (Maybe Idx.AbsoluteState),
+   DV.LookupUnsafe srchVec a,
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) demVec a a,
    Ord a,
    Show node,
    Show (idx0 node),TopoQty.Lookup idx0,
    Arith.Constant a,
    Atom.C a,
-   DV.Walker vec,
-   DV.Storage vec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
-   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)),
-   DV.Storage vec (Interp.Val a),
+   DV.Walker demVec,
+   DV.Storage demVec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
+   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)),
+   DV.Storage demVec (Interp.Val a),
    DV.Storage srchVec a,
    DV.LookupUnsafe srchVec (Interp.Val a),
    DV.Length srchVec,
    ND.Dimensions srchDim,
-   PlotCube.ToPlotData  CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val a)) =>
+   PlotCube.ToPlotData  CubeMap.Cube dim (DemandAndControl.Var node) demVec a (Interp.Val a)) =>
   Caller ->
   [idx0 node] ->
   [node] ->
    CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a ->
   SweepCtrl ->
-  Process.SweepResults node inst dim srchDim vec srchVec a ->
+  Process.SweepResults node inst dim srchDim demVec srchVec a ->
   [IO ()]
 sweep caller keyList stoList searchGrid ctrl swp = let
   newCaller = caller |> nc "sweep"
@@ -282,16 +294,19 @@ sweep caller keyList stoList searchGrid ctrl swp = let
     (SweepDraw.drawDemandSelection newCaller "SweepFlow DemandEdges" (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
     (Process.accessSweepFlow swp)) ++
    
-{-   (plotAction (plotState ctrl)
-   (SweepPlot.plotStates newCaller "State" searchGrid )
-    (Process.accessSweepFlowStatus swp)) ++ -}
-   
    (plotAction (plotFlowVariables ctrl)
     (SweepPlot.plotSweepFlowValues newCaller "FlowVariables" searchGrid 
      TopoQty.lookup 
      CubeGrid.All keyList)
-     (Process.accessSweepFlow swp))
+     (Process.accessSweepFlow swp)) ++ 
     
+   (plotAction (plotFlowVariables ctrl)
+    (SweepPlot.plotSweepFlowValuesPerState newCaller "FlowVariables Per State" searchGrid 
+     TopoQty.lookup CubeGrid.All keyList $ Process.accessSweepFlowStatus swp)
+     (Process.accessSweepFlow swp))
+   
+   
+   
 --   (plotAction (plotFlowVariables ctrl)
 --    (SweepPlot.plotStoragePowers newCaller "FlowVariables" searchGrid 
 --     CubeGrid.All stoList)
@@ -307,7 +322,14 @@ evalSweep ::
    Arith.Constant a,
    Atom.C a,
    DV.Walker vec,
+   DV.Zipper vec,
    DV.Walker srchVec,
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Maybe Idx.AbsoluteState)),
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus),
+   DV.Storage srchVec ActFlowCheck.EdgeFlowStatus,
+   DV.Storage srchVec (Maybe Idx.AbsoluteState),
+   DV.Storage srchVec (Interp.Val a),
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)),
    DV.Storage vec (Interp.Val a),
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
                    ActFlowOpt.OptimalityMeasure (Interp.Val a)),

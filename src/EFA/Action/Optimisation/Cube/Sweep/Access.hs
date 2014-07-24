@@ -11,7 +11,7 @@ import EFA.Utility(Caller,
                    ModuleName(..),FunctionName, genCaller)
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
 --import qualified EFA.Graph as Graph 
---import qualified EFA.Data.Interpolation as Interp  
+import qualified EFA.Data.Interpolation as Interp  
 import qualified EFA.Value.State as ValueState
 --import qualified EFA.Action.EtaFunctions as EtaFunctions
 --import qualified EFA.Action.Flow.Optimality as FlowOpt
@@ -23,7 +23,7 @@ import qualified EFA.Data.ND as ND
 --import qualified EFA.Flow.Topology as FlowTopoPlain
 --import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 --import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
---import qualified EFA.Action.Flow.Check as ActFlowCheck
+import qualified EFA.Action.Flow.Check as FlowCheck
 -- import qualified EFA.Flow.Topology as FlowTopo
 --import qualified EFA.Data.Interpolation as Interp
 --import qualified EFA.Application.Utility as AppUt
@@ -34,6 +34,7 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 --import qualified EFA.Application.Optimisation.Sweep as Sweep
 --import EFA.Application.Optimisation.Params (Name)
 --import qualified EFA.Application.Optimisation.Params as Params
+--import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 
 --import qualified EFA.Flow.Topology.Absolute as EqSys
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
@@ -92,9 +93,6 @@ modul = ModuleName "DoubleSweep"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-
---
---type SweepFlowCube = 
 
 collectionCubeToCubeCollection ::
   (DV.LookupUnsafe demVec (Collection.Collection key b), 
@@ -160,15 +158,60 @@ getAllStates ::
 getAllStates cube = ValueState.states $ DV.foldl (ValueState.union) (ValueState.Map Map.empty) vec 
   where vec = CubeMap.getVector $ CubeMap.getData cube
 
+{-
+getAllSweepStateCubes ::
+ CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 (FlowCheck.EdgeFlowStatus)) ->
+ CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 (Interp.Val b)) ->
+ ValueState.Map (CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 (Interp.Val b)))
+-}
+getAllSweepStateCubes ::
+  (Eq label,
+   Eq (vec a),
+   DV.Zipper vec1,
+   DV.Zipper vec,
+   DV.Walker vec,
+   DV.Walker vec1,
+   DV.Storage vec1 (Interp.Val b),
+   DV.Storage vec (CubeMap.Data inst1 dim1 vec1 (Interp.Val b)),
+   DV.Storage vec (CubeMap.Data inst1 dim1 vec1 (Maybe Idx.AbsoluteState)),
+   DV.Storage vec (CubeMap.Data inst1 dim1 vec1 FlowCheck.EdgeFlowStatus),
+   DV.Storage vec1 FlowCheck.EdgeFlowStatus,
+   DV.Storage vec1 (Maybe Idx.AbsoluteState)) =>
+  Caller ->
+  CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 FlowCheck.EdgeFlowStatus) ->
+  CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 (Interp.Val b)) ->
+  ValueState.Map (CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 (Interp.Val b)))
+                  
+getAllSweepStateCubes caller statusSweepCube valueSweepCube = ValueState.fromList $ zip states $ map f states
+  where
+    newCaller = (caller |> nc "getAllSweepStateCubes")
+    states = getAllSweepStates statusSweepCube
+    f state = CubeMap.zipWith newCaller (CubeMap.zipWithData (g state)) statusSweepCube valueSweepCube
+    g st statu val = if (FlowCheck.getState statu) == st 
+                     then val
+                     else Interp.Invalid ["getAllSweepStateCubes"]
 
+
+getAllSweepStates ::
+  (DV.Walker vec1,
+   DV.Walker vec,
+   DV.Storage vec1 (Maybe Idx.AbsoluteState), 
+   DV.Storage vec1 FlowCheck.EdgeFlowStatus,
+   DV.Storage vec (CubeMap.Data inst1 dim1 vec1 FlowCheck.EdgeFlowStatus),
+   DV.Storage vec (CubeMap.Data inst1 dim1 vec1 (Maybe Idx.AbsoluteState))) =>
+  CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 (FlowCheck.EdgeFlowStatus)) ->
+  [Maybe Idx.AbsoluteState] 
+getAllSweepStates = 
+  Set.toList . findSweepOccurences . CubeMap.map (CubeMap.mapData FlowCheck.getState) 
+  
 findSweepOccurences ::
   (Ord b,
    DV.Walker vec1,
    DV.Walker vec,
-   DV.Storage vec1 b,
+   DV.Storage vec1 b, 
    DV.Storage vec (CubeMap.Data inst1 dim1 vec1 b)) =>
   CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 b) ->
   Set.Set b 
-findSweepOccurences sweepCube = 
-  CubeMap.foldl (\acc xs -> CubeMap.foldlData (\a x -> flip Set.insert a x) acc xs ) Set.empty sweepCube
+findSweepOccurences = 
+  CubeMap.foldl (\acc xs -> CubeMap.foldlData (\a x -> flip Set.insert a x) acc xs ) Set.empty 
   
