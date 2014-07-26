@@ -227,12 +227,13 @@ absoluteStateIndex topo flowTopo =
   in toTernary $ map g tlabels
 
 
-absoluteFlowStateGraph ::
+-- TODO :: Intriduce absolute State
+absoluteStateFlowGraph ::
   Node.C node =>
   Graph node Graph.DirEdge nodeLabel1 a1->
   State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel ->
   State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel
-absoluteFlowStateGraph topo sfg = sfg {StateQty.states = Map.fromList $
+absoluteStateFlowGraph topo sfg = sfg {StateQty.states = Map.fromList $
   map (\(_,x) -> (absoluteStateIndex topo $ FlowTopo.topology x,x)) $
            Map.toList $ StateQty.states sfg}
 

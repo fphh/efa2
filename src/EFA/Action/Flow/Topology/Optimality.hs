@@ -348,3 +348,4 @@ findMinimumLoss caller cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCh
          g (Determined x) = x
          g (Undetermined) = merror caller modul "findMinimumLoss" "Undetermined Variables in Solution" 
 
+

@@ -120,7 +120,9 @@ getEdgeState p p1 =
 
 
 -- TODO: ETA-Check prüfen
-edgeFlowCheck ::  (Arith.Product a, Ord a, Arith.Constant a, Arith.NaNTestable a) => a -> a -> ActFlowCheck.EdgeFlowConsistency 
+edgeFlowCheck ::  
+  (Arith.Product a, Ord a, Arith.Constant a, Arith.NaNTestable a) => 
+  a -> a -> ActFlowCheck.EdgeFlowConsistency 
 edgeFlowCheck x y = ActFlowCheck.EFC signCheck etaCheck
   where
     eta = if x >= Arith.zero then y Arith.~/ x else x Arith.~/ y

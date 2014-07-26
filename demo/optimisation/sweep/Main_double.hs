@@ -63,6 +63,8 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
+import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
+
 --import EFA.Utility.Async (concurrentlyMany_)
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Data.ND as ND
@@ -95,6 +97,9 @@ import qualified Data.Map as Map
 import Data.GraphViz.Attributes.Colors.X11 (X11Color(DarkSeaGreen2))
                                                      -- Lavender))
 --import Data.Maybe as Maybe
+
+
+
 
 data Base
 

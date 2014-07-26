@@ -313,6 +313,7 @@ absoluteStateIndex' topo flowTopo =
 
   in toTernary $ map g tlabels
 
+
 absoluteFlowStateGraph ::
   Node.C node =>
   Graph node Graph.DirEdge nodeLabel1 a1->
