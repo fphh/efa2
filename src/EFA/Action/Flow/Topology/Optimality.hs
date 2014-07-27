@@ -193,7 +193,7 @@ applyGenerationEfficiency caller state lifeCycleEfficiencies node (Just sums) = 
         (FlowOpt.GenerationEfficiency eta,_) = 
           Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (ActFlowCheck.getState st) node 
         e = merror caller modul "applyGenerationEfficiency" 
-                    ("Node not in LifeCycleEfficiencyMap: " ++ show node)
+                    ("Node not in LifeCycleEfficiencyMap-State: " ++ show st ++ "-Node: " ++ show node)
                     
 
 applyUsageEfficiency ::
@@ -223,8 +223,9 @@ applyUsageEfficiency caller state lifeCycleEfficiencies node (Just sums) = case 
       where 
         (_,FlowOpt.UsageEfficiency eta) = 
           Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (ActFlowCheck.getState st) node 
-    e = merror caller modul "applyUsageEfficiency" 
-                    ("Node not in LifeCycleEfficiencyMap: " ++ show node)
+        e = merror caller modul "applyUsageEfficiency" 
+                    ("Node not in LifeCycleEfficiencyMap-State: " ++ show st ++ "-Node: " ++ show node)
+--                    ("Node not in LifeCycleEfficiencyMap: " ++ show node)
 --    e3 = merror caller modul "applyUsageEfficiency" 
 --                    ("Undefined State")
                     

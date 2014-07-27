@@ -227,9 +227,9 @@ searchVariation =
    (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[-0.91,-0.71 .. -0.01]++[0.01,0.21 .. 0.91])]  --  .. 0.91])]  
 
 
-lifeCycleMap :: FlowOpt.LifeCycleMap Node (Double)
-lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0..10000]) $ repeat $ 
-               Map.fromList [(Water,(FlowOpt.GenerationEfficiency (0.3), FlowOpt.UsageEfficiency (1.0)))] 
+lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
+lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0,1,18,27,28,45,54,72]) $ repeat $ 
+               Map.fromList [(Water,(FlowOpt.GenerationEfficiency (Interp.Inter 0.3), FlowOpt.UsageEfficiency (Interp.Inter 1.0)))] 
 
 
 showFunctionAxis ::  Strict.Axis Base String [] Double
@@ -279,7 +279,10 @@ initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))
 
 etaLoopParams = 
   Loop.EtaLoopParams
-  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 5}
+  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 5, 
+   Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
+   Loop.accGlobalEtas = (FlowOpt.GenerationEfficiency (Interp.Inter 1.0), FlowOpt.UsageEfficiency (Interp.Inter 1.0)) 
+}
   
 balanceLoopParams =  
   Loop.BalanceLoopParams 
@@ -337,7 +340,9 @@ main = do
   let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
       
   let loop = Process.loop (nc "Main") system systemData testSet optiSet efaParams sweep 
-             lifeCycleMap storageList etaLoopParams balanceLoopParams  
+             lifeCycleMap storageList controlVars etaLoopParams balanceLoopParams  
+             
+--   loop caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList controlVars etaParams balParams          
 --  caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList controlVars etaParams balParams
   
 --  concurrentlyMany_ $ OP.system sysCtrl system

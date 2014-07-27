@@ -7,7 +7,7 @@ module EFA.Action.Optimisation.Loop where
 import qualified EFA.Action.Flow.Balance as Balance
 import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
---import qualified EFA.Data.Interpolation as Interp
+import qualified EFA.Data.Interpolation as Interp
 
 import Debug.Trace (trace)
 import qualified EFA.Equation.Arithmetic as Arith

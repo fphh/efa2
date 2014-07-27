@@ -335,7 +335,7 @@ calculateOptimalityMeasure ::
    DV.Singleton vec1,
    DV.Length vec1) =>
   Caller ->
-  FlowOpt.LifeCycleMap node b ->
+  FlowOpt.LifeCycleMap node (Interp.Val b) ->
   CubeMap.Cube (Sweep.Demand inst) dim label vec a (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b))) ->
   CubeMap.Cube (Sweep.Demand inst) dim label vec a (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus) ->
   CubeMap.Cube (Sweep.Demand inst) dim label vec a (CubeMap.Data (Sweep.Search inst) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
@@ -344,8 +344,12 @@ calculateOptimalityMeasure caller lifeCycleMap endNodeValues status =
   CubeMap.zipWith (caller |> nc "calculateOptimalityMeasuregetEndNodeFlows") 
   (\ x st -> FlowTopoOpt.calculateOptimalityMeasure 
              (caller |> nc "calculateOptimalityMeasure") 
-             st lifeCycleMap x) 
+             st (f lifeCycleMap) x) 
   endNodeValues status
+  -- TODO :: ugly unpacking because of Type Conflict a - Interp.Val a between Forcing, etaSys and LifeCycle
+    where  f (FlowOpt.LifeCycleMap m) =  FlowOpt.LifeCycleMap $ Map.map (Map.map g) m 
+           g (FlowOpt.GenerationEfficiency x, FlowOpt.UsageEfficiency y) = 
+             (FlowOpt.GenerationEfficiency $ Interp.unpack x, FlowOpt.UsageEfficiency $ Interp.unpack y)
    
 objectiveFunctionValues ::
   (

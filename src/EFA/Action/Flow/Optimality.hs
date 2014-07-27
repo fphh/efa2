@@ -55,7 +55,7 @@ lookupLifeCycleEta :: (Ord node, Ord a, Arith.Constant a, Arith.Product a) =>
   Maybe (GenerationEfficiency (Interp.Val a), UsageEfficiency (Interp.Val a)) 
 lookupLifeCycleEta (LifeCycleMap m) (Just state) node = fmap g $ join $ fmap (Map.lookup node) $ Map.lookup state m 
   where g (GenerationEfficiency x, UsageEfficiency y) = (GenerationEfficiency (Interp.Inter x), UsageEfficiency (Interp.Inter y))
-lookupLifeCycleEta (LifeCycleMap m) Nothing node = Just (GenerationEfficiency $ Interp.Invalid ["lookupLifeCycleEta"], 
+lookupLifeCycleEta _ Nothing _ = Just (GenerationEfficiency $ Interp.Invalid ["lookupLifeCycleEta"], 
                                                          UsageEfficiency $ Interp.Invalid ["lookupLifeCycleEta"])
   
 newtype SinkMap node a = SinkMap {unSinkMap :: (Map.Map node a)} deriving Show  
