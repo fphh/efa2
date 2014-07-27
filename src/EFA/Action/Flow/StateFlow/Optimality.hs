@@ -3,7 +3,7 @@ module EFA.Action.Flow.StateFlow.Optimality where
 import qualified EFA.Graph as Graph
 import qualified EFA.Equation.Result as Result
 
-import qualified EFA.Data.Interpolation as Interp
+--import qualified EFA.Data.Interpolation as Interp
 
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Part.Map as PartMap
@@ -11,7 +11,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Arithmetic as Arith
 
-import qualified EFA.Flow.State as StateFlow
+--import qualified EFA.Flow.State as StateFlow
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Action.Utility as ActUt
@@ -63,8 +63,8 @@ updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleEtas sfg
   FlowOpt.LifeCycleMap $ Map.mapWithKey f oldMap 
   where
     absSfg = ActUt.absoluteStateFlowGraph topo sfg
---    absSfg = fmap g g  $ ActUt.absoluteStateFlowGraph topo sfg
---    g = (\(D.Data x) -> x) . (ActUt.checkDetermined "updateOneStorageLifeCycleEfficiencies") 
+    -- absSfg = fmap g g  $ ActUt.absoluteStateFlowGraph topo sfg
+    g = (\(D.Data x) -> x) . (ActUt.checkDetermined "updateOneStorageLifeCycleEfficiencies") 
 --    checkValid x = if Interp.isInvalid x then err else Interp.unpack x 
     err = merror caller modul "updateOneStorageLifeCycleEfficiencies" "Invalid Values in StateFlowChart"
     etaSysSfg = calculateEtaSys globalLifeCycleEtas absSfg  
@@ -80,8 +80,8 @@ etaSysState_Eq_etaSysSfg ::
    Arith.Constant a,
    Node.C node) =>
   Caller ->
-  StateFlow.Graph node Graph.EitherEdge (Result.Result (D.Data D.Nil a)) (TopoQty.Sums (Result.Result (D.Data D.Nil a))) 
-                     storageLabel (Maybe (TopoQty.Flow (Result.Result (D.Data D.Nil a)))) carryLabel ->
+  StateQty.Graph node (Result.Result ((D.Data D.Nil (a)))) 
+                      (Result.Result ((D.Data D.Nil (a)))) ->
   a ->
   Idx.State ->
   node ->
@@ -100,16 +100,18 @@ etaSysState_Eq_etaSysSfg caller sfg etaSysSfg state sto (oldEtaGen,oldEtaUse) =
     nodes = Graph.nodeLabels flowTopo
     sumRes = Map.foldl ((Arith.~+)) Arith.zero
 
-    f (Result.Determined (D.Data x)) = x
-    f Result.Undetermined = error "Bust"
+    f (TopoQty.Sums x y)  =  TopoQty.Sums  (fmap g x) (fmap g y)
     
-    storages = Map.map (fmap (fmap f)) $ Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
+    g (Result.Determined (D.Data x)) = x
+    g Result.Undetermined = error "Bust"                                  
+    
+    storages = Map.map (fmap f) $ Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
               $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
                
-    sinks = fmap (fmap (fmap f)) $ Map.mapMaybe TopoQty.sumIn $
+    sinks = Map.map g $ Map.mapMaybe TopoQty.sumIn $
               Map.filterWithKey (\node _ -> Node.isSink $ Node.typ node) nodes
             
-    sources = fmap (fmap (fmap f)) $ Map.mapMaybe TopoQty.sumOut $
+    sources = Map.map g $ Map.mapMaybe TopoQty.sumOut $
               Map.filterWithKey (\node _ -> Node.isSource $ Node.typ node) nodes
     
     totalSourceEnergy = sumRes sources

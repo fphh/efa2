@@ -223,7 +223,7 @@ demandVariation  =
 
 searchVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 searchVariation = 
-  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.01,0.21]),  -- .. 0.91]),
+  [(DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos LocalNetwork Gas,Type.P,[0.01,0.21 .. 0.91]),
    (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[-0.91,-0.71 .. -0.01]++[0.01,0.21 .. 0.91])]  --  .. 0.91])]  
 
 
@@ -366,10 +366,10 @@ main = do
     OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
      ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
 --                      OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
---  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
+  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
 --  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState1
 --  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation1
---  concurrentlyMany_ $ OP.simulation simCtrl simEfa
+  concurrentlyMany_ $ OP.simulation simCtrl simEfa
   
 --  print stoPowers
   print balance
