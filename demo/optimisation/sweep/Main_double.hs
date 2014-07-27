@@ -227,9 +227,9 @@ searchVariation =
    (DemandAndControl.Power $ TopoIdx.Power $ TopoIdx.ppos Network Water,Type.P,[-0.91,-0.71 .. -0.01]++[0.01,0.21 .. 0.91])]  --  .. 0.91])]  
 
 
-lifeCycleMap :: FlowOpt.LifeCycleMap Node Double
+lifeCycleMap :: FlowOpt.LifeCycleMap Node (Double)
 lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0..10000]) $ repeat $ 
-               Map.fromList [(Water,(FlowOpt.GenerationEfficiency 0.3, FlowOpt.UsageEfficiency 1.0))] 
+               Map.fromList [(Water,(FlowOpt.GenerationEfficiency (0.3), FlowOpt.UsageEfficiency (1.0)))] 
 
 
 showFunctionAxis ::  Strict.Axis Base String [] Double
@@ -336,8 +336,9 @@ main = do
   let (Process.OptimalOperation _ _ stoPowers balance1)  = optimalOperation1
   let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
       
-  let loop = Process.loop (nc "Main") testSet optiSet sweep evalSweep storageList controlVars etaLoopParams balanceLoopParams  
-  
+  let loop = Process.loop (nc "Main") system systemData testSet optiSet efaParams sweep 
+             lifeCycleMap storageList etaLoopParams balanceLoopParams  
+--  caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList controlVars etaParams balParams
   
 --  concurrentlyMany_ $ OP.system sysCtrl system
 --  concurrentlyMany_ $ OP.test testCtrl testSet demandVars

@@ -147,6 +147,27 @@ energyFlowAnalysisOld topology efaParams sequenceFlowsFilt =
           mempty
   in EnergyFlowAnalysis sequenceFlowsFilt sequenceFlowGraph stateFlowGraph
 
+{-      sequenceFlowGraph =
+        SeqAbs.solveOpts
+          (SeqAbs.independentInOutSums SeqAbs.optionsDefault)
+          (SeqRec.flowGraphFromSequence $
+            fmap (TopoRecord.flowTopologyFromRecord (Params.systemTopology sysParams)) $
+            sequenceFlowsFilt)
+          (Map.foldWithKey
+            (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
+            mempty (Params.unInitStorageSeq $ Params.initStorageSeq sysParams))
+
+      stateFlowGraph =
+        StateEqAbs.solveOpts
+          Optimisation.optionsScalar
+           (StateQty.graphFromCumResult $
+           StateQty.fromSequenceFlowResult False $
+           SeqQty.mapGraph id (fmap Arith.integrate) $
+           external (Params.initStorageState sysParams) sequenceFlowGraph)
+          mempty
+-}
+
+
 external ::
   (Eq (v a), Arith.Constant a, SV.Zipper v,
    SV.Storage v Bool, Arith.ZeroTestable a,

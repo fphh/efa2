@@ -1,6 +1,10 @@
 module EFA.Action.Flow.StateFlow.Optimality where
 
 import qualified EFA.Graph as Graph
+import qualified EFA.Equation.Result as Result
+
+import qualified EFA.Data.Interpolation as Interp
+
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Part.Map as PartMap
 import qualified EFA.Graph.Topology as Topo
@@ -13,6 +17,8 @@ import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Action.Utility as ActUt
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Flow.Part.Index as Idx
+
+import qualified EFA.Signal.Data as D 
 
 import qualified Data.Maybe as Maybe
 import qualified Data.Map as Map
@@ -43,18 +49,23 @@ data LifeCycleMethod =
 
 -- | Function works only for systems with one storage 
 updateOneStorageLifeCycleEfficiencies :: 
-  (Ord a, Arith.Constant a, Node.C node, Show node, Fractional a) =>
+  (Ord a, Arith.Constant a, Node.C node, Show node) =>
   Caller ->
   Topo.Topology node ->
-  StateQty.Graph node a a ->
   LifeCycleMethod ->
   (FlowOpt.GenerationEfficiency a, FlowOpt.UsageEfficiency a) ->
-  FlowOpt.LifeCycleMap node (Maybe a) ->
+  StateQty.Graph node (Result.Result ((D.Data D.Nil (Interp.Val a)))) 
+                      (Result.Result ((D.Data D.Nil (Interp.Val a)))) ->
+  FlowOpt.LifeCycleMap node (Maybe a) ->  
   FlowOpt.LifeCycleMap node (Maybe a)
-updateOneStorageLifeCycleEfficiencies caller topo sfg method globalLifeCycleEtas (FlowOpt.LifeCycleMap oldMap) = 
+
+updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleEtas sfg (FlowOpt.LifeCycleMap oldMap) = 
   FlowOpt.LifeCycleMap $ Map.mapWithKey f oldMap 
   where
-    absSfg = ActUt.absoluteStateFlowGraph topo sfg
+    absSfg = StateQty.mapGraph g g  $ ActUt.absoluteStateFlowGraph topo sfg
+    g = checkValid. (\(D.Data x) -> x) . (ActUt.checkDetermined "updateOneStorageLifeCycleEfficiencies") 
+    checkValid x = if Interp.isInvalid x then err else Interp.unpack x 
+    err = merror caller modul "updateOneStorageLifeCycleEfficiencies" "Invalid Values in StateFlowChart"
     etaSysSfg = calculateEtaSys globalLifeCycleEtas absSfg  
     f (Idx.AbsoluteState state) m =  case method of
           N_SFG_EQ_N_STATE -> Map.mapWithKey (etaSysState_Eq_etaSysSfg 
@@ -64,7 +75,7 @@ updateOneStorageLifeCycleEfficiencies caller topo sfg method globalLifeCycleEtas
 -- | This Approach calculates generation or use efficiency in a way system efficiency for sfg and the respective state are the same   
 -- TODO: extend to several storages or check for amount of storages
 etaSysState_Eq_etaSysSfg ::
-  (Fractional a,Show node,
+  (Show node,
    Arith.Constant a,
    Node.C node) =>
   Caller ->
@@ -98,7 +109,7 @@ etaSysState_Eq_etaSysSfg caller sfg etaSysSfg state sto (oldEtaGen,oldEtaUse) =
     
     totalSourceEnergy = sumRes sources
     totalSinkEnergy = sumRes sinks
-    etaUse eSto = FlowOpt.UsageEfficiency $ Just $ (etaSysSfg Arith.~* totalSourceEnergy  Arith.~- totalSinkEnergy) / eSto
+    etaUse eSto = FlowOpt.UsageEfficiency $ Just $ (etaSysSfg Arith.~* totalSourceEnergy  Arith.~- totalSinkEnergy) Arith.~/ eSto
     etaGen eSto = FlowOpt.GenerationEfficiency $ Just $ eSto  Arith.~/ (totalSinkEnergy  Arith.~/ etaSysSfg  Arith.~- totalSourceEnergy)
     err2 = merror caller modul "etaSysState_Eq_etaSysSfg" "no Sums found"
     err4 = merror caller modul "etaSysState_Eq_etaSysSfg" "invalid flow"

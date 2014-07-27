@@ -150,7 +150,7 @@ incrementBalanceCounter (BalanceCounter m) sto =
   
 checkBalanceCounterOne :: (Ord node,Show node) => Caller -> BalanceCounter node -> node -> MaxIterationsPerStorage -> Bool 
 checkBalanceCounterOne caller (BalanceCounter m) sto (MaxIterationsPerStorage ma) = f $ Map.lookup sto m
-  where f (Just cnt) = cnt > ma
+  where f (Just cnt) = cnt >= ma
         f Nothing = merror caller modul  "checkBalanceCounterOne" $ "Storage not found: " ++ show sto 
 
 checkBalanceCounter :: (Ord node) => BalanceCounter node -> MaxIterations -> Bool 

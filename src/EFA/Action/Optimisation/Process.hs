@@ -21,6 +21,7 @@ import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Value.State as ValueState
 import qualified EFA.Action.EtaFunctions as EtaFunctions
 import qualified EFA.Action.Flow.Optimality as FlowOpt
+import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
 import qualified EFA.Action.Flow.Balance as FlowBal
 import qualified EFA.Data.Vector as DV
 import qualified EFA.Data.ND as ND
@@ -572,6 +573,8 @@ simulateAndAnalyse caller system efaParams systemData demandVars optimalOperatio
 
 
 
+{-
+
 loop ::
   (Eq (demVec a),
    Ord a,
@@ -690,20 +693,58 @@ loop ::
  TestSet node inst demDim vec a ->
  OptiSet node inst demDim srchDim demVec srchVec vec a ->
  SweepResults node inst demDim srchDim demVec srchVec a ->
- SweepEvaluation node inst demDim srchDim demVec srchVec a ->
+ FlowOpt.LifeCycleMap node a ->
  [node] ->
  [DemandAndControl.ControlVar node] ->
  Loop.EtaLoopParams ->
  Loop.BalanceLoopParams node (Interp.Val a) ->
- Loop.EtaLoopItem node (Interp.Val a) (OptimisationPerState node inst demDim srchDim demVec srchVec vec a,
- OptimalOperation node inst vec a) 
-loop caller testSet optiSet sweepResults sweepEvaluationResults storageList controlVars etaParams balParams = Loop.etaLoop caller storageList etaParams balParams systemFunction getBalance
+ [Loop.EtaLoopItem node (Interp.Val a) (OptimisationPerState node inst demDim srchDim demVec srchVec vec a,
+ OptimalOperation node inst vec a)] -}
+
+
+loop caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList controlVars etaParams balParams = 
+  Loop.etaLoop caller storageList etaParams balParams sysF getBalance initialLifeCycleMap updateLifeCycleMap
   where
-    getBalance = Balance.unMaybeBalance (caller |> nc "loop") . accessBalance . snd
-    systemFunction balanceForcingMap = (optimisationPerStateResults,optOperation)
+    newCaller = caller |> nc "loop"
+    topo = accessTopology system
+    method = Loop.accLifeCycleMethod etaParams
+    globalEtas = Loop.accGlobalEtas etaParams
+    
+    getBalance = Balance.unMaybeBalance (caller |> nc "loop") . accessBalance . accOptOperation
+    updateLifeCycleMap = StateFlowOpt.updateOneStorageLifeCycleEfficiencies 
+                                                  newCaller topo method globalEtas . 
+                                                  EFA.accessStateFlowGraph . accessAnalysis . accSimEfa
+                                                  
+    sysF = systemFunction caller system systemData testSet optiSet efaParams storageList sweepResults
+
+
+
+systemFunction caller system systemData testSet optiSet efaParams storageList sweepResults lifeCycleMap balanceForcingMap = 
+      Res
+      sweepEvaluationResults
+      optimisationPerStateResults
+      optOperation 
+      simEfa
       where
+        demandCycle = accessDemandCycle testSet
+        demandVars = accessDemandVars optiSet
+        controlVars = accessControlVars optiSet
+        
+        sweepEvaluationResults = evaluateSweep caller lifeCycleMap 
+                                 sweepResults
+        
         optimisationPerStateResults = optimisationPerState testSet optiSet sweepResults sweepEvaluationResults 
                                   storageList balanceForcingMap controlVars
         optOperation = optimalOperation optimisationPerStateResults
+        
+        simEfa = simulateAndAnalyse caller system efaParams systemData demandVars optOperation demandCycle
  
-    
+
+
+
+data Res node inst demDim srchDim demVec srchVec sigVec a = Res
+  {accSweepEval :: SweepEvaluation node inst demDim srchDim demVec srchVec a,
+   accOptPerState :: OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a,
+   accOptOperation :: OptimalOperation node inst sigVec a, 
+   accSimEfa :: SimulationAndAnalysis node inst sigVec a 
+     }
