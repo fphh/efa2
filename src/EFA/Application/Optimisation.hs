@@ -57,7 +57,7 @@ etaOverPowerOut =
 
 
 givenAverageWithoutState ::
-   (Arith.Sum a, Arith.Sum v, Node.C node) =>
+   (Arith.Sum a, Arith.Sum v, Node.C node, Show node) =>
    Idx.State ->
    Map (TopoIdx.Power node) v ->
    StateQty.Graph node (Result a) (Result v) ->
@@ -83,7 +83,7 @@ givenAverageWithoutState focus given =
 
 
 initialEnvWithoutState ::
-  (Ord node, Arith.Constant b,
+  (Ord node, Arith.Constant b,Show node,
    Sweep.SweepClass sweep vec b,
    Sweep.SweepMap sweep vec b b) =>
   Params.Optimisation node list sweep vec b ->
@@ -136,7 +136,7 @@ initialEnvWithoutState state =
 
 
 eraseXAndEtaFromState ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    Idx.State ->
    StateQty.Graph node a (Result b) ->
    StateQty.Graph node a (Result b)
@@ -150,7 +150,7 @@ eraseXAndEtaFromState state =
             _ -> v)
 
 eraseEnergies ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    StateQty.Graph node (Result (Data Nil d)) (Result (Data Nil d)) ->
    StateQty.Graph node (Result (Data Nil d)) (Result (Data Nil d))
 eraseEnergies =
@@ -162,7 +162,7 @@ eraseEnergies =
             _ -> v)
 
 initialEnv ::
-  (Ord node, Arith.Constant b,
+  (Ord node, Arith.Constant b,Show node,
    Sweep.SweepClass sweep vec b,
    Sweep.SweepMap sweep vec b b) =>
   Params.Optimisation node list sweep vec b ->

@@ -91,7 +91,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 -- import qualified EFA.Graph.Topology as Topo
 --import qualified EFA.Flow.Topology as FlowTopo
 import qualified Data.Tuple.HT as TupleHT
-import qualified Data.List as List
+--import qualified Data.List as List
 
 modul :: ModuleName
 modul = ModuleName "Demo.Optimisation.Process"
@@ -558,11 +558,11 @@ simulateAndAnalyse ::
   OptimalOperation node inst sigVec a -> 
   OptSignal.DemandCycle node inst dim sigVec a a ->
   SimulationAndAnalysis  node inst sigVec a
-simulateAndAnalyse caller system efaParams systemData demandVars optimalOperation demandCycle = SimulationAndAnalysis sim efa
+simulateAndAnalyse caller system efaParams systemData demandVars optOperation demandCycle = SimulationAndAnalysis sim efa
   where 
     topology = accessTopology system
     etaFunctions = accessFunctionMap systemData
-    optimalControlSignals = accessOptimalControlSignals optimalOperation
+    optimalControlSignals = accessOptimalControlSignals optOperation
     given = OptSignal.makeGivenRecord (caller |> nc "simulateAndAnalyse") 
             (OptSignal.convertToDemandCycleMap demandCycle demandVars) optimalControlSignals
     sim = Simulation.simulation caller topology etaFunctions given
@@ -724,12 +724,11 @@ loop ::
   SweepResults node inst demDim srchDim demVec srchVec a ->
   FlowOpt.LifeCycleMap node (Interp.Val a) ->
   [node] ->
-  t ->
   Loop.EtaLoopParams (Interp.Val a) ->
   Loop.BalanceLoopParams node (Interp.Val a) ->
   [Loop.EtaLoopItem node (Interp.Val a) (Res node inst demDim srchDim demVec srchVec sigVec a)]
 
-loop caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList controlVars etaParams balParams = 
+loop caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList etaParams balParams = 
   Loop.etaLoop caller storageList etaParams balParams sysF getBalance initialLifeCycleMap updateLifeCycleMap
   where
     newCaller = caller |> nc "loop"

@@ -240,7 +240,7 @@ traverseStorages f =
 
 
 toAssignMap ::
-   (Node.C node) =>
+   (Node.C node, Show node) =>
    Graph node a v -> AssignMap node a v
 toAssignMap =
    fold .
@@ -365,7 +365,7 @@ storageMapFromList secs edges =
 
 
 mapGraphWithVar ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    (Var.Scalar node -> a0 -> a1) ->
    (Var.Signal node -> v0 -> v1) ->
    Graph node a0 v0 ->
@@ -377,7 +377,7 @@ mapGraphWithVar f g gr =
    }
 
 mapStoragesWithVar ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    (Var.Scalar node -> a0 -> a1) ->
    Graph node a0 v0 ->
    Storages node a1
@@ -401,7 +401,7 @@ mapSequenceWithVar f =
 
 
 formatAssigns ::
-   (Node.C node, FormatValue a, FormatValue v, Format output) =>
+   (Node.C node, FormatValue a, FormatValue v, Format output, Show node) =>
    Graph node a v -> [output]
 formatAssigns =
    foldMap (:[]) (:[]) .

@@ -65,7 +65,7 @@ instance (Ord part) => Traversable (PartMap part) where
 
 
 mapWithVar ::
-   (PartIdx.Format sec) =>
+   (PartIdx.Format sec,Show sec, Show node) =>
    (Idx.PartNode sec node -> Maybe Topo.StoreDir) ->
    (Var.Scalar sec node -> a0 -> a1) ->
    node ->
@@ -78,7 +78,7 @@ mapWithVar lookupDir f node (PartMap i e ps) =
       (Map.mapWithKey
           (\part a ->
              case lookupDir (Idx.PartNode part node) of
-                Nothing -> error "PartMap.mapWithVar: inactive"
+                Nothing -> error $ "PartMap.mapWithVar - inactive Part: " ++ show part ++ " Node: "++ show node  
                 Just Topo.In  -> f (StorageIdx.OutSum (Idx.NoInit part) <#> node) a
                 Just Topo.Out -> f (StorageIdx.InSum  (Idx.NoExit part) <#> node) a)
           ps)

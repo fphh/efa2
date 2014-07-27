@@ -152,7 +152,7 @@ fold = MW.execWriter . StateFlow.traverseGraph MW.tell MW.tell
 
 checkGreaterZeroNotNaN ::
   (Arith.Constant a, Ord a,RealFloat a,
-   Ord node,
+   Ord node,Show node,
    Monoid (sweep vec Bool), Node.C node,
    Sweep.SweepClass sweep vec a,
    Sweep.SweepClass sweep vec Bool,

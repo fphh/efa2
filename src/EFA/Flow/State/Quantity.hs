@@ -587,7 +587,7 @@ instance
 
 
 mapGraphWithVar ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    (Var.Scalar node -> a0 -> a1) ->
    (Var.Signal node -> v0 -> v1) ->
    Graph node a0 v0 ->
@@ -599,7 +599,7 @@ mapGraphWithVar f g gr =
    }
 
 mapStoragesWithVar ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    (Var.Scalar node -> a0 -> a1) ->
    Graph node a0 v0 ->
    Storages node a1

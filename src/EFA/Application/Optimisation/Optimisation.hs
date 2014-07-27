@@ -175,7 +175,7 @@ commonGiven params state stateFlowGraph =
 external ::
   (Eq (v a), Arith.Constant a, Vec.Zipper v,
    Vec.Storage v Bool, Arith.ZeroTestable a,
-  Vec.Walker v, Vec.Singleton v, Vec.Storage v a, Node.C node) =>
+  Vec.Walker v, Vec.Singleton v, Vec.Storage v a, Node.C node, Show node) =>
   InitStorageState node a ->
   SeqQty.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a)) ->
   SeqQty.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a))

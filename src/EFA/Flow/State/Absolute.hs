@@ -81,7 +81,7 @@ withExpressionGraph f =
 
 
 solve ::
-   (Eq a, Arith.Constant a, Arith.ZeroTestable a, Node.C node) =>
+   (Eq a, Arith.Constant a, Arith.ZeroTestable a, Node.C node, Show node) =>
    StateFlow.Graph node (Result a) (Result a) ->
    (forall s. EquationSystem Verify.Ignore node s a a) ->
    StateFlow.Graph node (Result a) (Result a)
@@ -92,7 +92,7 @@ solve graph sys =
 solveOpts ::
    (Arith.Product a, Arith.ZeroTestable a,
     Arith.Product v, Arith.ZeroTestable v,
-    Node.C node) =>
+    Node.C node, Show node) =>
    (forall s. Options Verify.Ignore s a v) ->
    StateFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem Verify.Ignore node s a v) ->
@@ -105,7 +105,7 @@ solveOpts opts graph sys =
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a (VarForStorageStateScalar node),
     Verify.GlobalVar (Verify.Track output) a (VarInStateSignal node),
-    Arith.Constant a, Arith.ZeroTestable a, Node.C node) =>
+    Arith.Constant a, Arith.ZeroTestable a, Node.C node,Show node) =>
    StateFlow.Graph node (Result a) (Result a) ->
    (forall s. EquationSystem (Verify.Track output) node s a a) ->
    (ME.Exceptional

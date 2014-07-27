@@ -171,7 +171,7 @@ energyFlowAnalysisOld topology efaParams sequenceFlowsFilt =
 external ::
   (Eq (v a), Arith.Constant a, SV.Zipper v,
    SV.Storage v Bool, Arith.ZeroTestable a,
-  SV.Walker v, SV.Singleton v, SV.Storage v a, Node.C node) =>
+  SV.Walker v, SV.Singleton v, SV.Storage v a, Node.C node, Show node) =>
   InitStorageState node a ->
   SeqQty.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a)) ->
   SeqQty.Graph node (Result (Data Nil a)) (Result (Data (v :> Nil) a))

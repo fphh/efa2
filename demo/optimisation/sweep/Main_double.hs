@@ -263,7 +263,7 @@ opCtrl = OP.OpDo {OP.plotOptimalControlSignals = OP.Dflt,
 simCtrl = OP.SimDo {OP.drawSimulationFlowGraph = OP.Xterm,
                     OP.plotSimulationPowers = OP.Dflt,
                     OP.drawSequenceFlowGraph = OP.Xterm, 
-                    OP.drawStateFlowGraph = OP.Xterm}
+                    OP.drawStateFlowGraph = OP.DontDraw} -- ,OP.Xterm}
 
 balanceForcingMap :: Balance.Forcing Node (Interp.Val Double)
 balanceForcingMap = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (-1.0)))]
@@ -279,16 +279,16 @@ initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))
 
 etaLoopParams = 
   Loop.EtaLoopParams
-  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 5, 
+  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 0, 
    Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
    Loop.accGlobalEtas = (FlowOpt.GenerationEfficiency (Interp.Inter 1.0), FlowOpt.UsageEfficiency (Interp.Inter 1.0)) 
 }
   
 balanceLoopParams =  
   Loop.BalanceLoopParams 
-  {Loop.accessMaxIterationsPerStorage = Balance.MaxIterationsPerStorage 10 , 
+  {Loop.accessMaxIterationsPerStorage = Balance.MaxIterationsPerStorage 100 , 
    Loop.accessMaxIterations = Balance.MaxIterations 100,
-   Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.4) , 
+   Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.8) , 
    Loop.accessInitialForcing = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0))], 
    Loop.accessInitialStep = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (0.001)))], 
    Loop.accessInitialSto = Water}
@@ -327,20 +327,20 @@ main = do
      
   let optimalOperation = Process.optimalOperation optPerState
       
-  let optPerState1 = Process.optimisationPerState testSet optiSet sweep evalSweep  storageList balanceForcingMap1 controlVars
+--  let optPerState1 = Process.optimisationPerState testSet optiSet sweep evalSweep  storageList balanceForcingMap1 controlVars
 --        :: Process.OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a
      
-  let optimalOperation1 = Process.optimalOperation optPerState1
+--  let optimalOperation1 = Process.optimalOperation optPerState1
    
   let simEfa = Process.simulateAndAnalyse caller system efaParams systemData demandVars optimalOperation demandCycle    
           :: Process.SimulationAndAnalysis Node Base [] Double
              
   let (Process.OptimalOperation _ _ stoPowers balance)  = optimalOperation
-  let (Process.OptimalOperation _ _ stoPowers balance1)  = optimalOperation1
+--  let (Process.OptimalOperation _ _ stoPowers balance1)  = optimalOperation1
   let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
       
   let loop = Process.loop (nc "Main") system systemData testSet optiSet efaParams sweep 
-             lifeCycleMap storageList controlVars etaLoopParams balanceLoopParams  
+             lifeCycleMap storageList etaLoopParams balanceLoopParams  
              
 --   loop caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList controlVars etaParams balParams          
 --  caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList controlVars etaParams balParams
@@ -362,24 +362,31 @@ main = do
                   TopoIdx.Eta (TopoIdx.Position Network LocalNetwork)]
                   --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]                      
    
-  concurrentlyMany_ $ 
-    OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
-     ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
-     ++ OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
-     ++ OP.optimalOperation opCtrl optimalOperation
-     ++ OP.simulation simCtrl simEfa
+--  concurrentlyMany_ $ 
+--    OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
+--     ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
+--     ++ OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
+--    OP.optimalOperation opCtrl optimalOperation
+--     ++ OP.simulation simCtrl simEfa
   
+--  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
+
 --  print stoPowers
   print balance
-  print balance1
+--  print balance1
   print $ Process.accessOptimalStoragePowers optimalOperation
-  print $ Process.accessOptimalStoragePowers optimalOperation1
   
-  
+--  print $ Process.accessOptimalStoragePowers optimalOperation1
   
 --  print $ Process.accessSweepEndNodePowers sweep
 --  print $ Process.accessSweepOptimality evalSweep
   print loop
+  print $ EFA.accessSeqFlowRecord $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop
+  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
+
+ 
+  
+  
 --  print rec
 --  let flow00= flip CubeMap.lookupLinUnsafe (CubeGrid.LinIdx 0) $ Process.accessSweepFlow sweep
 --  print $ FlowTopoCheck.getFlowStatus  (nc "Main") flow00 

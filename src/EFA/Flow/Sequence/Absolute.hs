@@ -88,7 +88,7 @@ withExpressionGraph f =
 solve ::
    (Arith.Constant a, Arith.ZeroTestable a, a ~ Arith.Scalar v,
     Arith.Product v, Arith.ZeroTestable v, Arith.Integrate v,
-    Node.C node) =>
+    Node.C node, Show node) =>
    SeqFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem Verify.Ignore node s a v) ->
    SeqFlow.Graph node (Result a) (Result v)
@@ -99,7 +99,7 @@ solve graph sys =
 solveOpts ::
    (Arith.Product a, Arith.ZeroTestable a,
     Arith.Product v, Arith.ZeroTestable v,
-    Node.C node) =>
+    Node.C node, Show node) =>
    (forall s. Options Verify.Ignore s a v) ->
    SeqFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem Verify.Ignore node s a v) ->
@@ -113,7 +113,7 @@ solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a (VarForStorageSectionScalar node),
     Arith.Constant a, Arith.ZeroTestable a, a ~ Arith.Scalar v,
     Verify.GlobalVar (Verify.Track output) v (VarInSectionSignal node),
-    Arith.Product v, Arith.ZeroTestable v, Arith.Integrate v, Node.C node) =>
+    Arith.Product v, Arith.ZeroTestable v, Arith.Integrate v, Node.C node, Show node) =>
    SeqFlow.Graph node (Result a) (Result v) ->
    (forall s. EquationSystem (Verify.Track output) node s a v) ->
    (ME.Exceptional

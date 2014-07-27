@@ -398,7 +398,7 @@ fromSectionSystem sec (EqSys.VariableSystem topoSys) =
 
 
 variables ::
-   (Node.C node, Record rec, Sum a, Sum v,
+   (Node.C node, Record rec, Sum a, Sum v,Show node, 
     Verify.GlobalVar mode a (Var.RecordScalar rec node),
     Verify.GlobalVar mode v (Var.RecordSignal rec node)) =>
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
@@ -433,7 +433,7 @@ setup ::
     Verify.GlobalVar mode v (Var.RecordSignal rec node),
     Product a, ZeroTestable a,
     Product v, ZeroTestable v,
-    Record rec, Node.C node) =>
+    Record rec, Node.C node,Show node) =>
    Options mode rec s a v ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EquationSystem mode rec node s a v ->
@@ -454,7 +454,7 @@ setup opts gr given = do
 solveOpts ::
    (Product a, ZeroTestable a,
     Product v, ZeroTestable v,
-    Record rec, Node.C node) =>
+    Record rec, Node.C node, Show node) =>
    (forall s. Options Verify.Ignore rec s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
@@ -467,7 +467,7 @@ solveOpts opts gr sys = runST $ do
 solve ::
    (Constant a, ZeroTestable a, a ~ Scalar v,
     Product v, ZeroTestable v, Integrate v,
-    Record rec, Node.C node) =>
+    Record rec, Node.C node, Show node) =>
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v))
@@ -478,7 +478,7 @@ solveTracked ::
     Constant a, ZeroTestable a, a ~ Scalar v,
     Verify.GlobalVar (Verify.Track output) v (Var.RecordSignal rec node),
     Product v, ZeroTestable v, Integrate v,
-    Record rec, Node.C node) =>
+    Record rec, Node.C node, Show node) =>
    SeqFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
    (ME.Exceptional
