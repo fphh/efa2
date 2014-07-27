@@ -510,7 +510,8 @@ simulation ctrl sim =  let
            Simulation.accessPowerRecord $ Process.accessSimulation sim
   in 
   
-  (drawAction (drawSimulationFlowGraph ctrl) (\x -> [Draw.flowSection Draw.optionsDefault x]) 
+  (drawAction (drawSimulationFlowGraph ctrl) 
+   (\x -> [Draw.title "Flow Result from Simulation" $ Draw.flowSection Draw.optionsDefault x]) 
       (Simulation.accessFlowResult $ Process.accessSimulation sim)) ++
   
   (plotAction (plotSimulationPowers ctrl)
@@ -519,8 +520,10 @@ simulation ctrl sim =  let
      PlotFSignal.plotHRecord) 
       (Simulation.accessPowerRecord $ Process.accessSimulation sim)) ++
   
- (drawAction (drawSequenceFlowGraph ctrl) (\x -> [Draw.seqFlowGraph Draw.optionsDefault x]) 
+ (drawAction (drawSequenceFlowGraph ctrl) 
+  (\x -> [Draw.title "Sequence Flow Graph from Simulation" $ Draw.seqFlowGraph Draw.optionsDefault x]) 
       (EFA.accessSeqFlowGraph $ Process.accessAnalysis sim)) ++
   
- (drawAction (drawStateFlowGraph ctrl) (\x -> [Draw.stateFlowGraph Draw.optionsDefault x]) 
+ (drawAction (drawStateFlowGraph ctrl) 
+  (\x -> [Draw.title "State Flow Graph from Simulation" $ Draw.stateFlowGraph Draw.optionsDefault x]) 
       (EFA.accessStateFlowGraph $ Process.accessAnalysis sim))

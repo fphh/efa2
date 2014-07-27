@@ -365,11 +365,9 @@ main = do
   concurrentlyMany_ $ 
     OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
      ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
---                      OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
-  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation
---  concurrentlyMany_ $ OP.optPerState  (nc "Main") optCtrl optPerState1
---  concurrentlyMany_ $ OP.optimalOperation opCtrl optimalOperation1
-  concurrentlyMany_ $ OP.simulation simCtrl simEfa
+     ++ OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
+     ++ OP.optimalOperation opCtrl optimalOperation
+     ++ OP.simulation simCtrl simEfa
   
 --  print stoPowers
   print balance
