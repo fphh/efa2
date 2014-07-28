@@ -257,6 +257,8 @@ generateOptimalControl ::
    DV.Walker vec,
    DV.Storage vec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val b)),
    DV.Storage vec (ValueState.Map (Interp.Val b)),
+   DV.Storage vec [SignalFlow.TimeStep a],
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.Storage vec [a],
    DV.Storage vec (Interp.Val b),
    DV.Storage vec [Interp.Val b],
@@ -278,6 +280,8 @@ generateOptimalStorageSignals ::
    DV.Zipper vec,
    DV.Walker vec,
    DV.Storage vec [a],
+   DV.Storage vec [SignalFlow.TimeStep a],
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.Storage vec a,
    DV.Storage vec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a)),
    DV.Singleton vec,
@@ -289,12 +293,14 @@ generateOptimalStorageSignals optimalStateSignal storagePowerSignalPerState =
   Map.map f storagePowerSignalPerState
   where f sig =  generateOptimalSignal optimalStateSignal sig
         
-        
+-- TODO .. activate storage part        
 getBalance :: 
   (Arith.Constant a,
    DV.Zipper vec,
    DV.Walker vec,
    DV.Storage vec (a, Maybe (Interp.Val a)),
+   DV.Storage vec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.Storage vec (Maybe (Interp.Val a)),
    DV.Storage vec a) =>       
 --  Map.Map (node) (SignalFlow.Signal inst label vec a (Maybe (Interp.Val a))) ->
@@ -315,6 +321,8 @@ generateOptimalSignal ::
    DV.Walker vec,
    DV.Storage vec (ValueState.Map b),
    DV.Storage vec ([Maybe Idx.AbsoluteState],c),
+   DV.Storage vec (SignalFlow.TimeStep a),
+   DV.Storage vec [SignalFlow.TimeStep a],
    DV.Storage vec a,
    DV.Storage vec [b],
    DV.Storage vec b,

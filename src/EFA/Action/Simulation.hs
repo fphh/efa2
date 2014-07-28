@@ -8,7 +8,7 @@ module EFA.Action.Simulation where
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.Vector as DV
-import qualified EFA.Value.Type as Type
+--import qualified EFA.Value.Type as Type
 import EFA.Action.Utility (quantityTopology)
 -- import qualified EFA.Application.Optimisation.Sweep as Sweep
 -- import EFA.Application.Optimisation.Params (Name(Name))
@@ -76,7 +76,7 @@ simulation ::
  Node.C node,
  DV.Walker sigVec,
  DV.Storage sigVec a,
- DV.Storage sigVec (Interp.Val a),
+ DV.Storage sigVec (Interp.Val a),DV.Storage sigVec (SignalFlow.TimeStep a),
  DV.Length sigVec,
  DV.FromList sigVec) =>
  Caller ->
@@ -98,7 +98,7 @@ solve ::
    DV.FromList sigVec,
    DV.Length sigVec,
    Arith.Constant a,
-   DV.Walker sigVec,
+   DV.Walker sigVec,DV.Storage sigVec (SignalFlow.TimeStep a),
    Arith.ZeroTestable (SignalFlow.Data inst sigVec (Interp.Val a)),
    Arith.Sum (SignalFlow.Data inst sigVec a), 
    Ord node, DV.Storage sigVec a,
@@ -123,7 +123,7 @@ givenSimulate ::
                         (RecIdx.Record RecIdx.Absolute (Variable.Signal node)),Ord node,
    Arith.Sum (SignalFlow.Data inst sigVec a),
    Arith.Sum (SignalFlow.Data inst sigVec (Interp.Val a)),
-   Node.C node, 
+   Node.C node, DV.Storage sigVec (SignalFlow.TimeStep a),
    DV.Storage sigVec (Interp.Val a), 
    DV.FromList sigVec) =>
   Caller ->
@@ -173,7 +173,7 @@ envToPowerRecord ::
    DV.Storage vec (Interp.Val a),
    DV.Storage vec a,
    Ord node) =>
-  Strict.Axis inst String vec a -> 
+  Strict.Axis inst String vec (SignalFlow.TimeStep a) -> 
   TopoQty.Section node (Result (SignalFlow.Data inst vec (Interp.Val a))) ->
   SignalFlow.HRecord (XIdx.Position node) inst String vec a (Interp.Val a)
 envToPowerRecord time =
@@ -189,10 +189,10 @@ sectionToPowerRecord ::
    Arith.Constant a,
    DV.Storage vec (Interp.Val a)) =>
    (Ord node) =>
-   Strict.Axis inst String vec a -> 
+   Strict.Axis inst String vec (SignalFlow.TimeStep a) -> 
    FlowTopo.Section node (SignalFlow.Data inst vec (Interp.Val a)) ->
    SignalFlow.HRecord (XIdx.Position node) inst String vec a (Interp.Val a)
-sectionToPowerRecord time (FlowTopoPlain.Section (SignalFlow.Data time1) topo) =
-   SignalFlow.HRecord (Strict.Axis "Time" Type.T $ DV.map Interp.unpack time1)
+sectionToPowerRecord time (FlowTopoPlain.Section _ topo) =
+   SignalFlow.HRecord time
    $ TopoRecord.topologyToPowerMap topo
 

@@ -50,16 +50,19 @@ getRangeInfo::
    DV.Storage vec b,
    DV.Singleton vec,
    DV.Length vec,
+   DV.Walker vec,
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.FromList vec) =>
  SignalFlow.Signal inst label vec a b ->
  PlotD2.RangeInfo label a b 
 getRangeInfo signal= PlotD2.RangeInfo axRange valRange
-    where axRange = DataPlot.fromAxis $ SignalFlow.getTime signal
+    where axRange = DataPlot.fromAxis $ Strict.map SignalFlow.getMidTime $ SignalFlow.getTime signal
           valRange = DataPlot.fromRange $  SignalFlow.getVector $ SignalFlow.getData signal
 
 basic :: 
   (Ord b,Tuple.C a, Tuple.C b, Type.ToDisplayUnit b,
    Arith.Constant b,(DV.Walker vec),Atom.C b, Atom.C a,
+   DV.Storage vec (SignalFlow.TimeStep a),
    Type.GetDynamicType b,
    DV.Storage vec b,
    DV.Singleton vec, 
@@ -76,27 +79,10 @@ basic ident signal = PlotD2.PlotData info range  (Plot2D.list Graph2D.lines $ zi
   where info = DataPlot.PlotInfo ident Nothing
         range = getRangeInfo signal
         time = SignalFlow.getTime signal
-        xdata = DV.toList $ DV.map (Type.toDisplayUnit' (Strict.getType time)) $ Strict.getVec time
+        xdata = DV.toList $ DV.map (Type.toDisplayUnit' (Strict.getType time)) $ 
+                Strict.getVec $ Strict.map SignalFlow.getMidTime time
         ydata = DV.toList $ DV.map Type.toDisplayUnit $ SignalFlow.getVector $ SignalFlow.getData signal                         
-{-              
-instance 
-  (Ord b,Atom.C a, Atom.C b,
-   Ord a,
-   Arith.Constant b,
-   Arith.Constant a,
-   Tuple.C a,
-   Tuple.C b,
-   Type.ToDisplayUnit b,
-   Type.GetDynamicType b,
-   Type.GetDynamicType a,
-   DV.Walker vec,
-   DV.Storage vec b,
-   DV.Storage vec a,
-   DV.Singleton vec,
-   DV.Length vec,
-   DV.FromList vec)=> 
-  PlotD2.ToPlotData SignalFlow.Signal info label vec a b where
--}    
+
 toPlotData ::
   (Ord a,
    Ord b,
@@ -114,6 +100,7 @@ toPlotData ::
    DV.Storage vec b,
    DV.Singleton vec,
    DV.Length vec,
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.FromList vec) =>
   Maybe id ->
   SignalFlow.Signal inst label vec a b ->
@@ -137,6 +124,7 @@ toPlotDataMap ::
    DV.Storage vec a,
    DV.Singleton vec,
    DV.Length vec,
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.FromList vec) =>
   Map.Map key (SignalFlow.Signal inst label vec a b) ->
   [PlotD2.PlotData key info label a b]
@@ -160,6 +148,7 @@ plotHRecord::
    DV.Storage vec b,
    DV.Singleton vec,
    DV.Length vec,
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.FromList vec) =>
   SignalFlow.HRecord key inst label vec a b ->
    [PlotD2.PlotData key info label a b]
@@ -183,6 +172,7 @@ plotSignalMap ::
    DV.Storage vec b,
    DV.Singleton vec,
    DV.Length vec,
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.FromList vec) =>
   Map.Map id (SignalFlow.Signal inst label vec a b) ->
   [PlotD2.PlotData id info label a b]

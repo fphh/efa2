@@ -498,8 +498,11 @@ optimalOperation ::
  DV.Storage vec (Interp.Val a),
  DV.Storage vec (Maybe (Interp.Val a)),
  DV.Storage vec (ValueState.Map (Interp.Val a)),
+ DV.Storage vec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
  DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
  DV.Singleton vec,
+ DV.Storage vec (SignalFlow.TimeStep a),
+ DV.Storage vec [SignalFlow.TimeStep a],
  DV.FromList vec) =>
  OptimisationPerState node inst demDim srchDim demVec srchVec vec a ->
  OptimalOperation node inst vec a
@@ -549,6 +552,7 @@ simulateAndAnalyse ::
    SV.Convert [] sigVec,
    SV.Convert sigVec [],
    DV.Storage sigVec (ND.Data dim a),
+   DV.Storage sigVec (SignalFlow.TimeStep a),
    Arith.ZeroTestable a) =>
   Caller -> 
   System node ->
@@ -714,6 +718,9 @@ loop ::
    DV.Length demVec,
    DV.Length sigVec,
    DV.Len (sigVec (Interp.Val a)),
+   DV.Storage sigVec (SignalFlow.TimeStep a,Maybe (Interp.Val a)),
+   DV.Storage sigVec (SignalFlow.TimeStep a),
+   DV.Storage sigVec [SignalFlow.TimeStep a],   
    DV.FromList sigVec) =>
   Caller ->
   System node ->
@@ -886,6 +893,9 @@ systemFunction ::
    DV.Length demVec,
    DV.Length srchVec,
    DV.Len (sigVec (Interp.Val a)),
+   DV.Storage sigVec [SignalFlow.TimeStep a],
+   DV.Storage sigVec (SignalFlow.TimeStep a), 
+   DV.Storage sigVec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
    DV.FromList sigVec) =>
   Caller ->
   System node ->

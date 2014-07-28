@@ -202,3 +202,11 @@ combine caller (Axis label typ vec) (Axis label1 typ1 vec1) = let
 
 modifyLabelWith :: (label -> label1) -> Axis inst label vec a -> Axis inst label1 vec a
 modifyLabelWith f (Axis label typ vec) =  (Axis (f label) typ vec)
+
+
+getSlice :: (DV.Storage vec a, DV.Slice vec) =>
+  Range ->  
+  Axis inst label vec a -> 
+  Axis inst label vec a
+getSlice  (Range (Idx startIdx) (Idx endIdx)) (Axis label typ vec) = 
+    Axis label typ $ DV.slice startIdx (endIdx-startIdx) vec

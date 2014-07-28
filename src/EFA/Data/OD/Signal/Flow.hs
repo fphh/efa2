@@ -58,15 +58,48 @@ data Data inst vec a = Data {getVector :: vec a} deriving Show
 instance (FormatValue.FormatValue (vec a)) => FormatValue.FormatValue (Data inst vec a) where
   formatValue (Data vec) = FormatValue.formatValue vec 
 
-data Signal inst label vec a b = Signal {getTime :: Strict.Axis inst label vec a, 
-                                         getData :: Data inst vec b} deriving Show
-                                                                              
+data TimeStep a = TimeStep {getMidTime :: a,  
+                            getTimeStep :: a} deriving (Show, Eq)
+                                                       
+instance  (Eq a, Ord a) => Ord (TimeStep a) where                                                     
+  compare (TimeStep x _) (TimeStep y _) = compare x y
+
+data Signal inst label vec a b = Signal {getTime :: Strict.Axis inst label vec (TimeStep a), 
+                                         getData :: Data inst vec b}
+{-
+instance 
+  (Show label,
+   Show a,
+   DV.Storage vec (TimeStep a),
+   DV.FromList vec) =>
+   Show (Strict.Axis inst label vec (TimeStep a)) where
+  show (Strict.Axis label typ vec) = 
+    "Strict.Axis " ++ show label ++ " " ++ show typ ++ " DV.fromList " ++ (show $ DV.toList vec) 
+-}  
+instance 
+  (Show label, 
+   Show (vec (TimeStep a)), 
+   Show (vec b)) => 
+  Show (Signal inst label vec a b) where
+    show (Signal time dat) = "FSignal " ++ show time ++ " " ++ show dat
+
 data HRecord key inst label vec a b = 
-  HRecord {getHTime :: Strict.Axis inst label vec a,
-           getHMap :: Map.Map key (Data inst vec b)} deriving Show
+  HRecord {getHTime :: Strict.Axis inst label vec (TimeStep a),
+           getHMap :: Map.Map key (Data inst vec b)}
+
+instance 
+  (Show label,
+   Show (vec (TimeStep a)),
+   Show key,
+   Show (vec b),
+   Ord (TimeStep a),
+   DV.Storage vec (TimeStep a)) =>
+   Show (HRecord key inst label vec a b) where
+    show (HRecord time m) = "Flow.HRecord " ++ show time ++ " " ++ show m
+  
                                                
 data VRecord key inst label vec vec1 a b = 
-  VRecord {getVRTime :: Strict.Axis inst label vec a,
+  VRecord {getVRTime :: Strict.Axis inst label vec (TimeStep a),
            getVRMap ::  Map.Map key Signal.SampleIdx,
            getVRSignal :: Data inst vec (Signal.Samples vec1 b)}
                                                                               
@@ -89,10 +122,12 @@ fromList ::
    DV.Zipper vec,
    DV.Storage vec Bool,
    DV.Singleton vec,
-   DV.Storage vec a, 
+   DV.Storage vec a,
    DV.Storage vec b,
-   DV.FromList vec) => 
-  Caller -> label -> Type.Dynamic -> [(a,b)] -> Signal inst label vec a b
+   DV.FromList vec,
+   Ord (TimeStep a),
+   DV.Storage vec (TimeStep a)) => 
+  Caller -> label -> Type.Dynamic -> [(TimeStep a,b)] -> Signal inst label vec a b
 fromList caller label typ xs = 
   let t = Strict.fromList (caller |> (nc "fromList")) label typ $ P.map fst xs
       v = Data $ DV.fromList $ P.map snd xs
@@ -184,8 +219,10 @@ foldlWithTime ::
    DV.Storage vec (a, b), 
    DV.Zipper vec,
    DV.Storage vec b,
-   DV.Storage vec a) => 
-  (acc -> (a,b) -> acc) ->
+   DV.Storage vec a, 
+   DV.Storage vec (TimeStep a, b), 
+   DV.Storage vec (TimeStep a)) => 
+  (acc -> (TimeStep a,b) -> acc) ->
   acc -> Signal inst label vec a b -> acc
 foldlWithTime f acc (Signal (Strict.Axis _ _ timeVec) (Data vec)) = DV.foldl f acc $ DV.zip timeVec vec
 
@@ -219,13 +256,17 @@ concatEvenEvenTimeShare ::
    DV.Singleton vec,
    DV.FromList vec,
    DV.Walker vec, 
-   DV.Storage vec [b],
+   DV.Storage vec [b],DV.Storage vec [TimeStep a],DV.Storage vec (TimeStep a),
    DV.Storage vec a) => 
   Signal inst label vec a [b] -> Signal inst1 label vec a b
 concatEvenEvenTimeShare (Signal (Strict.Axis label typ timeVec) (Data vec)) = 
   Signal (Strict.Axis label typ  $ concatAlt newTime) (Data $ concatAlt2 vec)
   where newTime = DV.zipWith f timeVec vec
-        f t xs = let n = P.length xs in replicate n (t Arith.~/ (Arith.fromInteger $ fromIntegral n))
+        f (TimeStep t dt) xs = let 
+          n = P.length xs
+          dtVec = replicate n (dt Arith.~/ (Arith.fromInteger $ fromIntegral n))
+          in P.zipWith TimeStep (P.foldl (\acc x -> acc ++ [last acc Arith.~+ x]) [t] dtVec) dtVec
+          -- TODO berechnung der Zitmittenwerte prüfen      
         concatAlt = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
         concatAlt2 = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
 
@@ -312,3 +353,11 @@ instance
   allZeros (Data x) = DV.all (==Arith.zero) x  
   coincidingZeros (Data x) (Data y) = DV.any (\(a,b)-> a==Arith.zero && b==Arith.zero) $ DV.zip x y
   
+  
+getDataSlice :: (DV.Storage vec a, DV.Slice vec) =>
+  Strict.Range ->  
+  Data inst vec a -> 
+  Data inst vec a
+getDataSlice  (Strict.Range (Strict.Idx startIdx) (Strict.Idx endIdx)) (Data vec) = 
+    Data $ DV.slice startIdx (endIdx-startIdx) vec
+ 

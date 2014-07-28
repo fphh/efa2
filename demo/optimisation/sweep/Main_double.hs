@@ -190,7 +190,7 @@ storageList :: [Node]
 storageList = [Water]              
 
 demandCycle :: OptSignal.DemandCycle Node Base ND.Dim2 [] Double Double
-demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc "Main") [0.3,0.5]),
+demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T $ map f [(0,ND.fromList (nc "Main") [0.3,0.5]),
                                                              (1,ND.fromList (nc "Main") [0.2,0.4]),
                                                              (2,ND.fromList (nc "Main") [0.21,0.42]),
                                                              (3,ND.fromList (nc "Main") [0.3,0.4]),
@@ -214,7 +214,7 @@ demandCycle = SignalFlow.fromList (nc "Main") "Time" Type.T [(0,ND.fromList (nc 
                                                              (21,ND.fromList (nc "Main") [0.2,0.4]),
                                                              (22,ND.fromList (nc "Main") [0.29,0.4]),
                                                              (23,ND.fromList (nc "Main") [0.2,0.4])]
-
+   where f (x,xs) = (SignalFlow.TimeStep x 1.0,xs) 
 
 demandVariation :: [(DemandAndControl.Var Node,Type.Dynamic,[Double])]
 demandVariation  = 
@@ -372,17 +372,19 @@ main = do
 --  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
 --  print stoPowers
-  print balance
+--  print balance
 --  print balance1
-  print $ Process.accessOptimalStoragePowers optimalOperation
+--  print $ Process.accessOptimalStoragePowers optimalOperation
   
 --  print $ Process.accessOptimalStoragePowers optimalOperation1
   
 --  print $ Process.accessSweepEndNodePowers sweep
 --  print $ Process.accessSweepOptimality evalSweep
-  print loop
+--  print loop
+  print $ demandCycle    
+  print $ Process.accessOptimalControlSignals $ Process.accOptOperation $ Loop.getLastResult loop 
   print $ EFA.accessSeqFlowRecord $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop
-  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
+--  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
  
   
@@ -508,4 +510,6 @@ main = do
 -}
 
 -}
+
+
 

@@ -66,7 +66,7 @@ plotDemandCycle ::
    Type.GetDynamicType a,
    Type.GetDynamicType b,
    DV.Walker vec,
-   DV.Storage vec (ND.Data dim b),
+   DV.Storage vec (ND.Data dim b),DV.Storage vec (SignalFlow.TimeStep a),
    DV.Storage vec a,
    DV.Storage vec b,
    DV.Singleton vec,
@@ -90,7 +90,7 @@ plotDemandCycleMap ::
    Type.GetDynamicType b,
    Type.GetDynamicType a,
    DV.Walker vec,
-   DV.Storage vec b,
+   DV.Storage vec b,DV.Storage vec (SignalFlow.TimeStep a),
    DV.Storage vec a,
    DV.Singleton vec,
    DV.Length vec,
@@ -121,7 +121,7 @@ plotOptimalSignals ::
    DV.Storage vec b,
    DV.Storage vec a,
    DV.Singleton vec,
-   DV.Length vec,
+   DV.Length vec,DV.Storage vec (SignalFlow.TimeStep a),
    DV.FromList vec) =>
   String ->
   Map.Map id (SignalFlow.Signal inst label vec a b) ->

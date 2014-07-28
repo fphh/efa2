@@ -50,6 +50,7 @@ chopHRecord ::
    DV.Storage vec a,
    DV.Slice vec,
    DV.Length vec,
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.Len (vec b)) =>
   Caller ->
   SignalFlow.HRecord key inst label vec a b ->
@@ -67,46 +68,43 @@ findHSections ::
    Arith.Constant b,
    DV.Walker vec,
    DV.Storage vec b,
+   DV.Storage vec (SignalFlow.TimeStep a),
    DV.Len (vec b)) => 
   Caller ->
   SignalFlow.HRecord key inst label vec a b -> Sectioning
 findHSections caller (SignalFlow.HRecord time m) = 
   NonEmpty.toList $ NonEmpty.zipWith (Strict.Range) startIndexList stopIndexList
-  where startIndexList = NonEmptySet.toAscList $ foldl1 NonEmptySet.union $ map (SignalFlow.locateSignChanges (caller |> nc "findVSections")) $ Map.elems m
-        stopIndexList = NonEmpty.snoc (DV.map (\(Strict.Idx idx)->Strict.Idx $ idx-1) $ 
+  where startIndexList = NonEmptySet.toAscList $ foldl1 NonEmptySet.union $ 
+                         map (SignalFlow.locateSignChanges (caller |> nc "findVSections")) $ Map.elems m
+        stopIndexList = NonEmpty.snoc (DV.map (\(Strict.Idx idx)->Strict.Idx $ idx+1) $ 
                                        NonEmpty.tail startIndexList) (Strict.Idx $ Strict.len time)
 
 
-getSignalSlice :: (DV.Storage vec a, DV.Slice vec) =>
-  Strict.Range ->  
-  SignalFlow.Data inst vec a -> 
-  SignalFlow.Data inst vec a
-getSignalSlice  (Strict.Range (Strict.Idx startIdx) (Strict.Idx endIdx)) (SignalFlow.Data vec) = 
-    SignalFlow.Data $ DV.slice startIdx (endIdx-startIdx) vec
 
-sliceHRecord :: (DV.Storage vec b, DV.Slice vec) =>
+sliceHRecord :: (DV.Storage vec b, DV.Slice vec, DV.Storage vec (SignalFlow.TimeStep a)) =>
   SignalFlow.HRecord key inst label vec a b -> 
   Sectioning -> 
   DataSequ.List (SignalFlow.HRecord key inst label vec a b)
-sliceHRecord (SignalFlow.HRecord t m) sectioning = DataSequ.fromRangeList $ map f sectioning
+sliceHRecord (SignalFlow.HRecord time m) sectioning = DataSequ.fromRangeList $ map f sectioning
   where
-    f range = (range,SignalFlow.HRecord t (Map.map (getSignalSlice range) m))
+    f range = (range,SignalFlow.HRecord (Strict.getSlice range time) 
+                     (Map.map (SignalFlow.getDataSlice range) m))
 
 
 convertHRecord2Old :: 
-  (DV.Walker sigVec,
+  (DV.Walker sigVec,DV.Storage sigVec (SignalFlow.TimeStep a),
    DV.Storage sigVec (Interp.Val a),
    DV.Storage sigVec a) =>
   SignalFlow.HRecord (TopoIdx.Position node) inst label sigVec a (Interp.Val a) ->   
   Record.FlowRecord node sigVec (Interp.Val a)
 convertHRecord2Old (SignalFlow.HRecord (Strict.Axis _ _ time) m) = 
-  Record.Record (S.TC (Data.Data $ DV.map Interp.Inter time)) (Map.map f m)
+  Record.Record (S.TC (Data.Data $ DV.map (Interp.Inter . SignalFlow.getMidTime) time)) (Map.map f m)
   where f (SignalFlow.Data vec) = S.TC (Data.Data vec)
 
 
 convertToOld :: 
   (DV.Walker sigVec,
-   DV.Storage sigVec a,
+   DV.Storage sigVec a,DV.Storage sigVec (SignalFlow.TimeStep a),
    DV.Storage sigVec (Interp.Val a)) =>
   DataSequ.List (SignalFlow.HRecord (TopoIdx.Position node) inst label sigVec a (Interp.Val a)) ->
   Sequ.List (Record.FlowRecord node sigVec (Interp.Val a))
