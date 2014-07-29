@@ -60,17 +60,20 @@ updateOneStorageLifeCycleEfficiencies ::
   FlowOpt.LifeCycleMap node a
 
 updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleEtas sfg (FlowOpt.LifeCycleMap oldMap) = 
-  FlowOpt.LifeCycleMap $ Map.mapWithKey f oldMap 
+  FlowOpt.LifeCycleMap $ Map.union (Map.mapKeys (\(Idx.State state) -> Idx.AbsoluteState $ fromIntegral state) $ 
+                                    Map.mapWithKey f  $ StateQty.states absSfg) oldMap 
   where
+    
     absSfg = ActUt.absoluteStateFlowGraph topo sfg
     -- absSfg = fmap g g  $ ActUt.absoluteStateFlowGraph topo sfg
     g = (\(D.Data x) -> x) . (ActUt.checkDetermined "updateOneStorageLifeCycleEfficiencies") 
 --    checkValid x = if Interp.isInvalid x then err else Interp.unpack x 
     err = merror caller modul "updateOneStorageLifeCycleEfficiencies" "Invalid Values in StateFlowChart"
     etaSysSfg = calculateEtaSys globalLifeCycleEtas absSfg  
-    f (Idx.AbsoluteState state) m =  case method of
+    f (Idx.State state) _ =  case method of
           N_SFG_EQ_N_STATE -> Map.mapWithKey (etaSysState_Eq_etaSysSfg 
-                              (caller |> nc "updateOneStorageLifeCycleEfficiencies") absSfg etaSysSfg (Idx.State $ fromIntegral state)) m
+                              (caller |> nc "updateOneStorageLifeCycleEfficiencies") absSfg etaSysSfg (Idx.State $ fromIntegral state)) 
+                               (oldMap Map.! (Idx.AbsoluteState  $ fromIntegral state))
     
 
 -- | This Approach calculates generation or use efficiency in a way system efficiency for sfg and the respective state are the same   
@@ -89,10 +92,10 @@ etaSysState_Eq_etaSysSfg ::
    FlowOpt.UsageEfficiency a) ->
   (FlowOpt.GenerationEfficiency a,
    FlowOpt.UsageEfficiency a)
-etaSysState_Eq_etaSysSfg caller sfg etaSysSfg state sto (oldEtaGen,oldEtaUse) = 
+etaSysState_Eq_etaSysSfg caller absSfg etaSysSfg state sto (oldEtaGen,oldEtaUse) = 
   let 
 --    newCaller = caller |> nc "etaSysState_Eq_etaSysSfg"
-    flowSection = Maybe.fromMaybe err $ Map.lookup state $ StateQty.states sfg
+    flowSection = Maybe.fromMaybe err $ Map.lookup state $ StateQty.states absSfg
     flowTopo = TopoQty.topology flowSection
     err = merror caller modul "etaSysState_Eq_etaSysSfg" $ "state not found in stateFlowGraph " ++ show state       
     err3 = merror caller modul "etaSysState_Eq_etaSysSfg" $ "storage not found in stateFlowGraph " ++ show sto     
@@ -143,7 +146,7 @@ calculateEtaSys (FlowOpt.GenerationEfficiency etaGen,FlowOpt.UsageEfficiency eta
        exitBalance = map f $ Map.elems $ fmap (PartMap.exit . Storage.nodes) (StateQty.storages sfg)
 
        f (Result.Determined (D.Data x)) = x
-       f Result.Undetermined = error "Bust"
+       f Result.Undetermined = error "calculateEtaSys -- Undetermined"
  
        balance = zipWith (Arith.~-) exitBalance initBalance
 

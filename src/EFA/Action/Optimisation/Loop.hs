@@ -125,6 +125,11 @@ data BalanceLoopItem node a z =
    accBestPair :: Balance.BestForcingPair a,
    accResult :: z}
 
+resetBalCounter :: BalanceLoopItem node a z -> BalanceLoopItem node a z
+resetBalCounter (BalanceLoopItem cnt n f s l b r) = BalanceLoopItem (g cnt) n f s l b r
+ where
+   g (Balance.BalanceCounter m) = Balance.BalanceCounter $ Map.map (\_ -> 0) m 
+
 etaLoop :: (Ord node,Ord a, Show a, Show node, Arith.Constant a) =>
   Caller ->
   [node] ->
@@ -135,7 +140,7 @@ etaLoop :: (Ord node,Ord a, Show a, Show node, Arith.Constant a) =>
   FlowOpt.LifeCycleMap node a ->
   (z -> FlowOpt.LifeCycleMap node a -> FlowOpt.LifeCycleMap node a)->
   [EtaLoopItem node a z]
-etaLoop caller storages etaParams balParams systemFunction getBalance initialLifeCycleMap updateLifeCycleMap =
+etaLoop caller storages etaParams balParams systemFunction getBalance initialLifeCycleMap updateLifeCycleMap = 
    UtList.takeUntil check $ 
    go (EtaLoopItem (EtaCounter 0) initialLifeCycleMap [BalanceLoopItem initialCount initialSto initialForcing 
                                                         initialStep initialBlance initialBestPair initialResult] )
@@ -153,7 +158,7 @@ etaLoop caller storages etaParams balParams systemFunction getBalance initialLif
     go lastItem@(EtaLoopItem lastCount lastLifeCycleMap lastBalLoop) = [lastItem] ++ go (EtaLoopItem count lifeCycleMap balLoop)
       where
         count = incrementEtaCounter lastCount
-        lifeCycleMap = lastLifeCycleMap --updateLifeCycleMap (accResult $ last balLoop) lastLifeCycleMap
+        lifeCycleMap = updateLifeCycleMap (accResult $ last balLoop) lastLifeCycleMap
         -- TODO :: check if last is OK
         balLoop = balanceLoop (caller |> nc "etaLoop") balParams (systemFunction lastLifeCycleMap) getBalance (last lastBalLoop)
 
@@ -169,7 +174,7 @@ balanceLoop ::
   BalanceLoopItem node a z ->
   [BalanceLoopItem node a z]
 balanceLoop caller balParams systemFunction getBalance lastBalItem = UtList.takeUntil check $ 
-  go lastBalItem
+  go $ resetBalCounter lastBalItem
   where
     check (BalanceLoopItem cnt _ _ _ bal _ _) = 
       (Balance.checkBalance threshold bal) || 

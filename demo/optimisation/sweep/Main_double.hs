@@ -279,16 +279,16 @@ initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))
 
 etaLoopParams = 
   Loop.EtaLoopParams
-  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 0, 
+  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 3, 
    Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
    Loop.accGlobalEtas = (FlowOpt.GenerationEfficiency (Interp.Inter 1.0), FlowOpt.UsageEfficiency (Interp.Inter 1.0)) 
 }
   
 balanceLoopParams =  
   Loop.BalanceLoopParams 
-  {Loop.accessMaxIterationsPerStorage = Balance.MaxIterationsPerStorage 100 , 
-   Loop.accessMaxIterations = Balance.MaxIterations 100,
-   Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.8) , 
+  {Loop.accessMaxIterationsPerStorage = Balance.MaxIterationsPerStorage 20, 
+   Loop.accessMaxIterations = Balance.MaxIterations 20,
+   Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.01) , 
    Loop.accessInitialForcing = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0))], 
    Loop.accessInitialStep = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (0.001)))], 
    Loop.accessInitialSto = Water}
@@ -380,10 +380,10 @@ main = do
   
 --  print $ Process.accessSweepEndNodePowers sweep
 --  print $ Process.accessSweepOptimality evalSweep
---  print loop
-  print $ demandCycle    
-  print $ Process.accessOptimalControlSignals $ Process.accOptOperation $ Loop.getLastResult loop 
-  print $ EFA.accessSeqFlowRecord $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop
+  print loop
+--  print $ demandCycle    
+--  print $ Process.accessOptimalControlSignals $ Process.accOptOperation $ Loop.getLastResult loop 
+--  print $ EFA.accessSeqFlowRecord $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop
 --  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
  
