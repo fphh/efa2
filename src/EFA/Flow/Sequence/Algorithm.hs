@@ -19,7 +19,7 @@ import Data.Monoid (mempty)
 
 -- | Accumulate energy per section and resolve for eta and x-factors
 accumulate ::
-  ( Arith.ZeroTestable (Arith.Scalar (Arith.Scalar a)),
+  ( Arith.ZeroTestable (Arith.Scalar (Arith.Scalar a)), Show node,
     Arith.ZeroTestable (Arith.Scalar a),
     Arith.Product (Arith.Scalar a), Arith.Integrate (Arith.Scalar a),
     Arith.Integrate a, Arith.Constant (Arith.Scalar (Arith.Scalar a)),

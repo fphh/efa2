@@ -514,7 +514,7 @@ optimalOperation optimisationPerStateResults =
     optimalStoragePowersPerState = accessOptimalStoragePowersPerState optimisationPerStateResults
     optimalControlSignalsPerState = accessOptimalControlSignalsPerState optimisationPerStateResults
     
-    optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta (nc "main") OptSignal.StateForcingOff optimalStateSignals
+    optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta (nc "main") OptSignal.StateForcingOn optimalStateSignals
     optimalControlSignals = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
     optimalStorageSignals = OptSignal.generateOptimalStorageSignals optimalStateSignal optimalStoragePowersPerState
     balance = OptSignal.getBalance optimalStorageSignals 
@@ -731,7 +731,7 @@ loop ::
   SweepResults node inst demDim srchDim demVec srchVec a ->
   FlowOpt.LifeCycleMap node (Interp.Val a) ->
   [node] ->
-  Loop.EtaLoopParams (Interp.Val a) ->
+  Loop.EtaLoopParams node (Interp.Val a) ->
   Loop.BalanceLoopParams node (Interp.Val a) ->
   [Loop.EtaLoopItem node (Interp.Val a) (Res node inst demDim srchDim demVec srchVec sigVec a)]
 
@@ -741,11 +741,11 @@ loop caller system systemData testSet optiSet efaParams sweepResults initialLife
     newCaller = caller |> nc "loop"
     topo = accessTopology system
     method = Loop.accLifeCycleMethod etaParams
-    globalEtas = Loop.accGlobalEtas etaParams
+    globalLifeCycleMap = Loop.accGlobalLifeCycleMap etaParams
     
     getBalance = Balance.unMaybeBalance newCaller . accessBalance . accOptOperation
     updateLifeCycleMap = StateFlowOpt.updateOneStorageLifeCycleEfficiencies 
-                                                  newCaller topo method globalEtas . 
+                                                  newCaller topo method globalLifeCycleMap . 
                                                   EFA.accessStateFlowGraph . accessAnalysis . accSimEfa
                                                   
     sysF = systemFunction newCaller system systemData testSet optiSet efaParams storageList sweepResults

@@ -39,12 +39,20 @@ modul = ModuleName "Action.Flow.Optimality"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-newtype GenerationEfficiency a = GenerationEfficiency a deriving Show
-newtype UsageEfficiency a = UsageEfficiency a deriving Show
+newtype GenerationEfficiency a = GenerationEfficiency a deriving (Show,Eq)
+newtype UsageEfficiency a = UsageEfficiency a deriving  (Show,Eq)
 
 -- | Indicates that values are Sign-Corrected for Storage-Sign-Convention positive == charging, negative == discharging
 newtype StorageFlow a = StorageFlow a deriving Show 
 
+newtype GlobalLifeCycleMap node a = GlobalLifeCycleMap (Map.Map node (GenerationEfficiency a,UsageEfficiency a)) deriving (Show, Eq)
+
+lookupLifeCycleEtaGlobalLifeCycleEta :: Ord node =>
+  GlobalLifeCycleMap node a ->
+  node ->
+  Maybe (GenerationEfficiency a, UsageEfficiency a)
+lookupLifeCycleEtaGlobalLifeCycleEta  (GlobalLifeCycleMap m) node = Map.lookup node m 
+ 
 newtype LifeCycleMap node a = 
   LifeCycleMap (Map.Map (Idx.AbsoluteState) (Map.Map node (GenerationEfficiency a,UsageEfficiency a))) deriving Show
 

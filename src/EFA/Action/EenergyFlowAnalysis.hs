@@ -28,6 +28,7 @@ import qualified EFA.Application.Type as Type
 --import qualified EFA.Data.Vector as DV
 import qualified EFA.Graph.Topology.Node as Node
 --import qualified EFA.Equation.Verify as Verify
+import qualified EFA.Flow.Sequence.Algorithm as SeqAlgo
 
 --import qualified EFA.Graph as Graph
 
@@ -142,7 +143,7 @@ energyFlowAnalysisOld topology efaParams sequenceFlowsFilt =
           Optimisation.optionsScalar
            (StateQty.graphFromCumResult $
            StateQty.fromSequenceFlowResult False $
-           SeqQty.mapGraph id (fmap Arith.integrate) $
+           SeqQty.mapGraph id id $
            external initStorageState sequenceFlowGraph)
           mempty
   in EnergyFlowAnalysis sequenceFlowsFilt sequenceFlowGraph stateFlowGraph
@@ -247,4 +248,7 @@ energyFlowAnalysis sysParams simParams powerRecord =
 -}
 
   in Type.EnergyFlowAnalysis sequencePowerRecord sequenceFlowGraph stateFlowGraph
+
+
+
 

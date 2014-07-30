@@ -108,7 +108,7 @@ maxPerState _term (_n, BalanceLoopItem _bForcing _bFStep _bal _opt) =
 
 simulation ::
   (Node.C node, SV.FromList efaVec, SV.Storage efaVec d,
-   Arith.Constant d, SV.Walker efaVec, UV.Unbox b,
+   Arith.Constant d, SV.Walker efaVec, UV.Unbox b, Show node,
    Arith.ZeroTestable d, FormatValue.FormatValue d,
    FormatValue.FormatValue b) =>
   (String -> Canonical.DotGraph LazyText.Text -> IO ()) ->

@@ -98,3 +98,11 @@ maxWith f x y = zipWithUnion g x y
             LT -> b
             EQ -> a
             GT -> a
+            
+minWith :: (a -> a -> Ordering) -> Map a -> Map a -> Map a
+minWith f x y = zipWithUnion g x y
+  where 
+    g a b = case f a b of
+            LT -> a
+            EQ -> a
+            GT -> b            

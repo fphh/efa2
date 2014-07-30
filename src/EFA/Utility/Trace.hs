@@ -14,6 +14,11 @@ showarg x = trace (show x) x
 debugLevel :: Integer
 debugLevel = 1
 
+
+simTrace :: Show a => String -> a -> a
+simTrace msg var = trace ("simTrace: " ++ show msg ++ " : " ++ show var) var
+  
+
 -- mytrace for single values
 mytrace ::
    (Show a, Show b, Show c) =>

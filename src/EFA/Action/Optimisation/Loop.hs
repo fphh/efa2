@@ -75,11 +75,11 @@ instance
   Display (Balance.BestForcingPair a) where
   disp (Balance.BestForcingPair x) = "BP: " ++ disp x
 
-data EtaLoopParams a = 
+data EtaLoopParams node a = 
   EtaLoopParams
   { accessMaxEtaIterations :: MaxEtaIterations, 
     accLifeCycleMethod :: StateFlowOpt.LifeCycleMethod,
-    accGlobalEtas :: (FlowOpt.GenerationEfficiency a, FlowOpt.UsageEfficiency a) }
+    accGlobalLifeCycleMap :: FlowOpt.GlobalLifeCycleMap node a}
   
   
 data BalanceLoopParams node a =  
@@ -133,7 +133,7 @@ resetBalCounter (BalanceLoopItem cnt n f s l b r) = BalanceLoopItem (g cnt) n f 
 etaLoop :: (Ord node,Ord a, Show a, Show node, Arith.Constant a) =>
   Caller ->
   [node] ->
-  EtaLoopParams a ->
+  EtaLoopParams node a ->
   BalanceLoopParams node a ->
   (FlowOpt.LifeCycleMap node a -> Balance.Forcing node a -> z) ->
   (z -> Balance.Balance node a) ->

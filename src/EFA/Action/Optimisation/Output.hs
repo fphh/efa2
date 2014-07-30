@@ -62,6 +62,7 @@ import qualified EFA.Report.FormatValue as FormatValue
 import qualified EFA.Graph.Topology.Node as Node
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 --import qualified EFA.Action.Flow.Optimality as ActFlowOpt
+import qualified EFA.Flow.Sequence.Algorithm as SeqAlgo
 
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Equation.Result as Result
@@ -503,6 +504,7 @@ simulation ::
    DV.Storage sigVec a,
    DV.Singleton sigVec,
    DV.Length sigVec,
+   SV.Walker sigVec,
    DV.FromList sigVec) =>
   SimCtrl ->
   Process.SimulationAndAnalysis node inst sigVec a ->
@@ -523,7 +525,7 @@ simulation ctrl sim =  let
       (Simulation.accessPowerRecord $ Process.accessSimulation sim)) ++
   
  (drawAction (drawSequenceFlowGraph ctrl) 
-  (\x -> [Draw.title "Sequence Flow Graph from Simulation" $ Draw.seqFlowGraph Draw.optionsDefault x]) 
+  (\x -> [Draw.title "Sequence Flow Graph from Simulation" $ Draw.seqFlowGraph Draw.optionsDefault $ SeqAlgo.accumulate x]) 
       (EFA.accessSeqFlowGraph $ Process.accessAnalysis sim)) ++
   
  (drawAction (drawStateFlowGraph ctrl) 

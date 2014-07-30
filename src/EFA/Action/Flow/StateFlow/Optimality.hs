@@ -3,7 +3,7 @@ module EFA.Action.Flow.StateFlow.Optimality where
 import qualified EFA.Graph as Graph
 import qualified EFA.Equation.Result as Result
 
---import qualified EFA.Data.Interpolation as Interp
+import qualified EFA.Data.Interpolation as Interp
 
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Part.Map as PartMap
@@ -23,6 +23,8 @@ import qualified EFA.Signal.Data as D
 import qualified Data.Maybe as Maybe
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
+
+import qualified EFA.Utility.Trace as UtTrace 
 
 import EFA.Utility(Caller,
                  merror,
@@ -49,27 +51,28 @@ data LifeCycleMethod =
 
 -- | Function works only for systems with one storage 
 updateOneStorageLifeCycleEfficiencies :: 
-  (Ord a, Arith.Constant a, Node.C node, Show node) =>
+  (Ord a, Arith.Constant a, Node.C node, Show node, Show a) =>
   Caller ->
   Topo.Topology node ->
   LifeCycleMethod ->
-  (FlowOpt.GenerationEfficiency a, FlowOpt.UsageEfficiency a) ->
+  FlowOpt.GlobalLifeCycleMap node a ->
+--  (FlowOpt.GenerationEfficiency a, FlowOpt.UsageEfficiency a) ->
   StateQty.Graph node (Result.Result ((D.Data D.Nil (a)))) 
                       (Result.Result ((D.Data D.Nil (a)))) ->
   FlowOpt.LifeCycleMap node a ->  
   FlowOpt.LifeCycleMap node a
 
-updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleEtas sfg (FlowOpt.LifeCycleMap oldMap) = 
+updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleMap sfg (FlowOpt.LifeCycleMap oldMap) = 
   FlowOpt.LifeCycleMap $ Map.union (Map.mapKeys (\(Idx.State state) -> Idx.AbsoluteState $ fromIntegral state) $ 
                                     Map.mapWithKey f  $ StateQty.states absSfg) oldMap 
   where
-    
+    newCaller = caller |> nc "updateOneStorageLifeCycleEfficiencies"
     absSfg = ActUt.absoluteStateFlowGraph topo sfg
     -- absSfg = fmap g g  $ ActUt.absoluteStateFlowGraph topo sfg
     g = (\(D.Data x) -> x) . (ActUt.checkDetermined "updateOneStorageLifeCycleEfficiencies") 
 --    checkValid x = if Interp.isInvalid x then err else Interp.unpack x 
     err = merror caller modul "updateOneStorageLifeCycleEfficiencies" "Invalid Values in StateFlowChart"
-    etaSysSfg = calculateEtaSys globalLifeCycleEtas absSfg  
+    etaSysSfg = calculateEtaSys newCaller globalLifeCycleMap absSfg  
     f (Idx.State state) _ =  case method of
           N_SFG_EQ_N_STATE -> Map.mapWithKey (etaSysState_Eq_etaSysSfg 
                               (caller |> nc "updateOneStorageLifeCycleEfficiencies") absSfg etaSysSfg (Idx.State $ fromIntegral state)) 
@@ -123,52 +126,72 @@ etaSysState_Eq_etaSysSfg caller absSfg etaSysSfg state sto (oldEtaGen,oldEtaUse)
     etaGen eSto = FlowOpt.GenerationEfficiency $ eSto  Arith.~/ (totalSinkEnergy  Arith.~/ etaSysSfg  Arith.~- totalSourceEnergy)
     err2 = merror caller modul "etaSysState_Eq_etaSysSfg" "no Sums found"
     err4 = merror caller modul "etaSysState_Eq_etaSysSfg" "invalid flow"
+--    hg oldX (FlowOpt.GenerationEfficiency x) = if Interp.isInvalid x then oldX else (FlowOpt.GenerationEfficiency x)
+--    hu oldX (FlowOpt.UsageEfficiency x) = if Interp.isInvalid x then oldX else (FlowOpt.UsageEfficiency x)
     
     in case Maybe.fromMaybe err2 $ Maybe.fromMaybe err3 $ Map.lookup sto storages of
-             TopoQty.Sums Nothing (Just sumOut) -> (etaGen sumOut ,oldEtaUse)
-             TopoQty.Sums (Just sumIn) Nothing -> (oldEtaGen,etaUse sumIn )
+             TopoQty.Sums Nothing (Just sumOut) -> (etaGen sumOut , oldEtaUse)
+             TopoQty.Sums (Just sumIn) Nothing -> (oldEtaGen, etaUse sumIn )
              TopoQty.Sums Nothing Nothing -> (oldEtaGen,oldEtaUse)     
              TopoQty.Sums (Just _) (Just _) -> err4
 
  
 calculateEtaSys ::
-  (Ord node, Node.C node,
+  (Ord node, Node.C node, Show a, Show node,
    Arith.Constant a, 
    Ord a) =>
-  (FlowOpt.GenerationEfficiency a, FlowOpt.UsageEfficiency a) ->
+  Caller -> 
+  FlowOpt.GlobalLifeCycleMap node a ->
   StateQty.Graph node (Result.Result (D.Data D.Nil a)) (Result.Result (D.Data D.Nil a)) ->
   a
-calculateEtaSys (FlowOpt.GenerationEfficiency etaGen,FlowOpt.UsageEfficiency etaUse) sfg =
+calculateEtaSys caller globalLifeCycleMap sfg = UtTrace.simTrace "calculateEtaSys-Eta" $ 
    let flowTopos = Map.map TopoQty.topology $ StateQty.states sfg
        nodes = Map.map Graph.nodeLabels flowTopos
 
-       initBalance = map f $ Map.elems $ fmap (PartMap.init . Storage.nodes) (StateQty.storages sfg)
-       exitBalance = map f $ Map.elems $ fmap (PartMap.exit . Storage.nodes) (StateQty.storages sfg)
+       initBalance = map f $ Map.toList $ fmap (PartMap.init . Storage.nodes) (StateQty.storages sfg)
+       exitBalance = map f $ Map.toList $ fmap (PartMap.exit . Storage.nodes) (StateQty.storages sfg)
 
-       f (Result.Determined (D.Data x)) = x
-       f Result.Undetermined = error "calculateEtaSys -- Undetermined"
+       f (node,Result.Determined (D.Data x)) = (node,x)
+       f (_,Result.Undetermined) = error "calculateEtaSys -- Undetermined"
  
-       balance = zipWith (Arith.~-) exitBalance initBalance
+       f1 (Result.Determined (D.Data x)) = x
+       f1 (Result.Undetermined) = error "calculateEtaSys -- Undetermined"
+        
+       balance = zipWith (\(node,x) (node1,y) -> if node == node1 then (node,x Arith.~- y) else err node node1) exitBalance initBalance
+       
+       err n n1 = merror caller modul "calculateEtaSys" $ "inconsistent storage nodes: " ++ show n ++ " " ++ show n1
 
-       sinks = fmap (fmap f) $ fmap (Map.mapMaybe TopoQty.sumIn .
+       sinks = fmap (fmap f1) $ fmap (Map.mapMaybe TopoQty.sumIn .
               Map.filterWithKey (\node _ -> Node.isSink $ Node.typ node)) nodes
               
-       sources = fmap (fmap f) $ fmap (Map.mapMaybe TopoQty.sumOut .
+       sources = fmap (fmap f1) $ fmap (Map.mapMaybe TopoQty.sumOut .
               Map.filterWithKey (\node _ -> Node.isSource $ Node.typ node)) nodes
+
        sumRes =
           Map.foldl ((Arith.~+)) Arith.zero . Fold.fold . Map.elems
           
-       sumCharge = Fold.foldl (\acc x -> if x > Arith.zero 
-                                  then acc Arith.~+ (x Arith.~* etaUse) else acc) Arith.zero 
+       sumCharge = 
+         Fold.foldl (\acc (node,x) -> let 
+                        (FlowOpt.UsageEfficiency etaUse) = snd $  Maybe.fromMaybe (err2 node) $
+                             FlowOpt.lookupLifeCycleEtaGlobalLifeCycleEta globalLifeCycleMap node  
+                                 in if x > Arith.zero 
+                                   then acc Arith.~+ (x Arith.~* etaUse) 
+                                   else acc) Arith.zero 
 
+       
        sumDischarge = 
-          Fold.foldl (\acc x -> if x > Arith.zero 
-                                  then acc Arith.~+ (x Arith.~/ etaGen) else acc) Arith.zero
+          Fold.foldl (\acc (node,x) -> let 
+                         (FlowOpt.GenerationEfficiency etaGen) =  fst $ Maybe.fromMaybe (err2 node) $
+                                FlowOpt.lookupLifeCycleEtaGlobalLifeCycleEta globalLifeCycleMap node
+                         in if x < Arith.zero 
+                            then acc Arith.~- (x Arith.~/ etaGen) 
+                            else acc) Arith.zero
+                                
+       err2 n =  merror caller modul "calculateEtaSys" $ "node not found in globalLifeCycleMap: " ++ show n      
 
-
-   in ((sumRes sinks)) Arith.~+ (sumCharge balance)   
+   in ((sumRes sinks) Arith.~+ (sumCharge balance))   
       Arith.~/ 
-      ((sumRes sources)) Arith.~+ (sumDischarge balance)
+      ((sumRes sources) Arith.~+ (sumDischarge balance))
 
 
 

@@ -748,7 +748,7 @@ requirements terminal plocal prest = do
 
 
 simulationGraphs ::
-  (FormatValue.FormatValue b, UV.Unbox b,
+  (FormatValue.FormatValue b, UV.Unbox b, Show node,
    Vector.Storage efaVec d,
    Vector.FromList efaVec,
    Vector.Walker efaVec,

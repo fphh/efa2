@@ -3,6 +3,7 @@
 {-# LANGUAGE  FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-} 
 {-# LANGUAGE UndecidableInstances #-} 
+{-# LANGUAGE TypeFamilies #-} 
 
 module EFA.Data.OD.Signal.Flow where
 
@@ -44,7 +45,7 @@ import qualified Data.NonEmpty.Set as NonEmptySet
 import qualified Data.NonEmpty as NonEmpty
 --import qualified Data.NonEmpty.Class as NonEmptyClass
 
-import Prelude hiding (map,zipWith,foldl, length) 
+import Prelude hiding (map,zipWith,foldl, length, sum) 
 import qualified Prelude as P
 
 modul :: ModuleName
@@ -266,7 +267,7 @@ concatEvenEvenTimeShare (Signal (Strict.Axis label typ timeVec) (Data vec)) =
           n = P.length xs
           dtVec = replicate n (dt Arith.~/ (Arith.fromInteger $ fromIntegral n))
           in P.zipWith TimeStep (P.foldl (\acc x -> acc ++ [last acc Arith.~+ x]) [t] dtVec) dtVec
-          -- TODO berechnung der Zitmittenwerte prüfen      
+          -- TODO berechnung der Zeitmittenwerte prüfen      
         concatAlt = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
         concatAlt2 = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
 
@@ -316,6 +317,11 @@ signalMap2HRecord caller m = HRecord t $ Map.map getData m
    ((Signal t _),_) = Maybe.fromMaybe err $ Map.minView m
    err = merror caller modul "signalMap2HRecord" "empty signal map"
    
+
+-- TODO -- make sure this Integration only is applied to energy signals
+instance  (Constant a, DV.Walker vec, DV.Storage vec a) => Arith.Integrate (Data inst vec a) where
+   type Scalar (Data inst vec a) = a
+   integrate = sumData
    
 instance (DV.Zipper vec, DV.Storage vec a, Sum a, DV.Walker vec) => Arith.Sum (Data inst vec a) where
   x ~+ y = zipWithData (~+) x y
@@ -361,3 +367,4 @@ getDataSlice :: (DV.Storage vec a, DV.Slice vec) =>
 getDataSlice  (Strict.Range (Strict.Idx startIdx) (Strict.Idx endIdx)) (Data vec) = 
     Data $ DV.slice startIdx (endIdx-startIdx) vec
  
+    

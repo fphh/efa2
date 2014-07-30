@@ -161,13 +161,13 @@ findOptimalStatesUsingMaxEta caller StateForcingOn optimalitySignalPerState =
     etaOptSignalMax = SignalFlow.map (Maybe.fromMaybe err2 . snd) maxSig 
     maxSig = findOptimalStatesUsingMaxEta (caller |> nc "findOptimalStatesUsingMaxEta") 
                       StateForcingOff optimalitySignalPerState 
-    diffSignal = SignalFlow.zipWith (\m x -> ValueState.map (Arith.~- x) m) etaOptSignal etaOptSignalMax              
+    diffSignal = SignalFlow.zipWith (\opt optMax -> ValueState.map (\x -> optMax Arith.~- x) opt) etaOptSignal etaOptSignalMax              
     minDifferencePerState = Maybe.fromMaybe err $ SignalFlow.foldl f (Nothing) diffSignal
     f (Nothing) y = Just y
-    f (Just x) y = Just $ ValueState.maxWith (Interp.compareMinWithInvalid) x y
+    f (Just x) y = Just $ ValueState.minWith (Interp.compareMinWithInvalid) x y
     err = merror caller modul "findOptimalStatesUsingMaxEta" "empty Signal"
     err2 = merror caller modul "findOptimalStatesUsingMaxEta" "no State found"
-    conditionedSignal = SignalFlow.map (\ m -> ValueState.zipWith (Arith.~-) m minDifferencePerState) etaOptSignal 
+    conditionedSignal = SignalFlow.map (\ m -> ValueState.zipWith (Arith.~+) m minDifferencePerState) etaOptSignal 
 
 
 

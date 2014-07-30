@@ -263,7 +263,7 @@ opCtrl = OP.OpDo {OP.plotOptimalControlSignals = OP.Dflt,
 simCtrl = OP.SimDo {OP.drawSimulationFlowGraph = OP.Xterm,
                     OP.plotSimulationPowers = OP.Dflt,
                     OP.drawSequenceFlowGraph = OP.Xterm, 
-                    OP.drawStateFlowGraph = OP.DontDraw} -- ,OP.Xterm}
+                    OP.drawStateFlowGraph = OP.Xterm} -- ,OP.Xterm}
 
 balanceForcingMap :: Balance.Forcing Node (Interp.Val Double)
 balanceForcingMap = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (-1.0)))]
@@ -279,9 +279,10 @@ initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))
 
 etaLoopParams = 
   Loop.EtaLoopParams
-  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 3, 
+  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 4, 
    Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
-   Loop.accGlobalEtas = (FlowOpt.GenerationEfficiency (Interp.Inter 1.0), FlowOpt.UsageEfficiency (Interp.Inter 1.0)) 
+   Loop.accGlobalLifeCycleMap = FlowOpt.GlobalLifeCycleMap $ 
+     Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 1.0), FlowOpt.UsageEfficiency (Interp.Inter 1.0)))]                                              
 }
   
 balanceLoopParams =  
@@ -327,10 +328,6 @@ main = do
      
   let optimalOperation = Process.optimalOperation optPerState
       
---  let optPerState1 = Process.optimisationPerState testSet optiSet sweep evalSweep  storageList balanceForcingMap1 controlVars
---        :: Process.OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a
-     
---  let optimalOperation1 = Process.optimalOperation optPerState1
    
   let simEfa = Process.simulateAndAnalyse caller system efaParams systemData demandVars optimalOperation demandCycle    
           :: Process.SimulationAndAnalysis Node Base [] Double
@@ -381,10 +378,14 @@ main = do
 --  print $ Process.accessSweepEndNodePowers sweep
 --  print $ Process.accessSweepOptimality evalSweep
   print loop
+--  print $  Process.accessOptimalStateSignals optPerState
+--  print $  Process.accessOptimalStateChoice optimalOperation
+--  print $ Process.accessOptimalStateChoice $ Process.accOptOperation $ Loop.getLastResult loop 
+--  print $ EFA.accessStateFlowGraph $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop 
 --  print $ demandCycle    
 --  print $ Process.accessOptimalControlSignals $ Process.accOptOperation $ Loop.getLastResult loop 
 --  print $ EFA.accessSeqFlowRecord $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop
---  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
+  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
  
   
@@ -510,6 +511,5 @@ main = do
 -}
 
 -}
-
 
 
