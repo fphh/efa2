@@ -153,7 +153,7 @@ data OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a = Opt
   accessObjectiveFunctionValues :: CubeSweep.ObjectiveFunctionValues node inst demDim srchDim demVec srchVec a (Interp.Val a),
   accessOptimalChoicePerState :: CubeSweep.OptimalChoicePerState node inst demDim demVec a (Interp.Val a),
   accessOptimalFlowPerState :: CubeSweep.OptimalFlowPerState node inst demDim demVec a (Interp.Val a), 
-  accessOptimalStateSignals :: OptSignal.OptimalityPerStateSignal node inst sigVec a (Interp.Val a), 
+  accessOptimalSignalsPerState:: OptSignal.OptimalityPerStateSignal node inst sigVec a (Interp.Val a), 
   accessOptimalControlSignalsPerState :: OptSignal.OptimalControlSignalsPerState node inst sigVec a (Interp.Val a),
   accessOptimalStoragePowersPerState :: OptSignal.OptimalStoragePowersPerState node inst sigVec a (Interp.Val a)}
 
@@ -510,7 +510,7 @@ optimalOperation optimisationPerStateResults =
   OptimalOperation optimalStateSignal optimalControlSignals
      optimalStorageSignals balance
   where
-    optimalStateSignals = accessOptimalStateSignals optimisationPerStateResults
+    optimalStateSignals = accessOptimalSignalsPerState optimisationPerStateResults
     optimalStoragePowersPerState = accessOptimalStoragePowersPerState optimisationPerStateResults
     optimalControlSignalsPerState = accessOptimalControlSignalsPerState optimisationPerStateResults
     

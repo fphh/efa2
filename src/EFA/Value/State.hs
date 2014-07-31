@@ -16,6 +16,9 @@ instance Functor Map where
 map :: (a -> b) -> Map a -> Map b 
 map = fmap  
 
+empty :: Map a
+empty = Map  $ Map.empty
+
 lookupUnsafe ::  Map a -> Maybe Idx.AbsoluteState -> a
 lookupUnsafe (Map m) idx = m Map.! idx 
 

@@ -2,6 +2,7 @@
 
 module EFA.Action.Optimisation.Signal.Plot where
 
+import qualified EFA.Action.Optimisation.Signal.Access as OptSignalAccess
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Action.DemandAndControl as DemandAndControl
 --import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
@@ -132,3 +133,13 @@ plotOptimalSignals title signalMap  =
   PlotFSignal.plotSignalMap signalMap
   where
     legend = Map.fromList $ zip [0..] $ Map.keys signalMap
+    
+plotOptimalSignalsPerState title faccess signal  = 
+  PlotD2.allInOne (PlotD2.labledFrame title)
+     (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) $     
+  PlotFSignal.plotSignalMap signalMap
+  where
+    legend = Map.fromList $ zip [0..] $ Map.keys signalMap
+    signalMap = OptSignalAccess.optimalityPerStateSignalToSignalMap faccess signal 
+    
+     

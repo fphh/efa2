@@ -122,12 +122,11 @@ etaSysState_Eq_etaSysSfg caller absSfg etaSysSfg state sto (oldEtaGen,oldEtaUse)
     
     totalSourceEnergy = sumRes sources
     totalSinkEnergy = sumRes sinks
-    etaUse eSto = FlowOpt.UsageEfficiency $ (etaSysSfg Arith.~* totalSourceEnergy  Arith.~- totalSinkEnergy) Arith.~/ eSto
+    etaUse eSto = FlowOpt.UsageEfficiency $ ((Arith.negate (etaSysSfg Arith.~* totalSourceEnergy))  Arith.~+ totalSinkEnergy) Arith.~/ eSto
     etaGen eSto = FlowOpt.GenerationEfficiency $ eSto  Arith.~/ (totalSinkEnergy  Arith.~/ etaSysSfg  Arith.~- totalSourceEnergy)
     err2 = merror caller modul "etaSysState_Eq_etaSysSfg" "no Sums found"
     err4 = merror caller modul "etaSysState_Eq_etaSysSfg" "invalid flow"
---    hg oldX (FlowOpt.GenerationEfficiency x) = if Interp.isInvalid x then oldX else (FlowOpt.GenerationEfficiency x)
---    hu oldX (FlowOpt.UsageEfficiency x) = if Interp.isInvalid x then oldX else (FlowOpt.UsageEfficiency x)
+
     
     in case Maybe.fromMaybe err2 $ Maybe.fromMaybe err3 $ Map.lookup sto storages of
              TopoQty.Sums Nothing (Just sumOut) -> (etaGen sumOut , oldEtaUse)

@@ -255,7 +255,8 @@ sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm,
 optCtrl = OP.OptiDo {OP.plotOptimality = OP.Dflt,
                      OP.plotOptEtaPerState = OP.Dflt, 
                      OP.plotEtaOptPerState= OP.Dflt, 
-                     OP.plotOptIndexPerState= OP.Dflt}
+                     OP.plotOptIndexPerState= OP.Dflt, 
+                     OP.plotOptimalSignalPerState =OP.Dflt }
 
 opCtrl = OP.OpDo {OP.plotOptimalControlSignals = OP.Dflt, 
                   OP.plotOptimalStoragePowers = OP.Dflt}
@@ -359,10 +360,10 @@ main = do
                   TopoIdx.Eta (TopoIdx.Position Network LocalNetwork)]
                   --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]                      
    
---  concurrentlyMany_ $ 
+  concurrentlyMany_ $ 
 --    OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
 --     ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
---     ++ OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
+      OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
 --    OP.optimalOperation opCtrl optimalOperation
 --     ++ OP.simulation simCtrl simEfa
   

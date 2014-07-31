@@ -18,10 +18,12 @@ import qualified EFA.Action.EtaFunctions as EtaFunctions
 import qualified EFA.Action.DemandAndControl as DemandAndControl
 --import qualified EFA.Action.Optimisation.Signal as OptSignal
 import qualified EFA.Action.Optimisation.Signal.Plot as OptSignalPlot
+import qualified EFA.Action.Optimisation.Signal.Access as OptSignalAccess
+
 import qualified EFA.Action.Optimisation.Sweep as Sweep
 
 import qualified EFA.Action.Flow.Check as ActFlowCheck
-import qualified EFA.Action.Flow.Optimality as ActFlowOpt
+import qualified EFA.Action.Flow.Optimality as FlowOpt
 
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.Collection as Collection
@@ -333,21 +335,21 @@ evalSweep ::
    DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)),
    DV.Storage vec (Interp.Val a),
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
-                   ActFlowOpt.OptimalityMeasure (Interp.Val a)),
+                   FlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.Storage srchVec a,
    DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
-                       ActFlowOpt.OptimalityMeasure (Interp.Val a)),
+                       FlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                     ActFlowOpt.OptimalityMeasure (Interp.Val a))),
+                                                                     FlowOpt.OptimalityMeasure (Interp.Val a))),
    DV.Storage srchVec (CubeGrid.DimIdx srchDim,
                        CubeMap.Cube (Sweep.Demand inst) dim (DemandAndControl.Var node) vec a (ActFlowCheck.EdgeFlowStatus,
-                                                                                               ActFlowOpt.OptimalityMeasure (Interp.Val a))),
+                                                                                               FlowOpt.OptimalityMeasure (Interp.Val a))),
    DV.Storage vec (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                                    ActFlowOpt.OptimalityMeasure (Interp.Val a)))),
+                                                                                    FlowOpt.OptimalityMeasure (Interp.Val a)))),
    DV.LookupUnsafe srchVec (ActFlowCheck.EdgeFlowStatus,
-                            ActFlowOpt.OptimalityMeasure (Interp.Val a)),
+                            FlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.LookupUnsafe vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                          ActFlowOpt.OptimalityMeasure (Interp.Val a))),
+                                                                          FlowOpt.OptimalityMeasure (Interp.Val a))),
    DV.Length srchVec,ND.Dimensions srchDim,
    DV.Storage vec (Interp.Val (Interp.Val a)),
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val (Interp.Val a)),
@@ -363,7 +365,7 @@ evalSweep caller srchGrid ctrl swp = let
   newCaller = caller |> nc "evalSweep"
   in 
    (plotAction (plotEta ctrl)
-    (SweepPlot.plotDemandSweepValue newCaller  "Eta" srchGrid (ActFlowOpt.unEta2Optimise . ActFlowOpt.getEta . snd) CubeGrid.All) 
+    (SweepPlot.plotDemandSweepValue newCaller  "Eta" srchGrid (FlowOpt.unEta2Optimise . FlowOpt.getEta . snd) CubeGrid.All) 
      (Process.accessSweepOptimality swp)) ++
    
    (plotAction (plotEta ctrl)
@@ -371,7 +373,7 @@ evalSweep caller srchGrid ctrl swp = let
      (Process.accessSweepOptimality swp)) ++
  
    (plotAction (plotEta ctrl)
-    (SweepPlot.plotDemandSweepValue newCaller  "Loss" srchGrid (ActFlowOpt.unLoss2Optimise . ActFlowOpt.getLoss . snd) CubeGrid.All) 
+    (SweepPlot.plotDemandSweepValue newCaller  "Loss" srchGrid (FlowOpt.unLoss2Optimise . FlowOpt.getLoss . snd) CubeGrid.All) 
      (Process.accessSweepOptimality swp))
    
 data OptiCtrl = OptiDont | 
@@ -379,28 +381,29 @@ data OptiCtrl = OptiDont |
                 {plotOptimality :: Plot,
                  plotOptEtaPerState :: Plot, 
                  plotEtaOptPerState :: Plot,
-                 plotOptIndexPerState :: Plot}
+                 plotOptIndexPerState :: Plot, 
+                 plotOptimalSignalPerState :: Plot}
 
 optPerState ::
   (Ord a,DV.Storage
          vec (ActFlowCheck.EdgeFlowStatus,
-              ActFlowOpt.OptimalityValues (Interp.Val a)),
+              FlowOpt.OptimalityValues (Interp.Val a)),
    DV.Storage vec (CubeMap.Data (Sweep.Search t1) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                   ActFlowOpt.OptimalityValues (Interp.Val a))),
+                                                                   FlowOpt.OptimalityValues (Interp.Val a))),
    DV.Storage srchVec a,
    DV.LookupUnsafe srchVec (ActFlowCheck.EdgeFlowStatus,
-                            ActFlowOpt.OptimalityValues (Interp.Val a)),
+                            FlowOpt.OptimalityValues (Interp.Val a)),
    DV.Length srchVec,
    ND.Dimensions srchDim,
    DV.Storage vec (CubeGrid.LinIdx,
                    (ActFlowCheck.EdgeFlowStatus,
-                    ActFlowOpt.OptimalityValues a)),
+                    FlowOpt.OptimalityValues a)),
    DV.Storage vec (ValueState.Map (CubeGrid.LinIdx,
                                    (ActFlowCheck.EdgeFlowStatus,
-                                    ActFlowOpt.OptimalityValues a))),
+                                    FlowOpt.OptimalityValues a))),
    DV.Storage vec (Maybe (CubeGrid.LinIdx,
                           (ActFlowCheck.EdgeFlowStatus,
-                           ActFlowOpt.OptimalityValues (Interp.Val a)))),
+                           FlowOpt.OptimalityValues (Interp.Val a)))),
    DV.Storage vec a,
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var t) vec a a,
    Show t,
@@ -409,12 +412,24 @@ optPerState ::
    DV.Walker vec,
    DV.Storage vec (CubeGrid.LinIdx,
                    (ActFlowCheck.EdgeFlowStatus,
-                    ActFlowOpt.OptimalityValues (Interp.Val a))),
+                    FlowOpt.OptimalityValues (Interp.Val a))),
    DV.Storage vec (ValueState.Map (CubeGrid.LinIdx,
                                    (ActFlowCheck.EdgeFlowStatus,
-                                    ActFlowOpt.OptimalityValues (Interp.Val a)))),
+                                    FlowOpt.OptimalityValues (Interp.Val a)))),
    DV.Storage vec (Interp.Val a),
-   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var t) vec a (Interp.Val a)) =>
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var t) vec a (Interp.Val a), 
+   Tuple.C a,
+   Type.ToDisplayUnit a,
+   Type.GetDynamicType a,
+   DV.Walker sigVec,
+   DV.Storage sigVec (SignalFlow.TimeStep a),
+   DV.Storage sigVec a,
+   DV.Storage sigVec (Interp.Val a),
+   DV.Singleton sigVec,
+   DV.Length sigVec,
+   DV.FromList sigVec, 
+   DV.Storage sigVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
+   DV.Storage sigVec (ValueState.Map (Interp.Val a))) =>
   Caller ->
   CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
   OptiCtrl ->
@@ -423,22 +438,25 @@ optPerState ::
 optPerState caller srchGrid ctrl opt = 
   let newCaller = caller |> nc "optPerState"
   in (plotAction (plotOptimality ctrl)
-     (SweepPlot.plotDemandSweepValue newCaller  "EtaBasedOptimalityValue" srchGrid (ActFlowOpt.getOptEtaVal . snd) CubeGrid.All) 
+     (SweepPlot.plotDemandSweepValue newCaller  "EtaBasedOptimalityValue" srchGrid (FlowOpt.getOptEtaVal . snd) CubeGrid.All) 
      (Process.accessObjectiveFunctionValues opt)) ++
 
      (plotAction (plotOptEtaPerState ctrl) 
-     (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Eta-Objective Per State" (ActFlowOpt.getOptEtaVal . snd . snd)) 
+     (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Eta-Objective Per State" (FlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt))  ++  
     
      (plotAction (plotEtaOptPerState ctrl)
-      (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Eta Per State" (ActFlowOpt.getOptEtaVal . snd . snd)) 
+      (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Eta Per State" (FlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt)) ++
                                
      (plotAction (plotOptIndexPerState ctrl)
       (SweepPlot.plotOptimalOptimalityValuePerState newCaller "Optimal Index Per State"
       (\(CubeGrid.LinIdx idx,_) -> Interp.Inter $ Arith.fromInteger $ fromIntegral idx)) 
-     (Process.accessOptimalChoicePerState opt))
+     (Process.accessOptimalChoicePerState opt)) ++ 
      
+     (plotAction (plotOptimalSignalPerState ctrl)
+      (OptSignalPlot.plotOptimalSignals "Optimal Signals per State" . OptSignalAccess.optimalityPerStateSignalToSignalMap FlowOpt.getEtaVal)
+     (Process.accessOptimalSignalsPerState opt))
 
 
 
