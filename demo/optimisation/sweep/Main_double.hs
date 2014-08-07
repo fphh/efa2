@@ -284,7 +284,7 @@ etaLoopParams =
   {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 4, 
    Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
    Loop.accGlobalLifeCycleMap = FlowOpt.GlobalLifeCycleMap $ 
-     Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 1.0), FlowOpt.UsageEfficiency (Interp.Inter 1.0)))]                                              
+     Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 0.5), FlowOpt.UsageEfficiency (Interp.Inter 0.5)))]                                              
 }
   
 balanceLoopParams =  
