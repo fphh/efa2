@@ -60,11 +60,11 @@ updateOneStorageLifeCycleEfficiencies ::
   StateQty.Graph node (Result.Result ((D.Data D.Nil (a)))) 
                       (Result.Result ((D.Data D.Nil (a)))) ->
   FlowOpt.LifeCycleMap node a ->  
-  FlowOpt.LifeCycleMap node a
+  (a,FlowOpt.LifeCycleMap node a)
 
-updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleMap sfg (FlowOpt.LifeCycleMap oldMap) = 
+updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleMap sfg (FlowOpt.LifeCycleMap oldMap) = (etaSysSfg,
   FlowOpt.LifeCycleMap $ Map.union (Map.mapKeys (\(Idx.State state) -> Idx.AbsoluteState $ fromIntegral state) $ 
-                                    Map.mapWithKey f  $ StateQty.states absSfg) oldMap 
+                                    Map.mapWithKey f  $ StateQty.states absSfg) oldMap) 
   where
     newCaller = caller |> nc "updateOneStorageLifeCycleEfficiencies"
     absSfg = ActUt.absoluteStateFlowGraph topo sfg

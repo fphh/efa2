@@ -120,6 +120,7 @@ data Node =
    | LocalRest
    deriving (Eq, Ord, Enum, Show)
 
+
 storage, coal, gas, transformer, local, rest :: Name
 storage     = Name "storage"
 coal        = Name "coal"
@@ -360,10 +361,10 @@ main = do
                   TopoIdx.Eta (TopoIdx.Position Network LocalNetwork)]
                   --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]                      
    
-  concurrentlyMany_ $ 
+--  concurrentlyMany_ $ 
 --    OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
 --     ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
-      OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
+--      OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
 --    OP.optimalOperation opCtrl optimalOperation
 --     ++ OP.simulation simCtrl simEfa
   
@@ -386,7 +387,7 @@ main = do
 --  print $ demandCycle    
 --  print $ Process.accessOptimalControlSignals $ Process.accOptOperation $ Loop.getLastResult loop 
 --  print $ EFA.accessSeqFlowRecord $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop
-  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
+--  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
  
   

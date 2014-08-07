@@ -7,7 +7,8 @@ module EFA.Action.Optimisation.Loop where
 import qualified EFA.Action.Flow.Balance as Balance
 import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
---import qualified EFA.Data.Interpolation as Interp
+import qualified EFA.Data.Interpolation as Interp
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 import Debug.Trace (trace)
 import qualified EFA.Equation.Arithmetic as Arith
@@ -16,9 +17,11 @@ import qualified EFA.Utility.List as UtList
 
 
 --import qualified EFA.Report.FormatValue as FormatValue
---import qualified EFA.Report.Format as Format
+import qualified EFA.Report.Format as Format
 
 import qualified Data.Map as Map
+import qualified Data.List as List
+
 --import Text.Printf (printf, PrintfArg) --,IsChar)
 import EFA.Utility(Caller,
                    --merror,
@@ -40,40 +43,94 @@ incrementEtaCounter (EtaCounter cnt) = EtaCounter $ cnt+1
 class Display a where
   disp :: a -> String
 
-instance (Show node, Show a) =>
-  Display (Map.Map node a) where
-  disp m = show $ Map.toList m 
+instance Display Int where
+  disp =  show
 
+instance Display Double where
+  disp =  Format.realExp      
+
+instance (Show a,Display a) => Display (Interp.Val a) where
+    disp (Interp.Inter x) =  disp x
+    disp (Interp.Extra x) =  disp x
+    disp x =  show x
+        
+instance (Show a,Display a) => Display (Maybe a) where
+    disp (Just x) =  disp x
+    disp (Nothing ) =  "Nothing"
+
+instance (Show a, Arith.Constant a, Display a) => Display (Balance.SocDrive a) where
+  disp x = disp $ Balance.getSocDrive x
+
+instance (Display a) => Display (FlowOpt.GenerationEfficiency a) where
+  disp (FlowOpt.GenerationEfficiency x) = "Eta-Gen: " ++ disp x 
+
+instance(Display a)=> Display (FlowOpt.UsageEfficiency a) where
+  disp (FlowOpt.UsageEfficiency x) = "Eta-Use: " ++ disp x 
+
+  {-
 instance  (Show node, Show a) =>
   Display (Balance.ForcingMap Balance.Absolute (Map.Map node (Balance.SocDrive a))) where
   disp (Balance.ForcingMap m) = "Fo: " ++ disp m
+-}
 
-instance   (Show node, Show a) => 
+instance (Display a,Display b) => Display (a,b) where
+  disp (x,y) = "(" ++ disp x ++"," ++ disp y ++ ")"
+{-
+instance Display (Maybe (Balance.SocDrive (Interp.Val Double), Interp.Val Double)) where
+  disp (Just (x,y)) = "(" ++ disp x ++"," ++ disp y ++ ")"
+  disp Nothing = "Nothing"
+-}
+instance (Show a, Show node, Display a) => Display [(node,a)] where
+  disp xs = List.intercalate ", " $ map f xs   
+    where
+      f (n,x) = "(" ++ show n ++ "," ++ disp x ++ ")"
+
+instance (Show node, Show a,  Display a) => Display (Map.Map node a) where
+  disp m = disp $ Map.toList m 
+
+instance  (Show node, Show a, Arith.Constant a,  Display a) =>
+  Display (Balance.ForcingMap Balance.Absolute (Map.Map node (Balance.SocDrive a))) where
+  disp (Balance.ForcingMap m) = "Fo: " ++ disp m
+
+instance   (Show node, Show a, Arith.Constant a,  Display a) => 
   Display (Balance.ForcingMap Balance.Step (Map.Map node (Balance.SocDrive a))) where
   disp (Balance.ForcingMap m) = "St: " ++ disp m
 
-instance   (Show node, Show a) => 
+instance   (Show node, Show a,  Display a) => 
   Display (Balance.Balance node a) where
   disp (Balance.Balance m) = "Bal: " ++ disp m
 
-instance (Show a) => Display (Balance.BalanceCounter a) where
+instance (Show a, Display a, Display Int) => Display (Balance.BalanceCounter a) where
   disp (Balance.BalanceCounter m) = "Cnt: " ++ disp m
+{-
+instance (Show a,Display a) => Display (a, a) where
+  disp  (x, y) = show x ++ " " ++ disp y
 
-instance Show a => Display (a, a) where
-  disp  (x, y) = show x ++ " " ++ show y
 
 instance (Show a, Arith.Constant a) => Display (Balance.SocDrive a) where
   disp x = show $ Balance.getSocDrive x 
 
-instance (Show a,Arith.Constant a) => Display (Maybe (Balance.SocDrive a, a)) where
+instance (Show a,Arith.Constant a,Display a) => Display (a, b) where
   disp  (Just (x, y)) = "Fo: " ++ disp x ++ "Bal: " ++ show y
   disp Nothing = "Nothing"
+-}
 
 instance 
   (Show a, 
    Display (Maybe (Balance.SocDrive a, a), Maybe (Balance.SocDrive a, a))) => 
   Display (Balance.BestForcingPair a) where
   disp (Balance.BestForcingPair x) = "BP: " ++ disp x
+
+
+instance 
+  (Show node,
+   Show a,
+   Display (FlowOpt.GenerationEfficiency a),
+   Display (FlowOpt.UsageEfficiency a)) => 
+  Display (FlowOpt.LifeCycleMap node a) where
+  disp (FlowOpt.LifeCycleMap m) = "LC:" ++ (List.intercalate "\n" $ map f $ Map.toList m)
+    where f (Idx.AbsoluteState st, x) = "( AbsState: " ++ show st ++ ", " ++ disp x ++ ")"
+
 
 data EtaLoopParams node a = 
   EtaLoopParams
@@ -94,20 +151,26 @@ data BalanceLoopParams node a =
 data EtaLoopItem node a z = 
   EtaLoopItem {
     accEtaCounter :: EtaCounter, 
+    accEtaSys :: a,
     accLifeCycleMap :: FlowOpt.LifeCycleMap node a, 
     accBalLoop :: [BalanceLoopItem node a z]}
   
 instance 
-  (Display (Maybe (Balance.SocDrive a, a), Maybe (Balance.SocDrive a, a)), 
+  (Display (FlowOpt.GenerationEfficiency a),
+   Display (FlowOpt.UsageEfficiency a), 
+   Display (Maybe (Balance.SocDrive a, a), Maybe (Balance.SocDrive a, a)), Arith.Constant a,Display a,
    Show node, Show a) => Show (EtaLoopItem node a z) where  
-  show (EtaLoopItem etaCounter lifeCycleMap balLoop) = "Eta-Loop Counter: " ++ show etaCounter ++ "\n" ++
-                                                       show lifeCycleMap ++ "\n" ++ show balLoop 
+  show (EtaLoopItem etaCounter etaSys lifeCycleMap balLoop) = 
+    "Eta-Cnt: " ++ show etaCounter ++ "\n" ++
+    "Eta-Sys: " ++ disp etaSys ++ "\n" ++
+    disp lifeCycleMap ++ "\n" ++ show balLoop 
   
 instance 
-  (Display (Maybe (Balance.SocDrive a, a), Maybe (Balance.SocDrive a, a)), Show node, Show a) => 
+  (Show node, Show a, Arith.Constant a, Display a, 
+   Display (Maybe (Balance.SocDrive a, a), Maybe (Balance.SocDrive a, a))) => 
   Show (BalanceLoopItem node a z) where  
   show (BalanceLoopItem cnt node force step balance bestPair _) = 
-    disp cnt ++ " | " ++
+    show cnt ++ " | " ++
     "Node: " ++ show node ++" | " ++
     disp force ++" | " ++
     disp step ++ " | " ++
@@ -138,14 +201,14 @@ etaLoop :: (Ord node,Ord a, Show a, Show node, Arith.Constant a) =>
   (FlowOpt.LifeCycleMap node a -> Balance.Forcing node a -> z) ->
   (z -> Balance.Balance node a) ->
   FlowOpt.LifeCycleMap node a ->
-  (z -> FlowOpt.LifeCycleMap node a -> FlowOpt.LifeCycleMap node a)->
+  (z -> FlowOpt.LifeCycleMap node a -> (a,FlowOpt.LifeCycleMap node a))->
   [EtaLoopItem node a z]
 etaLoop caller storages etaParams balParams systemFunction getBalance initialLifeCycleMap updateLifeCycleMap = 
    UtList.takeUntil check $ 
-   go (EtaLoopItem (EtaCounter 0) initialLifeCycleMap [BalanceLoopItem initialCount initialSto initialForcing 
+   go (EtaLoopItem (EtaCounter 0) Arith.zero initialLifeCycleMap [BalanceLoopItem initialCount initialSto initialForcing 
                                                         initialStep initialBlance initialBestPair initialResult] )
   where
-    check (EtaLoopItem (EtaCounter count) _ _) = count > maxEtaIterations 
+    check (EtaLoopItem (EtaCounter count) _ _ _) = count > maxEtaIterations 
     (MaxEtaIterations maxEtaIterations) = accessMaxEtaIterations etaParams
     initialStep = accessInitialStep balParams
     initialForcing = accessInitialForcing balParams
@@ -155,10 +218,10 @@ etaLoop caller storages etaParams balParams systemFunction getBalance initialLif
     initialBlance = getBalance initialResult
     initialBestPair = Balance.emptyBestForcingPair
       
-    go lastItem@(EtaLoopItem lastCount lastLifeCycleMap lastBalLoop) = [lastItem] ++ go (EtaLoopItem count lifeCycleMap balLoop)
+    go lastItem@(EtaLoopItem lastCount lastEtaSys lastLifeCycleMap lastBalLoop) = [lastItem] ++ go (EtaLoopItem count etaSys lifeCycleMap balLoop)
       where
         count = incrementEtaCounter lastCount
-        lifeCycleMap = updateLifeCycleMap (accResult $ last balLoop) lastLifeCycleMap
+        (etaSys,lifeCycleMap) = updateLifeCycleMap (accResult $ last balLoop) lastLifeCycleMap
         -- TODO :: check if last is OK
         balLoop = balanceLoop (caller |> nc "etaLoop") balParams (systemFunction lastLifeCycleMap) getBalance (last lastBalLoop)
 
