@@ -87,7 +87,7 @@ sliceHRecord :: (DV.Storage vec b, DV.Slice vec, DV.Storage vec (SignalFlow.Time
   DataSequ.List (SignalFlow.HRecord key inst label vec a b)
 sliceHRecord (SignalFlow.HRecord time m) sectioning = DataSequ.fromRangeList $ map f sectioning
   where
-    f range = (range,SignalFlow.HRecord (Strict.getSlice range time) 
+    f range= (range,SignalFlow.HRecord (Strict.getSlice range time) 
                      (Map.map (SignalFlow.getDataSlice range) m))
 
 

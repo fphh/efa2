@@ -26,6 +26,8 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
 
+import qualified Debug.Trace as Trace
+
 import qualified EFA.Utility.Trace as UtTrace 
 
 import EFA.Utility(Caller,
@@ -85,7 +87,7 @@ updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleMap sfg 
 -- | This Approach calculates generation or use efficiency in a way system efficiency for sfg and the respective state are the same   
 -- TODO: extend to several storages or check for amount of storages
 etaSysState_Eq_etaSysSfg ::
-  (Show node,
+  (Show node, Show a,
    Arith.Constant a,
    Node.C node) =>
   Caller ->
@@ -129,9 +131,13 @@ etaSysState_Eq_etaSysSfg caller absSfg etaSysSfg state sto (oldEtaGen,oldEtaUse)
     etaGen eSto = FlowOpt.GenerationEfficiency $ eSto  Arith.~/ (totalSinkEnergy  Arith.~/ etaSysSfg  Arith.~- totalSourceEnergy)
     err2 = merror caller modul "etaSysState_Eq_etaSysSfg" "no Sums found"
     err4 = merror caller modul "etaSysState_Eq_etaSysSfg" "invalid flow"
-
     
-    in case Maybe.fromMaybe err2 $ Maybe.fromMaybe err3 $ Map.lookup sto storages of
+    traceStr = " State: " ++ show state ++ 
+      " Sinks: " ++ show totalSinkEnergy  ++ 
+      " Sources: " ++ show totalSourceEnergy ++ 
+      " Sto: " ++ (show $ Map.lookup sto storages)
+    
+    in Trace.trace traceStr $ case Maybe.fromMaybe err2 $ Maybe.fromMaybe err3 $ Map.lookup sto storages of
              TopoQty.Sums Nothing (Just sumOut) -> (etaGen sumOut , oldEtaUse)
              TopoQty.Sums (Just sumIn) Nothing -> (oldEtaGen, etaUse sumIn )
              TopoQty.Sums Nothing Nothing -> (oldEtaGen,oldEtaUse)     
@@ -189,7 +195,9 @@ calculateEtaSys caller globalLifeCycleMap sfg = UtTrace.simTrace "calculateEtaSy
                             then acc Arith.~- (x Arith.~/ etaGen) 
                             else acc) Arith.zero
                                 
-       err2 n =  merror caller modul "calculateEtaSys" $ "node not found in globalLifeCycleMap: " ++ show n      
+       err2 n =  merror caller modul "calculateEtaSys" $ "node not found in globalLifeCycleMap: " ++ show n
+       
+
 
    in ((sumRes sinks) Arith.~+ (sumCharge balance))   
       Arith.~/ 

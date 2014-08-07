@@ -281,7 +281,7 @@ initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))
 
 etaLoopParams = 
   Loop.EtaLoopParams
-  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 4, 
+  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 1, 
    Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
    Loop.accGlobalLifeCycleMap = FlowOpt.GlobalLifeCycleMap $ 
      Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 0.5), FlowOpt.UsageEfficiency (Interp.Inter 0.5)))]                                              
@@ -361,12 +361,12 @@ main = do
                   TopoIdx.Eta (TopoIdx.Position Network LocalNetwork)]
                   --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]                      
    
---  concurrentlyMany_ $ 
+  concurrentlyMany_ $ 
 --    OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
 --     ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
 --      OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
 --    OP.optimalOperation opCtrl optimalOperation
---     ++ OP.simulation simCtrl simEfa
+     OP.simulation simCtrl simEfa
   
 --  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
@@ -390,139 +390,6 @@ main = do
 --  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
  
-  
-  
---  print rec
---  let flow00= flip CubeMap.lookupLinUnsafe (CubeGrid.LinIdx 0) $ Process.accessSweepFlow sweep
---  print $ FlowTopoCheck.getFlowStatus  (nc "Main") flow00 
---  print $ Graph.edges $ TopoQty.topology flow00
---  const Draw.xterm "simulationGraphsSequence"
---    $ Draw.bgcolour DarkSeaGreen2
---    $ Draw.title "Sequence Flow Graph from Simulation"
---    $ Draw.flowSection Draw.optionsDefault flow00
-   
---  print $ CubeMap.lookUp (nc "Main") (ND.fromList (nc "Main") $ map Strict.Idx [3,7]) $ Process.accessSweepEndNodePowers sweep
---  print $ CubeMap.lookUp (nc "Main") (ND.fromList (nc "Main") $ map Strict.Idx [3,7]) $ Process.accessSweepOptimality evalSweep
-  
-  
-{-  let Just flow_00 = CubeMap.lookupMaybe (ND.Data $ map Strict.Idx [0,0]) sweepCube
-  let powers = CubeMap.map (\ flow -> CubeSolve.getPowers searchGrid flow) sweepCube
-      
-  -- TODO :: Same as Control Signals ?     
-  let powerResult = CubeSweep.getDemandSweepPowers (condenseResult) sweepCube :: Collection.Collection (TopoIdx.Position Node) (Result.Result (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double (Interp.Val Double)))    
-      
-      condenseResult (Result.Determined (CubeMap.Data x)) = Result.Determined (DV.maximum x)
-      condenseResult Result.Undetermined = Result.Undetermined
-
-      powerResult2 = Collection.getDetermined powerResult :: Collection.Collection (TopoIdx.Position Node) (CubeMap.Cube (Sweep.Demand Base) ND.Dim2 (TopoIdx.Position Node) [] Double (Interp.Val Double))
-  
-  let p_CoalDemand = CubeMap.map (\collection -> flip CubeMap.lookupLinUnsafe (Grid.LinIdx 0) $
-                                  Collection.lookup (nc "main") (TopoIdx.ppos Coal Network) collection) powers
-  let status = CubeSweep.getFlowStatus (nc "main") sweepCube
-  let endNodeValues = CubeSweep.getEndNodeFlows sweepCube 
-  let optimalityMeasure =  CubeSweep.calculateOptimalityMeasure (nc "main") lifeCycleMap endNodeValues status
-    
-  let objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") balanceForcingMap endNodeValues optimalityMeasure
-      
-  let optimisationResultPerState = CubeSweep.findMaximumEtaPerState  (nc "main") objectiveFunctionValues
-  
---  let etaSys = FlowTopoOpt.getEtaValues (nc "main") flow_00 
-  let absState = FlowTopoCheck.getFlowStatus (nc "Main") flow_00
-      
-  let supportSignal = OptSignal.getSupportPoints (nc "Main") demandGrid demandCycle 
-
-  let supportSignalLinIdx = SignalFlow.map (Grid.getSupportingPointLinearIndices (nc "main")  demandGrid) supportSignal
-  let supportSignalObjFuncValues =  SignalFlow.map (CubeMap.lookupSupportingPoints (nc "main") objectiveFunctionValues) supportSignal
---  let supportPointOpt = CubeSweep.getOptimalSuportPoints supportSignalObjFuncValues
-  let optimalStateSignals = OptSignal.optimalStateSignals (nc "main") optimisationResultPerState supportSignal demandCycle
-  let optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta (nc "main") OptSignal.StateForcingOff optimalStateSignals
-      
-  let optimalFlowCube = CubeSweep.unresultOptimalFlowPerStateCube (nc "main") $ 
-                        CubeSweep.getOptimalFlowPerStateCube (nc "main") optimisationResultPerState sweepCube
-      
-  let optimalControlSignalsPerState = OptSignal.interpolateControlSignalsPerState (nc "main") Interp.Linear 
-                                       optimalFlowCube supportSignal demandCycle controlVars 
-                                       
-  let optimalStoragePowersPerState = OptSignal.interpolateStoragePowersPerState (nc "main") Interp.Linear 
-                              optimalFlowCube supportSignal demandCycle storageList                                   
-                              
-  let optimalControlSignals = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
-  let optimalStorageSignals = OptSignal.generateOptimalStorageSignals optimalStateSignal optimalStoragePowersPerState
-      
-  let balance = OptSignal.getBalance optimalStorageSignals 
-        
---  print given
---  print sweepCube    
---  print absState    
---  print lifeCycleMap
---  print etaValues
-  print optimisationResultPerState
-  print "--supportSignal--"
-  print supportSignal
-  print "--supportSignalLinIdx--"
-  print supportSignalLinIdx
-  print "--supportSignalObjFuncValues--"
-  print supportSignalObjFuncValues
-  print "" 
-  print "--optimalStateSignals--"
-  print optimalStateSignals
-  
-  print "--optimalStateSignal--"
-  print optimalStateSignal
-  
-  print "optimalControlSignalsPerState"
-  print optimalControlSignalsPerState
-  
-  print "storagePowersPerState"
-  print optimalStoragePowersPerState
-  
-  print "optimalControlSignals"
-  print optimalControlSignals
-  
-  print "optimalStorageSignals"
-  print optimalStorageSignals
-  
-  print "Balance"
-  print balance
-  
-  
---  print supportPointOpt
-  
-  const Draw.xterm "simulationGraphsSequence"
-    $ Draw.bgcolour DarkSeaGreen2
-    $ Draw.title "Sequence Flow Graph from Simulation"
-    $ Draw.flowSection Draw.optionsDefault flow_00
-    
-   
-  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "P_Coal") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") 
-    (Just "Test") p_CoalDemand
-    
-  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Result") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") 
-    (Just "Power") powerResult2
-
---  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Result") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") 
---    (Just "EtaSys") etaResult
-{-
-  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Hallo") PlotD3.plotInfo3lineTitles $ PlotD3.toPlotData (nc "plot") (Just "Test") p_lowVoltage
-  
-  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") demand
-
---  PlotD3.eachIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") demand
- 
-  PlotD3.allInOneIO DefaultTerm.cons (PlotD3.labledFrame "Collection") PlotD3.plotInfo3lineTitles $ PlotCollection.toD3PlotData (nc "plot") (Just "Collection") powers
--}
 
 
-[Inter 1.5999999999999945e-2,Inter 0.7720000000000002]}),(Position LocalNetwork Network,Data {getVector = [Inter 0.7840000000000003,Inter 0.1279999999999999]}),(Position LocalNetwork LocalRest,Data {getVector = [Inter 0.8000000000000002,Inter 0.9000000000000001]}),(Position Rest Network,Data {getVector = [Inter 0.4,Inter 0.5]}),(Position LocalRest LocalNetwork,Data {getVector = [Inter 0.8,Inter 0.9]})],
-Section (Section 11) (Range (Idx {getInt = 16}) (Idx {getInt = 19})) Flow.HRecord Axis {getLabel = "Time", getType = T, getVec = [TimeStep {getMidTime = 16.0, getTimeStep = 1.0},TimeStep {getMidTime = 17.0, getTimeStep = 1.0},TimeStep {getMidTime = 18.0, getTimeStep = 1.0}]} fromList [(Position Coal Network,Data {getVector = [Inter 1.1843940497236904,Inter 0.46345008865042836,Inter 2.3943072093568296]}),(Position Gas LocalNetwork,Data {getVector = [Inter 1.1440426793123895,Inter 0.5090311986863711,Inter 1.2244897959183676]}),(Position Water Network,Data {getVector = [Inter 0.8174528793085494,Inter 0.8312891796129735,Inter (-3.454411764705873e-2)]}),(Position Network Coal,Data {getVector = [Inter 5.769024545929302e-2,Inter 2.149567949725084e-2,Inter 0.12734468664850115]}),(Position Network Water,Data {getVector = [Inter 0.628,Inter 0.7319999999999999,Inter (-0.1739999999999998)]}),(Position Network LocalNetwork,Data {getVector = [Inter 0.18569024545929308,Inter 0.35349567949725064,Inter (-0.44665531335149866)]}),(Position Network Rest,Data {getVector = [Inter 0.5,Inter 0.4,Inter 0.4]}),(Position LocalNetwork Gas,Data {getVector = [Inter 0.7720000000000002,Inter 0.248,Inter 0.81]}),(Position LocalNetwork Network,Data {getVector = [Inter 0.1279999999999999,Inter 0.252,Inter (-0.5800000000000001)]}),(Position LocalNetwork LocalRest,Data {getVector = [Inter 0.9000000000000001,Inter 0.5,Inter 0.23]}),(Position Rest Network,Data {getVector = [Inter 0.5,Inter 0.4,Inter 0.4]}),(Position LocalRest LocalNetwork,Data {getVector = [Inter 0.9,Inter 0.5,Inter 0.23]})],
-Section (Section 12) (Range (Idx {getInt = 18}) (Idx {getInt = 20})) Flow.HRecord Axis {getLabel = "Time", getType = T, getVec = [TimeStep {getMidTime = 18.0, getTimeStep = 1.0},TimeStep {getMidTime = 19.0, getTimeStep = 1.0}]} fromList [(Position Coal Network,Data {getVector = [Inter 2.3943072093568296,Inter 1.7561517667297062]}),(Position Gas LocalNetwork,Data {getVector = [Inter 1.2244897959183676,Inter 1.2244897959183676]}),(Position Water Network,Data {getVector = [Inter (-3.454411764705873e-2),Inter 0.4141414141414141]}),(Position Network Coal,Data {getVector = [Inter 0.12734468664850115,Inter 8.908401084010838e-2]}),(Position Network Water,Data {getVector = [Inter (-0.1739999999999998),Inter 8.2e-2]}),(Position Network LocalNetwork,Data {getVector = [Inter (-0.44665531335149866),Inter (-0.4289159891598916)]}),(Position Network Rest,Data {getVector = [Inter 0.4,Inter 0.6]}),(Position LocalNetwork Gas,Data {getVector = [Inter 0.81,Inter 0.81]}),(Position LocalNetwork Network,Data {getVector = [Inter (-0.5800000000000001),Inter (-0.56)]}),(Position LocalNetwork LocalRest,Data {getVector = [Inter 0.23,Inter 0.25]}),(Position Rest Network,Data {getVector = [Inter 0.4,Inter 0.6]}),(Position LocalRest LocalNetwork,Data {getVector = [Inter 0.23,Inter 0.25]})],
-
-Section (Section 13) (Range (Idx {getInt = 19}) (Idx {getInt = 22})) Flow.HRecord Axis {getLabel = "Time", getType = T, getVec = [TimeStep {getMidTime = 19.0, getTimeStep = 1.0},TimeStep {getMidTime = 20.0, getTimeStep = 1.0},TimeStep {getMidTime = 21.0, getTimeStep = 1.0}]} fromList [(Position Coal Network,Data {getVector = [Inter 1.7561517667297062,Inter 1.0431062040475076,Inter 3.212427979747801]}),(Position Gas LocalNetwork,Data {getVector = [Inter 1.2244897959183676,Inter 1.070701192900786,Inter 1.2201751736635458]}),(Position Water Network,Data {getVector = [Inter 0.4141414141414141,Inter 0.1111111111111111,Inter (-0.11482491389207791)]}),(Position Network Coal,Data {getVector = [Inter 8.908401084010838e-2,Inter 5.031365313653136e-2,Inter 0.18218231740801744]}),(Position Network Water,Data {getVector = [Inter 8.2e-2,Inter 1.0e-2,Inter (-0.2539999999999997)]}),(Position Network LocalNetwork,Data {getVector = [Inter (-0.4289159891598916),Inter (-0.33968634686346866),Inter (-0.4718176825919823)]}),(Position Network Rest,Data {getVector = [Inter 0.6,Inter 0.4,Inter 0.4]}),(Position LocalNetwork Gas,Data {getVector = [Inter 0.81,Inter 0.7360000000000001,Inter 0.8079999999999999]}),(Position LocalNetwork Network,Data {getVector = [Inter (-0.56),Inter (-0.45600000000000007),Inter (-0.6079999999999999)]}),(Position LocalNetwork LocalRest,Data {getVector = [Inter 0.25,Inter 0.28,Inter 0.2]}),(Position Rest Network,Data {getVector = [Inter 0.6,Inter 0.4,Inter 0.4]}),(Position LocalRest LocalNetwork,Data {getVector = [Inter 0.25,Inter 0.28,Inter 0.2]})],
-
-Section (Section 14) (Range (Idx {getInt = 21}) (Idx {getInt = 23})) Flow.HRecord Axis {getLabel = "Time", getType = T, getVec = [TimeStep {getMidTime = 21.0, getTimeStep = 1.0},TimeStep {getMidTime = 22.0, getTimeStep = 1.0}]} fromList [(Position Coal Network,Data {getVector = [Inter 3.212427979747801,Inter 0.9125495693465687]}),(Position Gas LocalNetwork,Data {getVector = [Inter 1.2201751736635458,Inter 1.1070327411540157]}),(Position Water Network,Data {getVector = [Inter (-0.11482491389207791),Inter 0.1111111111111111]}),(Position Network Coal,Data {getVector = [Inter 0.18218231740801744,Inter 4.362387744321184e-2]}),(Position Network Water,Data {getVector = [Inter (-0.2539999999999997),Inter 1.0e-2]}),(Position Network LocalNetwork,Data {getVector = [Inter (-0.4718176825919823),Inter (-0.3463761225567882)]}),(Position Network Rest,Data {getVector = [Inter 0.4,Inter 0.4]}),(Position LocalNetwork Gas,Data {getVector = [Inter 0.8079999999999999,Inter 0.754]}),(Position LocalNetwork Network,Data {getVector = [Inter (-0.6079999999999999),Inter (-0.464)]}),(Position LocalNetwork LocalRest,Data {getVector = [Inter 0.2,Inter 0.29]}),(Position Rest Network,Data {getVector = [Inter 0.4,Inter 0.4]}),(Position LocalRest LocalNetwork,Data {getVector = [Inter 0.2,Inter 0.29]})],
-
-Section (Section 15) (Range (Idx {getInt = 22}) (Idx {getInt = 24})) Flow.HRecord Axis {getLabel = "Time", getType = T, getVec = [TimeStep {getMidTime = 22.0, getTimeStep = 1.0},TimeStep {getMidTime = 23.0, getTimeStep = 1.0}]} fromList [(Position Coal Network,Data {getVector = [Inter 0.9125495693465687,Inter 3.212427979747801]}),(Position Gas LocalNetwork,Data {getVector = [Inter 1.1070327411540157,Inter 1.2201751736635458]}),(Position Water Network,Data {getVector = [Inter 0.1111111111111111,Inter (-0.11482491389207791)]}),(Position Network Coal,Data {getVector = [Inter 4.362387744321184e-2,Inter 0.18218231740801744]}),(Position Network Water,Data {getVector = [Inter 1.0e-2,Inter (-0.2539999999999997)]}),(Position Network LocalNetwork,Data {getVector = [Inter (-0.3463761225567882),Inter (-0.4718176825919823)]}),(Position Network Rest,Data {getVector = [Inter 0.4,Inter 0.4]}),(Position LocalNetwork Gas,Data {getVector = [Inter 0.754,Inter 0.8079999999999999]}),(Position LocalNetwork Network,Data {getVector = [Inter (-0.464),Inter (-0.6079999999999999)]}),(Position LocalNetwork LocalRest,Data {getVector = [Inter 0.29,Inter 0.2]}),(Position Rest Network,Data {getVector = [Inter 0.4,Inter 0.4]}),(Position LocalRest LocalNetwork,Data {getVector = [Inter 0.29,Inter 0.2]})],
-
-Section (Section 16) (Range (Idx {getInt = 23}) (Idx {getInt = 23})) Flow.HRecord Axis {getLabel = "Time", getType = T, getVec = []} fromList [(Position Coal Network,Data {getVector = []}),(Position Gas LocalNetwork,Data {getVector = []}),(Position Water Network,Data {getVector = []}),(Position Network Coal,Data {getVector = []}),(Position Network Water,Data {getVector = []}),(Position Network LocalNetwork,Data {getVector = []}),(Position Network Rest,Data {getVector = []}),(Position LocalNetwork Gas,Data {getVector = []}),(Position LocalNetwork Network,Data {getVector = []}),(Position LocalNetwork LocalRest,Data {getVector = []}),(Position Rest Network,Data {getVector = []}),(Position LocalRest LocalNetwork,Data {getVector = []})]]
-
--}
+  

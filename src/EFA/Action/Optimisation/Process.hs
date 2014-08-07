@@ -576,9 +576,8 @@ simulateAndAnalyse caller system efaParams systemData demandVars optOperation de
     given = OptSignal.makeGivenRecord (caller |> nc "simulateAndAnalyse") 
             (OptSignal.convertToDemandCycleMap demandCycle demandVars) optimalControlSignals
     sim = Simulation.simulation caller topology etaFunctions given
-    sequenceFlowRecord = UtTrace.simTrace "sequenceFlowRecord" $ 
-                         DataChop.chopHRecord (caller |> nc "simulateAndAnalyse") (Simulation.accessPowerRecord sim)
-    sequenceFlowRecordOld = DataChop.convertToOld sequenceFlowRecord
+    sequenceFlowRecord = DataChop.chopHRecord (caller |> nc "simulateAndAnalyse") (Simulation.accessPowerRecord sim)
+    sequenceFlowRecordOld = UtTrace.simTrace "SfRecord" $ DataChop.convertToOld sequenceFlowRecord
     efa = EFA.energyFlowAnalysisOld topology efaParams sequenceFlowRecordOld
   
 
