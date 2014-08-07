@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module EFA.Action.Flow.StateFlow.Optimality where
 
 import qualified EFA.Graph as Graph
@@ -51,7 +53,8 @@ data LifeCycleMethod =
 
 -- | Function works only for systems with one storage 
 updateOneStorageLifeCycleEfficiencies :: 
-  (Ord a, Arith.Constant a, Node.C node, Show node, Show a) =>
+  (Ord a, Arith.Constant a, Node.C node, Show node, Show a, 
+   Show (TopoQty.Flow (Result.Result (D.Data D.Nil a)))) =>
   Caller ->
   Topo.Topology node ->
   LifeCycleMethod ->
@@ -137,14 +140,14 @@ etaSysState_Eq_etaSysSfg caller absSfg etaSysSfg state sto (oldEtaGen,oldEtaUse)
  
 calculateEtaSys ::
   (Ord node, Node.C node, Show a, Show node,
-   Arith.Constant a, 
+   Arith.Constant a, (Show (TopoQty.Flow (Result.Result (D.Data D.Nil a)))),
    Ord a) =>
   Caller -> 
   FlowOpt.GlobalLifeCycleMap node a ->
   StateQty.Graph node (Result.Result (D.Data D.Nil a)) (Result.Result (D.Data D.Nil a)) ->
   a
 calculateEtaSys caller globalLifeCycleMap sfg = UtTrace.simTrace "calculateEtaSys-Eta" $ 
-   let flowTopos = Map.map TopoQty.topology $ StateQty.states sfg
+   let flowTopos = Map.map TopoQty.topology $ StateQty.states  sfg
        nodes = Map.map Graph.nodeLabels flowTopos
 
        initBalance = map f $ Map.toList $ fmap (PartMap.init . Storage.nodes) (StateQty.storages sfg)

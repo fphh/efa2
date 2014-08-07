@@ -11,6 +11,10 @@ import qualified EFA.Data.OD.Curve as Curve
 import qualified EFA.Action.Flow.Balance as Balance
 import qualified EFA.Data.OD.Signal.Chop as DataChop
 
+import qualified EFA.Utility.Trace as UtTrace
+
+import qualified EFA.Signal.Data as Data
+
 import EFA.Utility(Caller,
                   --merror,
                   (|>),
@@ -550,6 +554,8 @@ simulateAndAnalyse ::
    SV.Storage sigVec a,
    SV.Singleton sigVec,
    SV.Convert [] sigVec,
+   Show (sigVec (SignalFlow.TimeStep a)),
+   Show (sigVec (Interp.Val a)),
    SV.Convert sigVec [],
    DV.Storage sigVec (ND.Data dim a),
    DV.Storage sigVec (SignalFlow.TimeStep a),
@@ -570,7 +576,8 @@ simulateAndAnalyse caller system efaParams systemData demandVars optOperation de
     given = OptSignal.makeGivenRecord (caller |> nc "simulateAndAnalyse") 
             (OptSignal.convertToDemandCycleMap demandCycle demandVars) optimalControlSignals
     sim = Simulation.simulation caller topology etaFunctions given
-    sequenceFlowRecord = DataChop.chopHRecord (caller |> nc "simulateAndAnalyse") (Simulation.accessPowerRecord sim)
+    sequenceFlowRecord = UtTrace.simTrace "sequenceFlowRecord" $ 
+                         DataChop.chopHRecord (caller |> nc "simulateAndAnalyse") (Simulation.accessPowerRecord sim)
     sequenceFlowRecordOld = DataChop.convertToOld sequenceFlowRecord
     efa = EFA.energyFlowAnalysisOld topology efaParams sequenceFlowRecordOld
   
@@ -721,7 +728,12 @@ loop ::
    DV.Storage sigVec (SignalFlow.TimeStep a,Maybe (Interp.Val a)),
    DV.Storage sigVec (SignalFlow.TimeStep a),
    DV.Storage sigVec [SignalFlow.TimeStep a],   
-   DV.FromList sigVec) =>
+   DV.FromList sigVec, 
+   Show (sigVec (SignalFlow.TimeStep a)),
+   Show (sigVec (Interp.Val a)),
+   Show (TopoQty.Flow
+         (Result.Result
+          (Data.Data Data.Nil (Interp.Val a))))) =>
   Caller ->
   System node ->
   SystemData inst node etaVec a ->
@@ -895,6 +907,8 @@ systemFunction ::
    DV.Len (sigVec (Interp.Val a)),
    DV.Storage sigVec [SignalFlow.TimeStep a],
    DV.Storage sigVec (SignalFlow.TimeStep a), 
+   Show (sigVec (Interp.Val a)),
+   Show (sigVec (SignalFlow.TimeStep a)),
    DV.Storage sigVec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
    DV.FromList sigVec) =>
   Caller ->

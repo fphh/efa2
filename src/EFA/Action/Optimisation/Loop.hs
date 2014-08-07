@@ -205,40 +205,45 @@ etaLoop :: (Ord node,Ord a, Show a, Show node, Arith.Constant a) =>
   [EtaLoopItem node a z]
 etaLoop caller storages etaParams balParams systemFunction getBalance initialLifeCycleMap updateLifeCycleMap = 
    UtList.takeUntil check $ 
-   go (EtaLoopItem (EtaCounter 0) Arith.zero initialLifeCycleMap [BalanceLoopItem initialCount initialSto initialForcing 
-                                                        initialStep initialBlance initialBestPair initialResult] )
+   go (EtaCounter (-1)) initialLifeCycleMap initialForcing
   where
     check (EtaLoopItem (EtaCounter count) _ _ _) = count > maxEtaIterations 
     (MaxEtaIterations maxEtaIterations) = accessMaxEtaIterations etaParams
-    initialStep = accessInitialStep balParams
     initialForcing = accessInitialForcing balParams
-    initialSto = accessInitialSto balParams
-    initialCount = Balance.initialiseBalanceCounter storages
-    initialResult = systemFunction initialLifeCycleMap initialForcing
-    initialBlance = getBalance initialResult
-    initialBestPair = Balance.emptyBestForcingPair
       
-    go lastItem@(EtaLoopItem lastCount lastEtaSys lastLifeCycleMap lastBalLoop) = [lastItem] ++ go (EtaLoopItem count etaSys lifeCycleMap balLoop)
+    go lastCount lifeCycleMap lastLatestForcing = [EtaLoopItem count etaSys lifeCycleMap balLoop] ++ go count nextLifeCycleMap latestForcing 
       where
         count = incrementEtaCounter lastCount
-        (etaSys,lifeCycleMap) = updateLifeCycleMap (accResult $ last balLoop) lastLifeCycleMap
+        (etaSys,nextLifeCycleMap) = updateLifeCycleMap (accResult $ last balLoop) lifeCycleMap
         -- TODO :: check if last is OK
-        balLoop = balanceLoop (caller |> nc "etaLoop") balParams (systemFunction lastLifeCycleMap) getBalance (last lastBalLoop)
+        balLoop = balanceLoop (caller |> nc "etaLoop") storages balParams (systemFunction lifeCycleMap) 
+                  getBalance lastLatestForcing
+        latestForcing = accForcing $ last balLoop          
 
 f str = id 
 -- f str x = trace (str ++": " ++ show x) x
 
 balanceLoop :: 
   (Ord a, Ord node, Show node, Arith.Constant a,Show a) =>
-  Caller ->                               
+  Caller ->       
+  [node] ->                          
   BalanceLoopParams node a ->
   (Balance.Forcing node a -> z) ->
   (z -> Balance.Balance node a) ->
-  BalanceLoopItem node a z ->
+--  BalanceLoopItem node a z ->
+  Balance.Forcing node a ->
   [BalanceLoopItem node a z]
-balanceLoop caller balParams systemFunction getBalance lastBalItem = UtList.takeUntil check $ 
-  go $ resetBalCounter lastBalItem
+balanceLoop caller storages balParams systemFunction getBalance initialForcing = 
+  UtList.takeUntil check $ 
+  go $ resetBalCounter  (BalanceLoopItem initialCount initialSto initialForcing initialStep initialBal initialPair initialResult)
   where
+    initialPair = Balance.emptyBestForcingPair
+    initialCount = Balance.initialiseBalanceCounter storages
+    initialSto = accessInitialSto balParams
+    initialStep = accessInitialStep balParams
+    initialResult = systemFunction initialForcing
+    initialBal = getBalance initialResult
+    
     check (BalanceLoopItem cnt _ _ _ bal _ _) = 
       (Balance.checkBalance threshold bal) || 
       Balance.checkBalanceCounter cnt maxIterations

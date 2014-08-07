@@ -209,4 +209,4 @@ getSlice :: (DV.Storage vec a, DV.Slice vec) =>
   Axis inst label vec a -> 
   Axis inst label vec a
 getSlice  (Range (Idx startIdx) (Idx endIdx)) (Axis label typ vec) = 
-    Axis label typ $ DV.slice startIdx (endIdx-startIdx) vec
+    Axis label typ $ DV.slice startIdx (endIdx-startIdx+1) vec

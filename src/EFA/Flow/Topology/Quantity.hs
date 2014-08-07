@@ -330,7 +330,7 @@ data Flow v =
       flowEta,
       flowEnergyIn, flowPowerIn, flowXIn :: v
    }
-   deriving (Eq)
+   deriving (Show,Eq)
 
 data Sums v =
    Sums { sumIn, sumOut :: Maybe v }

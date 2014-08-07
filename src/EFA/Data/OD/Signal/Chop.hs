@@ -76,8 +76,8 @@ findHSections caller (SignalFlow.HRecord time m) =
   NonEmpty.toList $ NonEmpty.zipWith (Strict.Range) startIndexList stopIndexList
   where startIndexList = NonEmptySet.toAscList $ foldl1 NonEmptySet.union $ 
                          map (SignalFlow.locateSignChanges (caller |> nc "findVSections")) $ Map.elems m
-        stopIndexList = NonEmpty.snoc (DV.map (\(Strict.Idx idx)->Strict.Idx $ idx+1) $ 
-                                       NonEmpty.tail startIndexList) (Strict.Idx $ Strict.len time)
+        stopIndexList = NonEmpty.snoc (DV.map (\(Strict.Idx idx)->Strict.Idx $ idx-1) $ 
+                                       NonEmpty.tail startIndexList) (Strict.Idx $ (Strict.len time - 1))
 
 
 

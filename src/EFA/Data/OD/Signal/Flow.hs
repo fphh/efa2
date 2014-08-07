@@ -244,9 +244,9 @@ locateSignChanges caller (Data vec)  = NonEmptySet.fromList indexList
  where
     err = merror caller modul "locateSignChanges" "empty Signal"
     indexList = (\(_,_,l) -> l) $ Maybe.fromMaybe err $  DV.foldl f Nothing vec
-    f Nothing x = Just (1,Arith.sign x,NonEmpty.Cons (Strict.Idx 0) []) 
+    f Nothing x = Just (0,Arith.sign x,NonEmpty.Cons (Strict.Idx 0) []) 
     f (Just (idx,sgn,lst)) x = if sgn /= Arith.sign x 
-                         then Just (idx+1,Arith.sign x, NonEmpty.appendRight lst [Strict.Idx idx])
+                         then Just (idx+1,Arith.sign x, NonEmpty.appendRight lst [Strict.Idx $ idx+1])
                          else Just (idx+1,sgn,lst)    
 
 
@@ -365,6 +365,6 @@ getDataSlice :: (DV.Storage vec a, DV.Slice vec) =>
   Data inst vec a -> 
   Data inst vec a
 getDataSlice  (Strict.Range (Strict.Idx startIdx) (Strict.Idx endIdx)) (Data vec) = 
-    Data $ DV.slice startIdx (endIdx-startIdx) vec
+    Data $ DV.slice startIdx (endIdx-startIdx+1) vec
  
     
