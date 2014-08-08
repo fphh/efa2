@@ -30,7 +30,7 @@ data Axis inst label vec a = Axis {
   getType :: Type.Dynamic,
   getVec :: vec a} deriving (Show,Eq)
 
-newInstance :: Axis inst label vec a -> Axis inst2 label vec a
+newInstance :: Axis inst label vec a -> Axis inst1 label vec a
 newInstance (Axis label vec a) = Axis label vec a
 
 instance (Show label,Ref.ToData (vec a)) =>

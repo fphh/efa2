@@ -10,7 +10,7 @@ import qualified EFA.Graph as Graph
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Action.Flow.Balance as Balance
 import qualified EFA.Flow.Topology.Index as XIdx
-
+import qualified EFA.Utility.Trace as UtTrace
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Data.Axis.Strict as Strict
@@ -363,22 +363,32 @@ convertToDemandCycleMap sig demandVars =
   where 
     f index = SignalFlow.map (flip ND.unsafeLookup (ND.Idx index)) sig
     
-    
 makeGivenRecord :: 
   (Ord node, 
    DV.Walker sigVec,
    DV.Storage sigVec a,
-   DV.Storage sigVec (Interp.Val a)) =>
+   DV.Storage sigVec (Interp.Val a), 
+   DV.Zipper sigVec,
+   DV.Storage sigVec (sigVec a),
+   DV.Singleton sigVec,Show (sigVec a), Show node,
+   DV.FromList sigVec, 
+   Show (sigVec (SignalFlow.TimeStep a)),
+   Show (sigVec Int),
+   DV.Storage sigVec ([Maybe Idx.AbsoluteState], c),
+   DV.Storage sigVec Int) =>
   Caller ->
+  SignalFlow.Signal inst String sigVec a ([Maybe Idx.AbsoluteState],c) ->
   DemandCycleMap node inst sigVec a a ->
   OptimalControlSignals node inst sigVec a (Interp.Val a) ->
   SignalFlow.HRecord (XIdx.Position node) inst String sigVec a (Interp.Val a) 
-makeGivenRecord caller demand control = 
+makeGivenRecord caller optimalStateSignal demand control = 
   SignalFlow.HRecord time (Map.map SignalFlow.getData m)
   where 
-    (SignalFlow.Signal time _, _) = Maybe.fromMaybe err $ Map.minView demand
-    err = merror caller modul "makeGivenRecord" "empty DemandCycle"
-    demandInter = Map.map (SignalFlow.map Interp.Inter) demand 
+    (SignalFlow.Signal time _, _) = Maybe.fromMaybe err $ Map.minView control
+    err = merror caller modul "makeGivenRecord" "empty ControlSignalMap"
+    demandInter = Map.map (SignalFlow.map Interp.Inter) demandRepli 
+    demandRepli = UtTrace.simTrace "demandRepli" $ Map.map (SignalFlow.replicateSamples numSig) demand
+    numSig = UtTrace.simTrace "numSig" $  SignalFlow.map (\(states,_) -> length states) optimalStateSignal
     m = Map.union (Map.mapKeys g control)
                   (Map.mapKeys h demandInter)
     -- TODO:: Variablen in die Generierung des Simulationsgleichungssystems reinschleifen !!    
@@ -386,4 +396,4 @@ makeGivenRecord caller demand control =
     g _ = error "makeGivenRecord -- not yet supported"
     h (DemandAndControl.DemandPower (XIdx.Power x)) = x
     h _ = error "makeGivenRecord -- not yet supported"
-   
+  

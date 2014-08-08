@@ -152,7 +152,8 @@ calculateEtaSys ::
   FlowOpt.GlobalLifeCycleMap node a ->
   StateQty.Graph node (Result.Result (D.Data D.Nil a)) (Result.Result (D.Data D.Nil a)) ->
   a
-calculateEtaSys caller globalLifeCycleMap sfg = UtTrace.simTrace "calculateEtaSys-Eta" $ 
+calculateEtaSys caller globalLifeCycleMap sfg = 
+  --UtTrace.simTrace "calculateEtaSys-Eta" $ 
    let flowTopos = Map.map TopoQty.topology $ StateQty.states  sfg
        nodes = Map.map Graph.nodeLabels flowTopos
 

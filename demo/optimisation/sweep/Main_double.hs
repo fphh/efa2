@@ -230,7 +230,7 @@ searchVariation =
 
 lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
 lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0,1,18,27,28,45,54,72]) $ repeat $ 
-               Map.fromList [(Water,(FlowOpt.GenerationEfficiency (Interp.Inter 0.3), FlowOpt.UsageEfficiency (Interp.Inter 1.0)))] 
+               Map.fromList [(Water,(FlowOpt.GenerationEfficiency (Interp.Inter 0.3), FlowOpt.UsageEfficiency (Interp.Inter 0.3)))] 
 
 
 showFunctionAxis ::  Strict.Axis Base String [] Double
@@ -292,7 +292,7 @@ balanceLoopParams =
   {Loop.accessMaxIterationsPerStorage = Balance.MaxIterationsPerStorage 20, 
    Loop.accessMaxIterations = Balance.MaxIterations 20,
    Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.01) , 
-   Loop.accessInitialForcing = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0))], 
+   Loop.accessInitialForcing = balanceForcingMap, -- Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.5))], 
    Loop.accessInitialStep = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (0.001)))], 
    Loop.accessInitialSto = Water}
           
@@ -322,7 +322,7 @@ main = do
   let sweep = Process.makeSweep system systemData optiSet     
         :: Process.SweepResults Node Base ND.Dim2 ND.Dim2 [] [] Double
                         
-  let evalSweep = Process.evaluateSweep caller lifeCycleMap sweep
+{-  let evalSweep = Process.evaluateSweep caller lifeCycleMap sweep
         :: Process.SweepEvaluation Node Base ND.Dim2 ND.Dim2 [] [] Double
       
   let optPerState = Process.optimisationPerState testSet optiSet sweep evalSweep  storageList balanceForcingMap controlVars
@@ -337,7 +337,7 @@ main = do
   let (Process.OptimalOperation _ _ stoPowers balance)  = optimalOperation
 --  let (Process.OptimalOperation _ _ stoPowers balance1)  = optimalOperation1
   let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
-      
+-}      
   let loop = Process.loop (nc "Main") system systemData testSet optiSet efaParams sweep 
              lifeCycleMap storageList etaLoopParams balanceLoopParams  
              
@@ -360,14 +360,14 @@ main = do
                   --TopoIdx.Eta (TopoIdx.Position Gas LocalNetwork)] 
                   TopoIdx.Eta (TopoIdx.Position Network LocalNetwork)]
                   --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]                      
-   
+{-   
   concurrentlyMany_ $ 
---    OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
---     ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
---      OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState
---    OP.optimalOperation opCtrl optimalOperation
-     OP.simulation simCtrl simEfa
-  
+    OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
+    ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
+    ++ OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState  
+    ++ OP.optimalOperation opCtrl optimalOperation
+    ++ OP.simulation simCtrl simEfa
+-}  
 --  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
 --  print stoPowers
@@ -380,6 +380,7 @@ main = do
 --  print $ Process.accessSweepEndNodePowers sweep
 --  print $ Process.accessSweepOptimality evalSweep
   print loop
+  OP.loopsIO evalCtrl optCtrl opCtrl simCtrl optiSet loop
 --  print $  Process.accessOptimalStateSignals optPerState
 --  print $  Process.accessOptimalStateChoice optimalOperation
 --  print $ Process.accessOptimalStateChoice $ Process.accOptOperation $ Loop.getLastResult loop 
@@ -389,7 +390,8 @@ main = do
 --  print $ EFA.accessSeqFlowRecord $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop
 --  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
- 
+ {-
+ Flow.HRecord Axis {getLabel = "Time", getType = T, getVec = [TimeStep {getMidTime = 0.0, getTimeStep = 1.0},TimeStep {getMidTime = 1.0, getTimeStep = 1.0},TimeStep {getMidTime = 2.0, getTimeStep = 1.0},TimeStep {getMidTime = 3.0, getTimeStep = 1.0},TimeStep {getMidTime = 4.0, getTimeStep = 1.0},TimeStep {getMidTime = 5.0, getTimeStep = 1.0},TimeStep {getMidTime = 6.0, getTimeStep = 1.0},TimeStep {getMidTime = 7.0, getTimeStep = 1.0},TimeStep {getMidTime = 8.0, getTimeStep = 1.0},TimeStep {getMidTime = 9.0, getTimeStep = 1.0},TimeStep {getMidTime = 10.0, getTimeStep = 1.0},TimeStep {getMidTime = 11.0, getTimeStep = 1.0},TimeStep {getMidTime = 12.0, getTimeStep = 1.0},TimeStep {getMidTime = 13.0, getTimeStep = 1.0},TimeStep {getMidTime = 14.0, getTimeStep = 1.0},TimeStep {getMidTime = 15.0, getTimeStep = 1.0},TimeStep {getMidTime = 16.0, getTimeStep = 1.0},TimeStep {getMidTime = 17.0, getTimeStep = 1.0},TimeStep {getMidTime = 18.0, getTimeStep = 1.0},TimeStep {getMidTime = 19.0, getTimeStep = 1.0},TimeStep {getMidTime = 20.0, getTimeStep = 1.0},TimeStep {getMidTime = 21.0, getTimeStep = 1.0},TimeStep {getMidTime = 22.0, getTimeStep = 1.0},TimeStep {getMidTime = 23.0, getTimeStep = 1.0}]} fromList [(Position Coal Network,Data {getVector = [Inter 2.0511095386685536,Inter 1.4226499217668174,Inter 1.329356201839421,Inter 0.7790545041221236,Inter 1.4226499217668174,Inter 1.4226499217668174,Inter 1.3193703371703114,Inter 1.4226499217668174,Inter 1.7530450479045454,Inter 9.932204745805729,Inter 1.4226499217668174,Inter 2.544675394622395,Inter 1.4226499217668174,Inter 10.933795621105487,Inter 0.34827868043772553,Inter 10.933795621105487,Inter 2.1404764046074702,Inter 11.456367676304202,Invalid ["\"\\\"coal\\\"\"@-5.665531335149864e-2"],Inter 4.613461991538875,Invalid ["\"\\\"coal\\\"\"@-8.466465053763438e-2"],Invalid ["\"\\\"coal\\\"\"@-1.7880990845449633e-2"],Inter 2.721967688909635,Invalid ["\"\\\"coal\\\"\"@-3.363162878787878e-2"]]}),(Position Gas LocalNetwork,Data {getVector = [Inter 1.220175173663546,Inter 1.1440426793123892,Inter 1.2244897959183674,Inter 1.1440426793123892,Inter 1.1440426793123892,Inter 1.1859838274932617,Inter 1.1987381703470033,Inter 1.1440426793123892,Inter 1.2244897959183676,Inter 1.2244897959183674,Inter 1.1440426793123892,Inter 1.2244897959183672,Inter 1.1440426793123892,Inter 0.17316017316017274,Inter 0.8580655082269723,Inter 0.17316017316017274,Inter 1.1440426793123895,Inter 0.11904761904761907,Inter 1.2244897959183676,Inter 1.190226352870634,Inter 1.2244897959183676,Inter 1.070701192900786,Inter 1.1440426793123892,Inter 1.1070327411540157,Inter 1.1440426793123892]}),(Position Water Network,Data {getVector = [Inter 0.1111111111111111,Inter (-1.4849999999999954e-2),Inter (-1.4849999999999954e-2),Inter 0.1111111111111111,Inter (-1.4849999999999954e-2),Inter (-1.4849999999999954e-2),Inter 0.1111111111111111,Inter (-1.4849999999999954e-2),Inter 0.8013395526850855,Inter (-0.7646265560165976),Inter (-1.4849999999999954e-2),Inter (-1.5272727272727223e-2),Inter (-1.4849999999999954e-2),Inter (-0.7646265560165976),Inter 0.8168394596292805,Inter (-0.7646265560165976),Inter 0.8085418075276088,Inter (-0.7646265560165976),Inter 0.1111111111111111,Inter (-1.4849999999999954e-2),Inter 0.4141414141414141,Inter 0.1111111111111111,Inter (-1.4849999999999954e-2),Inter 0.1111111111111111,Inter (-1.4849999999999954e-2)]}),(Position Network Coal,Data {getVector = [Inter 0.1063188134687333,Inter 7.046356715606289e-2,Inter 6.541095890410947e-2,Inter 3.6905770248808985e-2,Inter 7.046356715606289e-2,Inter 7.046356715606289e-2,Inter 6.487406716417911e-2,Inter 7.046356715606289e-2,Inter 8.890640096618352e-2,Inter 1.2363701923076926,Inter 7.046356715606289e-2,Inter 0.13690640096618342,Inter 7.046356715606289e-2,Inter 2.274212625282049,Inter 1.6031474820143887e-2,Inter 2.274212625282049,Inter 0.11169024545929251,Inter 1.9563527239150507,Inter (-5.665531335149864e-2),Inter 0.2951376146788988,Inter (-8.466465053763438e-2),Inter (-1.7880990845449633e-2),Inter 0.14846802016985122,Inter (-3.363162878787878e-2)]}),(Position Network Water,Data {getVector = [Inter 1.0e-2,Inter (-0.10999999999999976),Inter (-0.10999999999999976),Inter 1.0e-2,Inter (-0.10999999999999976),Inter (-0.10999999999999976),Inter 1.0e-2,Inter (-0.10999999999999976),Inter 0.5359999999999999,Inter (-0.9099999999999999),Inter (-0.10999999999999976),Inter (-0.11199999999999975),Inter (-0.10999999999999976),Inter (-0.9100000000000001),Inter 0.624,Inter (-0.9100000000000001),Inter 0.5740000000000005,Inter (-0.9099999999999999),Inter 1.0e-2,Inter (-0.10999999999999976),Inter 8.2e-2,Inter 1.0e-2,Inter (-0.10999999999999976),Inter 1.0e-2,Inter (-0.10999999999999976)]}),(Position Network LocalNetwork,Data {getVector = [Inter (-0.3836811865312667),Inter (-0.4395364328439369),Inter (-0.4645890410958903),Inter (-0.35309422975119104),Inter (-0.4395364328439369),Inter (-0.4395364328439369),Inter (-0.3751259328358209),Inter (-0.4395364328439369),Inter (-7.509359903381649e-2),Inter (-0.4736298076923075),Inter (-0.4395364328439369),Inter (-7.509359903381634e-2),Inter (-0.4395364328439369),Inter 0.964212625282049,Inter (-0.2599685251798562),Inter 0.964212625282049,Inter 0.18569024545929308,Inter 0.6463527239150508,Inter (-0.44665531335149866),Inter (-0.4148623853211009),Inter (-0.4026646505376344),Inter (-0.40788099084544965),Inter (-0.36153197983014856),Inter (-0.4236316287878788)]}),(Position Network Rest,Data {getVector = [Inter 0.5,Inter 0.4,Inter 0.42,Inter 0.4,Inter 0.4,Inter 0.4,Inter 0.45,Inter 0.4,Inter 0.7,Inter 0.8000000000000002,Inter 0.4,Inter 0.1,Inter 0.4,Inter 0.4,Inter 0.9000000000000001,Inter 0.4,Inter 0.5,Inter 0.4,Inter 0.4,Inter 0.6,Inter 0.4,Inter 0.4,Inter 0.4,Inter 0.4]}),(Position LocalNetwork Gas,Data {getVector = [Inter 0.808,Inter 0.772,Inter 0.8099999999999999,Inter 0.772,Inter 0.772,Inter 0.792,Inter 0.798,Inter 0.772,Inter 0.81,Inter 0.8099999999999999,Inter 0.772,Inter 0.8099999999999998,Inter 0.772,Inter 1.5999999999999945e-2,Inter 0.5580000000000002,Inter 1.5999999999999945e-2,Inter 0.7720000000000002,Inter 1.0e-2,Inter 0.81,Inter 0.794,Inter 0.81,Inter 0.7360000000000001,Inter 0.772,Inter 0.754,Inter 0.772]}),(Position LocalNetwork Network,Data {getVector = [Inter (-0.508),Inter (-0.5720000000000001),Inter (-0.5999999999999999),Inter (-0.47200000000000003),Inter (-0.5720000000000001),Inter (-0.5720000000000001),Inter (-0.49800000000000005),Inter (-0.5720000000000001),Inter (-0.1100000000000001),Inter (-0.6099999999999999),Inter (-0.5720000000000001),Inter (-0.10999999999999988),Inter (-0.5720000000000001),Inter 0.7840000000000003,Inter (-0.35800000000000015),Inter 0.7840000000000003,Inter 0.1279999999999999,Inter 0.49,Inter (-0.5800000000000001),Inter (-0.544),Inter (-0.53),Inter (-0.536),Inter (-0.48200000000000004),Inter (-0.554)]}),(Position LocalNetwork LocalRest,Data {getVector = [Inter 0.3,Inter 0.2,Inter 0.21000000000000002,Inter 0.3,Inter 0.2,Inter 0.22,Inter 0.3,Inter 0.2,Inter 0.7,Inter 0.2,Inter 0.2,Inter 0.7,Inter 0.2,Inter 0.8000000000000002,Inter 0.2,Inter 0.8000000000000002,Inter 0.9000000000000001,Inter 0.5,Inter 0.23,Inter 0.25,Inter 0.28,Inter 0.2,Inter 0.29,Inter 0.2]}),(Position Rest Network,Data {getVector = [Inter 0.5,Inter 0.4,Inter 0.42,Inter 0.4,Inter 0.4,Inter 0.4,Inter 0.45,Inter 0.4,Inter 0.7,Inter 0.8,Inter 0.4,Inter 0.1,Inter 0.4,Inter 0.4,Inter 0.9,Inter 0.4,Inter 0.5,Inter 0.4,Inter 0.4,Inter 0.6,Inter 0.4,Inter 0.4,Inter 0.4,Inter 0.4]}),(Position LocalRest LocalNetwork,Data {getVector = [Inter 0.3,Inter 0.2,Inter 0.21,Inter 0.3,Inter 0.2,Inter 0.22,Inter 0.3,Inter 0.2,Inter 0.7,Inter 0.2,Inter 0.2,Inter 0.7,Inter 0.2,Inter 0.8,Inter 0.2,Inter 0.8,Inter 0.9,Inter 0.5,Inter 0.23,Inter 0.25,Inter 0.28,Inter 0.2,Inter 0.29,Inter 0.2]})]
 
 
-  
+-}

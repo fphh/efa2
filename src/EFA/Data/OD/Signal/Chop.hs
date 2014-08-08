@@ -22,7 +22,8 @@ import qualified Data.NonEmpty.Set as NonEmptySet
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 --import qualified EFA.Flow.SequenceState.Index as Idx
-
+import qualified EFA.Utility.Trace as UtTrace 
+import qualified Debug.Trace as Trace 
 
 import qualified Data.Map as Map
 
@@ -43,7 +44,12 @@ nc = genCaller modul
 type Sectioning = [Strict.Range]
 
 chopHRecord ::  
-  (Ord b,
+  (Ord a,
+   Show label,
+   Show (vec (SignalFlow.TimeStep a)),
+   Show key,
+   Show (vec b), 
+   Ord b,
    Arith.Constant b,
    DV.Walker vec,
    DV.Storage vec b,
@@ -57,7 +63,9 @@ chopHRecord ::
   DataSequ.List (SignalFlow.HRecord key inst label vec a b)
 chopHRecord caller powerRecord = sequRecord
   where
-    sectioning = findHSections caller powerRecord
+    sectioning =  --UtTrace.simTrace  "Sections" $ 
+                  findHSections caller $ Trace.trace ("sigLength: " ++ show sigLength) powerRecord
+    sigLength = Map.map (\(SignalFlow.Data vec) -> DV.len vec) $ SignalFlow.getHMap powerRecord
     sequRecord = sliceHRecord powerRecord sectioning
 
 
@@ -74,7 +82,8 @@ findHSections ::
   SignalFlow.HRecord key inst label vec a b -> Sectioning
 findHSections caller (SignalFlow.HRecord time m) = 
   NonEmpty.toList $ NonEmpty.zipWith (Strict.Range) startIndexList stopIndexList
-  where startIndexList = NonEmptySet.toAscList $ foldl1 NonEmptySet.union $ 
+  where startIndexList = UtTrace.simTrace  "startIndexList" $ 
+                         NonEmptySet.toAscList $ foldl1 NonEmptySet.union $ 
                          map (SignalFlow.locateSignChanges (caller |> nc "findVSections")) $ Map.elems m
         stopIndexList = NonEmpty.snoc (DV.map (\(Strict.Idx idx)->Strict.Idx $ idx-1) $ 
                                        NonEmpty.tail startIndexList) (Strict.Idx $ (Strict.len time - 1))
@@ -93,17 +102,27 @@ sliceHRecord (SignalFlow.HRecord time m) sectioning = DataSequ.fromRangeList $ m
 
 convertHRecord2Old :: 
   (DV.Walker sigVec,DV.Storage sigVec (SignalFlow.TimeStep a),
-   DV.Storage sigVec (Interp.Val a),
+   DV.Storage sigVec (Interp.Val a),DV.Singleton sigVec,Arith.Sum a,Arith.Product a,Arith.Constant a,
    DV.Storage sigVec a) =>
   SignalFlow.HRecord (TopoIdx.Position node) inst label sigVec a (Interp.Val a) ->   
   Record.FlowRecord node sigVec (Interp.Val a)
 convertHRecord2Old (SignalFlow.HRecord (Strict.Axis _ _ time) m) = 
-  Record.Record (S.TC (Data.Data $ DV.map (Interp.Inter . SignalFlow.getMidTime) time)) (Map.map f m)
+  Record.Record (S.TC $ Data.Data absTime) (Map.map f m)
   where f (SignalFlow.Data vec) = S.TC (Data.Data vec)
+        
+        absTime = DV.map Interp.Inter $  DV.append (DV.singleton firstVal) absTimeTail
+        
+        firstVal = (\x -> SignalFlow.getMidTime x Arith.~- 
+                          ((SignalFlow.getTimeStep x) Arith.~/ (Arith.one Arith.~+ Arith.one))) $ DV.head time 
+
+        absTimeTail = DV.map (\x -> SignalFlow.getMidTime x Arith.~+
+                                ((SignalFlow.getTimeStep x) Arith.~/ 
+                                (Arith.one Arith.~+ Arith.one))) time
 
 
+-- TODO:: Are Signal Indices in Sequence OK ? - are they used in further analysis 
 convertToOld :: 
-  (DV.Walker sigVec,
+  (DV.Walker sigVec,Arith.Constant a, DV.Singleton sigVec,
    DV.Storage sigVec a,DV.Storage sigVec (SignalFlow.TimeStep a),
    DV.Storage sigVec (Interp.Val a)) =>
   DataSequ.List (SignalFlow.HRecord (TopoIdx.Position node) inst label sigVec a (Interp.Val a)) ->

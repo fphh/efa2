@@ -11,7 +11,7 @@ module EFA.Data.OD.Signal.Flow where
 --import qualified EFA.Data.OrdData as OrdData
 --import qualified EFA.Data.ND as ND
 --import qualified EFA.Data.Axis.Mono as Mono
---import qualified EFA.Data.Interpolation as Interpolation
+import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.Vector as DV
 --import qualified EFA.Data.Vector.NonEmpty as EV
 
@@ -367,4 +367,44 @@ getDataSlice :: (DV.Storage vec a, DV.Slice vec) =>
 getDataSlice  (Strict.Range (Strict.Idx startIdx) (Strict.Idx endIdx)) (Data vec) = 
     Data $ DV.slice startIdx (endIdx-startIdx+1) vec
  
-    
+
+
+replicateSamples :: 
+  (DV.Storage vec b, 
+   DV.Singleton vec, 
+   DV.Storage vec (vec b), 
+   DV.FromList vec, 
+   DV.Zipper vec, 
+   DV.Storage vec Int) =>
+  Signal inst label vec a Int ->
+  Signal inst label vec a b ->
+  Signal inst1 label vec a b
+replicateSamples (Signal time (Data x)) (Signal _ (Data y)) = 
+  Signal (Strict.newInstance time) $ 
+   Data $ DV.concat $ DV.toList $ DV.zipWith DV.replicate x y 
+
+{-    
+
+interp :: 
+  (Eq a, Show a, Arith.Product a, Arith.Constant a,Show label,
+   Ord a,
+   DV.Storage vec a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,
+   DV.Find vec) =>
+  Caller -> 
+  Interp.Method a -> 
+  Interp.ExtrapMethod a -> 
+  Signal inst label vec a (Interp.Val a) ->
+  a ->  
+  (Interp.Val a)
+interp caller inmethod exmethod signal x = case x of 
+  Interp.Invalid xs -> Interp.Invalid xs
+  _  -> result
+  where
+    result = Interp.dim1 (caller |> nc "interpolate") inmethod exmethod (show label) (x1, x2) (y1, y2) x
+    label = Strict.getLabel $ getTime signal
+    ((idx1,idx2),(x1,x2)) = Strict.getSupportPoints (getTime signal) (Interp.unpack x)
+    y1 = lookupUnsafe signal idx1
+    y2 = lookupUnsafe signal idx2
+-}   
