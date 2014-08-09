@@ -70,6 +70,8 @@ import qualified EFA.Flow.Sequence.Algorithm as SeqAlgo
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Equation.Result as Result
 
+import qualified EFA.Action.Utility as ActUt
+
 import qualified Data.Maybe as Maybe
 import qualified Data.Map as Map
 import Control.Functor.HT (void)
@@ -526,10 +528,11 @@ simulation ::
    DV.Length sigVec,
    SV.Walker sigVec,
    DV.FromList sigVec) =>
+  Process.System node ->
   SimCtrl ->
   Process.SimulationAndAnalysis node inst sigVec a ->
  [IO ()]
-simulation ctrl sim =  let
+simulation system ctrl sim =  let
   legend = Map.fromList $ zip [0..] $ SignalFlow.getHRecordKeys $ 
            Simulation.accessPowerRecord $ Process.accessSimulation sim
   in 
@@ -550,7 +553,7 @@ simulation ctrl sim =  let
   
  (drawAction (drawStateFlowGraph ctrl) 
   (\x -> [Draw.title "State Flow Graph from Simulation" $ Draw.stateFlowGraph Draw.optionsDefault x]) 
-      (EFA.accessStateFlowGraph $ Process.accessAnalysis sim))
+      (ActUt.absoluteStateFlowGraph (Process.accessTopology system) $ EFA.accessStateFlowGraph $ Process.accessAnalysis sim))
 
 loopsIO ::
   (Ord a,
@@ -641,10 +644,11 @@ loopsIO ::
  OptiCtrl ->
  OpCtrl ->
  SimCtrl ->
+ Process.System node ->
  Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
  [Loop.EtaLoopItem t0 t1 (Process.Res node inst demDim srchDim demVec srchVec sigVec a)] ->
  IO ()  
-loopsIO evalCtrl optCtrl opCtrl simCtrl optiSet etaLoop = mapM_ (etaLoopItemIO evalCtrl optCtrl opCtrl simCtrl optiSet) etaLoop  
+loopsIO evalCtrl optCtrl opCtrl simCtrl system optiSet etaLoop = mapM_ (etaLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet) etaLoop  
 
 
 etaLoopItemIO ::
@@ -732,12 +736,14 @@ etaLoopItemIO ::
   OptiCtrl ->
   OpCtrl ->
   SimCtrl ->
+  Process.System node ->
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   Loop.EtaLoopItem t t1 (Process.Res node inst demDim srchDim demVec srchVec sigVec a) ->
   IO ()
-etaLoopItemIO evalCtrl optCtrl opCtrl simCtrl optiSet' (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap balLoop) = do
+etaLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet' (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap balLoop) = do
   print cnt
-  mapM_ (balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl optiSet') balLoop
+--  mapM_ (balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl optiSet') balLoop
+  balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet' $ last balLoop
 
 balanceLoopItemIO ::
   (Ord a,
@@ -824,10 +830,11 @@ balanceLoopItemIO ::
   OptiCtrl ->
   OpCtrl ->
   SimCtrl ->
+  Process.System node ->
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   Loop.BalanceLoopItem t t1 (Process.Res node inst dim srchDim demVec srchVec sigVec a) ->
   IO ()
-balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl optiSet (Loop.BalanceLoopItem cnt _node _force _step _bal _bestPair result) = do
+balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet (Loop.BalanceLoopItem cnt _node _force _step _bal _bestPair result) = do
   let  (Process.Res sweepEval perState optOperation simEfa) = result
   concurrentlyMany_ $ 
   
@@ -836,4 +843,4 @@ balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl optiSet (Loop.BalanceLoopItem 
     evalSweep (nc "balanceLoopItemIO") (Process.accessSearchGrid optiSet) evalCtrl sweepEval
     ++ optPerState  (nc "balanceLoopItemIO") (Process.accessSearchGrid optiSet) optCtrl perState  
     ++ optimalOperation opCtrl optOperation
-    ++ simulation simCtrl simEfa
+    ++ simulation system simCtrl simEfa

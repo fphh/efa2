@@ -229,7 +229,7 @@ searchVariation =
 
 
 lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
-lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0,1,18,27,28,45,54,72]) $ repeat $ 
+lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0,1,18,27,28,45,54,72]) $ repeat $  -- [0,1,18,27,28,45,54,72]
                Map.fromList [(Water,(FlowOpt.GenerationEfficiency (Interp.Inter 0.3), FlowOpt.UsageEfficiency (Interp.Inter 0.3)))] 
 
 
@@ -281,7 +281,7 @@ initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))
 
 etaLoopParams = 
   Loop.EtaLoopParams
-  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 1, 
+  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 2, 
    Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
    Loop.accGlobalLifeCycleMap = FlowOpt.GlobalLifeCycleMap $ 
      Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 0.5), FlowOpt.UsageEfficiency (Interp.Inter 0.5)))]                                              
@@ -380,7 +380,7 @@ main = do
 --  print $ Process.accessSweepEndNodePowers sweep
 --  print $ Process.accessSweepOptimality evalSweep
   print loop
-  OP.loopsIO evalCtrl optCtrl opCtrl simCtrl optiSet loop
+  OP.loopsIO evalCtrl optCtrl opCtrl simCtrl system optiSet loop
 --  print $  Process.accessOptimalStateSignals optPerState
 --  print $  Process.accessOptimalStateChoice optimalOperation
 --  print $ Process.accessOptimalStateChoice $ Process.accOptOperation $ Loop.getLastResult loop 

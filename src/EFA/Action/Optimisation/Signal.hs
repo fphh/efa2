@@ -312,8 +312,6 @@ getBalance storageSignals = Balance.Balance $ Map.map f storageSignals
         g Nothing (t,Just x) = Just x --Just ((Interp.Inter t) Arith.~* x)
         g (Just acc) (t, Just x) = Just $ x Arith.~+ acc  -- ++ Just $ ((Interp.Inter t) Arith.~* x)  Arith.~+ acc        
         
----- Helper Function
-
 -- TODO: make sure this is not applied to Energy Signals (Time Splitting than would require to alter signal values)
 generateOptimalSignal ::
   (Arith.Constant a,
@@ -369,7 +367,7 @@ makeGivenRecord ::
    DV.Storage sigVec a,
    DV.Storage sigVec (Interp.Val a), 
    DV.Zipper sigVec,
-   DV.Storage sigVec (sigVec a),
+   DV.Storage sigVec (sigVec a), Arith.Constant a,
    DV.Singleton sigVec,Show (sigVec a), Show node,
    DV.FromList sigVec, 
    Show (sigVec (SignalFlow.TimeStep a)),
@@ -379,16 +377,18 @@ makeGivenRecord ::
   Caller ->
   SignalFlow.Signal inst String sigVec a ([Maybe Idx.AbsoluteState],c) ->
   DemandCycleMap node inst sigVec a a ->
-  OptimalControlSignals node inst sigVec a (Interp.Val a) ->
-  SignalFlow.HRecord (XIdx.Position node) inst String sigVec a (Interp.Val a) 
+  OptimalControlSignals node inst1 sigVec a (Interp.Val a) ->
+  SignalFlow.HRecord (XIdx.Position node) inst1 String sigVec a (Interp.Val a) 
 makeGivenRecord caller optimalStateSignal demand control = 
-  SignalFlow.HRecord time (Map.map SignalFlow.getData m)
+  SignalFlow.HRecord  (UtTrace.simTrace "Time" time) (Map.map SignalFlow.getData m)
   where 
     (SignalFlow.Signal time _, _) = Maybe.fromMaybe err $ Map.minView control
     err = merror caller modul "makeGivenRecord" "empty ControlSignalMap"
     demandInter = Map.map (SignalFlow.map Interp.Inter) demandRepli 
-    demandRepli = UtTrace.simTrace "demandRepli" $ Map.map (SignalFlow.replicateSamples numSig) demand
-    numSig = UtTrace.simTrace "numSig" $  SignalFlow.map (\(states,_) -> length states) optimalStateSignal
+    demandRepli = --UtTrace.simTrace "demandRepli" $ 
+                  Map.map (SignalFlow.replicateSamples numSig) demand
+    numSig = UtTrace.simTrace "numSig" $  
+             SignalFlow.map (\(states,_) -> length states) optimalStateSignal
     m = Map.union (Map.mapKeys g control)
                   (Map.mapKeys h demandInter)
     -- TODO:: Variablen in die Generierung des Simulationsgleichungssystems reinschleifen !!    

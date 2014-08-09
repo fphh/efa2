@@ -82,7 +82,7 @@ findHSections ::
   SignalFlow.HRecord key inst label vec a b -> Sectioning
 findHSections caller (SignalFlow.HRecord time m) = 
   NonEmpty.toList $ NonEmpty.zipWith (Strict.Range) startIndexList stopIndexList
-  where startIndexList = UtTrace.simTrace  "startIndexList" $ 
+  where startIndexList = --UtTrace.simTrace  "startIndexList" $ 
                          NonEmptySet.toAscList $ foldl1 NonEmptySet.union $ 
                          map (SignalFlow.locateSignChanges (caller |> nc "findVSections")) $ Map.elems m
         stopIndexList = NonEmpty.snoc (DV.map (\(Strict.Idx idx)->Strict.Idx $ idx-1) $ 

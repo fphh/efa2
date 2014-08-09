@@ -132,7 +132,8 @@ givenSimulate ::
   EqSys.EquationSystem mode node s (SignalFlow.Data inst sigVec (Interp.Val a))
 givenSimulate caller etaFunctions (SignalFlow.HRecord t xs) =
    (XIdx.dTime .=
-     (SignalFlow.fromListData (caller |> nc "givenSimulate") $ replicate (Strict.len t) $ Arith.one))
+     (SignalFlow.fromListData (caller |> nc "givenSimulate") $ 
+      map (Interp.Inter . SignalFlow.getTimeStep) $ DV.toList $ Strict.getVec t))
    <> EqSys.withExpressionGraph (makeEtaFuncGiven etaFunctions)
    <> Fold.fold (Map.mapWithKey f xs)
    where

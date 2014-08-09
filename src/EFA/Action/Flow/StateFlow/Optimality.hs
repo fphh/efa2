@@ -127,19 +127,20 @@ etaSysState_Eq_etaSysSfg caller absSfg etaSysSfg state sto (oldEtaGen,oldEtaUse)
     
     totalSourceEnergy = sumRes sources
     totalSinkEnergy = sumRes sinks
-    etaUse eSto = FlowOpt.UsageEfficiency $ ((Arith.negate (etaSysSfg Arith.~* totalSourceEnergy))  Arith.~+ totalSinkEnergy) Arith.~/ eSto
+    etaUse eSto = FlowOpt.UsageEfficiency $ ((etaSysSfg Arith.~* totalSourceEnergy)  Arith.~- totalSinkEnergy) Arith.~/ eSto
     etaGen eSto = FlowOpt.GenerationEfficiency $ eSto  Arith.~/ (totalSinkEnergy  Arith.~/ etaSysSfg  Arith.~- totalSourceEnergy)
     err2 = merror caller modul "etaSysState_Eq_etaSysSfg" "no Sums found"
     err4 = merror caller modul "etaSysState_Eq_etaSysSfg" "invalid flow"
     
     traceStr = " State: " ++ show state ++ 
-      " Sinks: " ++ show totalSinkEnergy  ++ 
-      " Sources: " ++ show totalSourceEnergy ++ 
-      " Sto: " ++ (show $ Map.lookup sto storages)
+      "Sinks: " ++ show totalSinkEnergy  ++ 
+      "Sources: " ++ show totalSourceEnergy ++ 
+      "Sto: " ++ (show $ Map.lookup sto storages) ++
+      "EtaSys: " ++ (show etaSysSfg)
     
     in Trace.trace traceStr $ case Maybe.fromMaybe err2 $ Maybe.fromMaybe err3 $ Map.lookup sto storages of
-             TopoQty.Sums Nothing (Just sumOut) -> (etaGen sumOut , oldEtaUse)
-             TopoQty.Sums (Just sumIn) Nothing -> (oldEtaGen, etaUse sumIn )
+             TopoQty.Sums Nothing (Just sumOut) -> UtTrace.simTrace "etaGen" $ (etaGen sumOut , oldEtaUse)
+             TopoQty.Sums (Just sumIn) Nothing -> UtTrace.simTrace "etaUse" $ (oldEtaGen, etaUse sumIn )
              TopoQty.Sums Nothing Nothing -> (oldEtaGen,oldEtaUse)     
              TopoQty.Sums (Just _) (Just _) -> err4
 

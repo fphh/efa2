@@ -250,26 +250,6 @@ locateSignChanges caller (Data vec)  = NonEmptySet.fromList indexList
                          else Just (idx+1,sgn,lst)    
 
 
-concatEvenEvenTimeShare :: 
-  (DV.Zipper vec, 
-   Constant a, 
-   DV.Storage vec [a], DV.Storage vec b, 
-   DV.Singleton vec,
-   DV.FromList vec,
-   DV.Walker vec, 
-   DV.Storage vec [b],DV.Storage vec [TimeStep a],DV.Storage vec (TimeStep a),
-   DV.Storage vec a) => 
-  Signal inst label vec a [b] -> Signal inst1 label vec a b
-concatEvenEvenTimeShare (Signal (Strict.Axis label typ timeVec) (Data vec)) = 
-  Signal (Strict.Axis label typ  $ concatAlt newTime) (Data $ concatAlt2 vec)
-  where newTime = DV.zipWith f timeVec vec
-        f (TimeStep t dt) xs = let 
-          n = P.length xs
-          dtVec = replicate n (dt Arith.~/ (Arith.fromInteger $ fromIntegral n))
-          in P.zipWith TimeStep (P.foldl (\acc x -> acc ++ [last acc Arith.~+ x]) [t] dtVec) dtVec
-          -- TODO berechnung der Zeitmittenwerte prüfen      
-        concatAlt = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
-        concatAlt2 = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
 
 len ::
  DV.Len (vec b) =>
@@ -368,10 +348,31 @@ getDataSlice  (Strict.Range (Strict.Idx startIdx) (Strict.Idx endIdx)) (Data vec
     Data $ DV.slice startIdx (endIdx-startIdx+1) vec
  
 
+concatEvenEvenTimeShare :: 
+  (DV.Zipper vec, 
+   Constant a, 
+   DV.Storage vec [a], DV.Storage vec b, 
+   DV.Singleton vec,
+   DV.FromList vec,
+   DV.Walker vec, 
+   DV.Storage vec [b],DV.Storage vec [TimeStep a],DV.Storage vec (TimeStep a),
+   DV.Storage vec a) => 
+  Signal inst label vec a [b] -> Signal inst1 label vec a b
+concatEvenEvenTimeShare (Signal (Strict.Axis label typ timeVec) (Data vec)) = 
+  Signal (Strict.Axis label typ  $ concatAlt newTime) (Data $ concatAlt2 vec)
+  where newTime = DV.zipWith f timeVec vec
+        f (TimeStep t dt) xs = let 
+          n = P.length xs
+          dtVec = replicate n (dt Arith.~/ (Arith.fromInteger $ fromIntegral n))
+          in P.zipWith TimeStep (P.foldl (\acc x -> acc ++ [last acc Arith.~+ x]) [t] dtVec) dtVec
+          -- TODO berechnung der Zeitmittenwerte prüfen      
+        concatAlt = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
+        concatAlt2 = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
 
+-- TODO :: Not Type Safe -- Power / Energy
 replicateSamples :: 
   (DV.Storage vec b, 
-   DV.Singleton vec, 
+   DV.Singleton vec, DV.Walker vec,Product b, Constant b,
    DV.Storage vec (vec b), 
    DV.FromList vec, 
    DV.Zipper vec, 
@@ -379,32 +380,7 @@ replicateSamples ::
   Signal inst label vec a Int ->
   Signal inst label vec a b ->
   Signal inst1 label vec a b
-replicateSamples (Signal time (Data x)) (Signal _ (Data y)) = 
+replicateSamples (Signal time (Data ns)) (Signal _ (Data xs)) = 
   Signal (Strict.newInstance time) $ 
-   Data $ DV.concat $ DV.toList $ DV.zipWith DV.replicate x y 
+   Data $ DV.concat $ DV.toList $ DV.zipWith (\ n x -> DV.replicate n x) ns xs
 
-{-    
-
-interp :: 
-  (Eq a, Show a, Arith.Product a, Arith.Constant a,Show label,
-   Ord a,
-   DV.Storage vec a,
-   DV.LookupUnsafe vec a,
-   DV.Length vec,
-   DV.Find vec) =>
-  Caller -> 
-  Interp.Method a -> 
-  Interp.ExtrapMethod a -> 
-  Signal inst label vec a (Interp.Val a) ->
-  a ->  
-  (Interp.Val a)
-interp caller inmethod exmethod signal x = case x of 
-  Interp.Invalid xs -> Interp.Invalid xs
-  _  -> result
-  where
-    result = Interp.dim1 (caller |> nc "interpolate") inmethod exmethod (show label) (x1, x2) (y1, y2) x
-    label = Strict.getLabel $ getTime signal
-    ((idx1,idx2),(x1,x2)) = Strict.getSupportPoints (getTime signal) (Interp.unpack x)
-    y1 = lookupUnsafe signal idx1
-    y2 = lookupUnsafe signal idx2
--}   

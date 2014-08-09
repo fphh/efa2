@@ -22,8 +22,10 @@ import qualified EFA.Application.Type as Type
 
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Flow.Storage as Storage
+import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.State.Quantity as StateQty
-
+import qualified EFA.Flow.Part.Index as PartIdx
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Data (Data, Nil, (:>))
@@ -227,16 +229,31 @@ absoluteStateIndex topo flowTopo =
   in toTernary $ map g tlabels
 
 
--- TODO :: Intriduce absolute State
+-- TODO :: Introduce absolute State as Type Variable
 absoluteStateFlowGraph ::
   Node.C node =>
   Graph node Graph.DirEdge nodeLabel1 a1->
   State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel ->
   State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel
-absoluteStateFlowGraph topo sfg = sfg {StateQty.states = Map.fromList $
-  map (\(_,x) -> (absoluteStateIndex topo $ FlowTopo.topology x,x)) $
-           Map.toList $ StateQty.states sfg}
+absoluteStateFlowGraph topo sfg = sfg {StateQty.states = states,  
+                                       StateQty.storages = storages}
+  where                                          
+    stateMap = Map.fromList $ map (\(oldState,x) -> (oldState,absoluteStateIndex topo $ FlowTopo.topology x)) $
+           Map.toList $ StateQty.states sfg
+    states = Map.fromList $ map (\(oldState,x) -> (stateMap Map.! oldState,x)) $
+           Map.toList $ StateQty.states sfg
+           
+    storages = Map.map f $ StateQty.storages sfg
+    
+    f stoGraph = stoGraph{Storage.edges= Map.mapKeys g $ Storage.edges stoGraph}
+    
+    g (StorageIdx.Edge initSec exitSec) = StorageIdx.Edge (h1 initSec) (h2 exitSec)  
+      
+    h1 PartIdx.Init = PartIdx.Init  
+    h1 (PartIdx.NoInit oldState) = (PartIdx.NoInit $ stateMap Map.! oldState)
 
+    h2 PartIdx.Exit = PartIdx.Exit  
+    h2 (PartIdx.NoExit oldState) = (PartIdx.NoExit $ stateMap Map.! oldState)
 
 ifNull :: b -> ([a] -> b) -> [a] -> b
 ifNull x _ [] = x
