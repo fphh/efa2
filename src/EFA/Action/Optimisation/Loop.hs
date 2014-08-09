@@ -207,7 +207,7 @@ etaLoop caller storages etaParams balParams systemFunction getBalance initialLif
    UtList.takeUntil check $ 
    go (EtaCounter (-1)) initialLifeCycleMap initialForcing
   where
-    check (EtaLoopItem (EtaCounter count) _ _ _) = count > maxEtaIterations 
+    check (EtaLoopItem (EtaCounter count) _ _ _) = (count+1) >= maxEtaIterations 
     (MaxEtaIterations maxEtaIterations) = accessMaxEtaIterations etaParams
     initialForcing = accessInitialForcing balParams
       
