@@ -79,6 +79,7 @@ import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 import qualified EFA.Action.Optimisation.Cube.Solve as CubeSolve
 
 import qualified Data.Maybe as Maybe
+import qualified Data.Set as Set
 --import Control.Applicative as Applicative
 
 --import qualified EFA.Flow.Topology as FlowTopo
@@ -423,12 +424,13 @@ findMaximumEtaPerState ::
  DV.Storage vec (ValueState.Map (CubeGrid.LinIdx, 
                                  (ActFlowCheck.EdgeFlowStatus, 
                                   FlowOpt.OptimalityValues (Interp.Val b))))) =>
- Caller ->
+ Caller -> 
+ [Idx.AbsoluteState] ->
  ObjectiveFunctionValues node inst dim dim1 vec vec1 a (Interp.Val  b) ->
  OptimalChoicePerState node inst dim vec a (Interp.Val b)
-findMaximumEtaPerState caller objFunctionValues = 
+findMaximumEtaPerState caller states objFunctionValues = 
   CubeMap.map (FlowTopoOpt.findMaximumEta 
-               (caller |> nc "findMaximumEtaPerState")) objFunctionValues
+               (caller |> nc "findMaximumEtaPerState") states) objFunctionValues
 
 
 

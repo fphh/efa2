@@ -380,14 +380,15 @@ makeGivenRecord ::
   OptimalControlSignals node inst1 sigVec a (Interp.Val a) ->
   SignalFlow.HRecord (XIdx.Position node) inst1 String sigVec a (Interp.Val a) 
 makeGivenRecord caller optimalStateSignal demand control = 
-  SignalFlow.HRecord  (UtTrace.simTrace "Time" time) (Map.map SignalFlow.getData m)
+  SignalFlow.HRecord  (--UtTrace.simTrace "Time" 
+                       time) (Map.map SignalFlow.getData m)
   where 
     (SignalFlow.Signal time _, _) = Maybe.fromMaybe err $ Map.minView control
     err = merror caller modul "makeGivenRecord" "empty ControlSignalMap"
     demandInter = Map.map (SignalFlow.map Interp.Inter) demandRepli 
     demandRepli = --UtTrace.simTrace "demandRepli" $ 
                   Map.map (SignalFlow.replicateSamples numSig) demand
-    numSig = UtTrace.simTrace "numSig" $  
+    numSig = --UtTrace.simTrace "numSig" $  
              SignalFlow.map (\(states,_) -> length states) optimalStateSignal
     m = Map.union (Map.mapKeys g control)
                   (Map.mapKeys h demandInter)

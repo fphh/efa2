@@ -96,6 +96,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 --import qualified EFA.Flow.Topology as FlowTopo
 import qualified Data.Tuple.HT as TupleHT
 --import qualified Data.List as List
+import qualified Data.Set as Set
 
 modul :: ModuleName
 modul = ModuleName "Demo.Optimisation.Process"
@@ -137,7 +138,8 @@ data OptiSet node inst demDim srchDim demVec srchVec sigVec a =
    accessDemandGrid ::  CubeGrid.Grid (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a,
    accessSearchGrid ::  CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a,
    accessVariation :: CubeSweep.Variation node inst demDim srchDim demVec srchVec a (Interp.Val a),
-   accessSupportSignal :: OptSignal.SupportSignal node inst demDim sigVec a a
+   accessSupportSignal :: OptSignal.SupportSignal node inst demDim sigVec a a,
+   accessAllowedStates ::  [Idx.AbsoluteState]
      } 
 
 data SweepResults node inst demDim srchDim demVec srchVec a = 
@@ -253,11 +255,13 @@ buildOptiSet ::
   [(DemandAndControl.Var node,Type.Dynamic,demVec a)] ->
   [(DemandAndControl.Var node,Type.Dynamic,srchVec a)] ->
   OptSignal.DemandCycle node inst demDim sigVec a a ->
+  [Idx.AbsoluteState]->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a
-buildOptiSet demandVariation searchVariation demandCycle = 
+buildOptiSet demandVariation searchVariation demandCycle allowedStates = 
   OptiSet demandVariation searchVariation demandVars controlVars 
    demandGrid searchGrid 
    sweepVariation supportSignal
+   allowedStates
   where
     demandGrid = CubeGrid.create (nc "Main") demandVariation
     searchGrid = CubeGrid.create (nc "Main") searchVariation
@@ -476,8 +480,9 @@ optimisationPerState testSet optiSet sweepResults sweepEvaluationResults storage
     flowResult = accessSweepFlowResult sweepResults
     endNodePowers = accessSweepEndNodePowers sweepResults
     optimalityMeasure = accessSweepOptimality sweepEvaluationResults
+    states = accessAllowedStates optiSet
     objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") balanceForcingMap endNodePowers optimalityMeasure
-    optimisationResultPerState = CubeSweep.findMaximumEtaPerState  (nc "main") objectiveFunctionValues                          
+    optimisationResultPerState = CubeSweep.findMaximumEtaPerState  (nc "main") states objectiveFunctionValues                          
     optimalFlowCube = CubeSweep.unresultOptimalFlowPerStateCube (nc "main") $ 
                         CubeSweep.getOptimalFlowPerStateCube (nc "main") optimisationResultPerState flowResult
     optimalStateSignals = OptSignal.optimalStateSignals (nc "main") optimisationResultPerState supportSignal demandCycle
@@ -579,13 +584,14 @@ simulateAndAnalyse caller system efaParams systemData demandVars optOperation de
     etaFunctions = accessFunctionMap systemData
     optimalStateSignal = accessOptimalStateChoice optOperation
     optimalControlSignals = accessOptimalControlSignals optOperation
-    given = UtTrace.simTrace "Given" $ OptSignal.makeGivenRecord (caller |> nc "simulateAndAnalyse") optimalStateSignal
+    given = --UtTrace.simTrace "Given" $ 
+            OptSignal.makeGivenRecord (caller |> nc "simulateAndAnalyse") optimalStateSignal
             (OptSignal.convertToDemandCycleMap demandCycle demandVars) optimalControlSignals
     sim = Simulation.simulation caller topology etaFunctions given
     sequenceFlowRecord = -- UtTrace.simTrace "SfRecord" $
                          DataChop.chopHRecord (caller |> nc "simulateAndAnalyse") 
                          ( Simulation.accessPowerRecord sim)
-    sequenceFlowRecordOld = UtTrace.simTrace "SfRecordOld" $ 
+    sequenceFlowRecordOld = -- UtTrace.simTrace "SfRecordOld" $ 
                             DataChop.convertToOld sequenceFlowRecord
     efa = EFA.energyFlowAnalysisOld topology efaParams sequenceFlowRecordOld
   

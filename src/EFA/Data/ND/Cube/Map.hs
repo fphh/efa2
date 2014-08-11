@@ -29,6 +29,7 @@ import EFA.Signal.Data(Nil,(:>))
 import qualified EFA.Signal.Data as SD
 import qualified EFA.Reference.Base as Ref
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 --import qualified EFA.Data.OrdData as OrdData
 import qualified EFA.Report.FormatValue as FormatValue
 
@@ -737,6 +738,7 @@ findBestWithIndexBy fselect dat = fromJust $ DV.foldl g Nothing indexedVec
     g Nothing  (idx,val) = Just (idx, val)
     g (Just (oldIdx,oldVal)) (idx,val) = if (fselect oldVal val) then Just (idx, val)
                                                          else Just (oldIdx, oldVal)
+{-
 findBestWithIndexByPerState :: 
   (DV.Walker vec,
    DV.Storage vec (Grid.LinIdx, a),
@@ -752,7 +754,25 @@ findBestWithIndexByPerState getState fselect dat = ValueState.Map $ DV.foldl g (
         where f (Just (_,oldVal)) = 
                 if fselect oldVal val then Map.insert (getState val) (idx, val) m else m
               f Nothing = Map.insert (getState val) (idx, val) m                                                     
+-}
 
+findBestWithIndexByPerState :: 
+  (DV.Walker vec,
+   DV.Storage vec (Grid.LinIdx, a),
+   DV.Storage vec a) =>
+  (a -> Maybe Idx.AbsoluteState) ->
+  (a -> a -> Bool) -> 
+  [Idx.AbsoluteState] ->
+  Data inst dim vec a -> 
+  ValueState.Map (Grid.LinIdx,a)
+findBestWithIndexByPerState getState fselect states dat = ValueState.Map $ DV.foldl g (Map.fromList []) indexedVec
+  where 
+    stateSet = Set.fromList $ P.map Just states
+    indexedVec = DV.imap (\i x ->(Grid.LinIdx i, x)) $ getVector $ dat
+    g m (idx,val) = f $ Map.lookup (getState val) m
+        where f (Just (_,oldVal)) = 
+                if fselect oldVal val &&  Set.member (getState val) stateSet then Map.insert (getState val) (idx, val) m else m
+              f Nothing = Map.insert (getState val) (idx, val) m                                                     
 
 filter :: 
   (DV.Storage vec a,

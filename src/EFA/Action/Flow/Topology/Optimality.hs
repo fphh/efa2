@@ -30,6 +30,7 @@ import EFA.Equation.Result (Result(..))
 import qualified EFA.Equation.Result as Result
 
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 import qualified EFA.Graph as Graph
 
@@ -316,10 +317,11 @@ findMaximumEta ::
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)),
    DV.Storage vec (CubeGrid.LinIdx, (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)))) =>
   Caller ->
+  [Idx.AbsoluteState] ->
   CubeMap.Data (Sweep.Search inst) dim vec 
                  (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a)) -> 
   ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityValues (Interp.Val a)))
-findMaximumEta caller cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f cubeData
+findMaximumEta caller states cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f states cubeData 
   where  f (_,FlowOpt.OptimalityValues (FlowOpt.OptimalityMeasure (FlowOpt.EtaSys eta) _) (FlowOpt.TotalBalanceForce forcing)) 
            (_,FlowOpt.OptimalityValues (FlowOpt.OptimalityMeasure (FlowOpt.EtaSys eta1) _) (FlowOpt.TotalBalanceForce forcing1))= 
                 Interp.greaterThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
@@ -336,17 +338,16 @@ findMinimumLoss ::
    DV.Storage vec (CubeGrid.LinIdx, 
                    (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)))) =>
   Caller ->
-  Result.Result (CubeMap.Data (Sweep.Search inst) dim vec 
+  [Idx.AbsoluteState] ->
+  CubeMap.Data (Sweep.Search inst) dim vec 
                  (ActFlowCheck.EdgeFlowStatus,
                   (FlowOpt.TotalBalanceForce (Interp.Val a),
-                   (FlowOpt.Eta2Optimise (Interp.Val a), FlowOpt.Loss2Optimise (Interp.Val a))))) -> 
+                   (FlowOpt.Eta2Optimise (Interp.Val a), FlowOpt.Loss2Optimise (Interp.Val a)))) -> 
   ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,(FlowOpt.TotalBalanceForce (Interp.Val a),
                    (FlowOpt.Eta2Optimise (Interp.Val a), FlowOpt.Loss2Optimise (Interp.Val a)))))
-findMinimumLoss caller cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f $ g cubeData
+findMinimumLoss caller states cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f states cubeData 
   where  f (_,(FlowOpt.TotalBalanceForce forcing,(_,FlowOpt.LossSys loss))) 
            (_,(FlowOpt.TotalBalanceForce forcing1, (_,FlowOpt.LossSys loss1)))= 
                 Interp.lessThanWithInvalid (loss Arith.~+ forcing) (loss1 Arith.~+ forcing1) 
-         g (Determined x) = x
-         g (Undetermined) = merror caller modul "findMinimumLoss" "Undetermined Variables in Solution" 
 
 
