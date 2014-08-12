@@ -347,10 +347,10 @@ evaluateSweep ::
    DV.Singleton srchVec,
    DV.Length srchVec) =>
   Caller ->
-  FlowOpt.LifeCycleMap node (Interp.Val a) ->
   SweepResults node inst demDim srchDim demVec srchVec a ->
+  FlowOpt.LifeCycleMap node (Interp.Val a) ->  
   SweepEvaluation node inst demDim srchDim demVec srchVec a
-evaluateSweep caller lifeCycleMap sweepResults = 
+evaluateSweep caller sweepResults lifeCycleMap = 
   SweepEvaluation $ CubeSweep.calculateOptimalityMeasure caller lifeCycleMap endNodePowers status
   where endNodePowers = accessSweepEndNodePowers sweepResults
         status = accessSweepFlowStatus sweepResults
@@ -761,10 +761,12 @@ loop ::
   [node] ->
   Loop.EtaLoopParams node (Interp.Val a) ->
   Loop.BalanceLoopParams node (Interp.Val a) ->
-  [Loop.EtaLoopItem node (Interp.Val a) (Res node inst demDim srchDim demVec srchVec sigVec a)]
+  [Loop.EtaLoopItem node (Interp.Val a)  
+   (SweepEvaluation node inst demDim srchDim demVec srchVec a) 
+   (Res node inst demDim srchDim demVec srchVec sigVec a)]
 
 loop caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList etaParams balParams = 
-  Loop.etaLoop caller storageList etaParams balParams sysF getBalance initialLifeCycleMap updateLifeCycleMap
+  Loop.etaLoop caller storageList etaParams balParams evalFunction sysFunction getBalance initialLifeCycleMap updateLifeCycleMap
   where
     newCaller = caller |> nc "loop"
     topo = accessTopology system
@@ -776,8 +778,11 @@ loop caller system systemData testSet optiSet efaParams sweepResults initialLife
                                                   newCaller topo method globalLifeCycleMap . 
                                                   EFA.accessStateFlowGraph . accessAnalysis . accSimEfa
                                                   
-    sysF = systemFunction newCaller system systemData testSet optiSet efaParams storageList sweepResults
- 
+    sysFunction = systemFunction newCaller system systemData testSet optiSet efaParams storageList sweepResults
+    evalFunction = evaluateSweep newCaller sweepResults
+
+    
+    
 systemFunction ::
   (Eq (sigVec a),
    Eq (sigVec (Interp.Val a)),
@@ -937,13 +942,15 @@ systemFunction ::
   EFA.EFAParams node (Interp.Val a) ->
   [node] ->
   SweepResults node inst demDim srchDim demVec srchVec a ->
-  FlowOpt.LifeCycleMap node  (Interp.Val a) ->
+  SweepEvaluation node inst demDim srchDim demVec srchVec a -> 
+--  FlowOpt.LifeCycleMap node  (Interp.Val a) ->
   FlowBal.Forcing node (Interp.Val a) ->
   Res node inst demDim srchDim demVec srchVec sigVec a
 
-systemFunction caller system systemData testSet optiSet efaParams storageList sweepResults lifeCycleMap balanceForcingMap = 
+systemFunction caller system systemData testSet optiSet efaParams 
+  storageList sweepResults sweepEvaluationResults balanceForcingMap = 
       Res
-      sweepEvaluationResults
+     -- sweepEvaluationResults
       optimisationPerStateResults
       optOperation 
       simEfa
@@ -952,8 +959,8 @@ systemFunction caller system systemData testSet optiSet efaParams storageList sw
         demandVars = accessDemandVars optiSet
         controlVars = accessControlVars optiSet
         
-        sweepEvaluationResults = evaluateSweep caller lifeCycleMap 
-                                 sweepResults
+--        sweepEvaluationResults = evaluateSweep caller lifeCycleMap 
+--                                 sweepResults
         
         optimisationPerStateResults = optimisationPerState testSet optiSet sweepResults sweepEvaluationResults 
                                   storageList balanceForcingMap controlVars
@@ -965,7 +972,7 @@ systemFunction caller system systemData testSet optiSet efaParams storageList sw
 
 
 data Res node inst demDim srchDim demVec srchVec sigVec a = Res
-  {accSweepEval :: SweepEvaluation node inst demDim srchDim demVec srchVec a,
+  {   -- accSweepEval :: SweepEvaluation node inst demDim srchDim demVec srchVec a,
    accOptPerState :: OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a,
    accOptOperation :: OptimalOperation node inst sigVec a, 
    accSimEfa :: SimulationAndAnalysis node inst sigVec a 

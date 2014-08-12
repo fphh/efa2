@@ -652,7 +652,9 @@ loopsIO ::
  SimCtrl ->
  Process.System node ->
  Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
- [Loop.EtaLoopItem t0 t1 (Process.Res node inst demDim srchDim demVec srchVec sigVec a)] ->
+ [Loop.EtaLoopItem t0 t1   
+  (Process.SweepEvaluation node inst demDim srchDim demVec srchVec a) 
+  (Process.Res node inst demDim srchDim demVec srchVec sigVec a)] ->
  IO ()  
 loopsIO evalCtrl optCtrl opCtrl simCtrl system optiSet etaLoop = mapM_ (etaLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet) etaLoop  
 
@@ -744,10 +746,14 @@ etaLoopItemIO ::
   SimCtrl ->
   Process.System node ->
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
-  Loop.EtaLoopItem t t1 (Process.Res node inst demDim srchDim demVec srchVec sigVec a) ->
+  Loop.EtaLoopItem t t1 
+  (Process.SweepEvaluation node inst demDim srchDim demVec srchVec a) 
+  (Process.Res node inst demDim srchDim demVec srchVec sigVec a) ->
   IO ()
-etaLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet' (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap balLoop) = do
+etaLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet' (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap sweepEval balLoop) = do
   print cnt
+  concurrentlyMany_ $  evalSweep (nc "balanceLoopItemIO") (Process.accessSearchGrid optiSet') evalCtrl sweepEval
+ 
 --  mapM_ (balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl optiSet') balLoop
   balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet' $ last balLoop
 
@@ -841,12 +847,11 @@ balanceLoopItemIO ::
   Loop.BalanceLoopItem t t1 (Process.Res node inst dim srchDim demVec srchVec sigVec a) ->
   IO ()
 balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet (Loop.BalanceLoopItem cnt _node _force _step _bal _bestPair result) = do
-  let  (Process.Res sweepEval perState optOperation simEfa) = result
+  let  (Process.Res perState optOperation simEfa) = result
   concurrentlyMany_ $ 
   
 --    [putStrLn $ Loop.disp cnt]
 --    sweep  (nc "balanceLoopItemIO") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
-    evalSweep (nc "balanceLoopItemIO") (Process.accessSearchGrid optiSet) evalCtrl sweepEval
-    ++ optPerState  (nc "balanceLoopItemIO") (Process.accessSearchGrid optiSet) optCtrl perState  
+   optPerState  (nc "balanceLoopItemIO") (Process.accessSearchGrid optiSet) optCtrl perState  
     ++ optimalOperation opCtrl optOperation
     ++ simulation system simCtrl simEfa

@@ -148,19 +148,20 @@ data BalanceLoopParams node a =
    accessInitialStep :: Balance.ForcingStep node a,   
    accessInitialSto :: node}
 
-data EtaLoopItem node a z = 
+data EtaLoopItem node a y z = 
   EtaLoopItem {
     accEtaCounter :: EtaCounter, 
     accEtaSys :: a,
     accLifeCycleMap :: FlowOpt.LifeCycleMap node a, 
+    accEvalSweep :: y,
     accBalLoop :: [BalanceLoopItem node a z]}
   
 instance 
   (Display (FlowOpt.GenerationEfficiency a),
    Display (FlowOpt.UsageEfficiency a), 
    Display (Maybe (Balance.SocDrive a, a), Maybe (Balance.SocDrive a, a)), Arith.Constant a,Display a,
-   Show node, Show a) => Show (EtaLoopItem node a z) where  
-  show (EtaLoopItem etaCounter etaSys lifeCycleMap balLoop) = 
+   Show node, Show a) => Show (EtaLoopItem node a y z) where  
+  show (EtaLoopItem etaCounter etaSys lifeCycleMap _ balLoop) = 
     "Eta-Cnt: " ++ show etaCounter ++ "\n" ++
     "Eta-Sys: " ++ disp etaSys ++ "\n" ++
     disp lifeCycleMap ++ "\n" ++ show balLoop 
@@ -198,26 +199,28 @@ etaLoop :: (Ord node,Ord a, Show a, Show node, Arith.Constant a) =>
   [node] ->
   EtaLoopParams node a ->
   BalanceLoopParams node a ->
-  (FlowOpt.LifeCycleMap node a -> Balance.Forcing node a -> z) ->
+  (FlowOpt.LifeCycleMap node a -> y ) ->
+  (y -> Balance.Forcing node a -> z) ->
   (z -> Balance.Balance node a) ->
   FlowOpt.LifeCycleMap node a ->
   (z -> FlowOpt.LifeCycleMap node a -> (a,FlowOpt.LifeCycleMap node a))->
-  [EtaLoopItem node a z]
-etaLoop caller storages etaParams balParams systemFunction getBalance initialLifeCycleMap updateLifeCycleMap = 
+  [EtaLoopItem node a y z]
+etaLoop caller storages etaParams balParams evalFunction systemFunction getBalance initialLifeCycleMap updateLifeCycleMap = 
    UtList.takeUntil check $ 
    go (EtaCounter (-1)) initialLifeCycleMap initialForcing
   where
-    check (EtaLoopItem (EtaCounter count) _ _ _) = (count+1) >= maxEtaIterations 
+    check (EtaLoopItem (EtaCounter count) _ _ _ _) = (count+1) >= maxEtaIterations 
     (MaxEtaIterations maxEtaIterations) = accessMaxEtaIterations etaParams
     initialForcing = accessInitialForcing balParams
       
-    go lastCount lifeCycleMap lastLatestForcing = [EtaLoopItem count etaSys lifeCycleMap balLoop] ++ go count nextLifeCycleMap latestForcing 
+    go lastCount lifeCycleMap lastLatestForcing = [EtaLoopItem count etaSys lifeCycleMap evalSweep balLoop] ++ go count nextLifeCycleMap latestForcing 
       where
         count = incrementEtaCounter lastCount
-        (etaSys,nextLifeCycleMap) = updateLifeCycleMap (accResult $ last balLoop) lifeCycleMap
         -- TODO :: check if last is OK
-        balLoop = balanceLoop (caller |> nc "etaLoop") storages balParams (systemFunction lifeCycleMap) 
+        evalSweep = evalFunction lifeCycleMap
+        balLoop = balanceLoop (caller |> nc "etaLoop") storages balParams (systemFunction evalSweep)
                   getBalance lastLatestForcing
+        (etaSys,nextLifeCycleMap) = updateLifeCycleMap (accResult $ last balLoop) lifeCycleMap
         latestForcing = accForcing $ last balLoop          
 
 f str = id 
@@ -271,5 +274,5 @@ balanceLoop caller storages balParams systemFunction getBalance initialForcing =
         
         
 
-getLastResult :: [EtaLoopItem node a z] -> z
+getLastResult :: [EtaLoopItem node a y z] -> z
 getLastResult = accResult . last . accBalLoop . last
