@@ -293,7 +293,7 @@ generateOptimalStorageSignals optimalStateSignal storagePowerSignalPerState =
   Map.map f storagePowerSignalPerState
   where f sig =  generateOptimalSignal optimalStateSignal sig
         
--- TODO .. activate storage part        
+-- TODO  -- check if Balance is calculated on power or energy signals
 getBalance :: 
   (Arith.Constant a,
    DV.Zipper vec,
@@ -303,7 +303,6 @@ getBalance ::
    DV.Storage vec (SignalFlow.TimeStep a),
    DV.Storage vec (Maybe (Interp.Val a)),
    DV.Storage vec a) =>       
---  Map.Map (node) (SignalFlow.Signal inst label vec a (Maybe (Interp.Val a))) ->
   OptimalStoragePowers node inst vec a (Interp.Val a) ->
   Balance.Balance node (Maybe (Interp.Val a))
 getBalance storageSignals = Balance.Balance $ Map.map f storageSignals

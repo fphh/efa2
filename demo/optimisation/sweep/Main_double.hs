@@ -348,7 +348,7 @@ main = do
   let sweep = Process.makeSweep caller system systemData optiSet     
         :: Process.SweepResults Node Base ND.Dim2 ND.Dim2 [] [] Double
                         
-  let evalFunction = FlowTopoOpt.calcEtaLossSys
+  let evalFunction = FlowTopoOpt.calcEtaLossSysWithLifeCycleMap
                                                              
   let evalMethod=StateFlowOpt.N_SFG_EQ_N_STATE
       

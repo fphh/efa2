@@ -41,7 +41,7 @@ import qualified EFA.Graph as Graph
 --import Data.Foldable (Foldable, foldMap)
 import qualified EFA.Flow.SequenceState.Index as Idx
 
-import qualified EFA.Report.Format as Format
+--import qualified EFA.Report.Format as Format
 
 import qualified Data.Maybe as Maybe
 --import Control.Applicative (liftA2, liftA)
@@ -60,39 +60,6 @@ modul = ModuleName "Action.Flow.Topology.Optimality"
 
 nc :: FunctionName -> Caller
 nc = genCaller modul
-
--- TODO :: old Code adjust to new needs
-data Orientation = Dir | UnDir deriving Show
-
-absoluteStateIndex ::
-  (Node.C node) =>
-  Graph.Graph node Graph.DirEdge nodeLabel1 a1 ->
-  Graph.Graph node Graph.EitherEdge nodeLabel a ->
-  Idx.AbsoluteState
-absoluteStateIndex topo flowTopo =
-  let tlabels = map unEitherEDir $ Map.keys $ Graph.edgeLabels topo
-
-      flabels = Map.fromList $ map unEDir $ Map.keys $ Graph.edgeLabels flowTopo
-
-      unEDir (Graph.EDirEdge (Graph.DirEdge f t)) = ((f, t), Dir)
-      unEDir (Graph.EUnDirEdge (Graph.UnDirEdge f t)) = ((f, t), UnDir)
-
-      unEitherEDir (Graph.DirEdge f t) = (f, t)
-
-      g k@(f, t) =
-        case (Map.lookup k flabels, Map.lookup (t, f) flabels) of
-             (Just Dir, _) -> 0
-             (Just UnDir, _) -> 1
-             (_, Just Dir) -> 2
-             (_, Just UnDir) -> 1
-             _ -> error $ "EFA.Graph.Topology.flowNumber: edge not found "
-                          ++ Format.showRaw (Node.display f :: Format.ASCII)
-                          ++ "->"
-                          ++ Format.showRaw (Node.display t :: Format.ASCII)
-
-      toTernary xs = Idx.AbsoluteState $ sum $ zipWith (*) xs $ map (3^) [0 :: Int ..]
-
-  in toTernary $ map g tlabels
 
 data EndNodeEnergies node v = EndNodeEnergies 
                               {getSinkMap:: (FlowOpt.SinkMap node v),
@@ -123,7 +90,7 @@ lookupControlVar :: Ord node => TopoQty.Section node v -> DemandAndControl.Contr
 lookupControlVar flowSection (DemandAndControl.ControlPower idx) = TopoQty.lookupPower idx flowSection
 lookupControlVar flowSection (DemandAndControl.ControlRatio idx) = TopoQty.lookupX idx flowSection
 
-calcEtaLossSys ::
+calcEtaLossSysWithLifeCycleMap ::
   (Ord a,
    Ord node,
    Show node,
@@ -147,7 +114,7 @@ calcEtaLossSys ::
   CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->  
   CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityMeasure (Interp.Val a))
 
-calcEtaLossSys caller lifeCycleEfficiencies  (EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) state = let 
+calcEtaLossSysWithLifeCycleMap caller lifeCycleEfficiencies  (EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) state = let 
   chargeStorages = Map.mapMaybeWithKey (\node x -> 
           (applyUsageEfficiency caller state lifeCycleEfficiencies node) x) storages
                    
@@ -164,10 +131,10 @@ calcEtaLossSys caller lifeCycleEfficiencies  (EndNodeEnergies (FlowOpt.SinkMap s
 -- TODO: move to right place -- use in applyGenerationEfficiency,applyUsageEfficiency
 getStoragePowerWithSign :: (Arith.Sum v) => TopoQty.Sums v -> Maybe v
 getStoragePowerWithSign sums = case sums of                 
-  -- TODO how to mach case Just Just ?
   TopoQty.Sums Nothing (Just energy) -> Just $ energy
   TopoQty.Sums  (Just energy) Nothing -> Just $ Arith.negate energy
   TopoQty.Sums Nothing Nothing -> Nothing 
+  TopoQty.Sums (Just _) (Just _) -> error "Error in getStoragePowerWithSign: Inconsistent energy flow - both directions active"
 
 applyGenerationEfficiency ::
   (Ord a,
@@ -227,37 +194,7 @@ applyUsageEfficiency caller state lifeCycleEfficiencies node (Just sums) = case 
           Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (ActFlowCheck.getState st) node 
         e = merror caller modul "applyUsageEfficiency" 
                     ("Node not in LifeCycleEfficiencyMap-State: " ++ show st ++ "-Node: " ++ show node)
-{-                    
-calculateOptimalityMeasure :: 
-  (Ord node, Ord a, Show node, Arith.Constant a, DV.Zipper vec,Show (vec a),
-   DV.Storage vec (FlowOpt.Eta2Optimise a, FlowOpt.Loss2Optimise a), 
-   DV.Storage vec (FlowOpt.Loss2Optimise a), 
-   DV.Storage vec (FlowOpt.TotalBalanceForce a),
-   DV.Storage vec (FlowOpt.OptimalityMeasure a),
-   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure a),
-   DV.Storage vec (FlowOpt.Eta2Optimise a),
-   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Walker vec, DV.Storage vec a, DV.Singleton vec,
-   DV.Storage vec (a, a),
-   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a),
-                   FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage vec (Interp.Val a),
-   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a)),
-   DV.Storage vec (FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, (a, a)),
-   DV.Storage vec (FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
-                         FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Length vec) =>
-   Caller -> 
-   CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->
-   FlowOpt.LifeCycleMap node (Interp.Val a) -> 
-    EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
-   CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure (Interp.Val a))
-calculateOptimalityMeasure caller state lifeCycleEfficiencies endNodeEnergies = let
-    etaLossSys = calcEtaLossSys caller lifeCycleEfficiencies endNodeEnergies state
-  in CubeMap.zipWithData ((,)) state $ (CubeMap.mapData (\(x,y) -> FlowOpt.OptimalityMeasure x y)) etaLossSys
--}
+
 objectiveFunctionValues :: 
   (Ord node, Ord a, Show node, Arith.Constant a, DV.Zipper vec,
    DV.Storage vec (FlowOpt.OptimalityMeasure a),
