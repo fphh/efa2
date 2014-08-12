@@ -21,7 +21,7 @@ import qualified EFA.Data.Vector as DV
 --import qualified EFA.Data.Plot.D2 as PlotD2
 --import qualified EFA.Data.Plot.D2.Curve as PlotCurve
 
-import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
+--import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
 --import qualified EFA.Action.Optimisation.Flow.Topology as 
 
@@ -348,7 +348,7 @@ main = do
   let sweep = Process.makeSweep caller system systemData optiSet     
         :: Process.SweepResults Node Base ND.Dim2 ND.Dim2 [] [] Double
                         
-  let evalFunction = FlowTopoOpt.calcEtaLossSys 
+  let evalFunction = FlowTopoOpt.calcEtaLossSys
                                                              
   let evalMethod=StateFlowOpt.N_SFG_EQ_N_STATE
       
@@ -359,13 +359,6 @@ main = do
   let loop = Process.loop (nc "Main") system systemData testSet optiSet efaParams sweep 
              storageList etaLoopParams balanceLoopParams evalFunction updateEvalParam
              
-
- {- let flowVars = [--TopoIdx.Power (TopoIdx.Position Water Network)] 
-                  --TopoIdx.Power (TopoIdx.Position Gas LocalNetwork), 
-                  TopoIdx.Power (TopoIdx.Position Coal Network)] 
-                  --TopoIdx.Power (TopoIdx.Position Rest Network),
-                  --TopoIdx.Power (TopoIdx.Position Network LocalNetwork)]
-                  --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]-}                      
 
   print loop
   OP.loopsIO evalCtrl optCtrl opCtrl simCtrl system optiSet loop

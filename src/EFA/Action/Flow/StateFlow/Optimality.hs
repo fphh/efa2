@@ -5,7 +5,7 @@ module EFA.Action.Flow.StateFlow.Optimality where
 import qualified EFA.Graph as Graph
 import qualified EFA.Equation.Result as Result
 
-import qualified EFA.Data.Interpolation as Interp
+--import qualified EFA.Data.Interpolation as Interp
 
 import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Part.Map as PartMap
@@ -60,12 +60,12 @@ updateOneStorageLifeCycleEfficiencies ::
   Caller ->
   Topo.Topology node ->
   LifeCycleMethod ->
-  FlowOpt.GlobalLifeCycleMap node a ->
+  FlowOpt.GlobalLifeCycleMap node (a) ->
 --  (FlowOpt.GenerationEfficiency a, FlowOpt.UsageEfficiency a) ->
   StateQty.Graph node (Result.Result ((D.Data D.Nil (a)))) 
                       (Result.Result ((D.Data D.Nil (a)))) ->
-  FlowOpt.LifeCycleMap node a ->  
-  (a,FlowOpt.LifeCycleMap node a)
+  FlowOpt.LifeCycleMap node (a) ->  
+  (a,FlowOpt.LifeCycleMap node (a))
 
 updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleMap sfg (FlowOpt.LifeCycleMap oldMap) = (etaSysSfg,
   FlowOpt.LifeCycleMap $ Map.union (Map.mapKeys (\(Idx.State state) -> Idx.AbsoluteState $ fromIntegral state) $ 
@@ -74,9 +74,9 @@ updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleMap sfg 
     newCaller = caller |> nc "updateOneStorageLifeCycleEfficiencies"
     absSfg = ActUt.absoluteStateFlowGraph topo sfg
     -- absSfg = fmap g g  $ ActUt.absoluteStateFlowGraph topo sfg
-    g = (\(D.Data x) -> x) . (ActUt.checkDetermined "updateOneStorageLifeCycleEfficiencies") 
+    --g = (\(D.Data x) -> x) . (ActUt.checkDetermined "updateOneStorageLifeCycleEfficiencies") 
 --    checkValid x = if Interp.isInvalid x then err else Interp.unpack x 
-    err = merror caller modul "updateOneStorageLifeCycleEfficiencies" "Invalid Values in StateFlowChart"
+    --err = merror caller modul "updateOneStorageLifeCycleEfficiencies" "Invalid Values in StateFlowChart"
     etaSysSfg = calculateEtaSys newCaller globalLifeCycleMap absSfg  
     f (Idx.State state) _ =  case method of
           N_SFG_EQ_N_STATE -> Map.mapWithKey (etaSysState_Eq_etaSysSfg 
