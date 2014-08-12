@@ -133,10 +133,10 @@ etaSysState_Eq_etaSysSfg caller absSfg etaSysSfg state sto (oldEtaGen,oldEtaUse)
     err4 = merror caller modul "etaSysState_Eq_etaSysSfg" "invalid flow"
     
     traceStr = " State: " ++ show state ++ 
-      "Sinks: " ++ show totalSinkEnergy  ++ 
-      "Sources: " ++ show totalSourceEnergy ++ 
-      "Sto: " ++ (show $ Map.lookup sto storages) ++
-      "EtaSys: " ++ (show etaSysSfg)
+      " Sinks: " ++ show totalSinkEnergy  ++ 
+      " Sources: " ++ show totalSourceEnergy ++ 
+      " Sto: " ++ (show $ Map.lookup sto storages) ++
+      " EtaSys: " ++ (show etaSysSfg)
     
     in Trace.trace traceStr $ case Maybe.fromMaybe err2 $ Maybe.fromMaybe err3 $ Map.lookup sto storages of
              TopoQty.Sums Nothing (Just sumOut) -> UtTrace.simTrace "etaGen" $ (etaGen sumOut , oldEtaUse)
@@ -199,9 +199,15 @@ calculateEtaSys caller globalLifeCycleMap sfg =
                                 
        err2 n =  merror caller modul "calculateEtaSys" $ "node not found in globalLifeCycleMap: " ++ show n
        
+       traceStr = 
+         " Sinks: " ++ show (sumRes sinks)  ++ 
+         " Sources: " ++ show (sumRes sources) ++ 
+         " Charge: " ++ show (sumCharge balance) ++
+         " Sto: " ++ show balance ++
+         " DisCharge: " ++ show (sumDischarge balance)
 
 
-   in ((sumRes sinks) Arith.~+ (sumCharge balance))   
+   in Trace.trace traceStr $ ((sumRes sinks) Arith.~+ (sumCharge balance))   
       Arith.~/ 
       ((sumRes sources) Arith.~+ (sumDischarge balance))
 

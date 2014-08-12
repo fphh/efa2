@@ -96,7 +96,7 @@ data File = RelativeFilePath | AbsoluteFilePath
 --4 Terminal; FilePath 
 --4 Optionen übergeben 
 
-data Draw = DontDraw | Xterm
+data Draw = DontDraw | Xterm | PDF FilePath
 data Plot = DontPlot | Dflt | PNG FilePath | SVG FilePath | PS FilePath
 data Print = DontPrint | StdOut | Print FilePath
   
@@ -110,10 +110,12 @@ plotAction (PNG file) toPlotData plot = [void $ Plot.plotSync (PNG.cons file)  $
 plotAction (SVG file) toPlotData plot = [void $ Plot.plotSync (SVG.cons file) $ toPlotData plot] 
 plotAction (PS file) toPlotData plot = [void $ Plot.plotSync (PS.cons file) $ toPlotData plot] 
 plotAction DontPlot _ _ = []
+
 drawAction :: 
   Draw -> (t -> [Canonical.DotGraph LazyText.Text]) -> t -> [IO ()]
 drawAction DontDraw _ _ = []
 drawAction Xterm toDotFunction diagram = map Draw.xterm $ toDotFunction diagram
+drawAction (PDF filePath) toDotFunction diagram = map (Draw.pdf filePath) $ toDotFunction diagram 
 
 printAction :: Show a => Print -> a -> [IO ()]
 printAction (Print _) _ = error "PrintAction Print to File not implemented yet"
@@ -365,6 +367,7 @@ evalSweep ::
   EvalCtrl ->
   Process.SweepEvaluation node inst dim srchDim vec srchVec a ->
   [IO ()]
+evalSweep _ _ EvalDont _ = []  
 evalSweep caller srchGrid ctrl swp = let  
   newCaller = caller |> nc "evalSweep"
   in 
@@ -439,6 +442,7 @@ optPerState ::
   OptiCtrl ->
   Process.OptimisationPerState t t1 dim srchDim vec srchVec sigVec a ->
   [IO ()]
+optPerState caller srchGrid OptiDont opt = []
 optPerState caller srchGrid ctrl opt = 
   let newCaller = caller |> nc "optPerState"
   in (plotAction (plotOptimality ctrl)
@@ -487,6 +491,7 @@ optimalOperation ::
   OpCtrl ->
   Process.OptimalOperation id inst vec a ->
   [IO ()]
+optimalOperation OpDont opt = []
 optimalOperation ctrl opt = 
    (plotAction (plotOptimalControlSignals ctrl) 
    (OptSignalPlot.plotOptimalSignals "Optimal ControlSignals")
@@ -532,6 +537,7 @@ simulation ::
   SimCtrl ->
   Process.SimulationAndAnalysis node inst sigVec a ->
  [IO ()]
+simulation _ SimDont _ = [] 
 simulation system ctrl sim =  let
   legend = Map.fromList $ zip [0..] $ SignalFlow.getHRecordKeys $ 
            Simulation.accessPowerRecord $ Process.accessSimulation sim

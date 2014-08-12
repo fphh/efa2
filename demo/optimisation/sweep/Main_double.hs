@@ -248,22 +248,28 @@ sysCtrl = OP.SysDo {OP.topo = OP.DoP OP.Xterm OP.StdOut, OP.labTopo =  OP.DoP OP
 testCtrl = OP.TestDo {OP.demandCycle = OP.Dflt}
 sysDataCtrl = OP.SysDataDo {OP.rawCurves = OP.PoP OP.Dflt OP.StdOut, OP.etaFunctions = OP.Dflt}
 optiSetCtrl = OP.OptiSetDo {OP.variation = OP.Dflt }
-evalCtrl = OP.EvalDo { OP.plotEta = OP.Dflt, 
-                       OP.plotEtaAt = OP.Dflt }
 
-sweepCtrl = OP.SweepDo {OP.drawFlow = OP.Xterm,
-                        OP.plotState = OP.Dflt,
-                        OP.plotStatus = OP.Dflt, 
-                        OP.plotFlowVariables = OP.Dflt} -- OP.DontPlot} -- OP.Dflt}
+evalCtrl = OP.EvalDont
+  {-OP.EvalDo { OP.plotEta = OP.Dflt, 
+                       OP.plotEtaAt = OP.Dflt }-}
+
+sweepCtrl = OP.SweepDont 
+          {-  OP.SweepDo {OP.drawFlow = OP.Xterm,
+                         OP.plotState = OP.Dflt,
+                         OP.plotStatus = OP.Dflt, 
+                         OP.plotFlowVariables = OP.Dflt} -- OP.DontPlot} -- OP.Dflt}-}
             
-optCtrl = OP.OptiDo {OP.plotOptimality = OP.Dflt,
+optCtrl = OP.OptiDont 
+          {- OP.OptiDo
+                    {OP.plotOptimality = OP.Dflt,
                      OP.plotOptEtaPerState = OP.Dflt, 
                      OP.plotEtaOptPerState= OP.Dflt, 
                      OP.plotOptIndexPerState= OP.Dflt, 
-                     OP.plotOptimalSignalPerState =OP.Dflt }
+                     OP.plotOptimalSignalPerState =OP.Dflt } -}
 
-opCtrl = OP.OpDo {OP.plotOptimalControlSignals = OP.Dflt, 
-                  OP.plotOptimalStoragePowers = OP.Dflt}
+opCtrl = OP.OpDont {-
+         OP.OpDo {OP.plotOptimalControlSignals = OP.Dflt, 
+                  OP.plotOptimalStoragePowers = OP.Dflt}-}
          
 simCtrl = OP.SimDo {OP.drawSimulationFlowGraph = OP.Xterm,
                     OP.plotSimulationPowers = OP.Dflt,
@@ -284,10 +290,10 @@ initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))
 
 etaLoopParams = 
   Loop.EtaLoopParams
-  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 10, 
+  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 4, 
    Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
    Loop.accGlobalLifeCycleMap = FlowOpt.GlobalLifeCycleMap $ 
-     Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 0), FlowOpt.UsageEfficiency (Interp.Inter 0)))]                                              
+     Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 0.5), FlowOpt.UsageEfficiency (Interp.Inter 0.5)))]                                              
 }
   
 balanceLoopParams =  
@@ -295,7 +301,7 @@ balanceLoopParams =
   {Loop.accessMaxIterationsPerStorage = Balance.MaxIterationsPerStorage 20, 
    Loop.accessMaxIterations = Balance.MaxIterations 20,
    Loop.accessThreshold = Balance.Threshold (Interp.Inter 0.01) , 
-   Loop.accessInitialForcing = balanceForcingMap, -- Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter 0.5))], 
+   Loop.accessInitialForcing = balanceForcingMap, 
    Loop.accessInitialStep = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (0.001)))], 
    Loop.accessInitialSto = Water}
           
