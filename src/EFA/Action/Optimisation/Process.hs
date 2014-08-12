@@ -310,6 +310,7 @@ makeSweep system systemData optiSet = SweepResults energyFlowResult energyFlow f
     flowStatus = CubeSweep.getFlowStatus (nc "main") energyFlow
     endNodePowers = CubeSweep.getEndNodeFlows energyFlow
 
+{-
 evaluateSweep ::
   (Eq (demVec a),
    Ord node,
@@ -352,6 +353,58 @@ evaluateSweep ::
   SweepEvaluation node inst demDim srchDim demVec srchVec a
 evaluateSweep caller sweepResults lifeCycleMap = 
   SweepEvaluation $ CubeSweep.calculateOptimalityMeasure caller lifeCycleMap endNodePowers status
+  where endNodePowers = accessSweepEndNodePowers sweepResults
+        status = accessSweepFlowStatus sweepResults
+-} 
+
+evaluateSweep ::
+  (Eq (demVec a),
+   Ord node,
+   Ord a,
+   Show node,
+   Show (srchVec a),
+   Arith.Constant a,
+   DV.Zipper demVec,
+   DV.Zipper srchVec,
+   DV.Walker srchVec,
+   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                        FlowOpt.OptimalityMeasure (Interp.Val a))),
+   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus),
+   DV.Storage demVec (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
+   DV.Storage srchVec (FlowOpt.Eta2Optimise a,
+                       FlowOpt.Loss2Optimise a),
+   DV.Storage srchVec (FlowOpt.Loss2Optimise a),
+   DV.Storage srchVec (FlowOpt.TotalBalanceForce a),
+   DV.Storage srchVec (FlowOpt.OptimalityMeasure a),
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                       FlowOpt.OptimalityMeasure a),
+   DV.Storage srchVec (FlowOpt.Eta2Optimise a),
+   DV.Storage srchVec ActFlowCheck.EdgeFlowStatus,
+   DV.Storage srchVec a,
+   DV.Storage srchVec (a, a),
+   DV.Storage srchVec (FlowOpt.Eta2Optimise (Interp.Val a),
+                       FlowOpt.Loss2Optimise (Interp.Val a)),
+   DV.Storage srchVec (Interp.Val a),
+   DV.Storage srchVec (FlowOpt.Eta2Optimise (Interp.Val a)),
+   DV.Storage srchVec (FlowOpt.Loss2Optimise (Interp.Val a)),
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,(a,a)),
+   DV.Storage srchVec (FlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                       FlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Singleton srchVec,
+   DV.Length srchVec) =>
+  Caller ->
+  (Caller -> 
+   evalParam ->
+   CubeSweep.EndNodeFlows node inst demDim srchDim demVec srchVec a (Interp.Val a) ->
+   CubeSweep.FlowStatus node inst demDim srchDim demVec srchVec a ->
+   CubeSweep.OptimalityMeasure node inst demDim srchDim demVec srchVec a (Interp.Val a)) ->
+  SweepResults node inst demDim srchDim demVec srchVec a ->
+  evalParam ->
+  SweepEvaluation node inst demDim srchDim demVec srchVec a
+evaluateSweep caller evalFunction sweepResults evalParam = 
+  SweepEvaluation $ evalFunction caller evalParam endNodePowers status
+  --CubeSweep.calculateOptimalityMeasure caller lifeCycleMap endNodePowers status
   where endNodePowers = accessSweepEndNodePowers sweepResults
         status = accessSweepFlowStatus sweepResults
  
@@ -757,29 +810,30 @@ loop ::
   OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   EFA.EFAParams node (Interp.Val a) ->
   SweepResults node inst demDim srchDim demVec srchVec a ->
-  FlowOpt.LifeCycleMap node (Interp.Val a) ->
   [node] ->
-  Loop.EtaLoopParams node (Interp.Val a) ->
+  Loop.EtaLoopParams node (Interp.Val a) evalParam ->
   Loop.BalanceLoopParams node (Interp.Val a) ->
-  [Loop.EtaLoopItem node (Interp.Val a)  
+  (evalParam -> SweepEvaluation node inst demDim srchDim demVec srchVec a) ->
+  (Res node inst demDim srchDim demVec srchVec sigVec a  -> evalParam -> (Interp.Val a,evalParam)) ->
+  [Loop.EtaLoopItem node (Interp.Val a) evalParam 
    (SweepEvaluation node inst demDim srchDim demVec srchVec a) 
    (Res node inst demDim srchDim demVec srchVec sigVec a)]
 
-loop caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList etaParams balParams = 
-  Loop.etaLoop caller storageList etaParams balParams evalFunction sysFunction getBalance initialLifeCycleMap updateLifeCycleMap
+loop caller system systemData testSet optiSet efaParams sweepResults storageList etaParams balParams evalFunction updateEvalParam = 
+  Loop.etaLoop caller storageList etaParams balParams evalFunction sysFunction getBalance updateEvalParam
   where
     newCaller = caller |> nc "loop"
     topo = accessTopology system
-    method = Loop.accLifeCycleMethod etaParams
-    globalLifeCycleMap = Loop.accGlobalLifeCycleMap etaParams
+ --   method = Loop.acc etaParams
+--    globalLifeCycleMap = Loop.accGlobalLifeCycleMap etaParams
     
     getBalance = Balance.unMaybeBalance newCaller . accessBalance . accOptOperation
-    updateLifeCycleMap = StateFlowOpt.updateOneStorageLifeCycleEfficiencies 
+{-    updateLifeCycleMap = StateFlowOpt.updateOneStorageLifeCycleEfficiencies 
                                                   newCaller topo method globalLifeCycleMap . 
-                                                  EFA.accessStateFlowGraph . accessAnalysis . accSimEfa
+                                                  EFA.accessStateFlowGraph . accessAnalysis . accSimEfa -}
                                                   
     sysFunction = systemFunction newCaller system systemData testSet optiSet efaParams storageList sweepResults
-    evalFunction = evaluateSweep newCaller sweepResults
+--    evalSweepFunction = evaluateSweep newCaller sweepResults
 
     
     

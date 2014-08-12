@@ -652,7 +652,7 @@ loopsIO ::
  SimCtrl ->
  Process.System node ->
  Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
- [Loop.EtaLoopItem t0 t1   
+ [Loop.EtaLoopItem t0 t1 t2  
   (Process.SweepEvaluation node inst demDim srchDim demVec srchVec a) 
   (Process.Res node inst demDim srchDim demVec srchVec sigVec a)] ->
  IO ()  
@@ -746,7 +746,7 @@ etaLoopItemIO ::
   SimCtrl ->
   Process.System node ->
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
-  Loop.EtaLoopItem t t1 
+  Loop.EtaLoopItem t t1 t2
   (Process.SweepEvaluation node inst demDim srchDim demVec srchVec a) 
   (Process.Res node inst demDim srchDim demVec srchVec sigVec a) ->
   IO ()

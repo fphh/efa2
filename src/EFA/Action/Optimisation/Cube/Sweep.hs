@@ -256,45 +256,8 @@ getFlowStatus ::
 getFlowStatus caller flowResult = 
   CubeMap.map (FlowTopoCheck.getFlowStatus 
                             (caller |> nc "getEndNodeFlows")) flowResult
-{-
-calculateOptimalityMeasure ::
-  (Eq (vec a),
-   Ord b,
-   Ord node,
-   Show node,
-   Arith.Constant b,
-   DV.Zipper vec1,
-   DV.Zipper vec,
-   DV.Walker vec1,
-   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,(b,b)), 
-   DV.Storage vec1 (b,b),
-   DV.Storage vec1 b,
-   DV.Storage vec1 ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec1 (FlowOpt.Eta2Optimise (Interp.Val b)),
-   DV.Storage  vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 
-                                   (ActFlowCheck.EdgeFlowStatus, 
-                                    FlowOpt.OptimalityMeasure (Interp.Val b)))),
-   DV.Storage vec1 (FlowOpt.TotalBalanceForce (Interp.Val b)),
-   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure (Interp.Val b)),
-   DV.Storage vec1 (FlowOpt.OptimalityMeasure (Interp.Val b)),
-   DV.Storage vec1 (FlowOpt.Loss2Optimise (Interp.Val b)),
-   DV.Storage vec1 (FlowOpt.Eta2Optimise (Interp.Val b),
-                    FlowOpt.Loss2Optimise (Interp.Val b)),
-   DV.Storage vec (FlowTopoOpt.EndNodeEnergies node (
-                      (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b)))),
-   DV.Storage vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus)),
-   DV.Storage vec ((CubeMap.Data (Sweep.Search inst) dim1 vec1 
-                    (ActFlowCheck.EdgeFlowStatus,
-                     (FlowOpt.TotalBalanceForce (Interp.Val b),
-                      (FlowOpt.Eta2Optimise (Interp.Val b),
-                       FlowOpt.Loss2Optimise (Interp.Val b)))))),
-   DV.Singleton vec1,Show (vec1 (Interp.Val b)),
-   DV.Length vec1) =>
-  Caller ->
-  FlowOpt.LifeCycleMap node b ->
-  EndNodeFlows node inst dim dim1 vec vec1 a (Interp.Val b) ->
-  FlowStatus node inst dim dim1 vec vec1 a ->
-  OptimalityMeasure node inst dim dim1 vec vec1 a (Interp.Val b) -}
+
+             
 calculateOptimalityMeasure ::
   (Eq label,
    Eq (vec a),
@@ -352,6 +315,7 @@ calculateOptimalityMeasure caller lifeCycleMap endNodeValues status =
            g (FlowOpt.GenerationEfficiency x, FlowOpt.UsageEfficiency y) = 
              (FlowOpt.GenerationEfficiency $ Interp.unpack x, FlowOpt.UsageEfficiency $ Interp.unpack y)
    
+
 objectiveFunctionValues ::
   (
   Eq (vec a),

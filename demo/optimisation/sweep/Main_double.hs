@@ -25,7 +25,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Action.Optimisation.Sweep as Sweep
 --import qualified EFA.Action.Optimisation.Flow.Topology as 
 
---import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Balance as Balance
 
@@ -109,6 +109,7 @@ modul = ModuleName "Demo.Optimisation.Sweep"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
+caller = nc "main"
 
 data Node =
      Coal
@@ -230,8 +231,8 @@ searchVariation =
 states :: [Idx.AbsoluteState]
 states = map Idx.AbsoluteState [0,18,54,72]  --[0,1,18,27,28,45,54,72]
 
-lifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
-lifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0,1,18,27,28,45,54,72]) 
+initialLifeCycleMap :: FlowOpt.LifeCycleMap Node (Interp.Val Double)
+initialLifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0,1,18,27,28,45,54,72]) 
                $ repeat $  -- [0,1,18,27,28,45,54,72]
                Map.fromList [(Water,(FlowOpt.GenerationEfficiency (Interp.Inter 0.3), FlowOpt.UsageEfficiency (Interp.Inter 0.3)))] 
 
@@ -240,7 +241,7 @@ showFunctionAxis ::  Strict.Axis Base String [] Double
 showFunctionAxis = Strict.Axis "Power" Type.P $ DV.fromList $ [-12,-11.9 .. -0.1] ++ [0,0.1..12]                      
 
 
-caller = nc "Main"
+--caller = nc "Main"
 
 -- OutPut Settings
 
@@ -291,7 +292,8 @@ initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))
 etaLoopParams = 
   Loop.EtaLoopParams
   {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 4, 
-   Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
+--   Loop.accLifeCycleMethod = StateFlowOpt.N_SFG_EQ_N_STATE,
+   Loop.accInitialEvalParam = initialLifeCycleMap,
    Loop.accGlobalLifeCycleMap = FlowOpt.GlobalLifeCycleMap $ 
      Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 0.5), FlowOpt.UsageEfficiency (Interp.Inter 0.5)))]                                              
 }
@@ -331,32 +333,18 @@ main = do
   let sweep = Process.makeSweep system systemData optiSet     
         :: Process.SweepResults Node Base ND.Dim2 ND.Dim2 [] [] Double
                         
-{-  let evalSweep = Process.evaluateSweep caller lifeCycleMap sweep
-        :: Process.SweepEvaluation Node Base ND.Dim2 ND.Dim2 [] [] Double
+  let evalSweepFunction = Process.evaluateSweep caller CubeSweep.calculateOptimalityMeasure sweep
+                                                             
+  let evalMethod=StateFlowOpt.N_SFG_EQ_N_STATE
       
-  let optPerState = Process.optimisationPerState testSet optiSet sweep evalSweep  storageList balanceForcingMap controlVars
---        :: Process.OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a
-     
-  let optimalOperation = Process.optimalOperation optPerState
-      
-   
-  let simEfa = Process.simulateAndAnalyse caller system efaParams systemData demandVars optimalOperation demandCycle    
-          :: Process.SimulationAndAnalysis Node Base [] Double
-             
-  let (Process.OptimalOperation _ _ stoPowers balance)  = optimalOperation
---  let (Process.OptimalOperation _ _ stoPowers balance1)  = optimalOperation1
-  let (Process.SimulationAndAnalysis _ (EFA.EnergyFlowAnalysis rec _ _)) = simEfa
--}      
-  let loop = Process.loop (nc "Main") system systemData testSet optiSet efaParams sweep 
-             lifeCycleMap storageList etaLoopParams balanceLoopParams  
-             
---   loop caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList controlVars etaParams balParams          
---  caller system systemData testSet optiSet efaParams sweepResults initialLifeCycleMap storageList controlVars etaParams balParams
+  let updateEvalParam = StateFlowOpt.updateOneStorageLifeCycleEfficiencies 
+                           caller (Process.accessTopology system) evalMethod  (Loop.accGlobalLifeCycleMap etaLoopParams) . 
+                           EFA.accessStateFlowGraph . Process.accessAnalysis . Process.accSimEfa
   
---  concurrentlyMany_ $ OP.system sysCtrl system
---  concurrentlyMany_ $ OP.test testCtrl testSet demandVars
---  concurrentlyMany_ $ OP.sysData sysDataCtrl systemData
---  concurrentlyMany_ $ OP.optiSet (nc "Main") optiSetCtrl optiSet
+  let loop = Process.loop (nc "Main") system systemData testSet optiSet efaParams sweep 
+             storageList etaLoopParams balanceLoopParams evalSweepFunction updateEvalParam
+             
+
   let flowVars = [--TopoIdx.Power (TopoIdx.Position Water Network)] 
                   --TopoIdx.Power (TopoIdx.Position Gas LocalNetwork), 
                   TopoIdx.Power (TopoIdx.Position Coal Network)] 
@@ -369,34 +357,7 @@ main = do
                   --TopoIdx.Eta (TopoIdx.Position Gas LocalNetwork)] 
                   TopoIdx.Eta (TopoIdx.Position Network LocalNetwork)]
                   --TopoIdx.Power (TopoIdx.Position LocalRest LocalNetwork)]                      
-{-   
-  concurrentlyMany_ $ 
-    OP.sweep  (nc "Main") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
-    ++ OP.evalSweep (nc "Main") (Process.accessSearchGrid optiSet) evalCtrl evalSweep 
-    ++ OP.optPerState  (nc "Main") (Process.accessSearchGrid optiSet) optCtrl optPerState  
-    ++ OP.optimalOperation opCtrl optimalOperation
-    ++ OP.simulation simCtrl simEfa
--}  
---  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
 
---  print stoPowers
---  print balance
---  print balance1
---  print $ Process.accessOptimalStoragePowers optimalOperation
-  
---  print $ Process.accessOptimalStoragePowers optimalOperation1
-  
---  print $ Process.accessSweepEndNodePowers sweep
---  print $ Process.accessSweepOptimality evalSweep
   print loop
   OP.loopsIO evalCtrl optCtrl opCtrl simCtrl system optiSet loop
---  print $  Process.accessOptimalStateSignals optPerState
---  print $  Process.accessOptimalStateChoice optimalOperation
---  print $ Process.accessOptimalStateChoice $ Process.accOptOperation $ Loop.getLastResult loop 
---  print $ EFA.accessStateFlowGraph $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop 
---  print $ demandCycle    
---  print $ Process.accessOptimalControlSignals $ Process.accOptOperation $ Loop.getLastResult loop 
---  print $ EFA.accessSeqFlowRecord $ Process.accessAnalysis $ Process.accSimEfa $ Loop.getLastResult loop
---  concurrentlyMany_ $ OP.simulation simCtrl (Process.accSimEfa $ Loop.getLastResult loop)
-
  
