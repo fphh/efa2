@@ -79,7 +79,7 @@ import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 import qualified EFA.Action.Optimisation.Cube.Solve as CubeSolve
 
 import qualified Data.Maybe as Maybe
-import qualified Data.Set as Set
+--import qualified Data.Set as Set
 --import Control.Applicative as Applicative
 
 --import qualified EFA.Flow.Topology as FlowTopo
@@ -257,7 +257,7 @@ getFlowStatus caller flowResult =
   CubeMap.map (FlowTopoCheck.getFlowStatus 
                             (caller |> nc "getEndNodeFlows")) flowResult
 
-             
+{-             
 calculateOptimalityMeasure ::
   (Eq label,
    Eq (vec a),
@@ -299,13 +299,16 @@ calculateOptimalityMeasure ::
    DV.Singleton vec1,
    DV.Length vec1) =>
   Caller ->
-  FlowOpt.LifeCycleMap node (Interp.Val b) ->
+  evalParam -> 
+  evalParam ->
   CubeMap.Cube (Sweep.Demand inst) dim label vec a (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b))) ->
   CubeMap.Cube (Sweep.Demand inst) dim label vec a (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus) ->
   CubeMap.Cube (Sweep.Demand inst) dim label vec a (CubeMap.Data (Sweep.Search inst) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
                                                                                   FlowOpt.OptimalityMeasure (Interp.Val b)))
+  
+   
 calculateOptimalityMeasure caller lifeCycleMap endNodeValues status = 
-  CubeMap.zipWith (caller |> nc "calculateOptimalityMeasuregetEndNodeFlows") 
+  CubeMap.zipWith (caller |> nc "calculateOptimalityMeasure") 
   (\ x st -> FlowTopoOpt.calculateOptimalityMeasure 
              (caller |> nc "calculateOptimalityMeasure") 
              st (f lifeCycleMap) x) 
@@ -314,8 +317,8 @@ calculateOptimalityMeasure caller lifeCycleMap endNodeValues status =
     where  f (FlowOpt.LifeCycleMap m) =  FlowOpt.LifeCycleMap $ Map.map (Map.map g) m 
            g (FlowOpt.GenerationEfficiency x, FlowOpt.UsageEfficiency y) = 
              (FlowOpt.GenerationEfficiency $ Interp.unpack x, FlowOpt.UsageEfficiency $ Interp.unpack y)
+-}
    
-
 objectiveFunctionValues ::
   (
   Eq (vec a),

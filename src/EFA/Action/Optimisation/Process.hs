@@ -352,14 +352,16 @@ evaluateSweep ::
   Caller ->
   (Caller -> 
    evalParam ->
-   CubeSweep.EndNodeFlows node inst demDim srchDim demVec srchVec a (Interp.Val a) ->
-   CubeSweep.FlowStatus node inst demDim srchDim demVec srchVec a ->
-   CubeSweep.OptimalityMeasure node inst demDim srchDim demVec srchVec a (Interp.Val a)) ->
+   FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)) ->
+   CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus ->
+   CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                     FlowOpt.OptimalityMeasure (Interp.Val a))) ->
   SweepResults node inst demDim srchDim demVec srchVec a ->
   evalParam ->
   SweepEvaluation node inst demDim srchDim demVec srchVec a
 evaluateSweep caller evalFunction sweepResults evalParam = 
-  SweepEvaluation $ evalFunction caller evalParam endNodePowers status
+  SweepEvaluation $  CubeMap.zipWith (caller |> nc "evaluateSweep") 
+  (evalFunction (caller |> nc "evaluateSweep") evalParam) endNodePowers status
   where endNodePowers = accessSweepEndNodePowers sweepResults
         status = accessSweepFlowStatus sweepResults
  
@@ -772,7 +774,12 @@ loop ::
   [node] ->
   Loop.EtaLoopParams node (Interp.Val a) evalParam ->
   Loop.BalanceLoopParams node (Interp.Val a) ->
-  (evalParam -> SweepEvaluation node inst demDim srchDim demVec srchVec a) ->
+  (Caller ->
+   evalParam ->
+   FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)) ->
+   CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus ->
+   CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                     FlowOpt.OptimalityMeasure (Interp.Val a))) ->
   (Res node inst demDim srchDim demVec srchVec sigVec a  -> evalParam -> (Interp.Val a,evalParam)) ->
   [Loop.EtaLoopItem node (Interp.Val a) evalParam 
    (SweepEvaluation node inst demDim srchDim demVec srchVec a) 
@@ -780,12 +787,12 @@ loop ::
 
 
 loop caller system systemData testSet optiSet efaParams sweepResults storageList etaParams balParams evalFunction updateEvalParam = 
-  Loop.etaLoop caller storageList etaParams balParams evalFunction sysFunction getBalance updateEvalParam
+  Loop.etaLoop caller storageList etaParams balParams sweepEvalFunction sysFunction getBalance updateEvalParam
   where
     newCaller = caller |> nc "loop"
     getBalance = Balance.unMaybeBalance newCaller . accessBalance . accOptOperation
     sysFunction = systemFunction newCaller system systemData testSet optiSet efaParams storageList sweepResults
-    
+    sweepEvalFunction = evaluateSweep newCaller evalFunction sweepResults
     
 systemFunction ::
   (Eq (sigVec a),

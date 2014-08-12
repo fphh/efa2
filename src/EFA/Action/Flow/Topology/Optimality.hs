@@ -26,11 +26,11 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Arithmetic as Arith
 --import EFA.Equation.Arithmetic ((~+), (~/))
-import EFA.Equation.Result (Result(..))
-import qualified EFA.Equation.Result as Result
+--import EFA.Equation.Result (Result(..))
+--import qualified EFA.Equation.Result as Result
 
 import qualified Data.Map as Map
-import qualified Data.Set as Set
+--import qualified Data.Set as Set
 
 import qualified EFA.Graph as Graph
 
@@ -48,7 +48,7 @@ import qualified Data.Maybe as Maybe
 --import Control.Monad(join)
 --import Data.Foldable (Foldable, foldMap)
 
-import Debug.Trace(trace)
+--import Debug.Trace(trace)
 
 import EFA.Utility(Caller,
                  merror,
@@ -139,12 +139,12 @@ calcEtaLossSys ::
    DV.Singleton vec,
    DV.Length vec) =>
   Caller ->
-  CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->
   FlowOpt.LifeCycleMap node a ->
   EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
+  CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->  
   CubeMap.Data (Sweep.Search inst) dim vec (FlowOpt.Eta2Optimise (Interp.Val a),
                              FlowOpt.Loss2Optimise (Interp.Val a))
-calcEtaLossSys caller state lifeCycleEfficiencies (EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) = let 
+calcEtaLossSys caller lifeCycleEfficiencies  (EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) state = let 
   chargeStorages = Map.mapMaybeWithKey (\node x -> 
           (applyUsageEfficiency caller state lifeCycleEfficiencies node) x) storages
                    
@@ -257,7 +257,7 @@ calculateOptimalityMeasure ::
     EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
    CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure (Interp.Val a))
 calculateOptimalityMeasure caller state lifeCycleEfficiencies endNodeEnergies = let
-    etaLossSys = calcEtaLossSys caller state lifeCycleEfficiencies endNodeEnergies
+    etaLossSys = calcEtaLossSys caller lifeCycleEfficiencies endNodeEnergies state
   in CubeMap.zipWithData ((,)) state $ (CubeMap.mapData (\(x,y) -> FlowOpt.OptimalityMeasure x y)) etaLossSys
 
 objectiveFunctionValues :: 
@@ -321,7 +321,7 @@ findMaximumEta ::
   CubeMap.Data (Sweep.Search inst) dim vec 
                  (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a)) -> 
   ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityValues (Interp.Val a)))
-findMaximumEta caller states cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f states cubeData 
+findMaximumEta _ states cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f states cubeData 
   where  f (_,FlowOpt.OptimalityValues (FlowOpt.OptimalityMeasure (FlowOpt.EtaSys eta) _) (FlowOpt.TotalBalanceForce forcing)) 
            (_,FlowOpt.OptimalityValues (FlowOpt.OptimalityMeasure (FlowOpt.EtaSys eta1) _) (FlowOpt.TotalBalanceForce forcing1))= 
                 Interp.greaterThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
@@ -345,7 +345,7 @@ findMinimumLoss ::
                    (FlowOpt.Eta2Optimise (Interp.Val a), FlowOpt.Loss2Optimise (Interp.Val a)))) -> 
   ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,(FlowOpt.TotalBalanceForce (Interp.Val a),
                    (FlowOpt.Eta2Optimise (Interp.Val a), FlowOpt.Loss2Optimise (Interp.Val a)))))
-findMinimumLoss caller states cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f states cubeData 
+findMinimumLoss _ states cubeData = CubeMap.findBestWithIndexByPerState (ActFlowCheck.getState . fst) f states cubeData 
   where  f (_,(FlowOpt.TotalBalanceForce forcing,(_,FlowOpt.LossSys loss))) 
            (_,(FlowOpt.TotalBalanceForce forcing1, (_,FlowOpt.LossSys loss1)))= 
                 Interp.lessThanWithInvalid (loss Arith.~+ forcing) (loss1 Arith.~+ forcing1) 

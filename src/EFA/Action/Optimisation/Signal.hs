@@ -10,7 +10,7 @@ import qualified EFA.Graph as Graph
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Action.Flow.Balance as Balance
 import qualified EFA.Flow.Topology.Index as XIdx
-import qualified EFA.Utility.Trace as UtTrace
+--import qualified EFA.Utility.Trace as UtTrace
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Data.Axis.Strict as Strict
