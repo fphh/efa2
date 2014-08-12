@@ -11,7 +11,7 @@ import qualified EFA.Data.OD.Curve as Curve
 import qualified EFA.Action.Flow.Balance as Balance
 import qualified EFA.Data.OD.Signal.Chop as DataChop
 
-import qualified EFA.Utility.Trace as UtTrace
+--import qualified EFA.Utility.Trace as UtTrace
 
 import qualified EFA.Signal.Data as Data
 
@@ -25,7 +25,7 @@ import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Value.State as ValueState
 import qualified EFA.Action.EtaFunctions as EtaFunctions
 import qualified EFA.Action.Flow.Optimality as FlowOpt
-import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
+--import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
 import qualified EFA.Action.Flow.Balance as FlowBal
 import qualified EFA.Data.Vector as DV
 import qualified EFA.Data.ND as ND
@@ -96,7 +96,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 --import qualified EFA.Flow.Topology as FlowTopo
 import qualified Data.Tuple.HT as TupleHT
 --import qualified Data.List as List
-import qualified Data.Set as Set
+--import qualified Data.Set as Set
 
 modul :: ModuleName
 modul = ModuleName "Demo.Optimisation.Process"
@@ -251,22 +251,23 @@ buildOptiSet ::
    DV.LookupUnsafe demVec a,
    DV.Length demVec,
    DV.Find demVec) =>
-
+  Caller ->
   [(DemandAndControl.Var node,Type.Dynamic,demVec a)] ->
   [(DemandAndControl.Var node,Type.Dynamic,srchVec a)] ->
   OptSignal.DemandCycle node inst demDim sigVec a a ->
   [Idx.AbsoluteState]->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a
-buildOptiSet demandVariation searchVariation demandCycle allowedStates = 
+buildOptiSet caller demandVariation searchVariation demandCycle allowedStates = 
   OptiSet demandVariation searchVariation demandVars controlVars 
    demandGrid searchGrid 
    sweepVariation supportSignal
    allowedStates
   where
-    demandGrid = CubeGrid.create (nc "Main") demandVariation
-    searchGrid = CubeGrid.create (nc "Main") searchVariation
-    sweepVariation = CubeSweep.generateVariation (nc "Main") demandGrid searchGrid
-    supportSignal = OptSignal.getSupportPoints (nc "Main") demandGrid demandCycle 
+    newCaller = caller |>  nc "buildOptiSet"
+    demandGrid = CubeGrid.create newCaller demandVariation
+    searchGrid = CubeGrid.create newCaller searchVariation
+    sweepVariation = CubeSweep.generateVariation newCaller demandGrid searchGrid
+    supportSignal = OptSignal.getSupportPoints newCaller demandGrid demandCycle 
     demandVars  = map (DemandAndControl.toDemandVar . TupleHT.fst3) demandVariation
     controlVars = map (DemandAndControl.toControlVar . TupleHT.fst3) searchVariation
 
@@ -297,65 +298,20 @@ makeSweep ::
    DV.Storage demVec (TopoQty.Section node (Maybe (TopoQty.Flow (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))))), 
    DV.Storage demVec (TopoQty.Section node 
                       (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)))) =>
-   System node ->
+  Caller -> 
+  System node ->
   SystemData inst node etaVec a ->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   SweepResults node inst demDim srchDim demVec srchVec a
-makeSweep system systemData optiSet = SweepResults energyFlowResult energyFlow flowStatus endNodePowers 
+makeSweep caller system systemData optiSet = SweepResults energyFlowResult energyFlow flowStatus endNodePowers 
   where 
+    newCaller = caller |> nc "makeSweep"
     topology = accessTopology system
     etaFunctions = accessFunctionMap systemData
     energyFlowResult = CubeSweep.solve topology etaFunctions (accessVariation optiSet)
     energyFlow = CubeMap.map (TopoQty.mapSection $ ActUt.checkDetermined "makeSweep") energyFlowResult
-    flowStatus = CubeSweep.getFlowStatus (nc "main") energyFlow
+    flowStatus = CubeSweep.getFlowStatus newCaller energyFlow
     endNodePowers = CubeSweep.getEndNodeFlows energyFlow
-
-{-
-evaluateSweep ::
-  (Eq (demVec a),
-   Ord node,
-   Ord a,
-   Show node,
-   Show (srchVec a),
-   Arith.Constant a,
-   DV.Zipper demVec,
-   DV.Zipper srchVec,
-   DV.Walker srchVec,
-   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
-                                                                        FlowOpt.OptimalityMeasure (Interp.Val a))),
-   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus),
-   DV.Storage demVec (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
-   DV.Storage srchVec (FlowOpt.Eta2Optimise a,
-                       FlowOpt.Loss2Optimise a),
-   DV.Storage srchVec (FlowOpt.Loss2Optimise a),
-   DV.Storage srchVec (FlowOpt.TotalBalanceForce a),
-   DV.Storage srchVec (FlowOpt.OptimalityMeasure a),
-   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
-                       FlowOpt.OptimalityMeasure a),
-   DV.Storage srchVec (FlowOpt.Eta2Optimise a),
-   DV.Storage srchVec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage srchVec a,
-   DV.Storage srchVec (a, a),
-   DV.Storage srchVec (FlowOpt.Eta2Optimise (Interp.Val a),
-                       FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage srchVec (Interp.Val a),
-   DV.Storage srchVec (FlowOpt.Eta2Optimise (Interp.Val a)),
-   DV.Storage srchVec (FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,(a,a)),
-   DV.Storage srchVec (FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
-                       FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Singleton srchVec,
-   DV.Length srchVec) =>
-  Caller ->
-  SweepResults node inst demDim srchDim demVec srchVec a ->
-  FlowOpt.LifeCycleMap node (Interp.Val a) ->  
-  SweepEvaluation node inst demDim srchDim demVec srchVec a
-evaluateSweep caller sweepResults lifeCycleMap = 
-  SweepEvaluation $ CubeSweep.calculateOptimalityMeasure caller lifeCycleMap endNodePowers status
-  where endNodePowers = accessSweepEndNodePowers sweepResults
-        status = accessSweepFlowStatus sweepResults
--} 
 
 evaluateSweep ::
   (Eq (demVec a),
@@ -404,7 +360,6 @@ evaluateSweep ::
   SweepEvaluation node inst demDim srchDim demVec srchVec a
 evaluateSweep caller evalFunction sweepResults evalParam = 
   SweepEvaluation $ evalFunction caller evalParam endNodePowers status
-  --CubeSweep.calculateOptimalityMeasure caller lifeCycleMap endNodePowers status
   where endNodePowers = accessSweepEndNodePowers sweepResults
         status = accessSweepFlowStatus sweepResults
  
@@ -510,6 +465,7 @@ optimisationPerState ::
    DV.Length demVec,
    DV.Length sigVec,
    DV.Length srchVec) =>
+  Caller ->
   TestSet node inst demDim sigVec a ->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   SweepResults node inst demDim srchDim demVec srchVec a ->
@@ -519,7 +475,7 @@ optimisationPerState ::
   [DemandAndControl.ControlVar node] ->
   OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a
 
-optimisationPerState testSet optiSet sweepResults sweepEvaluationResults storageList balanceForcingMap controlVars = 
+optimisationPerState caller testSet optiSet sweepResults sweepEvaluationResults storageList balanceForcingMap controlVars = 
   OptimisationPerState
   objectiveFunctionValues    
   optimisationResultPerState
@@ -528,20 +484,21 @@ optimisationPerState testSet optiSet sweepResults sweepEvaluationResults storage
   optimalControlSignalsPerState 
   optimalStoragePowersPerState
   where 
+    newCaller = caller |> caller |> nc "optimisationPerState"
     demandCycle = accessDemandCycle testSet
     supportSignal = accessSupportSignal optiSet
     flowResult = accessSweepFlowResult sweepResults
     endNodePowers = accessSweepEndNodePowers sweepResults
     optimalityMeasure = accessSweepOptimality sweepEvaluationResults
     states = accessAllowedStates optiSet
-    objectiveFunctionValues = CubeSweep.objectiveFunctionValues (nc "main") balanceForcingMap endNodePowers optimalityMeasure
-    optimisationResultPerState = CubeSweep.findMaximumEtaPerState  (nc "main") states objectiveFunctionValues                          
-    optimalFlowCube = CubeSweep.unresultOptimalFlowPerStateCube (nc "main") $ 
-                        CubeSweep.getOptimalFlowPerStateCube (nc "main") optimisationResultPerState flowResult
-    optimalStateSignals = OptSignal.optimalStateSignals (nc "main") optimisationResultPerState supportSignal demandCycle
-    optimalStoragePowersPerState = OptSignal.interpolateStoragePowersPerState (nc "main") Interp.Linear 
+    objectiveFunctionValues = CubeSweep.objectiveFunctionValues newCaller balanceForcingMap endNodePowers optimalityMeasure
+    optimisationResultPerState = CubeSweep.findMaximumEtaPerState  newCaller states objectiveFunctionValues                          
+    optimalFlowCube = CubeSweep.unresultOptimalFlowPerStateCube newCaller $ 
+                        CubeSweep.getOptimalFlowPerStateCube newCaller optimisationResultPerState flowResult
+    optimalStateSignals = OptSignal.optimalStateSignals newCaller optimisationResultPerState supportSignal demandCycle
+    optimalStoragePowersPerState = OptSignal.interpolateStoragePowersPerState newCaller Interp.Linear 
                               optimalFlowCube supportSignal demandCycle storageList                                   
-    optimalControlSignalsPerState = OptSignal.interpolateControlSignalsPerState (nc "main") Interp.Linear 
+    optimalControlSignalsPerState = OptSignal.interpolateControlSignalsPerState newCaller Interp.Linear 
                                        optimalFlowCube supportSignal demandCycle controlVars
 optimalOperation ::
   (Ord a,
@@ -566,17 +523,19 @@ optimalOperation ::
  DV.Storage vec (SignalFlow.TimeStep a),
  DV.Storage vec [SignalFlow.TimeStep a],
  DV.FromList vec) =>
+ Caller -> 
  OptimisationPerState node inst demDim srchDim demVec srchVec vec a ->
  OptimalOperation node inst vec a
-optimalOperation optimisationPerStateResults =
+optimalOperation caller optimisationPerStateResults =
   OptimalOperation optimalStateSignal optimalControlSignals
      optimalStorageSignals balance
   where
+    newCaller = caller |> nc "optimalOperation"
     optimalStateSignals = accessOptimalSignalsPerState optimisationPerStateResults
     optimalStoragePowersPerState = accessOptimalStoragePowersPerState optimisationPerStateResults
     optimalControlSignalsPerState = accessOptimalControlSignalsPerState optimisationPerStateResults
     
-    optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta (nc "main") OptSignal.StateForcingOn optimalStateSignals
+    optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta newCaller OptSignal.StateForcingOn optimalStateSignals
     optimalControlSignals = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
     optimalStorageSignals = OptSignal.generateOptimalStorageSignals optimalStateSignal optimalStoragePowersPerState
     balance = OptSignal.getBalance optimalStorageSignals 
@@ -819,22 +778,13 @@ loop ::
    (SweepEvaluation node inst demDim srchDim demVec srchVec a) 
    (Res node inst demDim srchDim demVec srchVec sigVec a)]
 
+
 loop caller system systemData testSet optiSet efaParams sweepResults storageList etaParams balParams evalFunction updateEvalParam = 
   Loop.etaLoop caller storageList etaParams balParams evalFunction sysFunction getBalance updateEvalParam
   where
     newCaller = caller |> nc "loop"
-    topo = accessTopology system
- --   method = Loop.acc etaParams
---    globalLifeCycleMap = Loop.accGlobalLifeCycleMap etaParams
-    
     getBalance = Balance.unMaybeBalance newCaller . accessBalance . accOptOperation
-{-    updateLifeCycleMap = StateFlowOpt.updateOneStorageLifeCycleEfficiencies 
-                                                  newCaller topo method globalLifeCycleMap . 
-                                                  EFA.accessStateFlowGraph . accessAnalysis . accSimEfa -}
-                                                  
     sysFunction = systemFunction newCaller system systemData testSet optiSet efaParams storageList sweepResults
---    evalSweepFunction = evaluateSweep newCaller sweepResults
-
     
     
 systemFunction ::
@@ -997,37 +947,29 @@ systemFunction ::
   [node] ->
   SweepResults node inst demDim srchDim demVec srchVec a ->
   SweepEvaluation node inst demDim srchDim demVec srchVec a -> 
---  FlowOpt.LifeCycleMap node  (Interp.Val a) ->
   FlowBal.Forcing node (Interp.Val a) ->
   Res node inst demDim srchDim demVec srchVec sigVec a
 
 systemFunction caller system systemData testSet optiSet efaParams 
   storageList sweepResults sweepEvaluationResults balanceForcingMap = 
       Res
-     -- sweepEvaluationResults
       optimisationPerStateResults
       optOperation 
       simEfa
       where
+        newCaller = caller |> nc "systemFunction"
         demandCycle = accessDemandCycle testSet
         demandVars = accessDemandVars optiSet
         controlVars = accessControlVars optiSet
         
---        sweepEvaluationResults = evaluateSweep caller lifeCycleMap 
---                                 sweepResults
-        
-        optimisationPerStateResults = optimisationPerState testSet optiSet sweepResults sweepEvaluationResults 
+
+        optimisationPerStateResults = optimisationPerState newCaller testSet optiSet sweepResults sweepEvaluationResults 
                                   storageList balanceForcingMap controlVars
-        optOperation = optimalOperation optimisationPerStateResults
+        optOperation = optimalOperation newCaller optimisationPerStateResults
         
-        simEfa = simulateAndAnalyse caller system efaParams systemData demandVars optOperation demandCycle
- 
-
-
+        simEfa = simulateAndAnalyse newCaller system efaParams systemData demandVars optOperation demandCycle
 
 data Res node inst demDim srchDim demVec srchVec sigVec a = Res
-  {   -- accSweepEval :: SweepEvaluation node inst demDim srchDim demVec srchVec a,
-   accOptPerState :: OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a,
+  {accOptPerState :: OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a,
    accOptOperation :: OptimalOperation node inst sigVec a, 
-   accSimEfa :: SimulationAndAnalysis node inst sigVec a 
-     }
+   accSimEfa :: SimulationAndAnalysis node inst sigVec a}
