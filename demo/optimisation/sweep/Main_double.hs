@@ -65,6 +65,7 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 import qualified EFA.Action.Flow.StateFlow.LifeCycle as StateFlowLifeCycle
+import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
 
 --import EFA.Utility.Async (concurrentlyMany_)
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
