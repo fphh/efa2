@@ -10,6 +10,7 @@ import qualified EFA.Value.State as ValueState
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Action.Flow.Balance as ActBal
+import qualified EFA.Action.Utility as ActUt
 
 import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 import qualified EFA.Data.ND.Cube.Map as CubeMap
@@ -61,7 +62,32 @@ modul = ModuleName "Action.Flow.Topology.Optimality"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
+getEndNodeFlows :: 
+  (Node.C node,Arith.Sum v) =>
+  Caller ->
+  TopoQty.Section node v ->
+  FlowOpt.EndNodeEnergies node v
+getEndNodeFlows caller flowSection =
+   let 
+     newCaller = caller |> nc "getEndNodeFlows"
+     
+     topo = TopoQty.topology flowSection
+       
+     nodes = Graph.nodeLabels topo
+       
+     sinks = FlowOpt.SinkMap $ Map.mapMaybe TopoQty.sumIn $ 
+               Map.filterWithKey (\node _ -> Node.isSink $ Node.typ node) nodes
+               
+     sources = FlowOpt.SourceMap $ Map.mapMaybe TopoQty.sumOut $ 
+               Map.filterWithKey (\node _ -> Node.isSource $ Node.typ node) nodes
 
+     storages = FlowOpt.StorageMap $ Map.mapWithKey (\node _ -> FlowOpt.getStoragePowerWithSignNew newCaller $ 
+                                                                  TopoQty.lookupSums node flowSection) 
+              $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
+                  
+    in (FlowOpt.EndNodeEnergies sinks sources storages)
+       
+{-
 getEndNodeFlows :: 
   Node.C node =>
   TopoQty.Section node v ->
@@ -81,7 +107,10 @@ getEndNodeFlows flowSection =
               $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
                   
     in (FlowOpt.EndNodeEnergies sinks sources storages)
+-}
       
+
+
 lookupControlVar :: Ord node => TopoQty.Section node v -> DemandAndControl.ControlVar node -> Maybe v
 lookupControlVar flowSection (DemandAndControl.ControlPower idx) = TopoQty.lookupPower idx flowSection
 lookupControlVar flowSection (DemandAndControl.ControlRatio idx) = TopoQty.lookupX idx flowSection
@@ -111,6 +140,7 @@ objectiveFunctionValues caller balanceForcing ( FlowOpt.EndNodeEnergies _ _ (Flo
     makeSum = foldl1 ((Arith.~+)) . Maybe.catMaybes . Map.elems
   in (CubeMap.zipWithData (\(st,optMeas) fo -> (st,FlowOpt.OptimalityValues optMeas fo))) optimalityMeasure forcing
 
+{-
 applyBalanceForcing :: 
   (DV.Walker vec, 
    DV.Storage vec a,
@@ -134,6 +164,27 @@ applyBalanceForcing caller balanceForcing node (Just sums) = case sums of
          ("Storage-Sums Variable contains values in positive and negative part-node: " ++ show node)
     f x =  x Arith.~* forcing
     forcing = ActBal.getSocDrive $ ActBal.lookupBalanceForcing (caller |> nc "applyBalanceForcing") balanceForcing node  
+-}
+
+applyBalanceForcing :: 
+  (DV.Walker vec, 
+   DV.Storage vec a,
+   Arith.Sum a,
+   Ord a, 
+   Ord node, Show node,
+   Arith.Constant a)=>
+ Caller ->  
+ ActBal.Forcing node a -> 
+ node -> 
+ Maybe (FlowOpt.StorageFlow (CubeMap.Data (Sweep.Search inst) dim vec a)) ->
+ Maybe (CubeMap.Data (Sweep.Search inst) dim vec a)
+applyBalanceForcing _ _ _ Nothing = Nothing
+applyBalanceForcing caller balanceForcing node (Just (FlowOpt.StorageFlow storageFlow)) = Just $ (CubeMap.mapData f) storageFlow
+  where
+    f x =  x Arith.~* forcing
+    forcing = ActBal.getSocDrive $ ActBal.lookupBalanceForcing (caller |> nc "applyBalanceForcing") balanceForcing node  
+
+
 
 -- | If State is Nothing, than state could not be detected because of invalid values
 findMaximumEta :: 

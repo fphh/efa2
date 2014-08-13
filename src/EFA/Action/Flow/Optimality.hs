@@ -39,29 +39,79 @@ modul = ModuleName "Action.Flow.Optimality"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
+{-
 data EndNodeEnergies node v = EndNodeEnergies 
                               {getSinkMap:: (SinkMap node v),
                               getSourceMap :: SourceMap node v,
                               getStorageMap :: StorageMap node (Maybe (TopoQty.Sums v))} deriving Show
+-}
+data EndNodeEnergies node v = EndNodeEnergies 
+                              {getSinkMap:: (SinkMap node v),
+                               getSourceMap :: SourceMap node v,
+                               getStorageMap :: StorageMap node (Maybe (StorageFlow v))} deriving Show
 
 
-newtype GenerationEfficiency a = GenerationEfficiency a deriving (Show,Eq)
-newtype UsageEfficiency a = UsageEfficiency a deriving  (Show,Eq)
+
+newtype GenerationEfficiency a = GenerationEfficiency {unGenerationEfficiency::a}  deriving (Show,Eq)
+newtype UsageEfficiency a = UsageEfficiency {unUsageEfficiency :: a} deriving  (Show,Eq)
 
 -- | Indicates that values are Sign-Corrected for Storage-Sign-Convention positive == charging, negative == discharging
-newtype StorageFlow a = StorageFlow a deriving Show 
+newtype StorageFlow a = StorageFlow {unStorageFlow :: a} deriving Show 
 
 newtype GlobalLifeCycleMap node a = GlobalLifeCycleMap (Map.Map node (GenerationEfficiency a,UsageEfficiency a)) deriving (Show, Eq)
+
 
 lookupLifeCycleEtaGlobalLifeCycleEta :: Ord node =>
   GlobalLifeCycleMap node a ->
   node ->
   Maybe (GenerationEfficiency a, UsageEfficiency a)
 lookupLifeCycleEtaGlobalLifeCycleEta  (GlobalLifeCycleMap m) node = Map.lookup node m 
+
  
+lookupLifeCycleEta :: 
+  (Show node, Ord node, Ord a, Arith.Constant a, Arith.Product a) =>
+  Caller -> 
+  LifeCycleMap node (Interp.Val a) -> 
+  Maybe Idx.AbsoluteState -> 
+  node -> 
+  (GenerationEfficiency (Interp.Val a), UsageEfficiency (Interp.Val a)) 
+lookupLifeCycleEta caller (LifeCycleMap m) (Just state) node = 
+  Maybe.fromMaybe err $ join $ fmap (Map.lookup node) $ Map.lookup state m 
+  where err = merror caller modul "lookupLifeCycleEta" 
+                    ("State or Node not in LifeCycleEfficiencyMap - State: " ++ show state ++ "- Node: " ++ show node)
+lookupLifeCycleEta _ _ Nothing _ = (GenerationEfficiency $ Interp.Invalid ["lookupLifeCycleEta"], 
+                                                         UsageEfficiency $ Interp.Invalid ["lookupLifeCycleEta"])
+
+
+lookupUsageEfficiency ::
+  (Ord a,
+   Ord node,
+   Show node,
+   Arith.Constant a) =>
+  Caller ->
+  LifeCycleMap node (Interp.Val a) ->
+  Maybe Idx.AbsoluteState ->
+  node ->
+  Interp.Val a
+lookupUsageEfficiency  caller m state node = 
+  unUsageEfficiency $ snd $ lookupLifeCycleEta caller m state node
+
+lookupGenerationEfficiency ::
+    (Ord a,
+     Ord node,
+     Show node,
+     Arith.Constant a) =>
+    Caller ->
+    LifeCycleMap node (Interp.Val a) ->
+    Maybe Idx.AbsoluteState ->
+    node ->
+    Interp.Val a
+lookupGenerationEfficiency  caller m state node = 
+  unGenerationEfficiency $ fst $ lookupLifeCycleEta caller m state node
+
 newtype LifeCycleMap node a = 
   LifeCycleMap (Map.Map (Idx.AbsoluteState) (Map.Map node (GenerationEfficiency a,UsageEfficiency a))) deriving Show
-
+{-
 lookupLifeCycleEta :: (Ord node, Ord a, Arith.Constant a, Arith.Product a) =>
   LifeCycleMap node (Interp.Val a) -> 
   Maybe Idx.AbsoluteState -> 
@@ -70,7 +120,7 @@ lookupLifeCycleEta :: (Ord node, Ord a, Arith.Constant a, Arith.Product a) =>
 lookupLifeCycleEta (LifeCycleMap m) (Just state) node = fmap g $ join $ fmap (Map.lookup node) $ Map.lookup state m 
   where g (GenerationEfficiency x, UsageEfficiency y) = (GenerationEfficiency x, UsageEfficiency y)
 lookupLifeCycleEta _ Nothing _ = Just (GenerationEfficiency $ Interp.Invalid ["lookupLifeCycleEta"], 
-                                                         UsageEfficiency $ Interp.Invalid ["lookupLifeCycleEta"])
+                                                         UsageEfficiency $ Interp.Invalid ["lookupLifeCycleEta"]) -}
   
 newtype SinkMap node a = SinkMap {unSinkMap :: (Map.Map node a)} deriving Show  
 newtype SourceMap node a = SourceMap {unSourceMap :: (Map.Map node a)} deriving Show  
@@ -144,3 +194,14 @@ lookupScaleSource caller (ScaleMap m) state = f state
   f Nothing =  Interp.Invalid ["lookupScaleSource"]               
   f (Just st) = unScaleSource $ fst $ Maybe.fromMaybe err $ Map.lookup st m  
   err = merror caller modul "lookupSourceScale" $ "State not in scalemap: " ++ show state
+
+
+-- TODO: move to right place -- use in applyGenerationEfficiency,applyUsageEfficiency
+getStoragePowerWithSignNew :: (Arith.Sum v) => Caller ->  Maybe (TopoQty.Sums v) -> Maybe (StorageFlow v)
+getStoragePowerWithSignNew caller Nothing =  merror caller modul "getStoragePowerWithSign" "Completely inactive edge" 
+getStoragePowerWithSignNew caller (Just sums) = case sums of                 
+  TopoQty.Sums Nothing (Just energy) -> Just $ StorageFlow $ Arith.negate energy
+  TopoQty.Sums  (Just energy) Nothing -> Just $ StorageFlow  energy
+  TopoQty.Sums Nothing Nothing -> Nothing 
+  TopoQty.Sums (Just _) (Just _) -> 
+    merror caller modul "getStoragePowerWithSign" "Inconsistent energy flow - both directions active"

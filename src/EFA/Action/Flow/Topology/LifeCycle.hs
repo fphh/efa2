@@ -51,7 +51,7 @@ import qualified Data.Maybe as Maybe
 
 import EFA.Utility(Caller,
                  merror,
---                   (|>),
+                   (|>),
                    ModuleName(..),FunctionName, genCaller)
 
 modul :: ModuleName
@@ -60,7 +60,7 @@ modul = ModuleName "Action.Flow.Topology.Optimality"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-
+{-
 calcEtaLossSys ::
   (Ord a,
    Ord node,
@@ -159,3 +159,95 @@ applyUsageEfficiency caller state lifeCycleEfficiencies node (Just sums) = case 
           Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (ActFlowCheck.getState st) node 
         e = merror caller modul "applyUsageEfficiency" 
                     ("Node not in LifeCycleEfficiencyMap-State: " ++ show st ++ "-Node: " ++ show node)
+-}
+
+calcEtaLossSys ::
+  (Ord a,
+   Ord node,
+   Show node,
+   Arith.Constant a,
+   DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a),
+                   FlowOpt.Loss2Optimise (Interp.Val a)),
+   DV.Storage vec (FlowOpt.Loss2Optimise (Interp.Val a)),
+   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a)),
+   DV.Storage vec (Interp.Val a),
+   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
+   DV.Storage vec (FlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
+                   FlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Singleton vec,
+   DV.Length vec) =>
+  Caller ->
+  FlowOpt.LifeCycleMap node (Interp.Val a) ->
+  FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
+  CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->  
+  CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityMeasure (Interp.Val a))
+
+calcEtaLossSys caller lifeCycleEfficiencies  
+  (FlowOpt.EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) state = let 
+    
+  -- CHECK :: is mapMaybe OK here ?   
+  chargeStorages = Map.map FlowOpt.unStorageFlow $ Map.mapMaybeWithKey (\node x -> 
+          (applyUsageEfficiency caller state lifeCycleEfficiencies node) x) storages
+                   
+  dischargeStorages =Map.map FlowOpt.unStorageFlow $ Map.mapMaybeWithKey (\node x ->
+          (applyGenerationEfficiency caller state lifeCycleEfficiencies node) x)  storages
+  
+  makeSum = foldl1 (Arith.~+) . Map.elems
+  sinkTerm =  (makeSum sinks)  Arith.~+ (makeSum chargeStorages)
+  sourceTerm = (makeSum sources) Arith.~+ (makeSum dischargeStorages)
+  eta = (CubeMap.mapData FlowOpt.EtaSys) $ sinkTerm Arith.~/ sourceTerm
+  loss = (CubeMap.mapData FlowOpt.LossSys) $ sourceTerm Arith.~- sinkTerm
+  in CubeMap.zipWithData ((,)) state $ CubeMap.zipWithData FlowOpt.OptimalityMeasure eta loss
+
+
+applyGenerationEfficiency ::
+  (Ord a,
+   Ord node,
+   Show node,
+   Arith.Constant a,
+   DV.Zipper vec,
+   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
+   DV.Storage vec (Interp.Val a)) =>
+  Caller ->
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus ->
+  FlowOpt.LifeCycleMap node (Interp.Val a) ->
+  node ->
+  Maybe (FlowOpt.StorageFlow (CubeMap.Data inst dim vec (Interp.Val a))) ->
+  Maybe (FlowOpt.StorageFlow (CubeMap.Data inst dim vec (Interp.Val a)))
+applyGenerationEfficiency _ _ _ _ Nothing  = Nothing
+applyGenerationEfficiency caller state lifeCycleEfficiencies node (Just (FlowOpt.StorageFlow storageFlow)) = 
+  Just $ FlowOpt.StorageFlow $ CubeMap.zipWithData f storageFlow state
+  where 
+    -- x < 0 means storage is discharged -> apply lifeCycle-Generation Efficiency
+    f x st = if x < (Interp.Inter $ Arith.zero) then Arith.negate $ x Arith.~/ etaGen else Interp.Inter $ Arith.zero
+      where
+        newCaller = caller |> nc "applyGenerationEfficiency"
+        etaGen = FlowOpt.lookupGenerationEfficiency newCaller lifeCycleEfficiencies (ActFlowCheck.getState st) node 
+
+                    
+applyUsageEfficiency ::
+  (Ord a,
+   Ord node,
+   Show node,
+   Arith.Constant a,
+   DV.Zipper vec,
+   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
+   DV.Storage vec (Interp.Val a)) =>
+  Caller ->
+  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus ->
+  FlowOpt.LifeCycleMap node (Interp.Val a) ->
+  node ->
+  Maybe (FlowOpt.StorageFlow (CubeMap.Data inst dim vec (Interp.Val a))) ->
+  Maybe (FlowOpt.StorageFlow (CubeMap.Data inst dim vec (Interp.Val a)))
+applyUsageEfficiency caller state lifeCycleEfficiencies node (Just (FlowOpt.StorageFlow storageFlow)) = 
+  Just $ FlowOpt.StorageFlow $ CubeMap.zipWithData f storageFlow state  
+  where
+    -- x > 0 means storage is charged -> apply lifeCycle-Usage Efficiency
+    f x st = if x > Arith.zero then x Arith.~* etaUse else Arith.zero
+      where 
+        newCaller = caller |> nc "applyUsageEfficiency"
+        etaUse = FlowOpt.lookupUsageEfficiency newCaller lifeCycleEfficiencies (ActFlowCheck.getState st) node 
+

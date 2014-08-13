@@ -272,21 +272,12 @@ ifNull x _ [] = x
 ifNull _ f xs = f xs
 
 
--- TODO: move to right place -- use in applyGenerationEfficiency,applyUsageEfficiency
-getStoragePowerWithSignNew :: (Arith.Sum v) => Caller ->  Maybe (TopoQty.Sums v) -> Maybe v
-getStoragePowerWithSignNew caller Nothing =  merror caller modul "getStoragePowerWithSign" "Completely inactive edge" 
-getStoragePowerWithSignNew caller (Just sums) = case sums of                 
-  TopoQty.Sums Nothing (Just energy) -> Just $ energy
-  TopoQty.Sums  (Just energy) Nothing -> Just $ Arith.negate energy
-  TopoQty.Sums Nothing Nothing -> Nothing 
-  TopoQty.Sums (Just _) (Just _) -> 
-    merror caller modul "getStoragePowerWithSign" "Inconsistent energy flow - both directions active"
 
 -- TODO: depreciated -- replace by new
 getStoragePowerWithSign :: (Arith.Sum v) => (TopoQty.Sums v) -> Maybe v
 getStoragePowerWithSign sums = case sums of                 
-  TopoQty.Sums Nothing (Just energy) -> Just $ energy
-  TopoQty.Sums  (Just energy) Nothing -> Just $ Arith.negate energy
+  TopoQty.Sums Nothing (Just energy) -> Just $ Arith.negate energy
+  TopoQty.Sums  (Just energy) Nothing -> Just energy
   TopoQty.Sums Nothing Nothing -> Nothing 
   TopoQty.Sums (Just _) (Just _) -> 
     error "Error in getStoragePowerWithSign: Inconsistent energy flow - both directions active"

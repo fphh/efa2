@@ -311,7 +311,7 @@ makeSweep caller system systemData optiSet = SweepResults energyFlowResult energ
     energyFlowResult = CubeSweep.solve topology etaFunctions (accessVariation optiSet)
     energyFlow = CubeMap.map (TopoQty.mapSection $ ActUt.checkDetermined "makeSweep") energyFlowResult
     flowStatus = CubeSweep.getFlowStatus newCaller energyFlow
-    endNodePowers = CubeSweep.getEndNodeFlows energyFlow
+    endNodePowers = CubeSweep.getEndNodeFlows newCaller energyFlow
 
 evaluateSweep ::
   (Eq (demVec a),

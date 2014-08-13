@@ -240,6 +240,7 @@ interpolateStoragePowersPerState caller inmethod flowCube
   supportSig demandCycle storageList = 
   Map.fromList $ zip storageList $ map f storageList
    where stoCube = CubeMap.map (ValueState.map getStoragePowers) flowCube
+         newCaller = caller |> nc "interpolateStoragePowersPerState" 
          getStoragePowers flowSection = let 
                 topo = TopoQty.topology flowSection
                 nodes = Graph.nodeLabels topo
@@ -248,7 +249,7 @@ interpolateStoragePowersPerState caller inmethod flowCube
                 in Map.map (fmap ActUt.getStoragePowerWithSign) storages 
          f sto = SignalFlow.zipWith g supportSig demandCycle
            where 
-             g support coordinates = CubeSweep.interpolateWithSupportPerStateMaybe (caller |> nc "interpolateStoragePowersPerState") 
+             g support coordinates = CubeSweep.interpolateWithSupportPerStateMaybe newCaller
                                      inmethod stoPowerCube support coordinates
              stoPowerCube = CubeMap.map (ValueState.map (Monad.join . flip (Map.!) sto)) stoCube
         

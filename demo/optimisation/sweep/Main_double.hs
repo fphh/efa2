@@ -307,7 +307,7 @@ etaLoopParams ::
  Loop.EtaLoopParams Node (Interp.Val Double) (FlowOpt.LifeCycleMap Node (Interp.Val Double))
 etaLoopParams = 
   Loop.EtaLoopParams
-  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 4, 
+  {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 2, 
    Loop.accInitialEvalParam = initialLifeCycleMap,
    Loop.accGlobalLifeCycleMap = FlowOpt.GlobalLifeCycleMap $ 
      Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 0.5), FlowOpt.UsageEfficiency (Interp.Inter 0.5)))]                                              
