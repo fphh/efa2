@@ -6,7 +6,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep.Plot as SweepPlot
 import qualified EFA.Action.Optimisation.Cube.Sweep.Draw as SweepDraw
 --import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 --import qualified EFA.Action.Optimisation.Cube.Sweep.Access as SweepAccess
-import qualified EFA.Action.EenergyFlowAnalysis as EFA
+import qualified EFA.Action.EnergyFlowAnalysis as EFA
 import qualified EFA.Action.Simulation as Simulation
 import qualified EFA.Flow.Part.Index as Idx
 import qualified EFA.Flow.Draw as Draw
@@ -70,7 +70,7 @@ import qualified EFA.Flow.Sequence.Algorithm as SeqAlgo
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Equation.Result as Result
 
-import qualified EFA.Action.Utility as ActUt
+--import qualified EFA.Action.Utility as ActUt
 
 import qualified Data.Maybe as Maybe
 import qualified Data.Map as Map
@@ -532,12 +532,11 @@ simulation ::
    DV.Length sigVec,
    SV.Walker sigVec,
    DV.FromList sigVec) =>
-  Process.System node ->
   SimCtrl ->
   Process.SimulationAndAnalysis node inst sigVec a ->
  [IO ()]
-simulation _ SimDont _ = [] 
-simulation sys ctrl sim =  let
+simulation SimDont _ = [] 
+simulation ctrl sim =  let
   legend = Map.fromList $ zip [0..] $ SignalFlow.getHRecordKeys $ 
            Simulation.accessPowerRecord $ Process.accessSimulation sim
   in 
@@ -558,7 +557,7 @@ simulation sys ctrl sim =  let
   
  (drawAction (drawStateFlowGraph ctrl) 
   (\x -> [Draw.title "State Flow Graph from Simulation" $ Draw.stateFlowGraph Draw.optionsDefault x]) 
-      (ActUt.absoluteStateFlowGraph (Process.accessTopology sys) $ EFA.accessStateFlowGraph $ Process.accessAnalysis sim))
+      (EFA.accessStateFlowGraph $ Process.accessAnalysis sim))
 
 loopsIO ::
   (Ord a,
@@ -843,10 +842,10 @@ balanceLoopItemIO ::
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   Loop.BalanceLoopItem t t1 (Process.Res node inst dim srchDim demVec srchVec sigVec a) ->
   IO ()
-balanceLoopItemIO optCtr opCtr simCtr sys optiS (Loop.BalanceLoopItem _cnt _node _force _step _bal _bestPair result) = do
+balanceLoopItemIO optCtr opCtr simCtr _sys optiS (Loop.BalanceLoopItem _cnt _node _force _step _bal _bestPair result) = do
   let  (Process.Res perState optOperation simEfa) = result
   concurrentlyMany_ $ 
   
    optPerState  (nc "balanceLoopItemIO") (Process.accessSearchGrid optiS) optCtr perState  
     ++ optimalOperation opCtr optOperation
-    ++ simulation sys simCtr simEfa
+    ++ simulation simCtr simEfa

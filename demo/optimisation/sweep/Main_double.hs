@@ -3,7 +3,7 @@
 
 module Main where
 import qualified EFA.Action.Optimisation.Output as OP
-import qualified EFA.Action.EenergyFlowAnalysis as EFA
+import qualified EFA.Action.EnergyFlowAnalysis as EFA
 import qualified EFA.Action.Optimisation.Process as Process
 import qualified EFA.Action.Optimisation.Loop as Loop
 

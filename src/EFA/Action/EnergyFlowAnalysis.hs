@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
 
-module EFA.Action.EenergyFlowAnalysis where
+module EFA.Action.EnergyFlowAnalysis where
 
 --import qualified EFA.Data.Sequence as DataSequ
 --import qualified EFA.Flow.Topology.Index as TopoIdx
@@ -11,14 +11,14 @@ import qualified EFA.Graph.Topology as Topo
 --import EFA.Graph (DirEdge(DirEdge), unDirEdge)
 --import EFA.Flow.Topology.Record (Flow(Flow),flowOut,flowIn)
 import qualified EFA.Application.Optimisation.Optimisation as Optimisation
-import qualified EFA.Application.Optimisation.Params as Params
+--import qualified EFA.Application.Optimisation.Params as Params
 --import qualified EFA.Application.Optimisation.Balance as Balance
-import qualified EFA.Application.Optimisation.Base as Base
+--import qualified EFA.Application.Optimisation.Base as Base
 -- import EFA.Application.Optimisation.Optimisation (external)
---import qualified EFA.Application.Utility as AppUt
+import qualified EFA.Action.Utility as ActUt
 
 --import qualified EFA.Application.Optimisation.ReqsAndDofs as ReqsAndDofs
-import qualified EFA.Application.Type as Type
+--import qualified EFA.Application.Type as Type
 --import qualified EFA.Application.Optimisation.Sweep as Sweep
 --import qualified EFA.Application.Optimisation.Balance as Forcing
 --import qualified EFA.Application.Simulation as AppSim
@@ -28,7 +28,7 @@ import qualified EFA.Application.Type as Type
 --import qualified EFA.Data.Vector as DV
 import qualified EFA.Graph.Topology.Node as Node
 --import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Flow.Sequence.Algorithm as SeqAlgo
+--import qualified EFA.Flow.Sequence.Algorithm as SeqAlgo
 
 --import qualified EFA.Graph as Graph
 
@@ -55,9 +55,9 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 
 import qualified EFA.Data.Interpolation as Interp
 
-import qualified EFA.Signal.Signal as Sig
+--import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.Chop as Chop
+--import qualified EFA.Signal.Chop as Chop
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Vector as SV
 
@@ -138,7 +138,7 @@ energyFlowAnalysisOld topology efaParams sequenceFlowsFilt =
             (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
             mempty initStorageSeq)
 
-      stateFlowGraph =
+      stateFlowGraph = ActUt.absoluteStateFlowGraph topology $
         StateEqAbs.solveOpts
           Optimisation.optionsScalar
            (StateQty.graphFromCumResult $
@@ -147,27 +147,6 @@ energyFlowAnalysisOld topology efaParams sequenceFlowsFilt =
            external initStorageState sequenceFlowGraph)
           mempty
   in EnergyFlowAnalysis sequenceFlowsFilt sequenceFlowGraph stateFlowGraph
-
-{-      sequenceFlowGraph =
-        SeqAbs.solveOpts
-          (SeqAbs.independentInOutSums SeqAbs.optionsDefault)
-          (SeqRec.flowGraphFromSequence $
-            fmap (TopoRecord.flowTopologyFromRecord (Params.systemTopology sysParams)) $
-            sequenceFlowsFilt)
-          (Map.foldWithKey
-            (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
-            mempty (Params.unInitStorageSeq $ Params.initStorageSeq sysParams))
-
-      stateFlowGraph =
-        StateEqAbs.solveOpts
-          Optimisation.optionsScalar
-           (StateQty.graphFromCumResult $
-           StateQty.fromSequenceFlowResult False $
-           SeqQty.mapGraph id (fmap Arith.integrate) $
-           external (Params.initStorageState sysParams) sequenceFlowGraph)
-          mempty
--}
-
 
 external ::
   (Eq (v a), Arith.Constant a, SV.Zipper v,
@@ -180,75 +159,4 @@ external (InitStorageState initSto) flowGraph =
   SeqAbs.solveOpts (SeqAbs.independentInOutSums SeqAbs.optionsDefault) flowGraph $
   Map.foldWithKey f mempty initSto
   where f st val = ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>)
-
-
-energyFlowAnalysis ::
-  (Ord a, Show node, SV.Convert [] vec,
-   Eq (vec a), SV.Storage vec Bool,
-   SV.Storage vec a, SV.Convert vec [],
-   SV.Walker vec, SV.Singleton vec,
-   SV.Zipper vec,
-   Show a, Node.C node,
-   Arith.ZeroTestable a,
-   Show (vec a),
-   Arith.Constant a) =>
-  Params.System node a ->
-  Params.Simulation node vec a ->
-  Record.PowerRecord node vec a ->
-  Type.EnergyFlowAnalysis node vec a
-energyFlowAnalysis sysParams simParams powerRecord =
-      -- Liefert nur delta-Zeiten und keinen Zeitvektor
-      -- Deshalb wird der urspruenglichen Zeitvektor behalten
-  let recZeroCross = --(\x -> trace ("recZeroCross" ++ show x) x) $
-        Chop.addZeroCrossings $ Base.convertRecord powerRecord
-
-      sequencePowerRecord = --(\x -> trace ("sequencePowerRecord" ++ show x) x) $
-                            Sequ.mapWithSection (\ _ r ->  Base.convertRecord r)
-                            $ Chop.genSequ recZeroCross
-
-      thrT = Params.sequFilterTime simParams
-      thrE = Params.sequFilterEnergy simParams
-
-      (_, sequenceFlowsFilt) =
-        Sequ.unzip $
-        Sequ.filter (Record.major (Sig.toScalar thrE)
-                                  (Sig.toScalar thrT) . snd) $
-        fmap (\x -> (x, Record.partIntegrate x)) sequencePowerRecord
-
-
-      sequenceFlowGraph =
-        SeqAbs.solveOpts
-          (SeqAbs.independentInOutSums SeqAbs.optionsDefault)
-          (SeqRec.flowGraphFromSequence $
-            fmap (TopoRecord.flowTopologyFromRecord (Params.systemTopology sysParams)) $
-            sequenceFlowsFilt)
-          (Map.foldWithKey
-            (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
-            mempty (Params.unInitStorageSeq $ Params.initStorageSeq sysParams))
-
-      stateFlowGraph =
-        StateEqAbs.solveOpts
-          Optimisation.optionsScalar
-           (StateQty.graphFromCumResult $
-           StateQty.fromSequenceFlowResult False $
-           SeqQty.mapGraph id (fmap Arith.integrate) $
-           Optimisation.external (Params.initStorageState sysParams) sequenceFlowGraph)
-          mempty
-
-{-
-      stateFlowGraphSweep =
-        StateEqAbs.solveOpts
-          Optimisation.options
-          (toSweep params $
-           StateQty.graphFromCumResult $
-           StateQty.fromSequenceFlowResult False $
-           SeqQty.mapGraph id (fmap Arith.integrate) $
-           external (Params.initStorageState params) sequenceFlowGraphSim)
-          mempty
--}
-
-  in Type.EnergyFlowAnalysis sequencePowerRecord sequenceFlowGraph stateFlowGraph
-
-
-
 

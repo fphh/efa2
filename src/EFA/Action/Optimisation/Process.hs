@@ -2,7 +2,7 @@
 
 module EFA.Action.Optimisation.Process where
 
-import qualified EFA.Action.EenergyFlowAnalysis as EFA
+import qualified EFA.Action.EnergyFlowAnalysis as EFA
 import qualified EFA.Action.Simulation as Simulation
 import qualified EFA.Action.Optimisation.Loop as Loop
 import qualified EFA.Action.Optimisation.Signal as OptSignal
