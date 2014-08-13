@@ -156,7 +156,7 @@ plotDemandSweepValue caller title searchGrid faccess  extractData sweepCube =
   concatMap f $ SweepAccess.extractSearchData (caller |> nc "plotEvalSweepStackValue") searchGrid  sweepCube extractData
   where 
     f (dimIdx,cube) = PlotCube.toPlotData caller (Just dimIdx) $ CubeMap.map faccess cube
-{-
+
 plotStoragePowers :: 
  (Show node,
   Ord node,
@@ -191,7 +191,7 @@ plotStoragePowers caller title searchGrid extractData nodeList sweepCube =
                                                       FlowOpt.unStorageMap . FlowOpt.getStorageMap) 
                                            sweepCube) nodeList
     err k = merror caller modul "plotStoragePowers" $ "key not found " ++ show k 
--}    
+    
 
 plotSweepFlowValues ::  
   (Show key, DV.Walker demVec,Ord b, Ord a, Atom.C b, Atom.C a,

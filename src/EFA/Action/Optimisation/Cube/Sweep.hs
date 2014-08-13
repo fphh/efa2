@@ -224,19 +224,14 @@ solve topology etaFunctions varCube =
 
 getEndNodeFlows ::
   (Node.C node,
-   Arith.Sum b,
-   DV.Zipper vec1,
-   DV.Walker vec1,
-   DV.Storage vec1 b,
    DV.Walker vec,
    DV.Storage vec (TopoQty.Section node 
                    (CubeMap.Data (Sweep.Search inst) dim1 vec1 b)),
    DV.Storage vec (FlowOpt.EndNodeEnergies node 
                    (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))) =>
-  Caller ->
   Flow node inst dim dim1 vec vec1 a b ->
   EndNodeFlows node inst dim dim1 vec vec1 a b
-getEndNodeFlows caller flowResult = CubeMap.map (FlowTopoOpt.getEndNodeFlows (caller |> nc "getEndNodeFlows")) flowResult 
+getEndNodeFlows flowResult = CubeMap.map FlowTopoOpt.getEndNodeFlows flowResult 
 
 getFlowStatus ::
   (Ord b,Arith.NaNTestable b,

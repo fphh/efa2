@@ -77,7 +77,7 @@ unresultStateFlow caller sfg = StateQty.mapGraph f f sfg
         f  Result.Undetermined = merror caller modul "unresultStateFlow"
                                  "StateFlowGraph contains undetermined values"
 
-{-
+
 -- WARNING -- needs an absolute State Graph - not yet type safe !
 -- TODO make all stateflows absolute        
 getEndNodeFlows :: 
@@ -87,7 +87,7 @@ getEndNodeFlows ::
 getEndNodeFlows absSfg = 
   Map.mapKeys f $ Map.map (FlowTopoOpt.getEndNodeFlows) $ StateQty.states absSfg
   where f (Idx.State idx) = (Idx.AbsoluteState $ fromIntegral idx) 
--}
+
 
 extractState:: 
   Caller ->
