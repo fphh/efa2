@@ -62,7 +62,7 @@ modul = ModuleName "Action.Flow.Topology.ScaleMap"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-
+{-
 calcEtaLossSys ::
   (Ord a,
    Ord node,
@@ -92,7 +92,7 @@ calcEtaLossSys caller scaleMap
   newCaller = caller |> nc "calcEtaLossSys"  
   sinkScale =  CubeMap.mapData (FlowOpt.lookupScaleSink newCaller scaleMap . ActFlowCheck.getState) state
   sourceScale =  CubeMap.mapData (FlowOpt.lookupScaleSource newCaller scaleMap . ActFlowCheck.getState) state
-  signedStorages = Map.mapMaybe (ActUt.getStoragePowerWithSignNew newCaller) storages
+  signedStorages = Map.mapMaybe (FlowOpt.getStoragePowerWithSignNew newCaller) storages
   -- TODO!! check this: x>= Interp.Inter $ Arith.zero
   chargeStorages = Map.map (CubeMap.mapData 
                             (\x -> if x>= (Interp.Inter $ Arith.zero) then x 
@@ -108,3 +108,4 @@ calcEtaLossSys caller scaleMap
   in CubeMap.zipWithData ((,)) state $ CubeMap.zipWithData FlowOpt.OptimalityMeasure eta loss
 
 
+-}

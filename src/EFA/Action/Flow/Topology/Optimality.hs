@@ -10,6 +10,7 @@ import qualified EFA.Value.State as ValueState
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Action.Flow.Balance as ActBal
+--import qualified EFA.Action.Utility as ActUt
 
 import qualified EFA.Data.ND.Cube.Grid as CubeGrid
 import qualified EFA.Data.ND.Cube.Map as CubeMap
@@ -51,7 +52,7 @@ import qualified Data.Maybe as Maybe
 --import Debug.Trace(trace)
 
 import EFA.Utility(Caller,
-                 merror,
+--                 merror,
                    (|>),
                    ModuleName(..),FunctionName, genCaller)
 
@@ -63,24 +64,57 @@ nc = genCaller modul
 
 
 getEndNodeFlows :: 
-  Node.C node =>
+  (Node.C node,Arith.Sum v) =>
+  Caller ->
   TopoQty.Section node v ->
   FlowOpt.EndNodeEnergies node v
-getEndNodeFlows flowSection =
-   let topo = TopoQty.topology flowSection
+getEndNodeFlows caller flowSection =
+   let 
+     newCaller = caller |> nc "getEndNodeFlows"
+     
+     topo = TopoQty.topology flowSection
        
-       nodes = Graph.nodeLabels topo
+     nodes = Graph.nodeLabels topo
        
-       sinks = FlowOpt.SinkMap $ Map.mapMaybe TopoQty.sumIn $ 
+     sinks = FlowOpt.SinkMap $ Map.mapMaybe TopoQty.sumIn $ 
                Map.filterWithKey (\node _ -> Node.isSink $ Node.typ node) nodes
                
-       sources = FlowOpt.SourceMap $ Map.mapMaybe TopoQty.sumOut $ 
+     sources = FlowOpt.SourceMap $ Map.mapMaybe TopoQty.sumOut $ 
                Map.filterWithKey (\node _ -> Node.isSource $ Node.typ node) nodes
 
-       storages = FlowOpt.StorageMap $ Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
+     storages = FlowOpt.StorageMap $ Map.mapWithKey (\node _ -> FlowOpt.getStoragePowerWithSign newCaller $ 
+                                                                  TopoQty.lookupSums node flowSection) 
               $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
                   
     in (FlowOpt.EndNodeEnergies sinks sources storages)
+       
+{-
+-- | WARNING -- needs at least one storage, sink and source  
+sumEndNodeEnergies :: 
+  (Arith.Sum a,
+   DV.Zipper vec,
+   DV.Walker vec,
+   DV.Storage vec (Interp.Val a)) =>  
+   FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
+   FlowOpt.EndNodeSums (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) 
+sumEndNodeEnergies endNodeEnergies = FlowOpt.EndNodeSums sinks sources charge disCharge
+  where
+    makeSum = foldl1 (Arith.~+) . Map.elems
+    eleminateNegative x = if x > Interp.Inter Arith.zero then x else Arith.zero 
+    sinks = FlowOpt.TotalSinkEnergy $ 
+            makeSum $ FlowOpt.unSinkMap $ FlowOpt.getSinkMap endNodeEnergies
+    sources = FlowOpt.TotalSourceEnergy $
+              makeSum $ FlowOpt.unSourceMap $ FlowOpt.getSourceMap endNodeEnergies
+    charge = FlowOpt.TotalChargeEnergy $ 
+             makeSum $  Map.mapMaybe (CubeMap.map eleminateNegative . FlowOpt.unStorageFlow) $
+             FlowOpt.unStorageMap $ FlowOpt.getStorageMap endNodeEnergies
+    disCharge = FlowOpt.TotalDischargeEnergy $
+                makeSum $  Map.mapMaybe (CubeMap.map eleminateNegative . Arith.negate . FlowOpt.unStorageFlow) $ 
+                FlowOpt.unStorageMap $ FlowOpt.getStorageMap endNodeEnergies
+  
+-}   
+
+       
       
 lookupControlVar :: Ord node => TopoQty.Section node v -> DemandAndControl.ControlVar node -> Maybe v
 lookupControlVar flowSection (DemandAndControl.ControlPower idx) = TopoQty.lookupPower idx flowSection
@@ -121,17 +155,11 @@ applyBalanceForcing ::
  Caller ->  
  ActBal.Forcing node a -> 
  node -> 
- Maybe (TopoQty.Sums ((CubeMap.Data (Sweep.Search inst) dim vec a))) ->
- Maybe ((CubeMap.Data (Sweep.Search inst) dim vec a))
+ Maybe (FlowOpt.StorageFlow (CubeMap.Data (Sweep.Search inst) dim vec a)) ->
+ Maybe (CubeMap.Data (Sweep.Search inst) dim vec a)
 applyBalanceForcing _ _ _ Nothing = Nothing
-applyBalanceForcing caller balanceForcing node (Just sums) = case sums of
-  TopoQty.Sums Nothing (Just energy) -> Just $ (CubeMap.mapData f) energy
-  TopoQty.Sums  (Just energy) Nothing -> Just $ (CubeMap.mapData (f. Arith.negate)) energy
-  TopoQty.Sums Nothing Nothing -> Nothing 
-  _ -> e2  
+applyBalanceForcing caller balanceForcing node (Just (FlowOpt.StorageFlow storageFlow)) = Just $ (CubeMap.mapData f) storageFlow
   where
-    e2 = merror caller modul "applyBalanceForcing" 
-         ("Storage-Sums Variable contains values in positive and negative part-node: " ++ show node)
     f x =  x Arith.~* forcing
     forcing = ActBal.getSocDrive $ ActBal.lookupBalanceForcing (caller |> nc "applyBalanceForcing") balanceForcing node  
 

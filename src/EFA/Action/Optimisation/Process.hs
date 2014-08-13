@@ -311,7 +311,7 @@ makeSweep caller system systemData optiSet = SweepResults energyFlowResult energ
     energyFlowResult = CubeSweep.solve topology etaFunctions (accessVariation optiSet)
     energyFlow = CubeMap.map (TopoQty.mapSection $ ActUt.checkDetermined "makeSweep") energyFlowResult
     flowStatus = CubeSweep.getFlowStatus newCaller energyFlow
-    endNodePowers = CubeSweep.getEndNodeFlows energyFlow
+    endNodePowers = CubeSweep.getEndNodeFlows newCaller energyFlow
 
 evaluateSweep ::
   (Eq (demVec a),
@@ -465,6 +465,7 @@ optimisationPerState ::
    DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
                                                                         FlowOpt.OptimalityMeasure (Interp.Val a))),
    DV.Length demVec,
+   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Length sigVec,
    DV.Length srchVec) =>
   Caller ->
@@ -750,6 +751,7 @@ loop ::
                                           (ActFlowCheck.EdgeFlowStatus,
                                            FlowOpt.OptimalityValues (Interp.Val a)))),
    DV.Length srchVec,
+   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Length demVec,
    DV.Length sigVec,
    DV.Len (sigVec (Interp.Val a)),
@@ -938,7 +940,8 @@ systemFunction ::
    DV.Length srchVec,
    DV.Len (sigVec (Interp.Val a)),
    DV.Storage sigVec [SignalFlow.TimeStep a],
-   DV.Storage sigVec (SignalFlow.TimeStep a), 
+   DV.Storage sigVec (SignalFlow.TimeStep a),
+   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))), 
    Show (sigVec (Interp.Val a)),
    Show (sigVec (SignalFlow.TimeStep a)),
    DV.Storage sigVec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
