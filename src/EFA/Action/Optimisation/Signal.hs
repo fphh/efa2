@@ -224,7 +224,7 @@ interpolateStoragePowersPerState ::
    DV.Storage vec a,
    DV.Storage vec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Storage vec (ValueState.Map (FlowTopo.Section node Graph.EitherEdge (Interp.Val a) (TopoQty.Sums (Interp.Val a)) (Maybe (TopoQty.Flow (Interp.Val a))))),
-   DV.Storage vec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
+   DV.Storage vec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Slice vec,
    DV.LookupMaybe vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
    DV.LookupMaybe vec (ValueState.Map (Maybe (Interp.Val a))),
@@ -246,13 +246,13 @@ interpolateStoragePowersPerState caller inmethod flowCube
                 nodes = Graph.nodeLabels topo
                 storages = Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
                            $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
-                in Map.map (fmap ActUt.getStoragePowerWithSign) storages 
+                in Map.map (FlowOpt.getStoragePowerWithSignNew newCaller) storages 
          f sto = SignalFlow.zipWith g supportSig demandCycle
            where 
              g support coordinates = CubeSweep.interpolateWithSupportPerStateMaybe newCaller
                                      inmethod stoPowerCube support coordinates
-             stoPowerCube = CubeMap.map (ValueState.map (Monad.join . flip (Map.!) sto)) stoCube
-        
+             stoPowerCube = CubeMap.map (ValueState.map (fmap FlowOpt.unStorageFlow . flip (Map.!) sto)) stoCube
+         
 generateOptimalControl ::
   (Arith.Constant a,
    DV.Zipper vec,

@@ -388,7 +388,6 @@ optimisationPerState ::
    DV.Walker srchVec,
    DV.Storage demVec (ValueState.Map (Interp.Val a)),
    DV.Storage sigVec (ValueState.Map (Interp.Val a)),
-   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
    DV.Storage demVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Storage sigVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Storage sigVec (ND.Data demDim (Strict.SupportingPoints (Strict.Idx,
@@ -444,7 +443,7 @@ optimisationPerState ::
    DV.Slice demVec,
    DV.Slice sigVec,
    DV.Singleton srchVec,
-   DV.LookupUnsafe srchVec (Interp.Val a),
+   DV.LookupUnsafe srchVec (Interp.Val a),   
    DV.LookupMaybe demVec (ValueState.Map (Interp.Val a)),
    DV.LookupMaybe demVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.LookupMaybe demVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
@@ -459,6 +458,7 @@ optimisationPerState ::
                                                                          (FlowOpt.Eta2Optimise (Interp.Val a),
                                                                           FlowOpt.Loss2Optimise (Interp.Val a))))),
    DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus),
+   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Storage demVec (FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
    DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
                                                                         FlowOpt.OptimalityValues (Interp.Val a))),
@@ -674,7 +674,7 @@ loop ::
                        FlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.Storage demVec (ValueState.Map (Interp.Val a)),
    DV.Storage sigVec (ValueState.Map (Interp.Val a)),
-   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
+--   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
    DV.Storage demVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Storage sigVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Storage sigVec (ND.Data demDim (Strict.SupportingPoints (Strict.Idx,
@@ -758,12 +758,12 @@ loop ::
    DV.Storage sigVec [SignalFlow.TimeStep a],   
    DV.FromList sigVec,Show (sigVec Int), 
    Show (sigVec (SignalFlow.TimeStep a)),
+--   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (FlowOpt.StorageFlow (Interp.Val a)))))),
    Show (sigVec (Interp.Val a)),
+   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Storage sigVec Int,
    DV.Storage sigVec (sigVec a),
-   Show (TopoQty.Flow
-         (Result.Result
-          (Data.Data Data.Nil (Interp.Val a))))) =>
+   Show (TopoQty.Flow (Result.Result (Data.Data Data.Nil (Interp.Val a))))) =>
   Caller ->
   System node ->
   SystemData inst node etaVec a ->
@@ -889,7 +889,7 @@ systemFunction ::
                                                                a))),
    DV.Storage sigVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Storage demVec (ValueState.Map (Maybe (Interp.Val a))),
-   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
+--   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
    DV.Storage sigVec (ValueState.Map (Interp.Val a)),
    DV.Storage demVec (ValueState.Map (Interp.Val a)),
    DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
@@ -944,6 +944,8 @@ systemFunction ::
    DV.Storage sigVec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
    DV.FromList sigVec, Show (sigVec Int),
    DV.Storage sigVec (sigVec a),
+--   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (FlowOpt.StorageFlow (Interp.Val a)))))),
+   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Storage sigVec Int) =>
   Caller ->
   System node ->

@@ -272,12 +272,3 @@ ifNull x _ [] = x
 ifNull _ f xs = f xs
 
 
-
--- TODO: depreciated -- replace by new
-getStoragePowerWithSign :: (Arith.Sum v) => (TopoQty.Sums v) -> Maybe v
-getStoragePowerWithSign sums = case sums of                 
-  TopoQty.Sums Nothing (Just energy) -> Just $ Arith.negate energy
-  TopoQty.Sums  (Just energy) Nothing -> Just energy
-  TopoQty.Sums Nothing Nothing -> Nothing 
-  TopoQty.Sums (Just _) (Just _) -> 
-    error "Error in getStoragePowerWithSign: Inconsistent energy flow - both directions active"
