@@ -156,6 +156,8 @@ checkBalanceCounterOne caller (BalanceCounter m) sto (MaxIterationsPerStorage ma
 checkBalanceCounter :: (Ord node) => BalanceCounter node -> MaxIterations -> Bool 
 checkBalanceCounter (BalanceCounter m) (MaxIterations ma) = Map.foldl (+) 0 m > ma
 
+
+-- TODO!! check storage selection
 selectStorageToForce ::(Ord node, Ord a, Show node, Arith.Sum a) =>
   Caller ->
   Balance node a ->

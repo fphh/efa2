@@ -8,7 +8,7 @@ import qualified EFA.Action.Flow.Check as ActFlowCheck
 --import qualified EFA.Action.Flow.Optimality as ActFlowOpt
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
 
-import qualified EFA.Graph.Topology.Node as Node
+--import qualified EFA.Graph.Topology.Node as Node
 --import EFA.Equation.Result (Result(Determined,Undetermined))
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph as Graph
@@ -21,7 +21,7 @@ import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Flow.Topology as FlowTopo
 
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Graph
+--import qualified EFA.Graph as Graph
 
 
 -- import qualified Data.Foldable as Fold
@@ -57,29 +57,8 @@ getFlowStatus caller flowGraph =
     f (Just flow) (expo,Just status) = (expo+1,Just $ combineStatusResults expo status (getEdgeFlowStatus flow))
     f (Just flow) (expo,Nothing) = (expo+1,Just $ getEdgeFlowStatus flow)
     f Nothing (_,_) = merror caller modul "getFlowStatus" "Flow not defined"
-{-
-getFlowStatus' :: 
-  (Ord node, Ord (edge node), Ord a, Arith.Constant a,Arith.NaNTestable a,
-   DV.Zipper vec, DV.Walker vec, DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
-   DV.Storage vec ActFlowCheck.Validity) =>
-  Caller ->
-  Topo.Topology node ->
-  FlowTopo.Section node edge sectionLabel nodeLabel (Maybe (TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)))) -> 
-  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus
-getFlowStatus' caller topo flowGraph = let 
-    flabels = Graph.edgeLabels $ TopoQty.topology flowGraph
-    flipEdge (f,t) = (t,f)
-    getFlow e = case (Map.lookup e flabels,Map.lookup (flipEdge e) flabels) of
-                (Nothing,Just fl) -> f
-                (Just fl,f) -> f
-                
-    f edge (expo,Just status) = (expo+1,Just $ combineStatusResults expo status (getEdgeFlowStatus (getFlow edge)))
-    f edge (expo,Nothing) = (expo+1,Just $ getEdgeFlowStatus (getFlow edge))
-    f _ (_,_) = merror caller modul "getFlowStatus" "Flow not defined or inconsistent"
-                
-    in Maybe.fromJust $ snd $ foldl f (0,Nothing) $ Graph.edges topo --TopoQty.topology flowGraph            
--}
+
+
 combineStatusResults :: 
   (DV.Zipper vec, DV.Storage vec ActFlowCheck.EdgeFlowStatus) => 
   Int ->

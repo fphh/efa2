@@ -22,7 +22,7 @@ import qualified Data.NonEmpty.Set as NonEmptySet
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
 --import qualified EFA.Flow.SequenceState.Index as Idx
-import qualified EFA.Utility.Trace as UtTrace 
+--import qualified EFA.Utility.Trace as UtTrace 
 import qualified Debug.Trace as Trace 
 
 import qualified Data.Map as Map

@@ -64,7 +64,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
-import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
+import qualified EFA.Action.Flow.StateFlow.LifeCycle as StateFlowLifeCycle
 
 --import EFA.Utility.Async (concurrentlyMany_)
 --import qualified EFA.Flow.Topology.Quantity as TopoQty
@@ -352,9 +352,9 @@ main = do
   let evalFunction = TopoLifeCycle.calcEtaLossSys
 --  let evalFunction2 = TopoScaleMap.calcEtaLossSys    
                                                              
-  let evalMethod=StateFlowOpt.N_SFG_EQ_N_STATE
+  let evalMethod=StateFlowLifeCycle.N_SFG_EQ_N_STATE
       
-  let updateEvalParam = StateFlowOpt.updateOneStorageLifeCycleEfficiencies 
+  let updateEvalParam = StateFlowLifeCycle.updateOneStorageLifeCycleEfficiencies 
                            caller (Process.accessTopology system) evalMethod  (Loop.accGlobalLifeCycleMap etaLoopParams) . 
                            EFA.accessStateFlowGraph . Process.accessAnalysis . Process.accSimEfa
   

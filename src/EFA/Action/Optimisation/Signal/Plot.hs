@@ -22,13 +22,13 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Data.Vector as DV
 --import qualified EFA.Action.Flow.Check as ActFlowCheck
 --import qualified EFA.Data.ND.Cube.Grid as CubeGrid
---import qualified EFA.Value.State as ValueState
---import qualified EFA.Action.Flow.Optimality as FlowOpt
+import qualified EFA.Value.State as ValueState
+import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 import qualified EFA.Action.Optimisation.Signal as OptSignal
 --import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Data.OD.Signal.Flow as SignalFlow
---import qualified EFA.Data.Interpolation as Interp
+import qualified EFA.Data.Interpolation as Interp
 --import qualified EFA.Data.ND.Cube.Map as CubeMap
 
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
@@ -134,6 +134,31 @@ plotOptimalSignals title signalMap  =
   where
     legend = Map.fromList $ zip [0..] $ Map.keys signalMap
     
+plotOptimalSignalsPerState ::
+  (Ord b,
+   Ord a,
+   Arith.Constant b,
+   Arith.Constant a,
+   Atom.C a,
+   Tuple.C a,
+   Tuple.C b,
+   Type.ToDisplayUnit b,
+   Type.GetDynamicType b,
+   Type.GetDynamicType a,
+   DV.Walker vec,
+   DV.Storage vec (SignalFlow.TimeStep a),
+   DV.Storage vec a,
+   DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val b))),
+   DV.Storage vec (ValueState.Map (Interp.Val b)),
+   DV.Storage vec (Interp.Val b),
+   DV.Singleton vec,
+   DV.Length vec,
+   DV.FromList vec) =>
+  String ->
+  (FlowOpt.OptimalityValues (Interp.Val b) ->
+   Interp.Val b) ->
+  OptSignal.OptimalityPerStateSignal node inst vec a (Interp.Val b) ->
+  Frame.T (Graph2D.T a (Interp.Val b))
 plotOptimalSignalsPerState title faccess signal  = 
   PlotD2.allInOne (PlotD2.labledFrame title)
      (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) $     

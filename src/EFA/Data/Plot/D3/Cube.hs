@@ -85,7 +85,7 @@ import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
 --import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 --import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 
-import qualified Graphics.Gnuplot.Graph as Graph
+--import qualified Graphics.Gnuplot.Graph as Graph
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
@@ -93,8 +93,8 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 --import qualified Graphics.Gnuplot.ColorSpecification as ColourSpec
 
 --import qualified Graphics.Gnuplot.Frame as Frame
-import qualified Graphics.Gnuplot.Frame.Option as Opt
-import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+--import qualified Graphics.Gnuplot.Frame.Option as Opt
+--import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 --import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 --import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 

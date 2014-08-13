@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module EFA.Action.Flow.StateFlow.Optimality where
+module EFA.Action.Flow.StateFlow.LifeCycle where
 
 import qualified EFA.Graph as Graph
 import qualified EFA.Equation.Result as Result
