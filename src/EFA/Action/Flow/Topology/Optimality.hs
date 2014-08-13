@@ -61,15 +61,11 @@ modul = ModuleName "Action.Flow.Topology.Optimality"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-data EndNodeEnergies node v = EndNodeEnergies 
-                              {getSinkMap:: (FlowOpt.SinkMap node v),
-                              getSourceMap :: FlowOpt.SourceMap node v,
-                              getStorageMap :: FlowOpt.StorageMap node (Maybe (TopoQty.Sums v))} deriving Show
 
 getEndNodeFlows :: 
   Node.C node =>
   TopoQty.Section node v ->
-  EndNodeEnergies node v
+  FlowOpt.EndNodeEnergies node v
 getEndNodeFlows flowSection =
    let topo = TopoQty.topology flowSection
        
@@ -84,116 +80,11 @@ getEndNodeFlows flowSection =
        storages = FlowOpt.StorageMap $ Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
               $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
                   
-    in (EndNodeEnergies sinks sources storages)
+    in (FlowOpt.EndNodeEnergies sinks sources storages)
       
 lookupControlVar :: Ord node => TopoQty.Section node v -> DemandAndControl.ControlVar node -> Maybe v
 lookupControlVar flowSection (DemandAndControl.ControlPower idx) = TopoQty.lookupPower idx flowSection
 lookupControlVar flowSection (DemandAndControl.ControlRatio idx) = TopoQty.lookupX idx flowSection
-
-calcEtaLossSysWithLifeCycleMap ::
-  (Ord a,
-   Ord node,
-   Show node,
-   Arith.Constant a,
-   DV.Zipper vec,
-   DV.Walker vec,
-   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a),
-                   FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage vec (FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a)),
-   DV.Storage vec (Interp.Val a),
-   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec (FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
-                   FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Singleton vec,
-   DV.Length vec) =>
-  Caller ->
-  FlowOpt.LifeCycleMap node (Interp.Val a) ->
-  EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
-  CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->  
-  CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityMeasure (Interp.Val a))
-
-calcEtaLossSysWithLifeCycleMap caller lifeCycleEfficiencies  (EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) state = let 
-  chargeStorages = Map.mapMaybeWithKey (\node x -> 
-          (applyUsageEfficiency caller state lifeCycleEfficiencies node) x) storages
-                   
-  dischargeStorages = Map.mapMaybeWithKey (\node x ->
-          (applyGenerationEfficiency caller state lifeCycleEfficiencies node) x)  storages
-  
-  makeSum = foldl1 (Arith.~+) . Map.elems
-  sinkTerm =  (makeSum sinks)  Arith.~+ (makeSum chargeStorages)
-  sourceTerm = (makeSum sources) Arith.~+ (makeSum dischargeStorages)
-  eta = (CubeMap.mapData FlowOpt.EtaSys) $ sinkTerm Arith.~/ sourceTerm
-  loss = (CubeMap.mapData FlowOpt.LossSys) $ sourceTerm Arith.~- sinkTerm
-  in CubeMap.zipWithData ((,)) state $ CubeMap.zipWithData FlowOpt.OptimalityMeasure eta loss
-
--- TODO: move to right place -- use in applyGenerationEfficiency,applyUsageEfficiency
-getStoragePowerWithSign :: (Arith.Sum v) => TopoQty.Sums v -> Maybe v
-getStoragePowerWithSign sums = case sums of                 
-  TopoQty.Sums Nothing (Just energy) -> Just $ energy
-  TopoQty.Sums  (Just energy) Nothing -> Just $ Arith.negate energy
-  TopoQty.Sums Nothing Nothing -> Nothing 
-  TopoQty.Sums (Just _) (Just _) -> error "Error in getStoragePowerWithSign: Inconsistent energy flow - both directions active"
-
-applyGenerationEfficiency ::
-  (Ord a,
-   Ord node,
-   Show node,
-   Arith.Constant a,
-   DV.Zipper vec,
-   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec (Interp.Val a)) =>
-  Caller ->
-  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus ->
-  FlowOpt.LifeCycleMap node (Interp.Val a) ->
-  node ->
-  Maybe (TopoQty.Sums (CubeMap.Data inst dim vec (Interp.Val a))) ->
-  Maybe (CubeMap.Data inst dim vec (Interp.Val a))
-applyGenerationEfficiency _ _ _ _ Nothing = Nothing
-applyGenerationEfficiency caller state lifeCycleEfficiencies node (Just sums) = case sums of
-  TopoQty.Sums Nothing (Just energy) -> Just $ (CubeMap.zipWithData f) energy state
-  TopoQty.Sums  (Just energy) Nothing -> Just $ (CubeMap.zipWithData (f. Arith.negate)) energy state
-  TopoQty.Sums Nothing Nothing -> Nothing 
-  _ ->  merror caller modul "applyGenerationEfficiency" 
-         ("Storage-Sums Variable contains values in positive and negative part-node: " ++ show node)  
-  where
-    f x st = if x > (Interp.Inter $ Arith.zero) then x Arith.~/ eta else Interp.Inter $ Arith.zero
-      where
-        (FlowOpt.GenerationEfficiency eta,_) = 
-          Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (ActFlowCheck.getState st) node 
-        e = merror caller modul "applyGenerationEfficiency" 
-                    ("Node not in LifeCycleEfficiencyMap-State: " ++ show st ++ "-Node: " ++ show node)
-                    
-
-applyUsageEfficiency ::
-  (Ord a,
-   Ord node,
-   Show node,
-   Arith.Constant a,
-   DV.Zipper vec,
-   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec (Interp.Val a)) =>
-  Caller ->
-  CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus ->
-  FlowOpt.LifeCycleMap node (Interp.Val a) ->
-  node ->
-  Maybe (TopoQty.Sums (CubeMap.Data inst dim vec (Interp.Val a))) ->
-  Maybe (CubeMap.Data inst dim vec (Interp.Val a))
-applyUsageEfficiency _ _ _ _ Nothing = Nothing
-applyUsageEfficiency caller state lifeCycleEfficiencies node (Just sums) = case sums of
-  TopoQty.Sums Nothing (Just energy) -> Just $ (CubeMap.zipWithData (f. Arith.negate)) energy state
-  TopoQty.Sums  (Just energy) Nothing -> Just $ (CubeMap.zipWithData f) energy state
-  TopoQty.Sums Nothing Nothing -> Nothing 
-  _ -> merror caller modul "applyUsageEfficiency" 
-         ("Storage-Sums Variable contains values in positive and negative part-node: " ++ show node)
-  where
-    f x st = if x > Arith.zero then x Arith.~* eta else Arith.zero
-      where 
-        (_,FlowOpt.UsageEfficiency eta) = 
-          Maybe.fromMaybe e $ FlowOpt.lookupLifeCycleEta lifeCycleEfficiencies (ActFlowCheck.getState st) node 
-        e = merror caller modul "applyUsageEfficiency" 
-                    ("Node not in LifeCycleEfficiencyMap-State: " ++ show st ++ "-Node: " ++ show node)
 
 objectiveFunctionValues :: 
   (Ord node, Ord a, Show node, Arith.Constant a, DV.Zipper vec,
@@ -211,10 +102,10 @@ objectiveFunctionValues ::
    DV.Length vec) =>
    Caller -> 
    ActBal.Forcing node a ->
-   EndNodeEnergies node ((CubeMap.Data (Sweep.Search inst) dim vec a)) ->
+   FlowOpt.EndNodeEnergies node ((CubeMap.Data (Sweep.Search inst) dim vec a)) ->
    (CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityMeasure a)) ->
    (CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues a))
-objectiveFunctionValues caller balanceForcing (EndNodeEnergies _ _ (FlowOpt.StorageMap stos)) optimalityMeasure = let
+objectiveFunctionValues caller balanceForcing ( FlowOpt.EndNodeEnergies _ _ (FlowOpt.StorageMap stos)) optimalityMeasure = let
     forcing = (CubeMap.mapData FlowOpt.TotalBalanceForce) $ 
               makeSum $ Map.mapWithKey (\node x -> applyBalanceForcing caller balanceForcing node x) stos
     makeSum = foldl1 ((Arith.~+)) . Maybe.catMaybes . Map.elems

@@ -4,7 +4,7 @@ module EFA.Action.Optimisation.Signal where
 
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Action.DemandAndControl as DemandAndControl
-import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+--import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph
 import qualified EFA.Flow.Topology as FlowTopo
@@ -25,6 +25,7 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Data.OD.Signal.Flow as SignalFlow
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.ND.Cube.Map as CubeMap
+import qualified EFA.Action.Utility as ActUt
 
 import qualified Data.Map as Map
 import qualified Control.Monad as Monad
@@ -244,7 +245,7 @@ interpolateStoragePowersPerState caller inmethod flowCube
                 nodes = Graph.nodeLabels topo
                 storages = Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
                            $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
-                in Map.map (fmap FlowTopoOpt.getStoragePowerWithSign) storages 
+                in Map.map (fmap ActUt.getStoragePowerWithSign) storages 
          f sto = SignalFlow.zipWith g supportSig demandCycle
            where 
              g support coordinates = CubeSweep.interpolateWithSupportPerStateMaybe (caller |> nc "interpolateStoragePowersPerState") 

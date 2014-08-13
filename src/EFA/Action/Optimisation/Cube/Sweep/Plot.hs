@@ -24,7 +24,7 @@ import qualified EFA.Data.ND as ND
 --import qualified EFA.Data.Axis.Strict as Strict
 --import qualified EFA.Flow.Topology.Record as TopoRecord
 --import qualified EFA.Flow.Topology as FlowTopoPlain
-import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+--import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 --import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 -- import qualified EFA.Flow.Topology as FlowTopo
@@ -165,7 +165,7 @@ plotStoragePowers ::
   Ord b,
   Ord a,
   DV.Walker demVec,
-  DV.Storage demVec (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) srchDim srchVec b)),
+  DV.Storage demVec (FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) srchDim srchVec b)),
   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec b),
   DV.Storage srchVec a,
   DV.Storage demVec b,
@@ -188,7 +188,7 @@ plotStoragePowers caller title searchGrid extractData nodeList sweepCube =
   where 
     f k (dimIdx,cube) = PlotCube.toPlotData caller (Just (k,dimIdx)) cube
     cubeList = zip nodeList $ map (\k -> CubeMap.map (Maybe.fromJust . TopoQty.sumOut . Maybe.fromJust . Maybe.fromMaybe (err k) . Map.lookup k . 
-                                                      FlowOpt.unStorageMap . FlowTopoOpt.getStorageMap) 
+                                                      FlowOpt.unStorageMap . FlowOpt.getStorageMap) 
                                            sweepCube) nodeList
     err k = merror caller modul "plotStoragePowers" $ "key not found " ++ show k 
     

@@ -24,8 +24,9 @@ import qualified EFA.Data.Vector as DV
 --import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
 --import qualified EFA.Action.Optimisation.Flow.Topology as 
-
-import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
+import qualified EFA.Action.Flow.Topology.LifeCycle as TopoLifeCycle
+import qualified EFA.Action.Flow.Topology.ScaleMap as TopoScaleMap
+--import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 --import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Balance as Balance
 
@@ -348,7 +349,8 @@ main = do
   let sweep = Process.makeSweep caller system systemData optiSet     
         :: Process.SweepResults Node Base ND.Dim2 ND.Dim2 [] [] Double
                         
-  let evalFunction = FlowTopoOpt.calcEtaLossSysWithLifeCycleMap
+  let evalFunction = TopoLifeCycle.calcEtaLossSys
+--  let evalFunction2 = TopoScaleMap.calcEtaLossSys    
                                                              
   let evalMethod=StateFlowOpt.N_SFG_EQ_N_STATE
       

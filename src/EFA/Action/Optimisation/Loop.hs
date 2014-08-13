@@ -6,11 +6,11 @@ module EFA.Action.Optimisation.Loop where
 
 import qualified EFA.Action.Flow.Balance as Balance
 import qualified EFA.Action.Flow.Optimality as FlowOpt
-import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
+--import qualified EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Flow.SequenceState.Index as Idx
 
-import Debug.Trace (trace)
+--import Debug.Trace (trace)
 import qualified EFA.Equation.Arithmetic as Arith
 --import qualified Data.Map as Map
 import qualified EFA.Utility.List as UtList
@@ -226,9 +226,6 @@ etaLoop caller storages etaParams balParams evalFunction systemFunction getBalan
         (etaSys,nextEvalParam) = updateEvalParam (accResult $ last balLoop) evalParam
         latestForcing = accForcing $ last balLoop          
 
-f str = id 
--- f str x = trace (str ++": " ++ show x) x
-
 balanceLoop :: 
   (Ord a, Ord node, Show node, Arith.Constant a,Show a) =>
   Caller ->       
@@ -256,14 +253,7 @@ balanceLoop caller storages balParams systemFunction getBalance initialForcing =
     maxIterations = accessMaxIterations balParams   
     maxIterationsPerStorage = accessMaxIterationsPerStorage balParams
     go lastItem@(BalanceLoopItem lastCount lastSto lastForcing step lastBalance lastBestPair _) = [lastItem] ++ go 
-      (BalanceLoopItem 
-      (f "count" count) 
-      (f "sto" sto) 
-      (f "forcing" forcing)
-      (f "nextStep " nextStep) 
-      (f "balance" balance)
-      (f "bestPair" bestPair) 
-      (trace "result" result))
+      (BalanceLoopItem count sto forcing nextStep balance bestPair result)
       where 
         sto = Balance.selectStorageToForce (caller |> nc "balanceOneStorageLoop") 
                lastBalance threshold lastCount maxIterationsPerStorage lastSto 

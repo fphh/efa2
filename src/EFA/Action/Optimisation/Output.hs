@@ -291,12 +291,11 @@ sweep ::
    PlotCube.ToPlotData  CubeMap.Cube dim (DemandAndControl.Var node) demVec a (Interp.Val a)) =>
   Caller ->
   [idx0 node] ->
-  [node] ->
    CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a ->
   SweepCtrl ->
   Process.SweepResults node inst dim srchDim demVec srchVec a ->
   [IO ()]
-sweep caller keyList stoList searchGrid ctrl swp = let
+sweep caller keyList searchGrid ctrl swp = let
   newCaller = caller |> nc "sweep"
   in
    (drawAction (drawFlow ctrl)  
@@ -442,7 +441,7 @@ optPerState ::
   OptiCtrl ->
   Process.OptimisationPerState t t1 dim srchDim vec srchVec sigVec a ->
   [IO ()]
-optPerState caller srchGrid OptiDont opt = []
+optPerState _ _ OptiDont _  = []
 optPerState caller srchGrid ctrl opt = 
   let newCaller = caller |> nc "optPerState"
   in (plotAction (plotOptimality ctrl)
@@ -491,7 +490,7 @@ optimalOperation ::
   OpCtrl ->
   Process.OptimalOperation id inst vec a ->
   [IO ()]
-optimalOperation OpDont opt = []
+optimalOperation OpDont _ = []
 optimalOperation ctrl opt = 
    (plotAction (plotOptimalControlSignals ctrl) 
    (OptSignalPlot.plotOptimalSignals "Optimal ControlSignals")
@@ -538,7 +537,7 @@ simulation ::
   Process.SimulationAndAnalysis node inst sigVec a ->
  [IO ()]
 simulation _ SimDont _ = [] 
-simulation system ctrl sim =  let
+simulation sys ctrl sim =  let
   legend = Map.fromList $ zip [0..] $ SignalFlow.getHRecordKeys $ 
            Simulation.accessPowerRecord $ Process.accessSimulation sim
   in 
@@ -559,7 +558,7 @@ simulation system ctrl sim =  let
   
  (drawAction (drawStateFlowGraph ctrl) 
   (\x -> [Draw.title "State Flow Graph from Simulation" $ Draw.stateFlowGraph Draw.optionsDefault x]) 
-      (ActUt.absoluteStateFlowGraph (Process.accessTopology system) $ EFA.accessStateFlowGraph $ Process.accessAnalysis sim))
+      (ActUt.absoluteStateFlowGraph (Process.accessTopology sys) $ EFA.accessStateFlowGraph $ Process.accessAnalysis sim))
 
 loopsIO ::
   (Ord a,
@@ -656,7 +655,7 @@ loopsIO ::
   (Process.SweepEvaluation node inst demDim srchDim demVec srchVec a) 
   (Process.Res node inst demDim srchDim demVec srchVec sigVec a)] ->
  IO ()  
-loopsIO evalCtrl optCtrl opCtrl simCtrl system optiSet etaLoop = mapM_ (etaLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet) etaLoop  
+loopsIO evalCtr optCtr opCtr simCtr sys optiS etaLoop = mapM_ (etaLoopItemIO evalCtr optCtr opCtr simCtr sys optiS) etaLoop  
 
 
 etaLoopItemIO ::
@@ -750,12 +749,11 @@ etaLoopItemIO ::
   (Process.SweepEvaluation node inst demDim srchDim demVec srchVec a) 
   (Process.Res node inst demDim srchDim demVec srchVec sigVec a) ->
   IO ()
-etaLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet' (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap sweepEval balLoop) = do
+etaLoopItemIO evalCtr optCtr opCtr simCtr sys optiS (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap sweepEval balLoop) = do
   print cnt
-  concurrentlyMany_ $  evalSweep (nc "balanceLoopItemIO") (Process.accessSearchGrid optiSet') evalCtrl sweepEval
+  concurrentlyMany_ $  evalSweep (nc "balanceLoopItemIO") (Process.accessSearchGrid optiS) evalCtr sweepEval
  
---  mapM_ (balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl optiSet') balLoop
-  balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet' $ last balLoop
+  balanceLoopItemIO optCtr opCtr simCtr sys optiS $ last balLoop
 
 balanceLoopItemIO ::
   (Ord a,
@@ -838,7 +836,6 @@ balanceLoopItemIO ::
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) demVec a a,
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) demVec a (Interp.Val a),
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) demVec a (Interp.Val (Interp.Val a))) =>
-  EvalCtrl ->
   OptiCtrl ->
   OpCtrl ->
   SimCtrl ->
@@ -846,12 +843,10 @@ balanceLoopItemIO ::
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   Loop.BalanceLoopItem t t1 (Process.Res node inst dim srchDim demVec srchVec sigVec a) ->
   IO ()
-balanceLoopItemIO evalCtrl optCtrl opCtrl simCtrl system optiSet (Loop.BalanceLoopItem cnt _node _force _step _bal _bestPair result) = do
+balanceLoopItemIO optCtr opCtr simCtr sys optiS (Loop.BalanceLoopItem _cnt _node _force _step _bal _bestPair result) = do
   let  (Process.Res perState optOperation simEfa) = result
   concurrentlyMany_ $ 
   
---    [putStrLn $ Loop.disp cnt]
---    sweep  (nc "balanceLoopItemIO") flowVars [Water] (Process.accessSearchGrid optiSet) sweepCtrl sweep  
-   optPerState  (nc "balanceLoopItemIO") (Process.accessSearchGrid optiSet) optCtrl perState  
-    ++ optimalOperation opCtrl optOperation
-    ++ simulation system simCtrl simEfa
+   optPerState  (nc "balanceLoopItemIO") (Process.accessSearchGrid optiS) optCtr perState  
+    ++ optimalOperation opCtr optOperation
+    ++ simulation sys simCtr simEfa

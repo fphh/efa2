@@ -127,7 +127,7 @@ type FlowStatus node inst demDim srchDim demVec srchVec a =
    
 type EndNodeFlows node inst demDim srchDim demVec srchVec a b =  
   CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
-  (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) 
+  (FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) 
                                                     srchDim srchVec b))
   
 type OptimalityMeasure node inst demDim srchDim demVec srchVec a b = 
@@ -227,7 +227,7 @@ getEndNodeFlows ::
    DV.Walker vec,
    DV.Storage vec (TopoQty.Section node 
                    (CubeMap.Data (Sweep.Search inst) dim1 vec1 b)),
-   DV.Storage vec (FlowTopoOpt.EndNodeEnergies node 
+   DV.Storage vec (FlowOpt.EndNodeEnergies node 
                    (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))) =>
   Flow node inst dim dim1 vec vec1 a b ->
   EndNodeFlows node inst dim dim1 vec vec1 a b
@@ -349,7 +349,7 @@ objectiveFunctionValues ::
   DV.Storage vec1 (FlowOpt.Loss2Optimise b),
   DV.Storage vec1 (FlowOpt.Eta2Optimise b,
   FlowOpt.Loss2Optimise b),
-  DV.Storage vec (FlowTopoOpt.EndNodeEnergies node 
+  DV.Storage vec (FlowOpt.EndNodeEnergies node 
                   ((CubeMap.Data (Sweep.Search inst) dim1 vec1 b))),
   DV.Storage vec ((CubeMap.Data 
                                  (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus)),

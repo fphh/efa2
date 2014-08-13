@@ -18,7 +18,8 @@ import qualified EFA.Flow.State as State
 
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Application.Type as Type
+--import qualified EFA.Application.Type as Type
+import qualified EFA.Flow.Topology.Quantity as TopoQty
 
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Flow.SequenceState.Index as Idx
@@ -26,10 +27,10 @@ import qualified EFA.Flow.Storage as Storage
 import qualified EFA.Flow.Storage.Index as StorageIdx
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Flow.Part.Index as PartIdx
-import qualified EFA.Signal.Vector as Vec
-import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Data (Data, Nil, (:>))
-import EFA.Signal.Typ (Typ)
+--import qualified EFA.Signal.Vector as Vec
+--import qualified EFA.Signal.Signal as Sig
+--import EFA.Signal.Data (Data, Nil, (:>))
+--import EFA.Signal.Typ (Typ)
 import Control.Monad ((>=>))
 import EFA.Graph (Graph)
 --import qualified Data.Bimap as Bimap
@@ -50,6 +51,17 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 
 import Data.Foldable (foldMap)
+
+import EFA.Utility(Caller,
+                 merror,
+--                   (|>),
+                   ModuleName(..),FunctionName, genCaller)
+
+modul :: ModuleName
+modul = ModuleName "EFA.Action.Utility"
+
+nc :: FunctionName -> Caller
+nc = genCaller modul
 
 
 topologyFromEdges ::
@@ -258,3 +270,23 @@ absoluteStateFlowGraph topo sfg = sfg {StateQty.states = states,
 ifNull :: b -> ([a] -> b) -> [a] -> b
 ifNull x _ [] = x
 ifNull _ f xs = f xs
+
+
+-- TODO: move to right place -- use in applyGenerationEfficiency,applyUsageEfficiency
+getStoragePowerWithSignNew :: (Arith.Sum v) => Caller ->  Maybe (TopoQty.Sums v) -> Maybe v
+getStoragePowerWithSignNew caller Nothing =  merror caller modul "getStoragePowerWithSign" "Completely inactive edge" 
+getStoragePowerWithSignNew caller (Just sums) = case sums of                 
+  TopoQty.Sums Nothing (Just energy) -> Just $ energy
+  TopoQty.Sums  (Just energy) Nothing -> Just $ Arith.negate energy
+  TopoQty.Sums Nothing Nothing -> Nothing 
+  TopoQty.Sums (Just _) (Just _) -> 
+    merror caller modul "getStoragePowerWithSign" "Inconsistent energy flow - both directions active"
+
+-- TODO: depreciated -- replace by new
+getStoragePowerWithSign :: (Arith.Sum v) => (TopoQty.Sums v) -> Maybe v
+getStoragePowerWithSign sums = case sums of                 
+  TopoQty.Sums Nothing (Just energy) -> Just $ energy
+  TopoQty.Sums  (Just energy) Nothing -> Just $ Arith.negate energy
+  TopoQty.Sums Nothing Nothing -> Nothing 
+  TopoQty.Sums (Just _) (Just _) -> 
+    error "Error in getStoragePowerWithSign: Inconsistent energy flow - both directions active"

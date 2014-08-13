@@ -1,7 +1,7 @@
 
 module EFA.Action.Flow.Optimality where
 
---import qualified EFA.Flow.Topology.Quantity as TopoQty
+import qualified EFA.Flow.Topology.Quantity as TopoQty
 --import qualified EFA.Data.Axis.Strict as Strict
 --import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Value.State as ValueState
@@ -21,7 +21,7 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 
 --import qualified EFA.Report.Format as Format
 
---import qualified Data.Maybe as Maybe
+import qualified Data.Maybe as Maybe
 --import Control.Applicative (liftA2)
 import Control.Monad(join)
 --import Data.Foldable (Foldable, foldMap)
@@ -29,7 +29,7 @@ import Control.Monad(join)
 --import qualified EFA.Action.DemandAndControl as DemandAndControl
 
 import EFA.Utility(Caller,
---                 merror,
+                 merror,
                --    (|>),
                    ModuleName(..),FunctionName, genCaller)
 
@@ -38,6 +38,12 @@ modul = ModuleName "Action.Flow.Optimality"
 
 nc :: FunctionName -> Caller
 nc = genCaller modul
+
+data EndNodeEnergies node v = EndNodeEnergies 
+                              {getSinkMap:: (SinkMap node v),
+                              getSourceMap :: SourceMap node v,
+                              getStorageMap :: StorageMap node (Maybe (TopoQty.Sums v))} deriving Show
+
 
 newtype GenerationEfficiency a = GenerationEfficiency a deriving (Show,Eq)
 newtype UsageEfficiency a = UsageEfficiency a deriving  (Show,Eq)
@@ -119,3 +125,22 @@ interpolateOptimalityPerState caller inmethod label xPair yPair x = ValueState.z
     force = Interp.dim1PerState caller inmethod label xPair 
             ((\(a,b) -> (ValueState.map getForceVal a, ValueState.map getForceVal b)) yPair) x
    
+
+newtype ScaleSource a = ScaleSource {unScaleSource :: a}
+newtype ScaleSink a = ScaleSink {unScaleSink :: a}
+
+data ScaleMap a = ScaleMap (Map.Map Idx.AbsoluteState (ScaleSource a, ScaleSink a))
+
+lookupScaleSink :: Caller -> ScaleMap (Interp.Val a) ->Maybe Idx.AbsoluteState ->  (Interp.Val a)
+lookupScaleSink caller (ScaleMap m) state = f state
+  where
+  f Nothing =  Interp.Invalid ["lookupScaleSource"]               
+  f (Just st) = unScaleSink $ snd $ Maybe.fromMaybe err $ Map.lookup st m
+  err = merror caller modul "lookupSourceScale" $ "State not in scalemap: " ++ show state
+
+lookupScaleSource ::  Caller -> ScaleMap  (Interp.Val a) ->Maybe Idx.AbsoluteState ->  (Interp.Val a)
+lookupScaleSource caller (ScaleMap m) state = f state
+  where
+  f Nothing =  Interp.Invalid ["lookupScaleSource"]               
+  f (Just st) = unScaleSource $ fst $ Maybe.fromMaybe err $ Map.lookup st m  
+  err = merror caller modul "lookupSourceScale" $ "State not in scalemap: " ++ show state
