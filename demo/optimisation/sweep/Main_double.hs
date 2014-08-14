@@ -259,44 +259,44 @@ sysCtrl :: OP.SysCtrl
 sysCtrl = OP.SysDo {OP.topo = OP.DoP OP.DrwXterm OP.StdOut, OP.labTopo =  OP.DoP OP.DrwXterm OP.StdOut , OP.stateAnalysis = OP.DrwXterm}
 
 testCtrl :: OP.TestCtrl
-testCtrl = OP.TestDo {OP.demandCycle = OP.Dflt}
+testCtrl = OP.TestDo {OP.demandCycle = OP.PltDflt}
 
 sysDataCtrl :: OP.SysDataCtrl
-sysDataCtrl = OP.SysDataDo {OP.rawCurves = OP.PoP OP.Dflt OP.StdOut, OP.etaFunctions = OP.Dflt}
+sysDataCtrl = OP.SysDataDo {OP.rawCurves = OP.PoP OP.PltDflt OP.StdOut, OP.etaFunctions = OP.PltDflt}
 
 optiSetCtrl :: OP.OptiSetCtrl
-optiSetCtrl = OP.OptiSetDo {OP.variation = OP.Dflt }
+optiSetCtrl = OP.OptiSetDo {OP.variation = OP.PltDflt }
 
 evalCtrl :: OP.EvalCtrl
 evalCtrl = OP.EvalDont
-  {-OP.EvalDo { OP.plotEta = OP.Dflt, 
-                       OP.plotEtaAt = OP.Dflt }-}
+  {-OP.EvalDo { OP.plotEta = OP.PltDflt, 
+                       OP.plotEtaAt = OP.PltDflt }-}
 
 sweepCtrl :: OP.SweepCtrl
 sweepCtrl = OP.SweepDont 
           {-  OP.SweepDo {OP.drawFlow = OP.DrwXterm,
-                         OP.plotState = OP.Dflt,
-                         OP.plotStatus = OP.Dflt, 
-                         OP.plotFlowVariables = OP.Dflt} -- OP.DontPlot} -- OP.Dflt}-}
+                         OP.plotState = OP.PltDflt,
+                         OP.plotStatus = OP.PltDflt, 
+                         OP.plotFlowVariables = OP.PltDflt} -- OP.DontPlot} -- OP.PltDflt}-}
 optCtrl :: OP.OptiCtrl            
-optCtrl = OP.OptiDont 
-          {- OP.OptiDo
-                    {OP.plotOptimality = OP.Dflt,
-                     OP.plotOptEtaPerState = OP.Dflt, 
-                     OP.plotEtaOptPerState= OP.Dflt, 
-                     OP.plotOptIndexPerState= OP.Dflt, 
-                     OP.plotOptimalSignalPerState =OP.Dflt } -}
+optCtrl = --OP.OptiDont 
+          OP.OptiDo
+                    {OP.plotOptimality = OP.PltPNG,
+                     OP.plotOptEtaPerState = OP.PltPNG, 
+                     OP.plotEtaOptPerState= OP.PltPNG, 
+                     OP.plotOptIndexPerState= OP.PltPNG, 
+                     OP.plotOptimalSignalPerState =OP.PltPNG } 
 
 opCtrl :: OP.OpCtrl
-opCtrl = OP.OpDont {-
-         OP.OpDo {OP.plotOptimalControlSignals = OP.Dflt, 
-                  OP.plotOptimalStoragePowers = OP.Dflt}-}
+opCtrl = --OP.OpDont {-
+         OP.OpDo {OP.plotOptimalControlSignals = OP.PltPNG, 
+                  OP.plotOptimalStoragePowers = OP.PltNot}
 
 simCtrl :: OP.SimCtrl         
 simCtrl = OP.SimDo {OP.drawSimulationFlowGraph = OP.DrwNot,
-                    OP.plotSimulationPowers = OP.PNG,
+                    OP.plotSimulationPowers = OP.PltPNG,
                     OP.drawSequenceFlowGraph = OP.DrwNot, 
-                    OP.drawStateFlowGraph = OP.DrwPS} -- ,OP.DrwXterm}
+                    OP.drawStateFlowGraph = OP.DrwPNG} -- ,OP.DrwXterm}
 
 balanceForcingMap :: Balance.Forcing Node (Interp.Val Double)
 balanceForcingMap = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (-1.0)))]
@@ -343,9 +343,16 @@ replaceBlancs :: String -> String
 replaceBlancs xs = map f xs   
   where f ' ' = '_'
         f x = x 
-
--- data TitleMap = Map.fromList [(EtaLoop,1)
-
+        
+fileOrder :: OP.FileOrder        
+fileOrder = OP.FileOrder [OP.TyDG,
+                          OP.TyEx, 
+                          OP.TySF, 
+                          OP.TyEL, 
+                          OP.TyBL, 
+                          OP.TyPR, 
+                          OP.TyIF]
+        
 main :: IO()
 main = do
   
@@ -396,7 +403,7 @@ main = do
 
   print loop
   
-  OP.loopsIO path ["StateForced"] evalCtrl optCtrl opCtrl simCtrl system optiSet loop
+  OP.loopsIO path fileOrder [OP.Ex "Base", OP.SF "Forced"] evalCtrl optCtrl opCtrl simCtrl system optiSet loop
  
   
   

@@ -97,16 +97,49 @@ data File = RelativeFilePath | AbsoluteFilePath
 --4 Terminal; FilePath 
 --4 Optionen übergeben 
 
-data Titles = Experim String
-            | StatForc String 
-            | NLoop String  
-            | BLoop String  
-            | ProcStep String  
-            | Diagram String  
-            | Info String
+data Title = Ex String -- Experiment
+            | SF String -- StateForcing
+            | EL String -- EtaLoop 
+            | BL String  -- BalanceLoop 
+            | PR String  -- ProcessStep
+            | DG String  -- Diagramm
+            | IF String -- Additional Info
+
+getType :: Title -> TitleType
+getType (Ex _) = TyEx
+getType (SF _) = TySF
+getType (EL _) = TyEL
+getType (BL _) = TyBL
+getType (PR _) = TyPR 
+getType (DG _) = TyDG
+getType (IF _) = TyIF
+
+data TitleType = TyEx
+               | TySF
+               | TyEL
+               | TyBL
+               | TyPR
+               | TyDG
+               | TyIF deriving Eq
+              
+instance Show Title where              
+  show (Ex str) = "Ex: " ++ show str 
+  show (SF str) = "SF: " ++ show str 
+  show (EL str) = "EL: " ++ show str 
+  show (BL str) = "BL: " ++ show str 
+  show (PR str) = "PS: " ++ show str 
+  show (DG str)  = "DG: " ++ show str
+  show (IF str) = "IF: " ++ show str
+   
+-- WARNING :: [Title] should be set ?
+sortTitles :: FileOrder -> [Title] -> [Title] 
+sortTitles (FileOrder order) titles = concatMap (\x -> List.filter (\y -> x== getType y) titles) order
+  where 
+              
+data FileOrder = FileOrder [TitleType]
 
 data Draw = DrwNot | DrwXterm | DrwPDF |DrwPNG | DrwPS
-data Plot = DontPlot | Dflt | PNG | SVG  | PS 
+data Plot = PltNot | PltDflt | PltPNG | PltSVG  | PltPS 
 data Print = DontPrint | StdOut | Print 
   
 data DrawOrPrint = DoP Draw Print
@@ -114,11 +147,11 @@ data PlotOrPrint = PoP Plot Print
   
 plotAction ::
   Display.C gfx => Plot -> FilePath -> (t -> gfx) -> t -> [IO ()] 
-plotAction Dflt _ toPlotData plot = [void $ Plot.plotSync DefaultTerm.cons  $ toPlotData plot]
-plotAction (PNG) file toPlotData plot = [void $ Plot.plotSync (PNG.cons $ file ++".png")  $ toPlotData plot] 
-plotAction (SVG) file toPlotData plot = [void $ Plot.plotSync (SVG.cons $ file ++".svg") $ toPlotData plot] 
-plotAction (PS) file toPlotData plot = [void $ Plot.plotSync (PS.cons $ file ++".ps") $ toPlotData plot] 
-plotAction DontPlot _ _ _ = []
+plotAction PltDflt _ toPlotData plot = [void $ Plot.plotSync DefaultTerm.cons  $ toPlotData plot]
+plotAction (PltPNG) file toPlotData plot = [void $ Plot.plotSync (PNG.cons $ file ++".png")  $ toPlotData plot] 
+plotAction (PltSVG) file toPlotData plot = [void $ Plot.plotSync (SVG.cons $ file ++".svg") $ toPlotData plot] 
+plotAction (PltPS) file toPlotData plot = [void $ Plot.plotSync (PS.cons $ file ++".ps") $ toPlotData plot] 
+plotAction PltNot _ _ _ = []
 
 drawAction :: 
   Draw -> FilePath -> (t -> [Canonical.DotGraph LazyText.Text]) -> t ->  [IO ()]
@@ -148,13 +181,18 @@ plotOrPrintAction (PoP dA pA) file toPlotData plot =
   plotAction dA file toPlotData plot ++ printAction pA file plot
 
 
-makeTitle :: [String] -> String
-makeTitle titles = List.intercalate " - " titles
+makeTitle :: [Title] -> String
+makeTitle titles = List.intercalate " - "  $ map show $ titles
 
-makeFileName :: FilePath -> [String] -> FilePath
-makeFileName [] _ = error "empty file Path"
-makeFileName basePath titles | last basePath == '/' = replaceBlancs $ basePath ++ List.intercalate "_" titles
-makeFileName basePath titles = replaceBlancs $ basePath ++ "/" ++ List.intercalate "_" titles
+makeFileName :: FilePath -> FileOrder -> [Title] -> FilePath
+makeFileName [] _ _ = error "empty file Path"
+makeFileName basePath fileOrder titles | last basePath == '/' = replaceBlancs $ 
+                              basePath ++ (List.intercalate "_" $ 
+                                           map show $ sortTitles fileOrder titles)
+                              
+makeFileName basePath fileOrder titles = replaceBlancs $ basePath 
+                                         ++ "/" ++ (List.intercalate "_" 
+                                          $ map show $ sortTitles fileOrder titles)
 
 replaceBlancs :: String -> String  
 replaceBlancs xs = map f xs   
@@ -171,22 +209,23 @@ system ::
   (Show node,
   Node.C node) =>
   FilePath ->
-  [String] ->
+  FileOrder -> 
+  [Title] ->
   SysCtrl -> 
   Process.System node -> [IO ()]
-system path titles sysAction sys = 
+system path fileOrder titles sysAction sys = 
   let 
-    f str = makeFileName path $ titles ++ [str]
+    f str = makeFileName path fileOrder $ titles ++ [str]
     g str = makeTitle $ titles ++ [str]
   in  
-    (drawOrPrintAction (topo sysAction) (f "topology")
-     (\x -> [Draw.title (g "topology") $ Draw.topology x])  $ Process.accessTopology sys) ++
+    (drawOrPrintAction (topo sysAction) (f $ DG "topology")
+     (\x -> [Draw.title (g $ DG "topology") $ Draw.topology x])  $ Process.accessTopology sys) ++
     
-    (drawOrPrintAction (labTopo sysAction) (f "labledTopology")
-     (\x -> [Draw.title (g "labledTopology") $ Draw.labeledTopology x]) $ Process.accessLabledTopology sys) ++
+    (drawOrPrintAction (labTopo sysAction) (f $ DG "labledTopology")
+     (\x -> [Draw.title (g $ DG "labledTopology") $ Draw.labeledTopology x]) $ Process.accessLabledTopology sys) ++
     
-    (drawAction (stateAnalysis sysAction)  (f "stateAnalysis")
-     (\ x -> [Draw.title (g "stateAnalysis") $ Draw.flowTopologiesAbsolute (Process.accessTopology sys) $ 
+    (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis")
+     (\ x -> [Draw.title (g $ DG "stateAnalysis") $ Draw.flowTopologiesAbsolute (Process.accessTopology sys) $ 
                                                    StateAnalysis.bruteForce x]) $ Process.accessTopology sys)
     
 data SysDataCtrl = SysDataDont | 
@@ -210,22 +249,22 @@ sysData ::
    DV.Length vec,
    DV.FromList vec) =>
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   SysDataCtrl ->
   Process.SystemData inst node vec a ->
   [IO ()]
-sysData path titles action sysDat = 
+sysData path fileOrder titles action sysDat = 
   let 
-    f str = makeFileName path $ titles ++ [str]
+    f str = makeFileName path fileOrder $ titles ++ [str]
     g str = makeTitle $ titles ++ [str]
   in  
- (plotOrPrintAction (rawCurves action) (f "EtaCurvesRaw")
-  (PlotD2.allInOne (PlotD2.labledFrame (g "EtaCurvesRaw")) 
+ (plotOrPrintAction (rawCurves action) (f $ DG "EtaCurvesRaw")
+  (PlotD2.allInOne (PlotD2.labledFrame (g $ DG "EtaCurvesRaw")) 
    PlotD2.plotInfo3lineTitles . PlotCurve.toPlotDataMap)
   (Process.accessRawEfficiencyCurves sysDat)) ++ 
  
- (plotAction (etaFunctions action) (f "EtaFunctions")
-  (PlotD2.allInOne (PlotD2.labledFrame (g "EtaFunctions")) 
+ (plotAction (etaFunctions action) (f $ DG "EtaFunctions")
+  (PlotD2.allInOne (PlotD2.labledFrame (g $ DG "EtaFunctions")) 
    PlotD2.plotInfo3lineTitles . PlotCurve.toPlotDataMap) 
   (EtaFunctions.toCurveMap (Process.accessFunctionPlotAxis sysDat) $ Process.accessFunctionMap sysDat))
  
@@ -249,18 +288,18 @@ test ::
    DV.Length sigVec,
    DV.FromList sigVec) =>
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   TestCtrl ->
   Process.TestSet  node inst demDim sigVec a ->
   [DemandAndControl.DemandVar node] ->
   [IO ()]
  
-test path titles testCtrl testData demandVars = 
+test path fileOrder titles testCtrl testData demandVars = 
   let 
---    f str = makeFileName path $ titles ++ [str]
+--    f str = makeFileName path fileOrder $ titles ++ [str]
     g str = makeTitle $ titles ++ [str]
   in
-  (plotAction (demandCycle testCtrl) (g "DemandCycle")
+  (plotAction (demandCycle testCtrl) (g $ DG "DemandCycle")
    (flip OptSignalPlot.plotDemandCycle demandVars) 
    (Process.accessDemandCycle testData))
 
@@ -287,25 +326,25 @@ optiSet ::
    PlotCube.ToPlotData CubeMap.Cube srchDim (DemandAndControl.Var node) srchVec a (Interp.Val a)) =>
   Caller ->  
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   OptiSetCtrl ->
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   [IO ()]
-optiSet caller path titles ctrl oSet = let
+optiSet caller path fileOrder titles ctrl oSet = let
   legend = Map.fromList $ zip [0..] $ 
            map DemandAndControl.unDemandVar (Process.accessDemandVars oSet) ++ 
            map DemandAndControl.unControlVar (Process.accessControlVars oSet)
-  f str = makeFileName path $ titles ++ [str]
+  f str = makeFileName path fileOrder $ titles ++ [str]
   g str = makeTitle $ titles ++ [str]
   in
-  (plotAction (variation ctrl) (f "DemandVariation")
-   (PlotD3.allInOne (PlotD3.labledFrame (g "DemandVariation")) 
+  (plotAction (variation ctrl) (f $ DG "DemandVariation")
+   (PlotD3.allInOne (PlotD3.labledFrame (g $ DG "DemandVariation")) 
     (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) . fst .
     SweepPlot.plotVariation caller ) 
    (Process.accessVariation oSet)) ++
   
-  (plotAction (variation ctrl) (f "SearchVariation")
-   (PlotD3.allInOne (PlotD3.labledFrame (g "SearchVariation")) 
+  (plotAction (variation ctrl) (f $ DG "SearchVariation")
+   (PlotD3.allInOne (PlotD3.labledFrame (g $ DG "SearchVariation")) 
     (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) . snd .
     SweepPlot.plotVariation caller ) 
    (Process.accessVariation oSet))
@@ -350,29 +389,29 @@ sweep ::
    PlotCube.ToPlotData  CubeMap.Cube dim (DemandAndControl.Var node) demVec a (Interp.Val a)) =>
   Caller ->
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   [idx0 node] ->
    CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a ->
   SweepCtrl ->
   Process.SweepResults node inst dim srchDim demVec srchVec a ->
   [IO ()]
-sweep caller path titles keyList searchGrid ctrl swp = let
+sweep caller path fileOrder titles keyList searchGrid ctrl swp = let
   newCaller = caller |> nc "sweep"
-  f str = makeFileName path $ titles ++ [str]
+  f str = makeFileName path fileOrder $ titles ++ [str]
   g str = makeTitle $ titles ++ [str]
   in
-   (drawAction (drawFlow ctrl)  (f "Flow DemandEdges")
-    (SweepDraw.drawDemandSelection newCaller (g "Flow DemandEdges") (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
+   (drawAction (drawFlow ctrl)  (f $ DG "Flow DemandEdges")
+    (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow DemandEdges") (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
     (Process.accessSweepFlow swp)) ++
    
-   (plotAction (plotFlowVariables ctrl) (f "Flow DemandEdges")
-    (SweepPlot.plotSweepFlowValues newCaller (g "FlowVariables") searchGrid 
+   (plotAction (plotFlowVariables ctrl) (f $ DG "Flow DemandEdges")
+    (SweepPlot.plotSweepFlowValues newCaller (g $ DG "FlowVariables") searchGrid 
      TopoQty.lookup 
      CubeGrid.All keyList)
      (Process.accessSweepFlow swp)) ++ 
     
-   (plotAction (plotFlowVariables ctrl) (f "Flow DemandEdges")
-    (SweepPlot.plotSweepFlowValuesPerState newCaller (g "FlowVariables Per State") searchGrid 
+   (plotAction (plotFlowVariables ctrl) (f $ DG "Flow DemandEdges")
+    (SweepPlot.plotSweepFlowValuesPerState newCaller (g $ DG "FlowVariables Per State") searchGrid 
      TopoQty.lookup CubeGrid.All keyList $ Process.accessSweepFlowStatus swp)
      (Process.accessSweepFlow swp))
    
@@ -424,27 +463,27 @@ evalSweep ::
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val a)) =>
   Caller ->
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
   EvalCtrl ->
   Process.SweepEvaluation node inst dim srchDim vec srchVec a ->
   [IO ()]
-evalSweep _ _ _ _ EvalDont _ = []  
-evalSweep caller path titles srchGrid ctrl swp = let  
+evalSweep _ _ _ _ _ EvalDont _ = []  
+evalSweep caller path fileOrder titles srchGrid ctrl swp = let  
   newCaller = caller |> nc "evalSweep"
-  f str = makeFileName path $ titles ++ [str]
+  f str = makeFileName path fileOrder $ titles ++ [str]
   g str = makeTitle $ titles ++ [str]
   in 
-   (plotAction (plotEta ctrl) (f "EtaSys")
-    (SweepPlot.plotDemandSweepValue newCaller (g "EtaSys") srchGrid (FlowOpt.unEta2Optimise . FlowOpt.getEta . snd) CubeGrid.All) 
+   (plotAction (plotEta ctrl) (f $ DG "EtaSys")
+    (SweepPlot.plotDemandSweepValue newCaller (g $ DG "EtaSys") srchGrid (FlowOpt.unEta2Optimise . FlowOpt.getEta . snd) CubeGrid.All) 
      (Process.accessSweepOptimality swp)) ++
    
-   (plotAction (plotEta ctrl) (f "State")
-    (SweepPlot.plotStates newCaller (g "State") srchGrid )
+   (plotAction (plotEta ctrl) (f $ DG "State")
+    (SweepPlot.plotStates newCaller (g $ DG "State") srchGrid )
      (Process.accessSweepOptimality swp)) ++
  
-   (plotAction (plotEta ctrl) (f "LossSys")
-    (SweepPlot.plotDemandSweepValue newCaller  (g "LossSys") srchGrid (FlowOpt.unLoss2Optimise . FlowOpt.getLoss . snd) CubeGrid.All) 
+   (plotAction (plotEta ctrl) (f $ DG "LossSys")
+    (SweepPlot.plotDemandSweepValue newCaller  (g $ DG "LossSys") srchGrid (FlowOpt.unLoss2Optimise . FlowOpt.getLoss . snd) CubeGrid.All) 
      (Process.accessSweepOptimality swp))
    
 data OptiCtrl = OptiDont | 
@@ -503,38 +542,38 @@ optPerState ::
    DV.Storage sigVec (ValueState.Map (Interp.Val a))) =>
   Caller ->
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
   OptiCtrl ->
   Process.OptimisationPerState t t1 dim srchDim vec srchVec sigVec a ->
   [IO ()]
-optPerState _ _ _ _ OptiDont _  = []
-optPerState caller path titles srchGrid ctrl opt = 
+optPerState _ _ _ _ _ OptiDont _  = []
+optPerState caller path fileOrder titles srchGrid ctrl opt = 
   let newCaller = caller |> nc "optPerState"
-      f str = makeFileName path $ titles ++ [str]
+      f str = makeFileName path fileOrder $ titles ++ [str]
       g str = makeTitle $ titles ++ [str]
       
-  in (plotAction (plotOptimality ctrl) (f "EtaBasedOptimalityValue")
-     (SweepPlot.plotDemandSweepValue newCaller  (g "EtaBasedOptimalityValue") srchGrid 
+  in (plotAction (plotOptimality ctrl) (f $ DG "EtaBasedOptimalityValue")
+     (SweepPlot.plotDemandSweepValue newCaller  (g $ DG "EtaBasedOptimalityValue") srchGrid 
       (FlowOpt.getOptEtaVal . snd) CubeGrid.All) 
      (Process.accessObjectiveFunctionValues opt)) ++
 
-     (plotAction (plotOptEtaPerState ctrl) (f "Optimal Eta-Objective Per State")
-     (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g "Optimal Eta-Objective Per State") 
+     (plotAction (plotOptEtaPerState ctrl) (f $ DG "Optimal Eta-Objective Per State")
+     (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g $ DG "Optimal Eta-Objective Per State") 
       (FlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt))  ++  
     
-     (plotAction (plotEtaOptPerState ctrl) (f "Optimal Eta Per State")
-      (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g "Optimal Eta Per State")
+     (plotAction (plotEtaOptPerState ctrl) (f $ DG "Optimal Eta Per State")
+      (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g $ DG "Optimal Eta Per State")
        (FlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt)) ++
                                
-     (plotAction (plotOptIndexPerState ctrl) (f "Optimal Index Per State")
-      (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g "Optimal Index Per State")
+     (plotAction (plotOptIndexPerState ctrl) (f $ DG "Optimal Index Per State")
+      (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g $ DG "Optimal Index Per State")
       (\(CubeGrid.LinIdx idx,_) -> Interp.Inter $ Arith.fromInteger $ fromIntegral idx)) 
      (Process.accessOptimalChoicePerState opt)) ++ 
      
-     (plotAction (plotOptimalSignalPerState ctrl) (f "Optimal Index Per State")
+     (plotAction (plotOptimalSignalPerState ctrl) (f $ DG "Optimal Index Per State")
       (OptSignalPlot.plotOptimalSignals "Optimal Signals per State" . 
        OptSignalAccess.optimalityPerStateSignalToSignalMap FlowOpt.getEtaVal)
      (Process.accessOptimalSignalsPerState opt))
@@ -562,22 +601,22 @@ optimalOperation ::
    DV.Length vec,
    DV.FromList vec) =>
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   OpCtrl ->
   Process.OptimalOperation id inst vec a ->
   [IO ()]
-optimalOperation _ _ OpDont _ = []
-optimalOperation path titles ctrl opt = let
-  f str = makeFileName path $ titles ++ [str]
+optimalOperation _ _ _ OpDont _ = []
+optimalOperation path fileOrder titles ctrl opt = let
+  f str = makeFileName path fileOrder $ titles ++ [str]
   g str = makeTitle $ titles ++ [str]
 
   in
-   (plotAction (plotOptimalControlSignals ctrl) (f "ControlSignals")
-   (OptSignalPlot.plotOptimalSignals (g "ControlSignals"))
+   (plotAction (plotOptimalControlSignals ctrl) (f $ DG "ControlSignals")
+   (OptSignalPlot.plotOptimalSignals (g $ DG "ControlSignals"))
     (Process.accessOptimalControlSignals opt)) ++ 
    
-   (plotAction (plotOptimalControlSignals ctrl) (f "Storage Powers")
-   (OptSignalPlot.plotOptimalSignals (g "Storage Powers"))
+   (plotAction (plotOptimalControlSignals ctrl) (f $ DG "Storage Powers")
+   (OptSignalPlot.plotOptimalSignals (g $ DG "Storage Powers"))
    (Map.map (SignalFlow.map (Maybe.fromMaybe (Interp.Invalid ["plotOptimalOperation"]))) $
       Process.accessOptimalStoragePowers opt))
    
@@ -613,36 +652,36 @@ simulation ::
    SV.Walker sigVec,
    DV.FromList sigVec) =>
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   SimCtrl ->
   Process.SimulationAndAnalysis node inst sigVec a ->
  [IO ()]
-simulation _ _ SimDont _ = [] 
-simulation path titles ctrl sim =  
+simulation _ _ _ SimDont _ = [] 
+simulation path fileOrder titles ctrl sim =  
   let
     legend = Map.fromList $ zip [0..] $ SignalFlow.getHRecordKeys $ 
            Simulation.accessPowerRecord $ Process.accessSimulation sim
     
-    f str = makeFileName path $ titles ++ [str]
+    f str = makeFileName path fileOrder $ titles ++ [str]
     g str = makeTitle $ titles ++ [str]
   in 
   
-  (drawAction (drawSimulationFlowGraph ctrl) (f "Flow Result")
-   (\x -> [Draw.title (g "Flow Result") $ Draw.flowSection Draw.optionsDefault x]) 
+  (drawAction (drawSimulationFlowGraph ctrl) (f $ DG "Flow Result")
+   (\x -> [Draw.title (g $ DG "Flow Result") $ Draw.flowSection Draw.optionsDefault x]) 
       (Simulation.accessFlowResult $ Process.accessSimulation sim)) ++
   
-  (plotAction (plotSimulationPowers ctrl) (f "Power Signals")
-   (PlotD2.allInOne (PlotD2.labledFrame  (g "Power Signals"))
+  (plotAction (plotSimulationPowers ctrl) (f $ DG "Power Signals")
+   (PlotD2.allInOne (PlotD2.labledFrame  (g $ DG "Power Signals"))
      (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) .
      PlotFSignal.plotHRecord) 
       (Simulation.accessPowerRecord $ Process.accessSimulation sim)) ++
   
-  (drawAction (drawSequenceFlowGraph ctrl) (f "Sequence Flow Graph")
-   (\x -> [Draw.title (g "Sequence Flow Graph") $ Draw.seqFlowGraph Draw.optionsDefault $ SeqAlgo.accumulate x]) 
+  (drawAction (drawSequenceFlowGraph ctrl) (f $ DG "Sequence Flow Graph")
+   (\x -> [Draw.title (g $ DG "Sequence Flow Graph") $ Draw.seqFlowGraph Draw.optionsDefault $ SeqAlgo.accumulate x]) 
       (EFA.accessSeqFlowGraph $ Process.accessAnalysis sim)) ++
   
-  (drawAction (drawStateFlowGraph ctrl)  (f "State Flow Graph")
-   (\x -> [Draw.title (g "State Flow Graph") $ Draw.stateFlowGraph Draw.optionsDefault x]) 
+  (drawAction (drawStateFlowGraph ctrl)  (f $ DG "State Flow Graph")
+   (\x -> [Draw.title (g $ DG "State Flow Graph") $ Draw.stateFlowGraph Draw.optionsDefault x]) 
       (EFA.accessStateFlowGraph $ Process.accessAnalysis sim))
 
 loopsIO ::
@@ -730,7 +769,7 @@ loopsIO ::
                        CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a (ActFlowCheck.EdgeFlowStatus,
                                                                                                    FlowOpt.OptimalityMeasure (Interp.Val a)))) =>
  FilePath ->
- [String] ->
+ FileOrder -> [Title] ->
  EvalCtrl ->
  OptiCtrl ->
  OpCtrl ->
@@ -741,8 +780,8 @@ loopsIO ::
   (Process.SweepEvaluation node inst demDim srchDim demVec srchVec a) 
   (Process.Res node inst demDim srchDim demVec srchVec sigVec a)] ->
  IO ()  
-loopsIO path titles evalCtr optCtr opCtr simCtr sys optiS etaLoop = 
-  mapM_ (etaLoopItemIO path titles evalCtr optCtr opCtr simCtr sys optiS) etaLoop  
+loopsIO path fileOrder titles evalCtr optCtr opCtr simCtr sys optiS etaLoop = 
+  mapM_ (etaLoopItemIO path fileOrder titles evalCtr optCtr opCtr simCtr sys optiS) etaLoop  
 
 
 etaLoopItemIO ::
@@ -828,7 +867,7 @@ etaLoopItemIO ::
    PlotCube.ToPlotData CubeMap.Cube demDim (DemandAndControl.Var node) demVec a (Interp.Val a),
    PlotCube.ToPlotData CubeMap.Cube demDim (DemandAndControl.Var node) demVec a a) =>
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   EvalCtrl ->
   OptiCtrl ->
   OpCtrl ->
@@ -839,12 +878,12 @@ etaLoopItemIO ::
   (Process.SweepEvaluation node inst demDim srchDim demVec srchVec a) 
   (Process.Res node inst demDim srchDim demVec srchVec sigVec a) ->
   IO ()
-etaLoopItemIO path titles evalCtr optCtr opCtr simCtr sys optiS (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap sweepEval balLoop) = do
-  let newTitles = titles ++ [show cnt]
+etaLoopItemIO path fileOrder titles evalCtr optCtr opCtr simCtr sys optiS (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap sweepEval balLoop) = do
+  let newTitles = titles ++ [EL $ show cnt]
   print cnt
-  concurrentlyMany_ $ evalSweep (nc "balanceLoopItemIO") path
+  concurrentlyMany_ $ evalSweep (nc "balanceLoopItemIO") path fileOrder
                           newTitles (Process.accessSearchGrid optiS) evalCtr sweepEval
-  mapM_ (balanceLoopItemIO path newTitles optCtr opCtr simCtr sys optiS) balLoop   
+  mapM_ (balanceLoopItemIO path fileOrder newTitles optCtr opCtr simCtr sys optiS) balLoop   
  
 balanceLoopItemIO ::
   (Ord a,
@@ -929,7 +968,7 @@ balanceLoopItemIO ::
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) demVec a (Interp.Val a),
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) demVec a (Interp.Val (Interp.Val a))) =>
   FilePath ->
-  [String] ->
+  FileOrder -> [Title] ->
   OptiCtrl ->
   OpCtrl ->
   SimCtrl ->
@@ -937,10 +976,11 @@ balanceLoopItemIO ::
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   Loop.BalanceLoopItem t t1 (Process.Res node inst dim srchDim demVec srchVec sigVec a) ->
   IO ()
-balanceLoopItemIO path titles optCtr opCtr simCtr _sys optiS (Loop.BalanceLoopItem cnt _node _force _step _bal _bestPair result) = do
+balanceLoopItemIO path fileOrder titles optCtr opCtr simCtr _sys optiS 
+  (Loop.BalanceLoopItem cnt _node _force _step _bal _bestPair result) = do
   let  (Process.Res perState optOperation simEfa) = result
-       newTitles = titles ++ [show cnt]
+       newTitles = titles ++ [BL $ show cnt]
   concurrentlyMany_ $ 
-   optPerState  (nc "balanceLoopItemIO") path newTitles (Process.accessSearchGrid optiS) optCtr perState  
-    ++ optimalOperation path newTitles opCtr optOperation
-    ++ simulation path newTitles simCtr simEfa
+   optPerState  (nc "balanceLoopItemIO") path fileOrder newTitles (Process.accessSearchGrid optiS) optCtr perState  
+    ++ optimalOperation path fileOrder newTitles opCtr optOperation
+    ++ simulation path fileOrder newTitles simCtr simEfa
