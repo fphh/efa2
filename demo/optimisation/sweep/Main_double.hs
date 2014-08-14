@@ -101,7 +101,8 @@ import qualified Data.Map as Map
                                                      -- Lavender))
 --import Data.Maybe as Maybe
 
-
+import Data.Time.Clock (UTCTime,getCurrentTime)
+import System.Directory as Directory
 
 
 data Base
@@ -255,7 +256,7 @@ showFunctionAxis = Strict.Axis "Power" Type.P $ DV.fromList $ [-12,-11.9 .. -0.1
 
 -- OutPut Settings
 sysCtrl :: OP.SysCtrl
-sysCtrl = OP.SysDo {OP.topo = OP.DoP OP.Xterm OP.StdOut, OP.labTopo =  OP.DoP OP.Xterm OP.StdOut , OP.stateAnalysis = OP.Xterm}
+sysCtrl = OP.SysDo {OP.topo = OP.DoP OP.DrwXterm OP.StdOut, OP.labTopo =  OP.DoP OP.DrwXterm OP.StdOut , OP.stateAnalysis = OP.DrwXterm}
 
 testCtrl :: OP.TestCtrl
 testCtrl = OP.TestDo {OP.demandCycle = OP.Dflt}
@@ -273,7 +274,7 @@ evalCtrl = OP.EvalDont
 
 sweepCtrl :: OP.SweepCtrl
 sweepCtrl = OP.SweepDont 
-          {-  OP.SweepDo {OP.drawFlow = OP.Xterm,
+          {-  OP.SweepDo {OP.drawFlow = OP.DrwXterm,
                          OP.plotState = OP.Dflt,
                          OP.plotStatus = OP.Dflt, 
                          OP.plotFlowVariables = OP.Dflt} -- OP.DontPlot} -- OP.Dflt}-}
@@ -292,10 +293,10 @@ opCtrl = OP.OpDont {-
                   OP.plotOptimalStoragePowers = OP.Dflt}-}
 
 simCtrl :: OP.SimCtrl         
-simCtrl = OP.SimDo {OP.drawSimulationFlowGraph = OP.Xterm,
-                    OP.plotSimulationPowers = OP.Dflt,
-                    OP.drawSequenceFlowGraph = OP.Xterm, 
-                    OP.drawStateFlowGraph = OP.Xterm} -- ,OP.Xterm}
+simCtrl = OP.SimDo {OP.drawSimulationFlowGraph = OP.DrwNot,
+                    OP.plotSimulationPowers = OP.PNG,
+                    OP.drawSequenceFlowGraph = OP.DrwNot, 
+                    OP.drawStateFlowGraph = OP.DrwPS} -- ,OP.DrwXterm}
 
 balanceForcingMap :: Balance.Forcing Node (Interp.Val Double)
 balanceForcingMap = Balance.ForcingMap $ Map.fromList [(Water, Balance.ChargeDrive (Interp.Inter (-1.0)))]
@@ -338,11 +339,25 @@ balanceLoopParams =
 bestPair :: Balance.BestForcingPair (Interp.Val Double)
 bestPair = 
   Balance.rememberBestBalanceForcing (nc "Main") (Balance.BestForcingPair (Nothing, Nothing)) (balanceForcingMap, initialBalanceMap') Water
+replaceBlancs :: String -> String  
+replaceBlancs xs = map f xs   
+  where f ' ' = '_'
+        f x = x 
+
+-- data TitleMap = Map.fromList [(EtaLoop,1)
 
 main :: IO()
 main = do
   
   print bestPair
+  
+  time <- getCurrentTime
+  
+  let path = "/home/felix/tmp/Run_" ++ (replaceBlancs $ show time)
+      
+  print path
+  
+  Directory.createDirectory path
   
   let system = Process.buildSystem edgeList
   
@@ -380,7 +395,8 @@ main = do
              
 
   print loop
-  OP.loopsIO evalCtrl optCtrl opCtrl simCtrl system optiSet loop
+  
+  OP.loopsIO path ["StateForced"] evalCtrl optCtrl opCtrl simCtrl system optiSet loop
  
   
   
