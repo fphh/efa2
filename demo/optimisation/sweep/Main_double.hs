@@ -26,6 +26,7 @@ import qualified EFA.Data.Vector as DV
 --import qualified EFA.Action.Optimisation.Flow.Topology as 
 import qualified EFA.Action.Flow.Topology.LifeCycle as TopoLifeCycle
 import qualified EFA.Action.Flow.Topology.ScaleMap as TopoScaleMap
+import qualified EFA.Action.Flow.StateFlow.ScaleMap as StateFlowScaleMap
 --import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 --import qualified EFA.Action.Flow.Topology.Check as FlowTopoCheck
 import qualified EFA.Action.Flow.Balance as Balance
@@ -242,6 +243,11 @@ initialLifeCycleMap = FlowOpt.LifeCycleMap $ Map.fromList $ zip (map Idx.Absolut
                $ repeat $  -- [0,1,18,27,28,45,54,72]
                Map.fromList [(Water,(FlowOpt.GenerationEfficiency (Interp.Inter 0.3), FlowOpt.UsageEfficiency (Interp.Inter 0.3)))] 
 
+initialScaleMap :: FlowOpt.ScaleMap (Interp.Val Double)
+initialScaleMap = FlowOpt.ScaleMap $ Map.fromList $ zip (map Idx.AbsoluteState [0,1,18,27,28,45,54,72])
+               $ repeat $
+               Just (FlowOpt.ScaleSource (Interp.Inter 10.0), FlowOpt.ScaleSink (Interp.Inter 3.0))
+                        
 
 showFunctionAxis ::  Strict.Axis Base String [] Double
 showFunctionAxis = Strict.Axis "Power" Type.P $ DV.fromList $ [-12,-11.9 .. -0.1] ++ [0,0.1..12]                      
@@ -303,14 +309,19 @@ initialBalanceMap = Balance.Balance $ Map.fromList [(Water, 0.5)]
 initialBalanceMap' :: Balance.Balance Node (Interp.Val Double)
 initialBalanceMap' = Balance.Balance $ Map.fromList [(Water, Interp.Inter (0.5))]
 
+globalLifeCycleMap :: FlowOpt.GlobalLifeCycleMap  Node (Interp.Val Double)
+globalLifeCycleMap = FlowOpt.GlobalLifeCycleMap $ 
+     Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 0.5), FlowOpt.UsageEfficiency (Interp.Inter 0.5)))] 
+
 etaLoopParams ::
- Loop.EtaLoopParams Node (Interp.Val Double) (FlowOpt.LifeCycleMap Node (Interp.Val Double))
+ Loop.EtaLoopParams Node (Interp.Val Double) (FlowOpt.ScaleMap (Interp.Val Double))
+ --(FlowOpt.LifeCycleMap Node (Interp.Val Double))
+ 
 etaLoopParams = 
   Loop.EtaLoopParams
   {Loop.accessMaxEtaIterations = Loop.MaxEtaIterations 2, 
-   Loop.accInitialEvalParam = initialLifeCycleMap,
-   Loop.accGlobalLifeCycleMap = FlowOpt.GlobalLifeCycleMap $ 
-     Map.fromList [(Water, (FlowOpt.GenerationEfficiency (Interp.Inter 0.5), FlowOpt.UsageEfficiency (Interp.Inter 0.5)))]                                              
+   Loop.accInitialEvalParam = initialScaleMap, --initialLifeCycleMap,
+   Loop.accGlobalLifeCycleMap = globalLifeCycleMap                                              
 }
 
 balanceLoopParams :: Loop.BalanceLoopParams Node (Interp.Val Double)  
@@ -350,14 +361,19 @@ main = do
   let sweep = Process.makeSweep caller system systemData optiSet     
         :: Process.SweepResults Node Base ND.Dim2 ND.Dim2 [] [] Double
                         
-  let evalFunction = TopoLifeCycle.calcEtaLossSys
---  let evalFunction2 = TopoScaleMap.calcEtaLossSys    
+--  let evalFunction = TopoLifeCycle.calcEtaLossSys
+  let evalFunction = TopoScaleMap.calcEtaLossSys    
                                                              
-  let evalMethod=StateFlowLifeCycle.N_SFG_EQ_N_STATE
+--  let evalMethod=StateFlowLifeCycle.N_SFG_EQ_N_STATE
       
-  let updateEvalParam = StateFlowLifeCycle.updateOneStorageLifeCycleEfficiencies 
+{-  let updateEvalParam = StateFlowLifeCycle.updateOneStorageLifeCycleEfficiencies 
                            caller (Process.accessTopology system) evalMethod  (Loop.accGlobalLifeCycleMap etaLoopParams) . 
-                           EFA.accessStateFlowGraph . Process.accessAnalysis . Process.accSimEfa
+                           EFA.accessStateFlowGraph . Process.accessAnalysis . Process.accSimEfa -}
+                           
+  let updateEvalParam = StateFlowScaleMap.calculateScaleMap caller globalLifeCycleMap . 
+                        StateFlowOpt.unDataStateFlow . 
+                        StateFlowOpt.unresultStateFlow caller .
+                        EFA.accessStateFlowGraph . Process.accessAnalysis . Process.accSimEfa                        
   
   let loop = Process.loop (nc "Main") system systemData testSet optiSet efaParams sweep 
              storageList etaLoopParams balanceLoopParams evalFunction updateEvalParam

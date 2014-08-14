@@ -674,7 +674,6 @@ loop ::
                        FlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.Storage demVec (ValueState.Map (Interp.Val a)),
    DV.Storage sigVec (ValueState.Map (Interp.Val a)),
---   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
    DV.Storage demVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Storage sigVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Storage sigVec (ND.Data demDim (Strict.SupportingPoints (Strict.Idx,
@@ -758,7 +757,6 @@ loop ::
    DV.Storage sigVec [SignalFlow.TimeStep a],   
    DV.FromList sigVec,Show (sigVec Int), 
    Show (sigVec (SignalFlow.TimeStep a)),
---   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (FlowOpt.StorageFlow (Interp.Val a)))))),
    Show (sigVec (Interp.Val a)),
    DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Storage sigVec Int,
@@ -889,7 +887,6 @@ systemFunction ::
                                                                a))),
    DV.Storage sigVec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Storage demVec (ValueState.Map (Maybe (Interp.Val a))),
---   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (Interp.Val a))))),
    DV.Storage sigVec (ValueState.Map (Interp.Val a)),
    DV.Storage demVec (ValueState.Map (Interp.Val a)),
    DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
@@ -944,7 +941,6 @@ systemFunction ::
    DV.Storage sigVec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
    DV.FromList sigVec, Show (sigVec Int),
    DV.Storage sigVec (sigVec a),
---   DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (Maybe (FlowOpt.StorageFlow (Interp.Val a)))))),
    DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Storage sigVec Int) =>
   Caller ->

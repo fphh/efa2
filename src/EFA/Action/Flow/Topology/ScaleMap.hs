@@ -3,12 +3,13 @@
 module EFA.Action.Flow.Topology.ScaleMap where
 
 --import qualified EFA.Action.DemandAndControl as DemandAndControl
---import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
 
 --import qualified EFA.Value.State as ValueState 
 --import qualified EFA.Action.Flow.Topology.Check as ActFlowTopoCheck
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 import qualified EFA.Action.Flow.Optimality as FlowOpt
+import qualified EFA.Action.Flow.Topology.Optimality as FlowTopoOpt
 --import qualified EFA.Action.Flow.Balance as ActBal
 import qualified EFA.Action.Utility as ActUt
 
@@ -44,15 +45,15 @@ import qualified Data.Map as Map
 
 --import qualified EFA.Report.Format as Format
 
---import qualified Data.Maybe as Maybe
+import qualified Data.Maybe as Maybe
 --import Control.Applicative (liftA2, liftA)
---import Control.Monad(join)
+import Control.Monad as Monad
 --import Data.Foldable (Foldable, foldMap)
 
 --import Debug.Trace(trace)
 
 import EFA.Utility(Caller,
---                 merror,
+                 merror,
                    (|>),
                    ModuleName(..),FunctionName, genCaller)
 
@@ -62,94 +63,55 @@ modul = ModuleName "Action.Flow.Topology.ScaleMap"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-
 calcEtaLossSys ::
-  (Ord a,
-   Ord node,
-   Show node,
-   Arith.Constant a,
+  (Arith.Sum a,Arith.Constant a,
+   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
+   DV.Storage vec (Interp.Val a, Interp.Val a),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure (Interp.Val a)),
+   DV.Storage vec (ActFlowCheck.EdgeFlowStatus, Interp.Val a),
    DV.Zipper vec,
    DV.Walker vec,
-   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a),
-                   FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage vec (FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a)),
-   DV.Storage vec (Interp.Val a),
-   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec (FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
-                   FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Singleton vec,
-   DV.Length vec) =>
-  Caller ->
+   DV.Storage vec (Interp.Val a)) =>
+  Caller -> 
   FlowOpt.ScaleMap (Interp.Val a) ->
+--  .Map (Maybe Idx.AbsoluteState) (Maybe (FlowOpt.ScaleSource (Interp.Val a), FlowOpt.ScaleSink (Interp.Val a))) ->
   FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
   CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->  
   CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityMeasure (Interp.Val a))
+calcEtaLossSys caller (FlowOpt.ScaleMap scaleMap) topoEndNodeEnergies flowStatus = g maybeStorageFlow 
+  where
+   newCaller = caller |> nc "calcEtaLossSys"
+   maybeStorageFlow = Map.elems $ FlowOpt.unStorageMap $ FlowOpt.getStorageMap topoEndNodeEnergies
+   
+   (FlowOpt.TotalSourceFlow sourceFlow, 
+    FlowOpt.TotalSinkFlow sinkFlow) = FlowTopoOpt.sumSinkSourceFlows topoEndNodeEnergies
+   
+   g [] = CubeMap.zipWithData h2 flowStatus $ CubeMap.zipWithData ((,)) sourceFlow sinkFlow
+   g [Nothing] =  CubeMap.zipWithData h2 flowStatus $ CubeMap.zipWithData ((,)) sourceFlow sinkFlow
+   g [Just (FlowOpt.StorageFlow storageFlow)] = CubeMap.zipWithData h1 
+                                                (CubeMap.zipWithData ((,)) flowStatus storageFlow)
+                                                (CubeMap.zipWithData ((,)) sourceFlow sinkFlow)
 
-calcEtaLossSys caller scaleMap
-  (FlowOpt.EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) state = let 
-  newCaller = caller |> nc "calcEtaLossSys"  
-  sinkScale =  CubeMap.mapData (FlowOpt.lookupScaleSink newCaller scaleMap . ActFlowCheck.getState) state
-  sourceScale =  CubeMap.mapData (FlowOpt.lookupScaleSource newCaller scaleMap . ActFlowCheck.getState) state
-  signedStorages = Map.mapMaybe (fmap FlowOpt.unStorageFlow) storages
-  -- TODO!! check this: x>= Interp.Inter $ Arith.zero
-  chargeStorages = Map.map (CubeMap.mapData 
-                            (\x -> if x>= (Interp.Inter $ Arith.zero) then x 
-                                   else Interp.Inter $ Arith.zero)) signedStorages
-  dischargeStorages = Map.map (CubeMap.mapData 
-                               (\x -> if x< (Interp.Inter $ Arith.zero) then Arith.negate x 
-                                      else Interp.Inter $ Arith.zero)) signedStorages
-  makeSum = foldl1 (Arith.~+) . Map.elems
-  sinkTerm = (makeSum sinks) Arith.~+ sinkScale Arith.~* (makeSum chargeStorages)
-  sourceTerm = (makeSum sources) Arith.~+ sourceScale Arith.~* (makeSum dischargeStorages)
-  eta = (CubeMap.mapData FlowOpt.EtaSys) $ sinkTerm Arith.~/ sourceTerm
-  loss = (CubeMap.mapData FlowOpt.LossSys) $ sourceTerm Arith.~- sinkTerm
-  in CubeMap.zipWithData ((,)) state $ CubeMap.zipWithData FlowOpt.OptimalityMeasure eta loss
+   g _ = merror caller modul "calcEtaLossSys" "Method works only for one storage"     
+   
+   h1 (status,x) (srcFl,snkFl) = f scales
+     where
+       scales = h3 (ActFlowCheck.getState status)
+       h3 (Just st) = Maybe.fromMaybe err $ Monad.join $ Map.lookup st scaleMap 
+       h3 (Nothing) = (FlowOpt.ScaleSource $ Interp.Invalid ["calcEtaLossSys"],
+                      FlowOpt.ScaleSink $ Interp.Invalid ["calcEtaLossSys"])
+       err = merror caller modul "calcEtaLossSys" $ "State not in Eta-ScaleMap - status: " ++ show status
+       f(FlowOpt.ScaleSource sourceScale, 
+           FlowOpt.ScaleSink sinkScale) = (status, FlowOpt.OptimalityMeasure 
+                                                   (FlowOpt.EtaSys $ snkTerm Arith.~/ srcTerm) 
+                                                   (FlowOpt.LossSys $ srcTerm Arith.~- snkTerm))
+                                          
+         where srcTerm = srcFl Arith.~+ sourceScale Arith.~* x
+               snkTerm = snkFl Arith.~+ sinkScale Arith.~* x
+   
+   h2 status (src,snk) = (status, FlowOpt.OptimalityMeasure 
+                                                   (FlowOpt.EtaSys $ snk Arith.~/ src) 
+                                                   (FlowOpt.LossSys $ src Arith.~- snk))            
+         
 
-{-
-calcEtaLossSys ::
-  (Ord a,
-   Ord node,
-   Show node,
-   Arith.Constant a,
-   DV.Zipper vec,
-   DV.Walker vec,
-   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a),
-                   FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage vec (FlowOpt.Loss2Optimise (Interp.Val a)),
-   DV.Storage vec (FlowOpt.Eta2Optimise (Interp.Val a)),
-   DV.Storage vec (Interp.Val a),
-   DV.Storage vec ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec (FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Storage vec (ActFlowCheck.EdgeFlowStatus,
-                   FlowOpt.OptimalityMeasure (Interp.Val a)),
-   DV.Singleton vec,
-   DV.Length vec) =>
-  Caller ->
-  FlowOpt.ScaleMap (Interp.Val a) ->
-  FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
-  CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->  
-  CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityMeasure (Interp.Val a))
-
-calcEtaLossSys caller scaleMap
-  (FlowOpt.EndNodeEnergies (FlowOpt.SinkMap sinks) (FlowOpt.SourceMap sources) (FlowOpt.StorageMap  storages)) state = let 
-  newCaller = caller |> nc "calcEtaLossSys"  
-  sinkScale =  CubeMap.mapData (FlowOpt.lookupScaleSink newCaller scaleMap . ActFlowCheck.getState) state
-  sourceScale =  CubeMap.mapData (FlowOpt.lookupScaleSource newCaller scaleMap . ActFlowCheck.getState) state
-  signedStorages = Map.mapMaybe (ActUt.getStoragePowerWithSignNew newCaller) storages
-  -- TODO!! check this: x>= Interp.Inter $ Arith.zero
-  chargeStorages = Map.map (CubeMap.mapData 
-                            (\x -> if x>= (Interp.Inter $ Arith.zero) then x 
-                                   else Interp.Inter $ Arith.zero)) signedStorages
-  dischargeStorages = Map.map (CubeMap.mapData 
-                               (\x -> if x< (Interp.Inter $ Arith.zero) then Arith.negate x 
-                                      else Interp.Inter $ Arith.zero)) signedStorages
-  makeSum = foldl1 (Arith.~+) . Map.elems
-  sinkTerm = (makeSum sinks) Arith.~+ sinkScale Arith.~* (makeSum chargeStorages)
-  sourceTerm = (makeSum sources) Arith.~+ sourceScale Arith.~* (makeSum dischargeStorages)
-  eta = (CubeMap.mapData FlowOpt.EtaSys) $ sinkTerm Arith.~/ sourceTerm
-  loss = (CubeMap.mapData FlowOpt.LossSys) $ sourceTerm Arith.~- sinkTerm
-  in CubeMap.zipWithData ((,)) state $ CubeMap.zipWithData FlowOpt.OptimalityMeasure eta loss
--}
-
+                                           

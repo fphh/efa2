@@ -9,6 +9,7 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 --import qualified EFA.Action.Flow.Topology.Check as ActFlowTopoCheck
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 import qualified EFA.Action.Flow.Optimality as FlowOpt
+import qualified  EFA.Action.Flow.StateFlow.Optimality as StateFlowOpt
 --import qualified EFA.Action.Flow.Balance as ActBal
 import qualified EFA.Action.Utility as ActUt
 
@@ -23,7 +24,7 @@ import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Data.Vector as DV
 
---import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Arithmetic as Arith
 --import EFA.Equation.Arithmetic ((~+), (~/))
@@ -32,6 +33,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified Data.Map as Map
 --import qualified Data.Set as Set
+import qualified EFA.Flow.State.Quantity as StateQty
 
 --import qualified EFA.Graph as Graph
 
@@ -63,38 +65,37 @@ nc :: FunctionName -> Caller
 nc = genCaller modul
 
 
-calculateScales ::
-  Caller ->
-  StateQty.Graph node (Result.Result ((D.Data D.Nil (a)))) 
-                      (Result.Result ((D.Data D.Nil (a)))) ->
-  a ->
-  Idx.State ->
-  (ScaleSource a, ScaleSink a)
-calculateScales sfg =   
-  
-  
-  
-getEndNodeFlows :: 
-  Node.C node =>
-  StateQty.Graph node (Result.Result ((D.Data D.Nil (a)))) 
-                      (Result.Result ((D.Data D.Nil (a)))) ->
-  FlowOpt.EndNodeEnergies node v
-getEndNodeFlows flowSection =
-   let topo = TopoQty.topology flowSection
-       
-       nodes = Graph.nodeLabels topo
-       
-       sinks = FlowOpt.SinkMap $ Map.mapMaybe TopoQty.sumIn $ 
-               Map.filterWithKey (\node _ -> Node.isSink $ Node.typ node) nodes
-               
-       sources = FlowOpt.SourceMap $ Map.mapMaybe TopoQty.sumOut $ 
-               Map.filterWithKey (\node _ -> Node.isSource $ Node.typ node) nodes
+calculateScaleMap ::(Ord a, Show node, Arith.Constant a,Node.C node)=>
+  Caller -> 
+  FlowOpt.GlobalLifeCycleMap node (Interp.Val a) ->
+  StateQty.Graph node (Interp.Val a) (Interp.Val a) ->
+  FlowOpt.ScaleMap (Interp.Val a) ->
+  ((Interp.Val a), FlowOpt.ScaleMap (Interp.Val a))
+calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) = 
+  (etaSys, FlowOpt.ScaleMap $ Map.union (Map.mapWithKey f endNodeMap) oldScaleMap)
+  where
+    newCaller = caller |> nc "calculateScaleMap"
+    etaSys = StateFlowOpt.calculateEtaSys newCaller globalLifeCycleMap sfg
+    endNodeMap = StateFlowOpt.getEndNodeFlows newCaller sfg
+    f state (FlowOpt.EndNodeEnergies _ _ storMap) = g $ Map.elems $ FlowOpt.unStorageMap storMap
+      where 
 
-       storages = FlowOpt.StorageMap $ Map.mapWithKey (\node _ -> TopoQty.lookupSums node flowSection) 
-              $ Map.filterWithKey (\node _ -> Node.isStorage $ Node.typ node) nodes
-                  
-    in (FlowOpt.EndNodeEnergies sinks sources storages)
-   
+       g [Just (FlowOpt.StorageFlow x)] = Just (FlowOpt.ScaleSource $ sourceFlow Arith.~/ x, 
+                          FlowOpt.ScaleSink $ sinkFlow Arith.~/ x)
+       g [Nothing] = Nothing             
+       g _ = merror caller modul "calculateScaleMap" "This Method works only for one Storage in the system"
+       (FlowOpt.TotalSourceFlow sourceFlow, 
+        FlowOpt.TotalSinkFlow sinkFlow) = StateFlowOpt.sumSinkSourceFlowsAllStates 
+                                              $ StateFlowOpt.removeState state endNodeMap
+            
+
+       
+      
+      
+  
+  
+  
+  
 
   
   

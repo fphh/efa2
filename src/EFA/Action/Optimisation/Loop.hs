@@ -67,6 +67,12 @@ instance (Display a) => Display (FlowOpt.GenerationEfficiency a) where
 instance(Display a)=> Display (FlowOpt.UsageEfficiency a) where
   disp (FlowOpt.UsageEfficiency x) = "Eta-Use: " ++ disp x 
 
+instance(Display a)=> Display (FlowOpt.ScaleSink a) where
+  disp (FlowOpt.ScaleSink x) = "Snk-Scale: " ++ disp x 
+
+instance(Display a)=> Display (FlowOpt.ScaleSource a) where
+  disp (FlowOpt.ScaleSource x) = "Src-Scale: " ++ disp x 
+
   {-
 instance  (Show node, Show a) =>
   Display (Balance.ForcingMap Balance.Absolute (Map.Map node (Balance.SocDrive a))) where
@@ -131,6 +137,14 @@ instance
   disp (FlowOpt.LifeCycleMap m) = "LC:" ++ (List.intercalate "\n" $ map f $ Map.toList m)
     where f (Idx.AbsoluteState st, x) = "( AbsState: " ++ show st ++ ", " ++ disp x ++ ")"
 
+instance 
+  (Show (FlowOpt.ScaleSource a),
+   Show (FlowOpt.ScaleSink a),
+   Display a,
+   Show a ) => 
+  Display (FlowOpt.ScaleMap a) where
+  disp (FlowOpt.ScaleMap m) = "SCM:" ++ (List.intercalate "\n" $ map f $ Map.toList m)
+    where f (Idx.AbsoluteState st, x) = "( AbsState: " ++ show st ++ ", " ++ disp x ++ ")"
 
 data EtaLoopParams node a evalParam = 
   EtaLoopParams

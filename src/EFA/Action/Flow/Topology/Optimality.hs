@@ -228,3 +228,12 @@ findMinimumLoss _ states cubeData = CubeMap.findBestWithIndexByPerState (ActFlow
                 Interp.lessThanWithInvalid (loss Arith.~+ forcing) (loss1 Arith.~+ forcing1) 
 
 
+sumSinkSourceFlows ::(Arith.Sum v) =>  
+  FlowOpt.EndNodeEnergies node v ->
+  (FlowOpt.TotalSourceFlow v,FlowOpt.TotalSinkFlow v)
+sumSinkSourceFlows endNodeFlows = (FlowOpt.TotalSourceFlow $ sumRes sourceMap, 
+                                   FlowOpt.TotalSinkFlow $ sumRes sinkMap)
+  where
+   sinkMap = FlowOpt.unSinkMap $ FlowOpt.getSinkMap endNodeFlows
+   sourceMap = FlowOpt.unSourceMap $ FlowOpt.getSourceMap endNodeFlows
+   sumRes = foldl1 (Arith.~+) . Map.elems 

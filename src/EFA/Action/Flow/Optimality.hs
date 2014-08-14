@@ -22,7 +22,7 @@ import qualified EFA.Flow.SequenceState.Index as Idx
 --import qualified EFA.Report.Format as Format
 
 import qualified Data.Maybe as Maybe
---import Control.Applicative (liftA2)
+import Control.Applicative as Applicative
 import Control.Monad(join)
 --import Data.Foldable (Foldable, foldMap)
 
@@ -39,18 +39,31 @@ modul = ModuleName "Action.Flow.Optimality"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-{-
+newtype SinkMap node a = SinkMap {unSinkMap :: (Map.Map node a)} deriving Show  
+newtype SourceMap node a = SourceMap {unSourceMap :: (Map.Map node a)} deriving Show  
+newtype StorageMap node a =  StorageMap {unStorageMap :: (Map.Map node a)} deriving Show  
+
 data EndNodeEnergies node v = EndNodeEnergies 
-                              {getSinkMap:: (SinkMap node v),
-                              getSourceMap :: SourceMap node v,
-                              getStorageMap :: StorageMap node (Maybe (TopoQty.Sums v))} deriving Show
--}
-data EndNodeEnergies node v = EndNodeEnergies 
-                              {getSinkMap:: (SinkMap node v),
+                              {getSinkMap:: SinkMap node v,
                                getSourceMap :: SourceMap node v,
                                getStorageMap :: StorageMap node (Maybe (StorageFlow v))} deriving Show
 
+newtype TotalSinkFlow a = TotalSinkFlow {unTotalSinkFlow :: a} deriving Show  
+newtype TotalSourceFlow a = TotalSourceFlow {unTotalSourceFlow :: a} deriving Show  
 
+instance Functor TotalSinkFlow where
+  fmap f (TotalSinkFlow x) = TotalSinkFlow $ f x
+  
+instance Functor TotalSourceFlow where  
+  fmap f (TotalSourceFlow x) = TotalSourceFlow $ f x
+
+instance Applicative.Applicative TotalSinkFlow where
+   pure a = TotalSinkFlow a
+   TotalSinkFlow f <*> TotalSinkFlow a = TotalSinkFlow $ f a
+
+instance Applicative.Applicative TotalSourceFlow where
+   pure a = TotalSourceFlow a
+   TotalSourceFlow f <*> TotalSourceFlow a = TotalSourceFlow $ f a
 
 newtype GenerationEfficiency a = GenerationEfficiency {unGenerationEfficiency::a}  deriving (Show,Eq)
 newtype UsageEfficiency a = UsageEfficiency {unUsageEfficiency :: a} deriving  (Show,Eq)
@@ -122,9 +135,6 @@ lookupLifeCycleEta (LifeCycleMap m) (Just state) node = fmap g $ join $ fmap (Ma
 lookupLifeCycleEta _ Nothing _ = Just (GenerationEfficiency $ Interp.Invalid ["lookupLifeCycleEta"], 
                                                          UsageEfficiency $ Interp.Invalid ["lookupLifeCycleEta"]) -}
   
-newtype SinkMap node a = SinkMap {unSinkMap :: (Map.Map node a)} deriving Show  
-newtype SourceMap node a = SourceMap {unSourceMap :: (Map.Map node a)} deriving Show  
-newtype StorageMap node a =  StorageMap {unStorageMap :: (Map.Map node a)} deriving Show  
 
 data Eta2Optimise a = EtaSys {unEta2Optimise :: a} deriving (Show,Eq,Ord) -- TODO add | SelectedEta a deriving Show
 data Loss2Optimise a = LossSys {unLoss2Optimise :: a} deriving Show -- TODO add | SelectedLoss a deriving Show
@@ -176,11 +186,15 @@ interpolateOptimalityPerState caller inmethod label xPair yPair x = ValueState.z
             ((\(a,b) -> (ValueState.map getForceVal a, ValueState.map getForceVal b)) yPair) x
    
 
-newtype ScaleSource a = ScaleSource {unScaleSource :: a}
-newtype ScaleSink a = ScaleSink {unScaleSink :: a}
+newtype ScaleSource a = ScaleSource {unScaleSource :: a} deriving Show
+newtype ScaleSink a = ScaleSink {unScaleSink :: a} deriving Show
 
-data ScaleMap a = ScaleMap (Map.Map Idx.AbsoluteState (ScaleSource a, ScaleSink a))
+data ScaleMap a = ScaleMap (Map.Map Idx.AbsoluteState (Maybe (ScaleSource a, ScaleSink a)))
 
+--lookupScales caller ScaleMap  (Interp.Val a) (Maybe Idx.AbsoluteState)
+
+--err = merror caller modul "lookupSourceScale" $ "State not in scalemap: " ++ show state
+{-
 lookupScaleSink :: Caller -> ScaleMap (Interp.Val a) ->Maybe Idx.AbsoluteState ->  (Interp.Val a)
 lookupScaleSink caller (ScaleMap m) state = f state
   where
@@ -194,7 +208,7 @@ lookupScaleSource caller (ScaleMap m) state = f state
   f Nothing =  Interp.Invalid ["lookupScaleSource"]               
   f (Just st) = unScaleSource $ fst $ Maybe.fromMaybe err $ Map.lookup st m  
   err = merror caller modul "lookupSourceScale" $ "State not in scalemap: " ++ show state
-
+-}
 
 -- TODO: move to right place -- use in applyGenerationEfficiency,applyUsageEfficiency
 getStoragePowerWithSignNew :: (Arith.Sum v) => Caller ->  Maybe (TopoQty.Sums v) -> Maybe (StorageFlow v)
