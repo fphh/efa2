@@ -225,7 +225,11 @@ system path fileOrder titles sysAction sys =
      (\x -> [Draw.title (g $ DG "labledTopology") $ Draw.labeledTopology x]) $ Process.accessLabledTopology sys) ++
     
     (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis")
-     (\ x -> [Draw.title (g $ DG "stateAnalysis") $ Draw.flowTopologiesAbsolute (Process.accessTopology sys) $ 
+     (\ x -> [Draw.title (g $ DG "stateAnalysis") $ Draw.flowTopologies $
+                                                   StateAnalysis.bruteForce x]) $ Process.accessTopology sys) ++
+    
+        (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis - Absolute")
+     (\ x -> [Draw.title (g $ DG "stateAnalysis - Absolute") $ Draw.flowTopologiesAbsolute (Process.accessTopology sys) $ 
                                                    StateAnalysis.bruteForce x]) $ Process.accessTopology sys)
     
 data SysDataCtrl = SysDataDont | 
@@ -294,14 +298,14 @@ test ::
   [DemandAndControl.DemandVar node] ->
   [IO ()]
  
-test path fileOrder titles testCtrl testData demandVars = 
+test path fileOrder titles testCtrl testSet demandVars = 
   let 
 --    f str = makeFileName path fileOrder $ titles ++ [str]
     g str = makeTitle $ titles ++ [str]
   in
   (plotAction (demandCycle testCtrl) (g $ DG "DemandCycle")
    (flip OptSignalPlot.plotDemandCycle demandVars) 
-   (Process.accessDemandCycle testData))
+   (Process.accessDemandCycle testSet))
 
 
 data OptiSetCtrl = OptiSetDont | OptiSetDo {variation :: Plot}
