@@ -311,10 +311,10 @@ test ::
  
 test path fileOrder titles testCtrl testSet demandVars = 
   let 
---    f str = makeFileName path fileOrder $ titles ++ [str]
-    g str = makeTitle $ titles ++ [str]
+    f str = makeFileName path fileOrder $ titles ++ [str]
+--    g str = makeTitle $ titles ++ [str]
   in
-  (plotAction (demandCycle testCtrl) (g $ DG "DemandCycle")
+  (plotAction (demandCycle testCtrl) (f $ DG "DemandCycle")
    (flip OptSignalPlot.plotDemandCycle demandVars) 
    (Process.accessDemandCycle testSet))
 
@@ -902,6 +902,8 @@ etaLoopItemIO path fileOrder titles evalCtr optCtr opCtr simCtr sys optiS (Loop.
   concurrentlyMany_ $ evalSweep (nc "balanceLoopItemIO") path fileOrder
                           newTitles (Process.accessSearchGrid optiS) evalCtr sweepEval
   mapM_ (balanceLoopItemIO path fileOrder newTitles optCtr opCtr simCtr sys optiS) balLoop   
+  
+  mapM_ (balanceLoopItemIO (path++"/Eta") fileOrder newTitles optCtr opCtr simCtr sys optiS) [head balLoop,last balLoop]
  
 balanceLoopItemIO ::
   (Ord a,
@@ -998,6 +1000,7 @@ balanceLoopItemIO path fileOrder titles optCtr opCtr simCtr _sys optiS
   (Loop.BalanceLoopItem cnt _node _force _step _bal _bestPair result) = do
   let  (Process.Res perState optOperation simEfa) = result
        newTitles = titles ++ [BL $ show $ map (fmap formatCounter) $ Map.toList $ Balance.unBalanceCounter cnt]
+  print cnt     
   concurrentlyMany_ $ 
    optPerState  (nc "balanceLoopItemIO") path fileOrder newTitles (Process.accessSearchGrid optiS) optCtr perState  
     ++ optimalOperation path fileOrder newTitles opCtr optOperation

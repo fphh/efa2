@@ -228,13 +228,13 @@ rememberBestBalanceForcing caller (BestForcingPair (neg, pos)) (forceMap, balMap
 
 
     g (Just (f, b)) =
-      if bal <= b || (getSocDrive force < getSocDrive force && bal > b)
+      if bal < b || (getSocDrive force < getSocDrive f && bal == b)
          then Just (force, bal)
          else Just (f, b)
     g Nothing = Just (force, bal)
 
     h (Just (f, b)) =
-      if (Arith.abs bal <= Arith.abs b) || (getSocDrive force > getSocDrive f && bal < b)
+      if (bal > b) || (getSocDrive force > getSocDrive f && bal == b)
          then Just (force, bal)
          else Just (f, b)
     h Nothing = Just (force, bal)
@@ -249,7 +249,7 @@ getForcingIntervall ::  (Ord a, Arith.Constant a) =>
   (Maybe (SocDrive a,a), Maybe (SocDrive a,a)) ->
   Maybe (SocDrive a)
 getForcingIntervall (Just (n, _), Just (p, _)) =
-  Just $ setSocDrive $ (Arith.abs $ getSocDrive n) ~+ getSocDrive p
+  Just $ setSocDrive $ getSocDrive p Arith.~- getSocDrive n
 getForcingIntervall _ = Nothing
 
 
