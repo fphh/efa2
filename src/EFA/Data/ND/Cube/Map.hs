@@ -32,6 +32,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 --import qualified EFA.Data.OrdData as OrdData
 import qualified EFA.Report.FormatValue as FormatValue
+import qualified EFA.Utility.Trace as UtTrace 
 
 import qualified EFA.Data.Interpolation as DataInterp
 
@@ -757,7 +758,7 @@ findBestWithIndexByPerState getState fselect dat = ValueState.Map $ DV.foldl g (
 -}
 
 findBestWithIndexByPerState :: 
-  (DV.Walker vec,
+  (DV.Walker vec,Show a,
    DV.Storage vec (Grid.LinIdx, a),
    DV.Storage vec a) =>
   (a -> Maybe Idx.AbsoluteState) ->
@@ -765,14 +766,17 @@ findBestWithIndexByPerState ::
   [Idx.AbsoluteState] ->
   Data inst dim vec a -> 
   ValueState.Map (Grid.LinIdx,a)
-findBestWithIndexByPerState getState fselect states dat = ValueState.Map $ DV.foldl g (Map.fromList []) indexedVec
+findBestWithIndexByPerState getState fselect states dat = -- UtTrace.simTrace "valueStates" $ 
+                                                          ValueState.Map $ DV.foldl g (Map.fromList []) indexedVec
   where 
     stateSet = Set.fromList $ P.map Just states
     indexedVec = DV.imap (\i x ->(Grid.LinIdx i, x)) $ getVector $ dat
     g m (idx,val) = f $ Map.lookup (getState val) m
         where f (Just (_,oldVal)) = 
-                if fselect oldVal val &&  Set.member (getState val) stateSet then Map.insert (getState val) (idx, val) m else m
-              f Nothing = Map.insert (getState val) (idx, val) m                                                     
+                if fselect oldVal val then Map.insert (getState val) (idx, val) m else m
+              f Nothing = if Set.member (getState val) stateSet 
+                          then Map.insert (getState val) (idx, val) m                                                  
+                               else m
 
 filter :: 
   (DV.Storage vec a,

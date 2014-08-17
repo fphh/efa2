@@ -513,7 +513,7 @@ optimisationPerState caller testSet optiSet sweepResults sweepEvaluationResults 
     optimalControlSignalsPerState = OptSignal.interpolateControlSignalsPerState newCaller Interp.Linear 
                                        optimalFlowCube supportSignal demandCycle controlVars
 optimalOperation ::
-  (Ord a,
+  (Ord a,Show a,
  Arith.Constant a,
  DV.Zipper vec,
  DV.Walker vec,
@@ -537,6 +537,9 @@ optimalOperation ::
  Show (vec (ValueState.Map (Interp.Val a))),
  DV.Storage vec (SignalFlow.TimeStep a),
  DV.Storage vec [SignalFlow.TimeStep a],
+ DV.Storage vec Int,
+ DV.LookupUnsafe vec (SignalFlow.TimeStep a),
+ DV.Find vec,
  DV.FromList vec) =>
  Caller -> 
  OptimisationPerState node inst demDim srchDim demVec srchVec vec a ->
@@ -775,6 +778,8 @@ loop ::
    DV.Storage sigVec Int,
    DV.Storage sigVec (sigVec a),
    Show (sigVec (ValueState.Map (Interp.Val a))),
+   DV.LookupUnsafe sigVec (SignalFlow.TimeStep a),
+   DV.Find sigVec,
    Show (TopoQty.Flow (Result.Result (Data.Data Data.Nil (Interp.Val a))))) =>
   Caller ->
   System node ->
@@ -955,6 +960,8 @@ systemFunction ::
    Show (sigVec (ValueState.Map (Interp.Val a))),
    DV.Storage sigVec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
    DV.FromList sigVec, Show (sigVec Int),
+   DV.LookupUnsafe sigVec (SignalFlow.TimeStep a),
+   DV.Find sigVec,
    DV.Storage sigVec (sigVec a),
    DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Storage sigVec Int) =>

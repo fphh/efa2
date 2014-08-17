@@ -384,3 +384,28 @@ replicateSamples (Signal time (Data ns)) (Signal _ (Data xs)) =
   Signal (Strict.newInstance time) $ 
    Data $ DV.concat $ DV.toList $ DV.zipWith (\ n x -> DV.replicate n x) ns xs
 
+
+
+findInSignal :: 
+  (DV.LookupUnsafe vec (TimeStep a), 
+   DV.Storage vec b, DV.Find vec,
+   DV.Storage vec Int, DV.FromList vec) =>
+  (b -> Bool) ->
+  Signal inst label vec a b ->
+  [(Strict.Idx,a)]
+findInSignal f (Signal time (Data vec)) = zip idxList $ P.map (getMidTime . Strict.lookupUnsafe time) idxList  
+  where idxList = P.map Strict.Idx $ DV.toList $ DV.findIndices f vec
+        
+    
+any :: 
+  (DV.Storage vec b, DV.Singleton vec) =>
+  (b -> Bool) ->
+  Signal inst label vec a b ->
+  Bool
+any  f (Signal _ (Data vec)) = DV.any f vec
+
+all :: (DV.Storage vec b, DV.Singleton vec)=>   
+  (b -> Bool) ->
+  Signal inst label vec a b ->
+  Bool
+all  f (Signal _ (Data vec)) = DV.all f vec

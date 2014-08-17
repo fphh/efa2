@@ -108,4 +108,12 @@ minWith f x y = zipWithUnion g x y
     g a b = case f a b of
             LT -> a
             EQ -> a
-            GT -> b            
+            GT -> b
+            
+-- A ValueStateMap is Valid if there is at least one Valid State 
+isValid ::  Map a -> Bool
+isValid m = f $ P.map fst $ toList m
+  where
+    f [] = False
+    f [Nothing] = False
+    f _ = True

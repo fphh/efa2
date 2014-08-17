@@ -188,7 +188,7 @@ applyBalanceForcing caller balanceForcing node (Just (FlowOpt.StorageFlow storag
 
 -- | If State is Nothing, than state could not be detected because of invalid values
 findMaximumEta :: 
-  (DV.Walker vec,Ord a, Arith.Constant a,
+  (DV.Walker vec,Ord a, Arith.Constant a, Show a,
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a)),
    DV.Storage vec (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityValues (Interp.Val a))),
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, (Interp.Val a, Interp.Val a)),
@@ -204,7 +204,7 @@ findMaximumEta _ states cubeData = CubeMap.findBestWithIndexByPerState (ActFlowC
                 Interp.greaterThanWithInvalid (eta Arith.~+ forcing) (eta1 Arith.~+ forcing1) 
 
 findMinimumLoss :: 
-  (DV.Walker vec,Ord a, Arith.Constant a,
+  (DV.Walker vec,Ord a, Arith.Constant a, Show a,
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, 
                    (FlowOpt.TotalBalanceForce (Interp.Val a),
                     (FlowOpt.Eta2Optimise (Interp.Val a),FlowOpt.Loss2Optimise (Interp.Val a)))),

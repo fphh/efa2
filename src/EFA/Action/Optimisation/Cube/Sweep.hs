@@ -388,7 +388,7 @@ objectiveFunctionValues caller balanceForcingMap endNodeValues optimalityMeasure
   endNodeValues optimalityMeasure
       
 findMaximumEtaPerState ::
- (Ord  b,
+ (Ord  b, Show b,
  Arith.Constant  b,
  DV.Walker vec1,
  DV.Walker vec,

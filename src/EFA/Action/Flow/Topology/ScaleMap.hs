@@ -97,7 +97,11 @@ calcEtaLossSys caller (FlowOpt.ScaleMap scaleMap) topoEndNodeEnergies flowStatus
    h1 (status,x) (srcFl,snkFl) = f scales
      where
        scales = h3 (ActFlowCheck.getState status)
-       h3 (Just st) = Maybe.fromMaybe err $ Monad.join $ Map.lookup st scaleMap 
+       -- TODO:: Hier besser absichern
+       -- ungewünschte Zustände bekommen ungültige Skalierungsfaktoren
+       h3 (Just st) = Maybe.fromMaybe (FlowOpt.ScaleSource $ Interp.Invalid ["calcEtaLossSys"], 
+                                       FlowOpt.ScaleSink $ Interp.Invalid ["calcEtaLossSys"]) $ 
+                      Monad.join $ Map.lookup st scaleMap 
        h3 (Nothing) = (FlowOpt.ScaleSource $ Interp.Invalid ["calcEtaLossSys"],
                       FlowOpt.ScaleSink $ Interp.Invalid ["calcEtaLossSys"])
        err = merror caller modul "calcEtaLossSys" $ "State not in Eta-ScaleMap - status: " ++ show status
