@@ -329,8 +329,11 @@ getBalance ::
 getBalance storageSignals = Balance.Balance $ Map.map f storageSignals
   where f storageSignal = SignalFlow.foldlWithTime g Nothing storageSignal
         g _ (_,Nothing) = Nothing
-        g Nothing (t,Just x) = Just x --Just ((Interp.Inter t) Arith.~* x)
-        g (Just acc) (t, Just x) = Just $ x Arith.~+ acc  -- ++ Just $ ((Interp.Inter t) Arith.~* x)  Arith.~+ acc        
+        g Nothing (t,Just x) = --Just x 
+           Just ((Interp.Inter $ SignalFlow.getTimeStep t) Arith.~* x)
+        g (Just acc) (t, Just x) = 
+          Just $ ((Interp.Inter $ SignalFlow.getTimeStep t) Arith.~* x)  Arith.~+ acc
+                                    -- Just $ x Arith.~+ acc 
         
 -- TODO: make sure this is not applied to Energy Signals (Time Splitting than would require to alter signal values)
 generateOptimalSignal ::
