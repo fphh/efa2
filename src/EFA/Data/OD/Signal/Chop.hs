@@ -64,7 +64,9 @@ chopHRecord ::
 chopHRecord caller powerRecord = sequRecord
   where
     sectioning =  --UtTrace.simTrace  "Sections" $ 
-                  findHSections caller $ Trace.trace ("sigLength: " ++ show sigLength) powerRecord
+                  findHSections caller $ 
+                  --Trace.trace ("sigLength: " ++ show sigLength) 
+                  powerRecord
     sigLength = Map.map (\(SignalFlow.Data vec) -> DV.len vec) $ SignalFlow.getHMap powerRecord
     sequRecord = sliceHRecord powerRecord sectioning
 
