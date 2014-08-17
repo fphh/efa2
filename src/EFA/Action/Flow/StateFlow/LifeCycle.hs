@@ -17,6 +17,8 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Action.Utility as ActUt
+import qualified EFA.Action.Flow.Topology.State as TopoState
+
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Flow.Part.Index as Idx
 
@@ -72,7 +74,7 @@ updateOneStorageLifeCycleEfficiencies caller topo method globalLifeCycleMap sfg 
                                     Map.mapWithKey f  $ StateQty.states absSfg) oldMap) 
   where
     newCaller = caller |> nc "updateOneStorageLifeCycleEfficiencies"
-    absSfg = ActUt.absoluteStateFlowGraph topo sfg
+    absSfg = TopoState.absoluteStateFlowGraph topo sfg
     -- absSfg = fmap g g  $ ActUt.absoluteStateFlowGraph topo sfg
     --g = (\(D.Data x) -> x) . (ActUt.checkDetermined "updateOneStorageLifeCycleEfficiencies") 
 --    checkValid x = if Interp.isInvalid x then err else Interp.unpack x 

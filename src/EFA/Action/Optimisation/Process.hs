@@ -20,6 +20,8 @@ import EFA.Utility(Caller,
                   (|>),
                    ModuleName(..),FunctionName, genCaller)
 import qualified EFA.Action.Optimisation.Sweep as Sweep
+import qualified EFA.Action.Flow.Topology.State as TopoState
+
 --import qualified EFA.Action.Optimisation.Signal as OptSignal
 import qualified EFA.Data.Interpolation as Interp  
 import qualified EFA.Value.State as ValueState
@@ -99,7 +101,7 @@ import qualified Data.Tuple.HT as TupleHT
 --import qualified Data.Set as Set
 
 modul :: ModuleName
-modul = ModuleName "Demo.Optimisation.Process"
+modul = ModuleName "EFA.Action.Optimisation.Process"
 
 nc :: FunctionName -> Caller
 nc = genCaller modul
@@ -113,7 +115,9 @@ data System node =
   System
   {accessLabledEdgeList :: ActUt.LabeledEdgeList node,
    accessTopology :: Topo.Topology node, 
-   accessLabledTopology :: Topo.LabeledTopology node
+   accessLabledTopology :: Topo.LabeledTopology node,
+   accessStateAnalysis :: [(Idx.AbsoluteState,Topo.FlowTopology node)],
+   accessStates :: [Idx.AbsoluteState]
   } deriving Show
 
 data SystemData inst node etaVec a = 
@@ -183,10 +187,16 @@ data ContolSet = ContolSet {
   accessMakePlot :: Bool}
   
 
-buildSystem :: (Node.C node) => ActUt.LabeledEdgeList node -> System node
-buildSystem  edgeList = System edgeList topoPlain labeledTopology
+buildSystem :: 
+  (Node.C node,Show node) => 
+  ActUt.LabeledEdgeList node -> 
+  TopoState.EdgeConditions node -> 
+  System node
+buildSystem edgeList edgeCond = System edgeList topoPlain labeledTopology stateAnalysis stateList
   where labeledTopology = ActUt.topologyFromLabeledEdges edgeList
         topoPlain = Topo.plainFromLabeled labeledTopology
+        stateAnalysis = TopoState.filterFlowStates edgeCond $ TopoState.stateAnalysisAbsolute topoPlain
+        stateList = map fst stateAnalysis
   
 buildTestSet :: 
   OptSignal.DemandCycle node inst demDim sigVec a a -> 
@@ -515,13 +525,16 @@ optimalOperation ::
  DV.Storage vec [Interp.Val a],
  DV.Storage vec [a],
  DV.Storage vec ([Maybe Idx.AbsoluteState],
- Maybe (Interp.Val a)),
+                 Maybe (Interp.Val a)),
  DV.Storage vec (Interp.Val a),
+ Show (vec (Interp.Val a)),
+ Show (vec (SignalFlow.TimeStep a)),
  DV.Storage vec (Maybe (Interp.Val a)),
  DV.Storage vec (ValueState.Map (Interp.Val a)),
  DV.Storage vec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
  DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
  DV.Singleton vec,
+ Show (vec (ValueState.Map (Interp.Val a))),
  DV.Storage vec (SignalFlow.TimeStep a),
  DV.Storage vec [SignalFlow.TimeStep a],
  DV.FromList vec) =>
@@ -761,6 +774,7 @@ loop ::
    DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Storage sigVec Int,
    DV.Storage sigVec (sigVec a),
+   Show (sigVec (ValueState.Map (Interp.Val a))),
    Show (TopoQty.Flow (Result.Result (Data.Data Data.Nil (Interp.Val a))))) =>
   Caller ->
   System node ->
@@ -938,6 +952,7 @@ systemFunction ::
    DV.Storage sigVec (SignalFlow.TimeStep a), 
    Show (sigVec (Interp.Val a)),
    Show (sigVec (SignalFlow.TimeStep a)),
+   Show (sigVec (ValueState.Map (Interp.Val a))),
    DV.Storage sigVec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
    DV.FromList sigVec, Show (sigVec Int),
    DV.Storage sigVec (sigVec a),

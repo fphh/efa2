@@ -12,9 +12,16 @@ import Prelude hiding (init, flip)
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
-newtype AbsoluteState = AbsoluteState {unAbsoluteState :: Integer} deriving (Show, Eq, Ord)
+newtype AbsoluteState = AbsoluteState {unAbsoluteState :: Word} deriving (Show, Eq, Ord)
+
+absoluteState2Int :: 
+  AbsoluteState -> 
+  Int
+absoluteState2Int st = fromIntegral $ toInteger $ unAbsoluteState st  
 
 instance Atom.C (Maybe AbsoluteState) where
+instance Tuple.C Word where
+  text word = Tuple.text word
   
 instance Tuple.C (Maybe AbsoluteState) where
   text (Just (AbsoluteState x)) = Tuple.text x

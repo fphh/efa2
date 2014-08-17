@@ -208,64 +208,6 @@ nestM n act = foldr (>=>) return (replicate n act)
 
 
 
-data Orientation = Dir | UnDir deriving Show
-
-absoluteStateIndex ::
-  (Node.C node) =>
-  Graph node Graph.DirEdge nodeLabel1 a1 ->
-  Graph node Graph.EitherEdge nodeLabel a ->
-  Idx.State
-absoluteStateIndex topo flowTopo =
-  let tlabels = map unEitherEDir $ Map.keys $ Graph.edgeLabels topo
-
-      flabels = Map.fromList $ map unEDir $ Map.keys $ Graph.edgeLabels flowTopo
-
-      unEDir (Graph.EDirEdge (Graph.DirEdge f t)) = ((f, t), Dir)
-      unEDir (Graph.EUnDirEdge (Graph.UnDirEdge f t)) = ((f, t), UnDir)
-
-      unEitherEDir (Graph.DirEdge f t) = (f, t)
-
-      g k@(f, t) =
-        case (Map.lookup k flabels, Map.lookup (t, f) flabels) of
-             (Just Dir, _) -> 0
-             (Just UnDir, _) -> 1
-             (_, Just Dir) -> 2
-             (_, Just UnDir) -> 1
-             _ -> error $ "EFA.Graph.Topology.flowNumber: edge not found "
-                          ++ Format.showRaw (Node.display f :: Format.ASCII)
-                          ++ "->"
-                          ++ Format.showRaw (Node.display t :: Format.ASCII)
-
-      toTernary xs = Idx.State $ sum $ zipWith (*) xs $ map (3^) [0 :: Int ..]
-
-  in toTernary $ map g tlabels
-
-
--- TODO :: Introduce absolute State as Type Variable
-absoluteStateFlowGraph ::
-  Node.C node =>
-  Graph node Graph.DirEdge nodeLabel1 a1->
-  State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel ->
-  State.Graph node Graph.EitherEdge stateLabel nodeLabel storageLabel flowLabel carryLabel
-absoluteStateFlowGraph topo sfg = sfg {StateQty.states = states,  
-                                       StateQty.storages = storages}
-  where                                          
-    stateMap = Map.fromList $ map (\(oldState,x) -> (oldState,absoluteStateIndex topo $ FlowTopo.topology x)) $
-           Map.toList $ StateQty.states sfg
-    states = Map.fromList $ map (\(oldState,x) -> (stateMap Map.! oldState,x)) $
-           Map.toList $ StateQty.states sfg
-           
-    storages = Map.map f $ StateQty.storages sfg
-    
-    f stoGraph = stoGraph{Storage.edges= Map.mapKeys g $ Storage.edges stoGraph}
-    
-    g (StorageIdx.Edge initSec exitSec) = StorageIdx.Edge (h1 initSec) (h2 exitSec)  
-      
-    h1 PartIdx.Init = PartIdx.Init  
-    h1 (PartIdx.NoInit oldState) = (PartIdx.NoInit $ stateMap Map.! oldState)
-
-    h2 PartIdx.Exit = PartIdx.Exit  
-    h2 (PartIdx.NoExit oldState) = (PartIdx.NoExit $ stateMap Map.! oldState)
 
 ifNull :: b -> ([a] -> b) -> [a] -> b
 ifNull x _ [] = x

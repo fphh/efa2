@@ -569,16 +569,14 @@ flowTopologies ts =
    DotGraph False True Nothing $
    DotStmts [] (zipWith dotFromFlowTopology [0..] ts) [] []
 
+
 -- TODO:: Auspacken von AbsoluteState und Rückkonversion von Integer to Int fürs Zeichnen noch nicht optimal 
 flowTopologiesAbsolute ::
    (Node.C node,Show node) =>
-   Topo.Topology node ->
-   [FlowTopology node] -> DotGraph T.Text
-flowTopologiesAbsolute topo ts =
+   [(Idx.AbsoluteState, FlowTopology node)] -> DotGraph T.Text
+flowTopologiesAbsolute ts =
    DotGraph False True Nothing $
-   DotStmts [] (zipWith dotFromFlowTopology states ts) [] []
-   where   
-     states = map (fromIntegral . Idx.unAbsoluteState . Topo.getAbsoluteStateIndex topo) ts
+   DotStmts [] (map (\(st,fl) -> dotFromFlowTopology (PartIdx.absoluteState2Int st) fl) ts) [] []
 
 dotFromFlowTopology ::
    (Node.C node) =>

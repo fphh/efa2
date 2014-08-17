@@ -39,7 +39,7 @@ import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Data.OD.Signal.Flow as SignalFlow
 
 --import qualified EFA.Data.OD.Signal.Record as SignalRecord
---import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility.Async (concurrentlyMany_)
 
 import EFA.Utility(Caller,
                    --merror,(|>),
@@ -402,6 +402,9 @@ main = do
              
 
   print loop
+  
+  concurrentlyMany_ $ OP.sweep caller path fileOrder [OP.Ex "Base", OP.SF "Forced"] [] (Process.accessSearchGrid optiSet) sweepCtrl sweep
+  
   
   OP.loopsIO path fileOrder [OP.Ex "Base", OP.SF "Forced"] evalCtrl optCtrl opCtrl simCtrl system optiSet loop
  

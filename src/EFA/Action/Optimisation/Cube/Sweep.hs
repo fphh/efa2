@@ -509,13 +509,13 @@ interpolateWithSupportPerState caller inmethod cube support coordinates =
     f idx = if ND.len coordinates >=2 
             then
                interpolateWithSupportPerState newCaller inmethod (CubeMap.getSubCube newCaller cube idx) 
-               (ND.dropFirst (caller |> (nc "interpolateOptimalityValuesWithSupportPerState-support")) support) 
-               (ND.dropFirst (caller |> (nc "interpolateOptimalityValuesWithSupportPerState-coordinates")) coordinates)
+               (ND.dropFirst (caller |> (nc $ "interpolateOptimalityValuesWithSupportPerState-support-" ++ show label )) support) 
+               (ND.dropFirst (caller |> (nc $ "interpolateOptimalityValuesWithSupportPerState-coordinates-"++ show label)) coordinates)
             else CubeMap.lookUp newCaller (ND.Data [idx]) cube   
     g (Strict.LeftPoint (idx,_)) = f idx 
     g (Strict.RightPoint (idx,_)) = f idx
     g (Strict.PairOfPoints (idx1,x1) (idx2,x2)) = 
-      Interp.dim1PerState caller inmethod label (x1,x2) (y1,y2) 
+      Interp.dim1PerState newCaller inmethod label (x1,x2) (y1,y2) 
                                              $ ND.getFirst newCaller coordinates 
       where    
         (y1,y2) = (f idx1, f idx2)
@@ -539,21 +539,21 @@ interpolateWithSupportPerStateMaybe ::
 interpolateWithSupportPerStateMaybe caller inmethod cube support coordinates = 
   g (ND.getFirst newCaller support) 
   where 
-    newCaller = (caller |> (nc "interpolateWithSupportPerState"))
+    newCaller = (caller |> (nc "interpolateWithSupportPerStateMaybe"))
     label = show $ Strict.getLabel $ ND.getFirst newCaller $ CubeMap.getGrid cube
     f idx = if ND.len coordinates >=2 
             then
                interpolateWithSupportPerStateMaybe newCaller inmethod 
                (CubeMap.getSubCube newCaller cube idx) 
                (ND.dropFirst (caller |> 
-                              (nc "interpolateOptimalityValuesWithSupportPerState-support")) support) 
+                              (nc "interpolateOptimalityValuesWithSupportPerStateMaybe-support")) support) 
                (ND.dropFirst (caller |> 
-                              (nc "interpolateOptimalityValuesWithSupportPerState-coordinates")) coordinates)
+                              (nc "interpolateOptimalityValuesWithSupportPerStateMaybe-coordinates")) coordinates)
             else CubeMap.lookUp newCaller (ND.Data [idx]) cube   
     g (Strict.LeftPoint (idx,_)) = f idx 
     g (Strict.RightPoint (idx,_)) = f idx
     g (Strict.PairOfPoints (idx1,x1) (idx2,x2)) = 
-      Interp.dim1PerStateWithMaybe caller inmethod label (x1,x2) (y1,y2) 
+      Interp.dim1PerStateWithMaybe newCaller inmethod label (x1,x2) (y1,y2) 
                                              $ ND.getFirst newCaller coordinates 
       where    
         (y1,y2) = (f idx1, f idx2)

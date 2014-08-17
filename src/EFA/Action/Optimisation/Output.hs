@@ -25,6 +25,9 @@ import qualified EFA.Action.Optimisation.Sweep as Sweep
 
 import qualified EFA.Action.Flow.Check as ActFlowCheck
 import qualified EFA.Action.Flow.Optimality as FlowOpt
+import qualified EFA.Action.Flow.Balance as Balance
+import qualified EFA.Action.Flow.Topology.State as TopoState
+
 
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.Collection as Collection
@@ -78,6 +81,8 @@ import qualified Data.List as List
 import Control.Functor.HT (void)
 import EFA.Utility.Async (concurrentlyMany_)
 
+import Text.Printf (printf) --, PrintfArg) --,IsChar)
+
 import EFA.Utility(Caller,
                    --merror,
                    (|>),
@@ -123,13 +128,13 @@ data TitleType = TyEx
                | TyIF deriving Eq
               
 instance Show Title where              
-  show (Ex str) = "Ex: " ++ show str 
-  show (SF str) = "SF: " ++ show str 
-  show (EL str) = "EL: " ++ show str 
-  show (BL str) = "BL: " ++ show str 
-  show (PR str) = "PS: " ++ show str 
-  show (DG str)  = "DG: " ++ show str
-  show (IF str) = "IF: " ++ show str
+  show (Ex str) = "Ex: " ++ str 
+  show (SF str) = "SF: " ++ str 
+  show (EL str) = "EL: " ++ str 
+  show (BL str) = "BL: " ++ str 
+  show (PR str) = "PS: " ++ str 
+  show (DG str) = "DG: " ++ str
+  show (IF str) = "IF: " ++ str
    
 -- WARNING :: [Title] should be set ?
 sortTitles :: FileOrder -> [Title] -> [Title] 
@@ -148,7 +153,7 @@ data PlotOrPrint = PoP Plot Print
 plotAction ::
   Display.C gfx => Plot -> FilePath -> (t -> gfx) -> t -> [IO ()] 
 plotAction PltDflt _ toPlotData plot = [void $ Plot.plotSync DefaultTerm.cons  $ toPlotData plot]
-plotAction (PltPNG) file toPlotData plot = [void $ Plot.plotSync (PNG.cons $ file ++".png")  $ toPlotData plot] 
+plotAction (PltPNG) file toPlotData plot = [void $ Plot.plotSync (PNG.fontTiny $ PNG.cons $ file ++".png")  $ toPlotData plot] 
 plotAction (PltSVG) file toPlotData plot = [void $ Plot.plotSync (SVG.cons $ file ++".svg") $ toPlotData plot] 
 plotAction (PltPS) file toPlotData plot = [void $ Plot.plotSync (PS.cons $ file ++".ps") $ toPlotData plot] 
 plotAction PltNot _ _ _ = []
@@ -194,6 +199,9 @@ makeFileName basePath fileOrder titles = replaceBlancs $ basePath
                                          ++ "/" ++ (List.intercalate "_" 
                                           $ map show $ sortTitles fileOrder titles)
 
+formatCounter :: Int -> String
+formatCounter = printf "%02d"
+                
 replaceBlancs :: String -> String  
 replaceBlancs xs = map f xs   
   where f ' ' = '_'
@@ -224,13 +232,16 @@ system path fileOrder titles sysAction sys =
     (drawOrPrintAction (labTopo sysAction) (f $ DG "labledTopology")
      (\x -> [Draw.title (g $ DG "labledTopology") $ Draw.labeledTopology x]) $ Process.accessLabledTopology sys) ++
     
+    (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis - no inactive ")
+     (\ x -> [Draw.title (g $ DG ("stateAnalysis - Amount of States: " ++ show num2)) $ Draw.flowTopologiesAbsolute x]) sa2) ++
+     
     (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis")
-     (\ x -> [Draw.title (g $ DG "stateAnalysis") $ Draw.flowTopologies $
-                                                   StateAnalysis.bruteForce x]) $ Process.accessTopology sys) ++
-    
-        (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis - Absolute")
-     (\ x -> [Draw.title (g $ DG "stateAnalysis - Absolute") $ Draw.flowTopologiesAbsolute (Process.accessTopology sys) $ 
-                                                   StateAnalysis.bruteForce x]) $ Process.accessTopology sys)
+     (\ x -> [Draw.title (g $ DG ("stateAnalysis - Amount of States: " ++ show num)) $ Draw.flowTopologiesAbsolute x]) sa)
+           where sa = Process.accessStateAnalysis sys
+                 num = length sa
+                 sa2 = TopoState.filterFlowStates (TopoState.EdgeOrs $ [TopoState.EdgeAnds [TopoState.NoInactive]]) sa
+                 num2 = length sa2
+             
     
 data SysDataCtrl = SysDataDont | 
                SysDataDo {rawCurves :: PlotOrPrint,
@@ -379,8 +390,10 @@ sweep ::
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) demVec a a,
    Ord a,
    Show node,
-   Show (idx0 node),TopoQty.Lookup idx0,
+   Show (idx node),
+   TopoQty.Lookup idx,
    Arith.Constant a,
+   DV.LookupUnsafe demVec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a)))),
    Atom.C a,
    DV.Walker demVec,
    DV.Storage demVec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Interp.Val a))),
@@ -394,11 +407,12 @@ sweep ::
   Caller ->
   FilePath ->
   FileOrder -> [Title] ->
-  [idx0 node] ->
+  [idx node] ->
    CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a ->
   SweepCtrl ->
   Process.SweepResults node inst dim srchDim demVec srchVec a ->
   [IO ()]
+sweep _ _ _ _ _ _ SweepDont _ = []
 sweep caller path fileOrder titles keyList searchGrid ctrl swp = let
   newCaller = caller |> nc "sweep"
   f str = makeFileName path fileOrder $ titles ++ [str]
@@ -406,7 +420,7 @@ sweep caller path fileOrder titles keyList searchGrid ctrl swp = let
   in
    (drawAction (drawFlow ctrl)  (f $ DG "Flow DemandEdges")
     (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow DemandEdges") (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
-    (Process.accessSweepFlow swp)) ++
+    (Process.accessSweepFlowResult swp)) ++
    
    (plotAction (plotFlowVariables ctrl) (f $ DG "Flow DemandEdges")
     (SweepPlot.plotSweepFlowValues newCaller (g $ DG "FlowVariables") searchGrid 
@@ -577,7 +591,7 @@ optPerState caller path fileOrder titles srchGrid ctrl opt =
       (\(CubeGrid.LinIdx idx,_) -> Interp.Inter $ Arith.fromInteger $ fromIntegral idx)) 
      (Process.accessOptimalChoicePerState opt)) ++ 
      
-     (plotAction (plotOptimalSignalPerState ctrl) (f $ DG "Optimal Index Per State")
+     (plotAction (plotOptimalSignalPerState ctrl) (f $ DG "Optimality-Signal Per State")
       (OptSignalPlot.plotOptimalSignals "Optimal Signals per State" . 
        OptSignalAccess.optimalityPerStateSignalToSignalMap FlowOpt.getEtaVal)
      (Process.accessOptimalSignalsPerState opt))
@@ -883,7 +897,7 @@ etaLoopItemIO ::
   (Process.Res node inst demDim srchDim demVec srchVec sigVec a) ->
   IO ()
 etaLoopItemIO path fileOrder titles evalCtr optCtr opCtr simCtr sys optiS (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap sweepEval balLoop) = do
-  let newTitles = titles ++ [EL $ show cnt]
+  let newTitles = titles ++ [EL $ formatCounter $ Loop.unEtaCounter cnt]
   print cnt
   concurrentlyMany_ $ evalSweep (nc "balanceLoopItemIO") path fileOrder
                           newTitles (Process.accessSearchGrid optiS) evalCtr sweepEval
@@ -983,8 +997,9 @@ balanceLoopItemIO ::
 balanceLoopItemIO path fileOrder titles optCtr opCtr simCtr _sys optiS 
   (Loop.BalanceLoopItem cnt _node _force _step _bal _bestPair result) = do
   let  (Process.Res perState optOperation simEfa) = result
-       newTitles = titles ++ [BL $ show cnt]
+       newTitles = titles ++ [BL $ show $ map (fmap formatCounter) $ Map.toList $ Balance.unBalanceCounter cnt]
   concurrentlyMany_ $ 
    optPerState  (nc "balanceLoopItemIO") path fileOrder newTitles (Process.accessSearchGrid optiS) optCtr perState  
     ++ optimalOperation path fileOrder newTitles opCtr optOperation
     ++ simulation path fileOrder newTitles simCtr simEfa
+

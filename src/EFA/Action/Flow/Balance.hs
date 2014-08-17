@@ -134,7 +134,7 @@ balanceDeviation (Balance m) =
 
 newtype MaxIterationsPerStorage = MaxIterationsPerStorage Int deriving Show
 
-newtype BalanceCounter node = BalanceCounter (Map.Map node Int) deriving Show
+newtype BalanceCounter node = BalanceCounter {unBalanceCounter::Map.Map node Int} deriving Show
 newtype MaxIterations = MaxIterations Int deriving Show
 
 -- data BalanceCounter node = BalanceCounter (Map.Map node Int)

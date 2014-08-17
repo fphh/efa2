@@ -6,6 +6,7 @@ module EFA.Action.EnergyFlowAnalysis where
 --import qualified EFA.Data.Sequence as DataSequ
 --import qualified EFA.Flow.Topology.Index as TopoIdx
 --import qualified EFA.Flow.Topology as FlowTopoPlain
+import qualified EFA.Action.Flow.Topology.State as TopoState
 --import qualified EFA.Utility.Map as MapU
 import qualified EFA.Graph.Topology as Topo
 --import EFA.Graph (DirEdge(DirEdge), unDirEdge)
@@ -138,7 +139,7 @@ energyFlowAnalysisOld topology efaParams sequenceFlowsFilt =
             (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))
             mempty initStorageSeq)
 
-      stateFlowGraph = ActUt.absoluteStateFlowGraph topology $
+      stateFlowGraph = TopoState.absoluteStateFlowGraph topology $
         StateEqAbs.solveOpts
           Optimisation.optionsScalar
            (StateQty.graphFromCumResult $

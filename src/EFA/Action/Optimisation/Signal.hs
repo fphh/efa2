@@ -10,7 +10,7 @@ import qualified EFA.Graph as Graph
 import qualified EFA.Flow.Topology as FlowTopo
 import qualified EFA.Action.Flow.Balance as Balance
 import qualified EFA.Flow.Topology.Index as XIdx
---import qualified EFA.Utility.Trace as UtTrace
+import qualified EFA.Utility.Trace as UtTrace
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
 import qualified EFA.Flow.SequenceState.Index as Idx
 import qualified EFA.Data.Axis.Strict as Strict
@@ -139,11 +139,14 @@ findOptimalStatesUsingMaxEta ::
   (Ord b,Arith.Constant b,
    DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val b))),
    DV.Storage vec (ValueState.Map (Interp.Val b)),
- DV.Walker vec,DV.Storage vec (Maybe (Interp.Val b)),
- DV.Storage vec (Interp.Val b),
- DV.Zipper vec,
- DV.Storage vec ([Maybe Idx.AbsoluteState],
- Maybe (Interp.Val b))) =>
+   Show (vec (SignalFlow.TimeStep a)),
+   Show (vec (Interp.Val b)),
+   DV.Walker vec,DV.Storage vec (Maybe (Interp.Val b)),
+   DV.Storage vec (Interp.Val b),
+   Show (vec (ValueState.Map (Interp.Val b))),
+   DV.Zipper vec,
+   DV.Storage vec ([Maybe Idx.AbsoluteState],
+                   Maybe (Interp.Val b))) =>
  Caller -> 
  StateForcing ->
  OptimalityPerStateSignal inst label vec a (Interp.Val b) ->
@@ -159,10 +162,12 @@ findOptimalStatesUsingMaxEta caller StateForcingOn optimalitySignalPerState =
   SignalFlow.map (ValueState.getBest Interp.compareMaxWithInvalid) conditionedSignal 
   where 
     etaOptSignal = SignalFlow.map (ValueState.map FlowOpt.getOptEtaVal) optimalitySignalPerState
-    etaOptSignalMax = SignalFlow.map (Maybe.fromMaybe err2 . snd) maxSig 
+    etaOptSignalMax = UtTrace.simTrace "etaOptSignalMax" $ 
+                      SignalFlow.map (Maybe.fromMaybe err2 . snd) maxSig 
     maxSig = findOptimalStatesUsingMaxEta (caller |> nc "findOptimalStatesUsingMaxEta") 
                       StateForcingOff optimalitySignalPerState 
-    diffSignal = SignalFlow.zipWith (\opt optMax -> ValueState.map (\x -> optMax Arith.~- x) opt) etaOptSignal etaOptSignalMax              
+    diffSignal = UtTrace.simTrace "etaOptSignalMax" $ 
+                 SignalFlow.zipWith (\opt optMax -> ValueState.map (\x -> optMax Arith.~- x) opt) etaOptSignal etaOptSignalMax              
     minDifferencePerState = Maybe.fromMaybe err $ SignalFlow.foldl f (Nothing) diffSignal
     f (Nothing) y = Just y
     f (Just x) y = Just $ ValueState.minWith (Interp.compareMinWithInvalid) x y
@@ -333,7 +338,11 @@ generateOptimalSignal ::
   SignalFlow.Signal inst1 label vec a b
 generateOptimalSignal optimalStateSignal stateSignal = SignalFlow.concatEvenEvenTimeShare
    $ SignalFlow.zipWith f optimalStateSignal stateSignal
-  where f (states,_) m = map (ValueState.lookupUnsafe m) states    
+  where f (states,_) m = map g states
+          where 
+            g st = ValueState.lookupUnsafe m st
+--            g (Just st) = ValueState.lookupUnsafe m (Just st)
+--            g Nothing = error ("No valid state found")
 
 
 convertToDemandCycleRecord :: 

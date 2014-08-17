@@ -34,7 +34,7 @@ modul = ModuleName "EFA.Action.Optimisation.Loop"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
-newtype EtaCounter = EtaCounter Int deriving Show
+newtype EtaCounter = EtaCounter {unEtaCounter::Int} deriving Show
 newtype MaxEtaIterations = MaxEtaIterations Int deriving Show
 
 incrementEtaCounter :: EtaCounter -> EtaCounter
@@ -178,7 +178,7 @@ instance
    Display (Maybe (Balance.SocDrive a, a), Maybe (Balance.SocDrive a, a)), Arith.Constant a,Display a,
    Show node, Show a) => Show (EtaLoopItem node a evalParam evalSwp res) where  
   show (EtaLoopItem etaCounter etaSys evalParam _ balLoop) = 
-    "Eta-Cnt: " ++ show etaCounter ++ "\n" ++
+    "Eta-Cnt: " ++ (show $ unEtaCounter etaCounter) ++ "\n" ++
     "Eta-Sys: " ++ disp etaSys ++ "\n" ++
     disp evalParam ++ "\n" ++ show balLoop 
   
@@ -187,7 +187,7 @@ instance
    Display (Maybe (Balance.SocDrive a, a), Maybe (Balance.SocDrive a, a))) => 
   Show (BalanceLoopItem node a z) where  
   show (BalanceLoopItem cnt node force step balance bestPair _) = 
-    show cnt ++ " | " ++
+    show  (Balance.unBalanceCounter cnt) ++ " | " ++
     "Node: " ++ show node ++" | " ++
     disp force ++" | " ++
     disp step ++ " | " ++

@@ -234,7 +234,7 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Extra x) =
                    (ExtrapVal val) ->  Extra $ val
                    ExtrapNone ->  Invalid [show label ++ "@" ++ show x]
                    ExtrapError ->
-                     merror caller modul "interp1Core" ("Extrapolation not allowed" ++
+                     merror caller modul "interp1Core" ("Extrapolation not allowed " ++
                              "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
 
     EQ -> case getPos (x1, x2) x of
@@ -246,7 +246,7 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Extra x) =
                    (ExtrapVal val) ->  Extra $ val
                    ExtrapNone ->  Invalid [show label ++ "@" ++ show x]
                    ExtrapError ->
-                     merror caller modul "interp1Core" ("Extrapolation not allowed" ++
+                     merror caller modul "interp1Core" ("Extrapolation not allowed " ++
                              "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
 
                _   -> Extra $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)
@@ -271,7 +271,7 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Inter x) =
                    (ExtrapVal val) ->  Extra $ val
                    ExtrapNone ->  Invalid [show label ++ "@" ++ show x]
                    ExtrapError ->
-                     merror caller modul "interp1Core" ("Extrapolation not allowed" ++
+                     merror caller modul "interp1Core" ("Extrapolation not allowed " ++
                              "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
 
     EQ -> case getPos (x1, x2) x of
@@ -283,7 +283,7 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Inter x) =
                    (ExtrapVal val) ->  Extra $ val
                    ExtrapNone ->  Invalid [show label ++ "@" ++ show x]
                    ExtrapError ->
-                     merror caller modul "interp1Core" ("Extrapolation not allowed" ++
+                     merror caller modul "interp1Core" ("Extrapolation not allowed " ++
                              "x1: " ++ show x1 ++ " x2: " ++ show x2 ++ " x: " ++ show x)
 
                _   -> Inter $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)
