@@ -152,7 +152,7 @@ plotDemandSweepValue ::
   CubeMap.Cube inst dim label vec a (CubeMap.Data inst1 dim1 vec1 b) ->
   Frame.T (Graph3D.T a a c)
 plotDemandSweepValue caller title searchGrid faccess  extractData sweepCube = 
-  PlotD3.allInOne (PlotD3.labledFrame title) (\ _ plotData -> LineSpec.title (show $ PlotD3.getId $ plotData )) $ 
+  PlotD3.allInOne (PlotD3.labledFrame title) (\ num _ -> LineSpec.title (show num)) $ 
   concatMap f $ SweepAccess.extractSearchData (caller |> nc "plotEvalSweepStackValue") searchGrid  sweepCube extractData
   where 
     f (dimIdx,cube) = PlotCube.toPlotData caller (Just dimIdx) $ CubeMap.map faccess cube
@@ -351,11 +351,12 @@ plotOptimalOptimalityValuePerState ::
   Frame.T (Graph3D.T a a (Interp.Val b))
 plotOptimalOptimalityValuePerState caller title faccess optPerState = 
   PlotD3.allInOne (PlotD3.labledFrame title) 
-      (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) $ 
-  concatMap f stateCubes
+--      (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) 
+ (\ _ x ->  LineSpec.title $ show $ PlotD3.getId x)
+  $ concatMap f stateCubes
   where  
     f (_,cube) = PlotCube.toPlotData caller (Just "OpimalObjectivePerState") $ 
                   CubeMap.map (Maybe.maybe (Interp.Invalid ["plotOptimalObjectivePerState"]) faccess) cube
     stateCubes = ValueState.toList $ SweepAccess.stateCubeToStateCubes optPerState
-    legend = Map.fromList $ zip [0..] $ map fst stateCubes
+--    legend = Map.fromList $ zip [0..] $ map fst stateCubes
  

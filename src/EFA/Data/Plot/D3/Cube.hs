@@ -346,5 +346,4 @@ plotCollection ::
  Caller ->
  Collection.Collection id (ndContainer inst dim label vec a b) ->
  [PlotD3.PlotData id label a b]
-
 plotCollection caller collection = concat $ map (\(label,x) -> toPlotData caller (Just label) x) $ Collection.toList collection

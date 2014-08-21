@@ -73,10 +73,11 @@ plotDemandCycle ::
    DV.Singleton vec,
    DV.Length vec,
    DV.FromList vec) =>
+  String ->
   OptSignal.DemandCycle node inst dim vec a b ->
   [DemandAndControl.DemandVar node] ->
   Frame.T (Graph2D.T a b)
-plotDemandCycle demandVars cyc = plotDemandCycleMap $ OptSignal.convertToDemandCycleMap demandVars cyc 
+plotDemandCycle title demandVars cyc = plotDemandCycleMap title $ OptSignal.convertToDemandCycleMap demandVars cyc 
 
 plotDemandCycleMap ::
   (Ord b,Show node,
@@ -96,10 +97,11 @@ plotDemandCycleMap ::
    DV.Singleton vec,
    DV.Length vec,
    DV.FromList vec) =>
+  String ->
   OptSignal.DemandCycleMap node inst vec a b ->
   Frame.T (Graph2D.T a b)
-plotDemandCycleMap cyc = 
-  PlotD2.allInOne (PlotD2.labledFrame "DemandCycle")  (\ _ _ -> id) $ 
+plotDemandCycleMap title cyc = 
+  PlotD2.allInOne (PlotD2.labledFrame title)  (\ _ x -> LineSpec.title $ show $ PlotD2.getId x) $ 
   concat $ Map.elems $ Map.mapWithKey (\ident sig ->  SignalFlowPlot.toPlotData (Just ident) sig) cyc
   
   
