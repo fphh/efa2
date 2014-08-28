@@ -767,6 +767,7 @@ loop ::
    DV.Length srchVec,
    DV.Length demVec,
    DV.Length sigVec,
+   Show evalParam,
    DV.Len (sigVec (Interp.Val a)),
    DV.Storage sigVec (SignalFlow.TimeStep a,Maybe (Interp.Val a)),
    DV.Storage sigVec (SignalFlow.TimeStep a),

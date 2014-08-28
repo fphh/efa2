@@ -52,6 +52,7 @@ import qualified Data.Maybe as Maybe
 --import Data.Foldable (Foldable, foldMap)
 
 --import Debug.Trace(trace)
+import qualified EFA.Utility.Trace as UtTrace 
 
 import EFA.Utility(Caller,
                  merror,
@@ -65,13 +66,19 @@ nc :: FunctionName -> Caller
 nc = genCaller modul
 
 
-calculateScaleMap ::(Ord a, Show node, Arith.Constant a,Node.C node)=>
+calculateScaleMap ::
+  (Ord a,
+   Show a,
+   Show node,
+   Arith.Constant a,
+   Node.C node,
+   Show (FlowOpt.ScaleMap (Interp.Val a)))=>
   Caller -> 
   FlowOpt.GlobalLifeCycleMap node (Interp.Val a) ->
   StateQty.Graph node (Interp.Val a) (Interp.Val a) ->
   FlowOpt.ScaleMap (Interp.Val a) ->
   ((Interp.Val a), FlowOpt.ScaleMap (Interp.Val a))
-calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) = 
+calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) = UtTrace.simTrace "ScaleMap" $
   (etaSys, FlowOpt.ScaleMap $ Map.union (Map.mapWithKey f endNodeMap) oldScaleMap)
   where
     newCaller = caller |> nc "calculateScaleMap"
@@ -80,13 +87,14 @@ calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) =
     f state (FlowOpt.EndNodeEnergies _ _ storMap) = g $ Map.elems $ FlowOpt.unStorageMap storMap
       where 
 
-       g [Just (FlowOpt.StorageFlow x)] = Just (FlowOpt.ScaleSource $ sourceFlow Arith.~/ x, 
-                          FlowOpt.ScaleSink $ sinkFlow Arith.~/ x)
+       g [Just (FlowOpt.StorageFlow x)] = -- UtTrace.simTrace "Source,SinkScale" $ 
+                                          Just (FlowOpt.ScaleSource $ sourceFlow Arith.~/ x, 
+                                                FlowOpt.ScaleSink $ sinkFlow Arith.~/ (UtTrace.simTrace "stoPower" x))
        g [Nothing] = Nothing             
        g _ = merror caller modul "calculateScaleMap" "This Method works only for one Storage in the system"
        (FlowOpt.TotalSourceFlow sourceFlow, 
-        FlowOpt.TotalSinkFlow sinkFlow) = StateFlowOpt.sumSinkSourceFlowsAllStates 
-                                              $ StateFlowOpt.removeState state endNodeMap
+        FlowOpt.TotalSinkFlow sinkFlow) = UtTrace.simTrace "srcSinkFlow" $ StateFlowOpt.sumSinkSourceFlowsAllStates 
+                                              $ StateFlowOpt.removeState (UtTrace.simTrace "state" state) endNodeMap
             
 
        

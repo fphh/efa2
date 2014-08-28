@@ -27,6 +27,7 @@ import EFA.Utility(Caller,
                    --merror,
                    (|>),
                    ModuleName(..),FunctionName, genCaller)
+import Debug.Trace as Trace
 
 modul :: ModuleName
 modul = ModuleName "EFA.Action.Optimisation.Loop"
@@ -211,7 +212,7 @@ resetBalCounter (BalanceLoopItem cnt n f s l b r) = BalanceLoopItem (g cnt) n f 
    g (Balance.BalanceCounter m) = Balance.BalanceCounter $ Map.map (\_ -> 0) m 
 
 etaLoop:: 
-  (Ord node,Ord a, Show a, Show node, Arith.Constant a) =>
+  (Ord node,Ord a, Show a, Show node, Arith.Constant a,Show evalParam) =>
   Caller ->
   [node] ->
   EtaLoopParams node a evalParam ->
@@ -237,7 +238,8 @@ etaLoop caller storages etaParams balParams evalFunction systemFunction getBalan
         evalSweep = evalFunction evalParam 
         balLoop = balanceLoop (caller |> nc "etaLoop") storages balParams (systemFunction evalSweep)
                   getBalance lastLatestForcing
-        (etaSys,nextEvalParam) = updateEvalParam (accResult $ last balLoop) evalParam
+        (etaSys,nextEvalParam) = (\(x,y) -> Trace.trace (show count ++ ":" ++ show y) (x,y))  $ 
+                                 updateEvalParam (accResult $ last balLoop) evalParam
         latestForcing = accForcing $ last balLoop          
 
 balanceLoop :: 

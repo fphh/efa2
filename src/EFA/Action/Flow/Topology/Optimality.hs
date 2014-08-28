@@ -236,4 +236,5 @@ sumSinkSourceFlows endNodeFlows = (FlowOpt.TotalSourceFlow $ sumRes sourceMap,
   where
    sinkMap = FlowOpt.unSinkMap $ FlowOpt.getSinkMap endNodeFlows
    sourceMap = FlowOpt.unSourceMap $ FlowOpt.getSourceMap endNodeFlows
+--   stoMap = FlowOpt.unStoMap $ FlowOpt.getStoMap endNodeFlows
    sumRes = foldl1 (Arith.~+) . Map.elems 

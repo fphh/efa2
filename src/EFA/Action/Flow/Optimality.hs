@@ -189,7 +189,7 @@ interpolateOptimalityPerState caller inmethod label xPair yPair x = ValueState.z
 newtype ScaleSource a = ScaleSource {unScaleSource :: a} deriving Show
 newtype ScaleSink a = ScaleSink {unScaleSink :: a} deriving Show
 
-data ScaleMap a = ScaleMap (Map.Map Idx.AbsoluteState (Maybe (ScaleSource a, ScaleSink a)))
+data ScaleMap a = ScaleMap (Map.Map Idx.AbsoluteState (Maybe (ScaleSource a, ScaleSink a))) deriving Show
 
 --lookupScales caller ScaleMap  (Interp.Val a) (Maybe Idx.AbsoluteState)
 
