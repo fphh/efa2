@@ -214,6 +214,11 @@ foldl ::
   acc -> Signal inst label vec a b -> acc
 foldl f acc signal = applyOut (DV.foldl f acc) signal
 
+foldr :: 
+  (DV.Walker vec, DV.Storage vec b) => 
+  (b -> acc -> acc) ->
+  acc -> Signal inst label vec a b -> acc
+foldr f acc signal = applyOut (DV.foldr f acc) signal
 
 foldlWithTime :: 
   (DV.Walker vec, 
@@ -227,6 +232,17 @@ foldlWithTime ::
   acc -> Signal inst label vec a b -> acc
 foldlWithTime f acc (Signal (Strict.Axis _ _ timeVec) (Data vec)) = DV.foldl f acc $ DV.zip timeVec vec
 
+foldrWithTime :: 
+  (DV.Walker vec, 
+   DV.Storage vec (a, b), 
+   DV.Zipper vec,
+   DV.Storage vec b,
+   DV.Storage vec a, 
+   DV.Storage vec (TimeStep a, b), 
+   DV.Storage vec (TimeStep a)) => 
+  ((TimeStep a,b) -> acc -> acc) ->
+  acc -> Signal inst label vec a b -> acc
+foldrWithTime f acc (Signal (Strict.Axis _ _ timeVec) (Data vec)) = DV.foldr f acc $ DV.zip timeVec vec
 
 -- | delivers left border of sign sections
 locateSignChanges :: 
@@ -409,3 +425,18 @@ all :: (DV.Storage vec b, DV.Singleton vec)=>
   Signal inst label vec a b ->
   Bool
 all  f (Signal _ (Data vec)) = DV.all f vec
+
+{-
+singleton :: 
+  label ->
+  Type.Dynamic ->
+  (TimeStep a, b) ->
+  Signal inst label vec a b
+singleton label typ step val = Signal (Strict.Axis label typ (DV.singleton step)) (DV.singleton val)   
+
+appendRight :: 
+  Signal inst label vec a b ->
+  (TimeStep a, b) ->
+  Signal inst label vec a b
+appendRight (Signal axis vec) (step,val) = Signal (Strict.appendRight axis step) (DV.append vec (DV.singleton val)) 
+-}  
