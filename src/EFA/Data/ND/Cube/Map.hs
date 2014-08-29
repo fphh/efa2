@@ -798,3 +798,18 @@ filterData ::
   Data t t1 vec1 b ->
   [(Grid.DimIdx dim, b)] 
 filterData f grid (Data vec) = P.filter (f . snd) $ P.zip (P.map (Grid.fromLinear grid . Grid.LinIdx) [0 ..]) $ DV.toList vec
+
+
+zipWith3Data :: 
+  (DV.Zipper vec,
+   DV.Storage vec a,
+   DV.Storage vec b, 
+   DV.Storage vec c,
+   DV.Storage vec (b, c),
+   DV.Storage vec d)=>
+  (a -> b -> c -> d) ->
+  Data inst dim vec a ->
+  Data inst dim vec b ->
+  Data inst dim vec c ->
+  Data inst dim vec d
+zipWith3Data f xs xs1 xs2 = zipWithData (\x (x1,x2) -> f x x1 x2) xs $ zipWithData ((,)) xs1 xs2

@@ -74,6 +74,15 @@ instance(Display a)=> Display (FlowOpt.ScaleSink a) where
 instance(Display a)=> Display (FlowOpt.ScaleSource a) where
   disp (FlowOpt.ScaleSource x) = "Src-Scale: " ++ disp x 
 
+instance(Display a)=> Display (FlowOpt.ScaleSto a) where
+  disp (FlowOpt.ScaleSto x) = "Sto-Scale: " ++ disp x 
+
+
+instance (Display a, 
+          Display b, 
+          Display c ) => 
+         Display (a,b,c) where
+  disp (x,y,z) = "(" ++ disp x ++ "," ++ disp y ++ "," ++ disp z ++ ")"
   {-
 instance  (Show node, Show a) =>
   Display (Balance.ForcingMap Balance.Absolute (Map.Map node (Balance.SocDrive a))) where

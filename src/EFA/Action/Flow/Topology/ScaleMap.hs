@@ -63,59 +63,66 @@ modul = ModuleName "Action.Flow.Topology.ScaleMap"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
+
 calcEtaLossSys ::
-  (Arith.Sum a,Arith.Constant a,
+  (Ord a, Arith.Sum a,Arith.Constant a,
    DV.Storage vec ActFlowCheck.EdgeFlowStatus,
    DV.Storage vec (Interp.Val a, Interp.Val a),
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, Interp.Val a),
+   DV.Storage vec (Interp.Val a, Interp.Val a, Interp.Val a),
    DV.Zipper vec,
    DV.Walker vec,
    DV.Storage vec (Interp.Val a)) =>
   Caller -> 
+  FlowOpt.GlobalLifeCycleMap node (Interp.Val a) ->
   FlowOpt.ScaleMap (Interp.Val a) ->
---  .Map (Maybe Idx.AbsoluteState) (Maybe (FlowOpt.ScaleSource (Interp.Val a), FlowOpt.ScaleSink (Interp.Val a))) ->
   FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
   CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->  
   CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityMeasure (Interp.Val a))
-calcEtaLossSys caller (FlowOpt.ScaleMap scaleMap) topoEndNodeEnergies flowStatus = g maybeStorageFlow 
-  where
-   newCaller = caller |> nc "calcEtaLossSys"
-   maybeStorageFlow = Map.elems $ FlowOpt.unStorageMap $ FlowOpt.getStorageMap topoEndNodeEnergies
+calcEtaLossSys caller globalLifeCycleMap scaleMap topoEndNodeEnergies flowStatus = 
+  CubeMap.zipWithData f flowStatus  (CubeMap.zipWith3Data ((,,)) sourceFlow sinkFlow (FlowOpt.unStorageFlow $ Maybe.fromMaybe err $ 
+                                                                                      FlowOpt.getSingleStorage newCaller stoMap))
+    where
+      err = merror caller modul "calcEtaLossSys" "No Storage in System" 
+      newCaller = caller |> nc "calcEtaLossSys"
+      (FlowOpt.TotalSourceFlow sourceFlow, FlowOpt.TotalSinkFlow sinkFlow,stoMap) = 
+                    FlowTopoOpt.sumSinkSourceFlows topoEndNodeEnergies
    
-   (FlowOpt.TotalSourceFlow sourceFlow, 
-    FlowOpt.TotalSinkFlow sinkFlow) = FlowTopoOpt.sumSinkSourceFlows topoEndNodeEnergies
+      f status (src,snk,sto) = (status, calcEtaLossWithScales newCaller globalLifeCycleMap scales 
+                                       (FlowOpt.TotalSourceFlow src,
+                                        FlowOpt.TotalSinkFlow snk,
+                                        FlowOpt.TotalStorageFlow sto))
+                               
+        where scales = FlowOpt.lookupScales newCaller scaleMap (ActFlowCheck.getState status) 
    
-   g [] = CubeMap.zipWithData h2 flowStatus $ CubeMap.zipWithData ((,)) sourceFlow sinkFlow
-   g [Nothing] =  CubeMap.zipWithData h2 flowStatus $ CubeMap.zipWithData ((,)) sourceFlow sinkFlow
-   g [Just (FlowOpt.StorageFlow storageFlow)] = CubeMap.zipWithData h1 
-                                                (CubeMap.zipWithData ((,)) flowStatus storageFlow)
-                                                (CubeMap.zipWithData ((,)) sourceFlow sinkFlow)
 
-   g _ = merror caller modul "calcEtaLossSys" "Method works only for one storage"     
-   
-   h1 (status,x) (srcFl,snkFl) = f scales
-     where
-       scales = h3 (ActFlowCheck.getState status)
-       -- TODO:: Hier besser absichern
-       -- ungewünschte Zustände bekommen ungültige Skalierungsfaktoren
-       h3 (Just st) = Maybe.fromMaybe (FlowOpt.ScaleSource $ Interp.Invalid ["calcEtaLossSys"], 
-                                       FlowOpt.ScaleSink $ Interp.Invalid ["calcEtaLossSys"]) $ 
-                      Monad.join $ Map.lookup st scaleMap 
-       h3 (Nothing) = (FlowOpt.ScaleSource $ Interp.Invalid ["calcEtaLossSys"],
-                      FlowOpt.ScaleSink $ Interp.Invalid ["calcEtaLossSys"])
-       err = merror caller modul "calcEtaLossSys" $ "State not in Eta-ScaleMap - status: " ++ show status
-       f(FlowOpt.ScaleSource sourceScale, 
-           FlowOpt.ScaleSink sinkScale) = (status, FlowOpt.OptimalityMeasure 
-                                                   (FlowOpt.EtaSys $ snkTerm Arith.~/ srcTerm) 
-                                                   (FlowOpt.LossSys $ srcTerm Arith.~- snkTerm))
-                                          
-         where srcTerm = srcFl Arith.~+ sourceScale Arith.~* x
-               snkTerm = snkFl Arith.~+ sinkScale Arith.~* x
-   
-   h2 status (src,snk) = (status, FlowOpt.OptimalityMeasure 
-                                                   (FlowOpt.EtaSys $ snk Arith.~/ src) 
-                                                   (FlowOpt.LossSys $ src Arith.~- snk))            
-         
+calcEtaLossWithScales :: (Ord a,Arith.Constant a) =>
+  Caller ->
+  FlowOpt.GlobalLifeCycleMap node a ->
+  (FlowOpt.ScaleSource a, FlowOpt.ScaleSink a, FlowOpt.ScaleSto a) ->                                       
+  (FlowOpt.TotalSourceFlow a, FlowOpt.TotalSinkFlow a, FlowOpt.TotalStorageFlow a) ->
+  FlowOpt.OptimalityMeasure a
+  
+calcEtaLossWithScales caller globalLifeCycleMap 
+  (FlowOpt.ScaleSource srcScale, FlowOpt.ScaleSink snkScale, FlowOpt.ScaleSto stoScale) 
+  (FlowOpt.TotalSourceFlow srcFl, FlowOpt.TotalSinkFlow snkFl, FlowOpt.TotalStorageFlow stoFl) = 
+    FlowOpt.OptimalityMeasure (FlowOpt.EtaSys $ snkTerm Arith.~/ srcTerm) (FlowOpt.LossSys $ srcTerm Arith.~- snkTerm)
 
-                                           
+         where srcTerm = srcFl Arith.~+ stoFl Arith.~* srcScale Arith.~+ stoTermDisCharge stoFl
+               snkTerm = snkFl Arith.~+ stoFl Arith.~* snkScale Arith.~+ stoTermCharge stoFl
+               
+
+               -- | when storage is charged, positive power, apply usage efficiency for latter use
+               stoTermCharge x = 
+                 (\y -> if y>=Arith.zero then y else Arith.zero) $ stoScale Arith.~* x Arith.~* etaUse
+               
+               -- | when storage is discharged, negative power, apply generation efficiency 
+               stoTermDisCharge  x = 
+                 (\y -> if y<Arith.zero then Arith.negate y else Arith.zero) $ stoScale Arith.~* x Arith.~/ etaGen
+               
+               (FlowOpt.GenerationEfficiency etaGen, FlowOpt.UsageEfficiency etaUse) = 
+                 FlowOpt.getSingleLifeCycleEtas (caller |> nc "calcEtaLossWithScales") globalLifeCycleMap
+                                                  
+               
+

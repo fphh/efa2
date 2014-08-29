@@ -50,6 +50,7 @@ data EndNodeEnergies node v = EndNodeEnergies
 
 newtype TotalSinkFlow a = TotalSinkFlow {unTotalSinkFlow :: a} deriving Show  
 newtype TotalSourceFlow a = TotalSourceFlow {unTotalSourceFlow :: a} deriving Show  
+newtype TotalStorageFlow a = TotalStorageFlow {unTotalUnstorageFlow :: a} deriving Show  
 
 instance Functor TotalSinkFlow where
   fmap f (TotalSinkFlow x) = TotalSinkFlow $ f x
@@ -188,29 +189,30 @@ interpolateOptimalityPerState caller inmethod label xPair yPair x = ValueState.z
 
 newtype ScaleSource a = ScaleSource {unScaleSource :: a} deriving Show
 newtype ScaleSink a = ScaleSink {unScaleSink :: a} deriving Show
+newtype ScaleSto a = ScaleSto {unScaleSto :: a} deriving Show
 
-data ScaleMap a = ScaleMap (Map.Map Idx.AbsoluteState (Maybe (ScaleSource a, ScaleSink a))) deriving Show
+data ScaleMap a = ScaleMap (Map.Map Idx.AbsoluteState (Maybe (ScaleSource a, ScaleSink a, ScaleSto a))) deriving Show
 
---lookupScales caller ScaleMap  (Interp.Val a) (Maybe Idx.AbsoluteState)
+       
+-- | Not identified or unwanted states get an invalid scale 
+lookupScales :: 
+  Caller ->
+  ScaleMap (Interp.Val a) ->
+  Maybe (Idx.AbsoluteState) ->
+  (ScaleSource (Interp.Val a),
+   ScaleSink (Interp.Val a),
+   ScaleSto (Interp.Val a))
+lookupScales _ _ Nothing =  (ScaleSource $ Interp.Invalid ["lookupScales"],
+                   ScaleSink $ Interp.Invalid ["lookupScales"], 
+                   ScaleSto $ Interp.Invalid ["lookupScales"]) 
+  
+lookupScales caller (ScaleMap m) (Just state) = Maybe.fromMaybe (ScaleSource $ Interp.Invalid ["lookupScales"], 
+                                       ScaleSink $ Interp.Invalid ["lookupScales"], 
+                                       ScaleSto $ Interp.Invalid ["lookupScales"]) $ 
+                                   join $ Map.lookup state m
 
---err = merror caller modul "lookupSourceScale" $ "State not in scalemap: " ++ show state
-{-
-lookupScaleSink :: Caller -> ScaleMap (Interp.Val a) ->Maybe Idx.AbsoluteState ->  (Interp.Val a)
-lookupScaleSink caller (ScaleMap m) state = f state
-  where
-  f Nothing =  Interp.Invalid ["lookupScaleSource"]               
-  f (Just st) = unScaleSink $ snd $ Maybe.fromMaybe err $ Map.lookup st m
-  err = merror caller modul "lookupSourceScale" $ "State not in scalemap: " ++ show state
 
-lookupScaleSource ::  Caller -> ScaleMap  (Interp.Val a) ->Maybe Idx.AbsoluteState ->  (Interp.Val a)
-lookupScaleSource caller (ScaleMap m) state = f state
-  where
-  f Nothing =  Interp.Invalid ["lookupScaleSource"]               
-  f (Just st) = unScaleSource $ fst $ Maybe.fromMaybe err $ Map.lookup st m  
-  err = merror caller modul "lookupSourceScale" $ "State not in scalemap: " ++ show state
--}
-
--- TODO: move to right place -- use in applyGenerationEfficiency,applyUsageEfficiency
+-- TODO: use in applyGenerationEfficiency,applyUsageEfficiency
 getStoragePowerWithSignNew :: (Arith.Sum v) => Caller ->  Maybe (TopoQty.Sums v) -> Maybe (StorageFlow v)
 getStoragePowerWithSignNew caller Nothing =  merror caller modul "getStoragePowerWithSign" "Completely inactive edge" 
 getStoragePowerWithSignNew caller (Just sums) = case sums of                 
@@ -219,3 +221,37 @@ getStoragePowerWithSignNew caller (Just sums) = case sums of
   TopoQty.Sums Nothing Nothing -> Nothing 
   TopoQty.Sums (Just _) (Just _) -> 
     merror caller modul "getStoragePowerWithSign" "Inconsistent energy flow - both directions active"
+    
+    
+-- | Is used to sum Storage energy flows of several states 
+-- | Both storage maps have to have the same key list, this is not checked here
+zipStorageMapsTrusted :: 
+  Ord node =>
+  (a -> b -> c) ->
+  StorageMap node a -> 
+  StorageMap node b -> 
+  StorageMap node c
+zipStorageMapsTrusted f (StorageMap m) (StorageMap m1) = 
+  StorageMap $ Map.fromList $ 
+  zipWith (\(x,y) y1 -> (x, f y y1)) 
+  (Map.toList m) (Map.elems m1)
+
+
+-- | is used in combination with the ScaleMap-Method, which works only for one storage
+getSingleStorage :: 
+  Caller -> 
+  StorageMap node a -> 
+  a
+getSingleStorage caller (StorageMap m) = 
+  if Map.size m == 1 
+  then head $ Map.elems m
+  else merror caller modul "getSingleStorage" "we need exactly one storage in the storage map"
+       
+getSingleLifeCycleEtas :: 
+  Caller -> 
+  GlobalLifeCycleMap node a -> 
+  (GenerationEfficiency a,UsageEfficiency a)       
+getSingleLifeCycleEtas caller (GlobalLifeCycleMap m) =   
+  if Map.size m == 1 
+  then head $ Map.elems m
+  else merror caller modul "getSigleLifeCycleEtas" "more than one storage in the storage map"

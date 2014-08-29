@@ -108,13 +108,20 @@ removeState::
 removeState state endNodeFlows = Map.filterWithKey (\st _ -> st /= state) endNodeFlows
 
                                           
-sumSinkSourceFlowsAllStates ::(Arith.Sum v) =>  
+sumSinkSourceFlowsAllStates ::(Arith.Sum v,Ord node) =>  
   Map.Map Idx.AbsoluteState (FlowOpt.EndNodeEnergies node v) ->
-  (FlowOpt.TotalSourceFlow v,FlowOpt.TotalSinkFlow v)
+  (FlowOpt.TotalSourceFlow v,FlowOpt.TotalSinkFlow v, FlowOpt.StorageMap node (Maybe (FlowOpt.StorageFlow v)))
 sumSinkSourceFlowsAllStates endNodeFlowsMap = 
   foldl1 f $ Map.elems $ Map.map FlowTopoOpt.sumSinkSourceFlows endNodeFlowsMap
-  where f (x1,y1) (x2,y2) = (liftA2 (Arith.~+) x1 x2, 
-                             liftA2 (Arith.~+) y1 y2)
+  where f (x1,y1, stoMap1) 
+          (x2,y2, stoMap2) = 
+          (liftA2 (Arith.~+) x1 x2, 
+           liftA2 (Arith.~+) y1 y2, 
+           FlowOpt.zipStorageMapsTrusted g stoMap1 stoMap2)
+        g (Just (FlowOpt.StorageFlow x)) (Just (FlowOpt.StorageFlow y)) = Just $ FlowOpt.StorageFlow $ x Arith.~+ y   
+        g (Just x) Nothing = Just x
+        g Nothing (Just y) = Just y
+        g Nothing  Nothing = Nothing
 
 
 calculateEtaSys :: (Node.C node,Show node,Ord a, Arith.Sum a,Arith.Constant a) =>
@@ -124,7 +131,7 @@ calculateEtaSys :: (Node.C node,Show node,Ord a, Arith.Sum a,Arith.Constant a) =
   (Interp.Val a)
 calculateEtaSys caller globalLifeCycleMap sfg = let
     newCaller = caller |> nc "calculateEtaLossSys"
-    (FlowOpt.TotalSourceFlow src,FlowOpt.TotalSinkFlow snk) = sumSinkSourceFlowsAllStates endNodeFlowsMap
+    (FlowOpt.TotalSourceFlow src,FlowOpt.TotalSinkFlow snk, _ ) = sumSinkSourceFlowsAllStates endNodeFlowsMap
     endNodeFlowsMap = getEndNodeFlows newCaller sfg                                                          
   
     initBalance = Map.toList $ fmap (PartMap.init . Storage.nodes) (StateQty.storages sfg)
