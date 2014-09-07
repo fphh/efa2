@@ -7,6 +7,7 @@ import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Value.State as ValueState
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Action.Flow.Balance as Balance
 --import EFA.Equation.Arithmetic ((~+), (~/))
 --import EFA.Equation.Result (Result)
 
@@ -27,6 +28,7 @@ import Control.Monad(join)
 --import Data.Foldable (Foldable, foldMap)
 
 --import qualified EFA.Action.DemandAndControl as DemandAndControl
+import qualified EFA.Utility.Map as UtMap
 
 import EFA.Utility(Caller,
                  merror,
@@ -255,3 +257,33 @@ getSingleLifeCycleEtas caller (GlobalLifeCycleMap m) =
   if Map.size m == 1 
   then head $ Map.elems m
   else merror caller modul "getSigleLifeCycleEtas" "more than one storage in the storage map"
+
+{-
+-- TODO :: write generic function to be used in all methods applied 
+calcEtaLossSys :: 
+  GlobalLifeCycleMap node a ->
+  TotalSourceFlow a ->
+  TotalSinkFlow a ->
+  TotalStorageFlow (Maybe StorageFlow a) 
+calcEtaLossSys globalLifeCycleMap (TotalSourceFlow src, TotalSinkFlow snk, balance) =      
+  OptimalityMeasure (FlowOpt.EtaSys $ snkTerm Arith.~/ srcTerm) (FlowOpt.LossSys $ srcTerm Arith.~- snkTerm)
+         where srcTerm = srcFl Arith.~+ stoTermDisCharge balance
+               snkTerm = snkFl Arith.~+ stoTermCharge balance
+-}  
+
+{-
+newtype GlobalBalance node a = GlobalBalance (Map.Map node a)
+
+applyGlobalLifeCycles :: 
+  Caller ->
+  GlobalLifeCycleMap node a ->
+  Balance.Balance node a ->
+  GlobalBalance node a
+applyGlobalLifeCycles caller (GlobalLifeCycleMap gm) (Balance.Balance bm) = GlobalBalance $
+  UtMap.checkedZipWith caller f gm bm
+  where f (GenerationEfficiency etaGen, UsageEfficiency etaUse) balance = 
+          if balance >= Arith.zero then balance Arith.~* etaUse 
+                                       else balance Arith.~/ etaGen
+-}    
+    
+  

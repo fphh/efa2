@@ -42,6 +42,17 @@ checkedZipWith caller f ma mb =
             "checkedZipWith called by function " ++ caller ++
             ": key sets differ"
 
+checkedZipWithKey ::
+  (Ord k) =>
+  Caller ->
+  (k -> a -> b -> c) ->
+  Map k a -> Map k b -> Map k c
+checkedZipWithKey caller f ma mb =
+  if Map.keysSet ma == Map.keysSet mb
+    then Map.intersectionWithKey f ma mb
+    else error $
+            "checkedZipWithWithKey called by function " ++ caller ++
+            ": key sets differ"
 
 reverse :: (Ord b) => Map a b -> Map b a
 reverse = Map.fromList . map swap . Map.toList
