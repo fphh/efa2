@@ -47,7 +47,7 @@ labledFrame ::
   String -> [PlotData id id label a b] -> Opts.T (Graph2D.T a b)
 labledFrame title xs =
   Opts.xLabel (DataPlot.makeAxisLabel ax) $
-  Opts.yLabel (DataPlot.makeAxisLabelWithIds plotIds ax1) $
+  Opts.yLabel (DataPlot.makeAxisLabel ax1) $
   Opts.title title $ defaultFrameAttr
   where
     RangeInfo ax ax1 = combineRangeList (head rs) (tail rs)

@@ -85,7 +85,7 @@ instance Type.GetDynamicType a =>Type.GetDynamicType (Val a) where
   
 
 instance Functor Val where
-  fmap _ (Invalid xs) = Invalid xs -- $ map (\(label,x) -> (label,f x)) xs
+  fmap _ (Invalid xs) = Invalid xs
   fmap f (Extra x) = Extra (f x)
   fmap f (Inter x) = Inter (f x)
 

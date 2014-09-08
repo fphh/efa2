@@ -146,13 +146,14 @@ combine (AxisInfo label range tic typ) (AxisInfo label1 range1 tic1 typ1) =
            (Value.combineRange range range1)
            (combineTics tic tic1)
            (typ++typ1))
+          
 makeAxisLabel :: Show label => AxisInfo label a -> String
 makeAxisLabel (AxisInfo labels _ _ types) =
   if all (== head labelList) labelList
   then head labelList
   else  List.intercalate "," labelList
   where f (Just l) t = (show l) ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] "
-        f (Nothing) t = "-" ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] "
+        f (Nothing) t = " " ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] "
         labelList = zipWith f labels types
 
 makeAxisLabelWithIds  :: Show id => [Maybe id] -> AxisInfo label a -> String
@@ -161,7 +162,7 @@ makeAxisLabelWithIds xs (AxisInfo _ _ _ types) =
   then head labelList
   else  List.intercalate "," labelList
     where f (Just l) t = (show l) ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] "
-          f (Nothing) t = "-" ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] "
+          f (Nothing) t = " " ++ " [" ++ (Type.showUnit $ Type.getDisplayUnit t) ++ "] "
           labelList = zipWith f xs types
 
 -- | Generic IO Commands ---------------------------------------------------------------

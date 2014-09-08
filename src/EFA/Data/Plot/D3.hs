@@ -161,10 +161,11 @@ labledFrame ::
   (Ord a, Ord b, Show label, Show id, Atom.C a, Atom.C b) =>
   String -> [PlotData id label a b] -> Opts.T (Graph3D.T a a b)
 labledFrame title xs =
---  Opts.add (Opt.custom "datafile" "") ["missing NaN"] $
+  Opts.add (Opt.custom "zlabel" "") ["rotate by 90"] $
+--  Opts.add (Opt.custom "ylabel" "") ["rotate parallel"] -- doesn' work for png-files, gives a vertical alignment$
   Opts.xLabel (DataPlot.makeAxisLabel ax1) $
   Opts.yLabel (DataPlot.makeAxisLabel ax2) $
-  Opts.zLabel (DataPlot.makeAxisLabelWithIds plotIds ax3) $
+  Opts.zLabel (DataPlot.makeAxisLabel ax3) $
   Opts.title title $ defaultFrameAttr
   where
     D3RangeInfo ax1 ax2 ax3 = combineRangeList (head rs) (tail rs)

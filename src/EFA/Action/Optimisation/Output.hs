@@ -191,21 +191,28 @@ makeTitle titles = List.intercalate " - "  $ map show $ titles
 
 makeFileName :: FilePath -> FileOrder -> [Title] -> FilePath
 makeFileName [] _ _ = error "empty file Path"
-makeFileName basePath fileOrder titles | last basePath == '/' = replaceBlancs $ 
+makeFileName basePath fileOrder titles | last basePath == '/' = replaceChars $ 
                               basePath ++ (List.intercalate "_" $ 
                                            map show $ sortTitles fileOrder titles)
                               
-makeFileName basePath fileOrder titles = replaceBlancs $ basePath 
+makeFileName basePath fileOrder titles = replaceChars $ basePath 
                                          ++ "/" ++ (List.intercalate "_" 
                                           $ map show $ sortTitles fileOrder titles)
 
 formatCounter :: Int -> String
 formatCounter = printf "%02d"
                 
-replaceBlancs :: String -> String  
-replaceBlancs xs = map f xs   
-  where f ' ' = '_'
-        f x = x 
+replaceChars :: String -> String  
+replaceChars xs = concatMap f xs   
+  where f ' ' = "-"
+        f ',' = "_"
+        f '[' = ""
+        f ']' = ""
+        f '(' = ""
+        f ')' = ""
+--        f ':' = ""
+        f x = [x]
+        
 
 data SysCtrl = 
   SysDont | 
@@ -226,17 +233,17 @@ system path fileOrder titles sysAction sys =
     f str = makeFileName path fileOrder $ titles ++ [str]
     g str = makeTitle $ titles ++ [str]
   in  
-    (drawOrPrintAction (topo sysAction) (f $ DG "topology")
-     (\x -> [Draw.title (g $ DG "topology") $ Draw.topology x])  $ Process.accessTopology sys) ++
+    (drawOrPrintAction (topo sysAction) (f $ DG "topo")
+     (\x -> [Draw.title (g $ DG "Topology") $ Draw.topology x])  $ Process.accessTopology sys) ++
     
-    (drawOrPrintAction (labTopo sysAction) (f $ DG "labledTopology")
-     (\x -> [Draw.title (g $ DG "labledTopology") $ Draw.labeledTopology x]) $ Process.accessLabledTopology sys) ++
+    (drawOrPrintAction (labTopo sysAction) (f $ DG "labTopo")
+     (\x -> [Draw.title (g $ DG "Labled Topology") $ Draw.labeledTopology x]) $ Process.accessLabledTopology sys) ++
     
-    (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis - no inactive ")
-     (\ x -> [Draw.title (g $ DG ("stateAnalysis - Amount of States: " ++ show num)) $ Draw.flowTopologiesAbsolute x]) sa) ++
+    (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis")
+     (\ x -> [Draw.title (g $ DG ("State Analysis - Amount of States: " ++ show num)) $ Draw.flowTopologiesAbsolute x]) sa) ++
      
-    (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis - no inactive")
-     (\ x -> [Draw.title (g $ DG ("stateAnalysis  - no inactive - Amount of States: " ++ show numNI)) $ Draw.flowTopologiesAbsolute x]) saNI)
+    (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysisNoInactive")
+     (\ x -> [Draw.title (g $ DG ("State Analysis  - no inactive - Amount of States: " ++ show numNI)) $ Draw.flowTopologiesAbsolute x]) saNI)
            where sa = Process.accessStateAnalysis sys
                  num = length sa
                  saNI = TopoState.filterFlowStates (TopoState.EdgeOrs $ [TopoState.EdgeAnds [TopoState.NoInactive]]) sa
@@ -273,12 +280,12 @@ sysData path fileOrder titles action sysDat =
     f str = makeFileName path fileOrder $ titles ++ [PR "System"] ++ [str]
     g str = makeTitle $ titles ++ [PR "System"] ++ [str]
   in  
- (plotOrPrintAction (rawCurves action) (f $ DG "Imported Eta-Curves")
+ (plotOrPrintAction (rawCurves action) (f $ DG "ImportedEtaCurves")
   (PlotD2.allInOne (PlotD2.labledFrame (g $ DG "Imported Eta-Curves")) 
    PlotD2.plotInfo3lineTitles . PlotCurve.toPlotDataMap)
   (Process.accessRawEfficiencyCurves sysDat)) ++ 
  
- (plotAction (etaFunctions action) (f $ DG "Eta-Functions")
+ (plotAction (etaFunctions action) (f $ DG "EtaFunctions")
   (PlotD2.allInOne (PlotD2.labledFrame (g $ DG "Eta-Functions")) 
    PlotD2.plotInfo3lineTitles . PlotCurve.toPlotDataMap) 
   (EtaFunctions.toCurveMap (Process.accessFunctionPlotAxis sysDat) $ Process.accessFunctionMap sysDat))
@@ -314,7 +321,7 @@ test path fileOrder titles testCtrl testSet demandVars =
     f str = makeFileName path fileOrder $ titles ++ [PR "Test"] ++ [str]
     g str = makeTitle $ titles ++ [PR "Test"] ++ [str]
   in
-  (plotAction (demandCycle testCtrl) (f $ DG "Demand Cycle")
+  (plotAction (demandCycle testCtrl) (f $ DG "DemandCycle")
    (flip (OptSignalPlot.plotDemandCycle (g $ DG "Demand Cycle")) demandVars) 
    (Process.accessDemandCycle testSet))
 
@@ -349,14 +356,14 @@ optiSet caller path fileOrder titles ctrl oSet = let
   f str = makeFileName path fileOrder $ titles  ++ [PR "OptiSet"] ++ [str]
   g str = makeTitle $ titles ++ [PR "OptiSet"] ++ [str]
   in
-  (plotAction (variation ctrl) (f $ DG "Demand Variation")
+  (plotAction (variation ctrl) (f $ DG "DemandVariation")
    (PlotD3.allInOne (PlotD3.labledFrame (g $ DG "Demand Variation")) 
     (\ _ x -> LineSpec.title $ show $ PlotD3.getId x)
     . fst .
     SweepPlot.plotVariation caller ) 
    (Process.accessVariation oSet)) ++
   
-  (plotAction (variation ctrl) (f $ DG "Search Variation")
+  (plotAction (variation ctrl) (f $ DG "SearchVariation")
    (PlotD3.allInOne (PlotD3.labledFrame (g $ DG "Search Variation")) 
     (\ _ x -> LineSpec.title $ show $ PlotD3.getId x)
     . snd .
@@ -417,11 +424,11 @@ sweep caller path fileOrder titles keyList searchGrid ctrl swp = let
   f str = makeFileName path fileOrder $ titles ++ [PR "sweep"] ++ [str]
   g str = makeTitle $ titles ++ [PR "sweep"] ++ [str]
   in
-   (drawAction (drawFlow ctrl)  (f $ DG "Flow Demand Edges")
+   (drawAction (drawFlow ctrl)  (f $ DG "FlowDemandEdges")
     (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Edges") (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
     (Process.accessSweepFlowResult swp)) ++
    
-   (plotAction (plotFlowVariables ctrl) (f $ DG "Flow Variables")
+   (plotAction (plotFlowVariables ctrl) (f $ DG "FlowVariables")
     (SweepPlot.plotSweepFlowValues newCaller (g $ DG "Flow Variables") searchGrid 
      TopoQty.lookup 
      CubeGrid.All keyList)
@@ -489,16 +496,16 @@ evalSweep caller path fileOrder titles srchGrid ctrl swp = let
   f str = makeFileName path fileOrder $ titles ++ [PR "EvalSweep"] ++ [str]
   g str = makeTitle $ titles ++ [PR "EvalSweep"] ++ [str]
   in 
-   (plotAction (plotEta ctrl) (f $ DG "EtaSys")
-    (SweepPlot.plotDemandSweepValue newCaller (g $ DG "EtaSys") srchGrid (FlowOpt.unEta2Optimise . FlowOpt.getEta . snd) CubeGrid.All) 
+   (plotAction (plotEta ctrl) (f $ DG "SystemEfficiency")
+    (SweepPlot.plotDemandSweepValue newCaller (g $ DG "System Efficiency") srchGrid (FlowOpt.unEta2Optimise . FlowOpt.getEta . snd) CubeGrid.All) 
      (Process.accessSweepOptimality swp)) ++
    
    (plotAction (plotState ctrl) (f $ DG "FlowState")
-    (SweepPlot.plotStates newCaller (g $ DG "FlowState") srchGrid )
+    (SweepPlot.plotStates newCaller (g $ DG "Flow State") srchGrid )
      (Process.accessSweepOptimality swp)) ++ 
  
-   (plotAction (plotLossSys ctrl) (f $ DG "LossSys")
-    (SweepPlot.plotDemandSweepValue newCaller  (g $ DG "LossSys") srchGrid (FlowOpt.unLoss2Optimise . FlowOpt.getLoss . snd) CubeGrid.All) 
+   (plotAction (plotLossSys ctrl) (f $ DG "SystemLoss")
+    (SweepPlot.plotDemandSweepValue newCaller  (g $ DG "System Loss") srchGrid (FlowOpt.unLoss2Optimise . FlowOpt.getLoss . snd) CubeGrid.All) 
      (Process.accessSweepOptimality swp))
    
 data OptiCtrl = OptiDont | 
@@ -573,23 +580,23 @@ optPerState caller path fileOrder titles srchGrid ctrl opt =
       (FlowOpt.getOptEtaVal . snd) CubeGrid.All) 
      (Process.accessObjectiveFunctionValues opt)) ++
 
-     (plotAction (plotOptEtaPerState ctrl) (f $ DG "Optimal Eta-Based Objective Value Per State")
+     (plotAction (plotOptEtaPerState ctrl) (f $ DG "OptimalEtaBasedObjectiveValuePerState")
      (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g $ DG "Optimal Eta-Based Objective Value Per State") 
       (FlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt))  ++  
     
-     (plotAction (plotEtaOptPerState ctrl) (f $ DG "Optimal Eta Per State")
+     (plotAction (plotEtaOptPerState ctrl) (f $ DG "OptimalEtaPerState")
       (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g $ DG "Optimal Eta Per State")
        (FlowOpt.getEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt)) ++
                                
-     (plotAction (plotOptIndexPerState ctrl) (f $ DG "Optimal Index Per State")
+     (plotAction (plotOptIndexPerState ctrl) (f $ DG "OptimalIndexPerState")
       (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g $ DG "Optimal Index Per State")
       (\(CubeGrid.LinIdx idx,_) -> Interp.Inter $ Arith.fromInteger $ fromIntegral idx)) 
      (Process.accessOptimalChoicePerState opt)) ++ 
      
-     (plotAction (plotOptimalSignalPerState ctrl) (f $ DG "Eta-Based Optimal Objective-Signal Per State")
-      (OptSignalPlot.plotOptimalSignals (g $ DG "Eta-Based Optimal Objective-Signal Per State") . 
+     (plotAction (plotOptimalSignalPerState ctrl) (f $ DG "EtaBasedOptimalObjectiveSignalPerState")
+      (OptSignalPlot.plotOptimalSignals (g $ DG "Eta-Based Optimal Objective Signal Per State") . 
        OptSignalAccess.optimalityPerStateSignalToSignalMap FlowOpt.getEtaVal)
      (Process.accessOptimalSignalsPerState opt))
 
@@ -627,10 +634,10 @@ optimalOperation path fileOrder titles ctrl opt = let
 
   in
    (plotAction (plotOptimalControlSignals ctrl) (f $ DG "ControlSignals")
-   (OptSignalPlot.plotOptimalSignals (g $ DG "ControlSignals"))
+   (OptSignalPlot.plotOptimalSignals (g $ DG "Control Signals"))
     (Process.accessOptimalControlSignals opt)) ++ 
    
-   (plotAction (plotOptimalControlSignals ctrl) (f $ DG "Storage Powers")
+   (plotAction (plotOptimalControlSignals ctrl) (f $ DG "StoragePowers")
    (OptSignalPlot.plotOptimalSignals (g $ DG "Storage Powers"))
    (Map.map (SignalFlow.map (Maybe.fromMaybe (Interp.Invalid ["plotOptimalOperation"]))) $
       Process.accessOptimalStoragePowers opt))
@@ -678,21 +685,21 @@ simulation path fileOrder titles ctrl sim =
     g str = makeTitle $ titles ++ [PR "Simulation"] ++ [str]
   in 
   
-  (drawAction (drawSimulationFlowGraph ctrl) (f $ DG "Flow Result")
+  (drawAction (drawSimulationFlowGraph ctrl) (f $ DG "FlowResult")
    (\x -> [Draw.title (g $ DG "Flow Result") $ Draw.flowSection Draw.optionsDefault x]) 
       (Simulation.accessFlowResult $ Process.accessSimulation sim)) ++
   
-  (plotAction (plotSimulationPowers ctrl) (f $ DG "Power Signals")
+  (plotAction (plotSimulationPowers ctrl) (f $ DG "PowerSignals")
    (PlotD2.allInOne (PlotD2.labledFrame  (g $ DG "Power Signals"))
     (\ _ x -> LineSpec.title $ show $ PlotD2.getId x)
     .  PlotFSignal.plotHRecord) 
       (Simulation.accessPowerRecord $ Process.accessSimulation sim)) ++
   
-  (drawAction (drawSequenceFlowGraph ctrl) (f $ DG "Sequence Flow Graph")
+  (drawAction (drawSequenceFlowGraph ctrl) (f $ DG "SequenceFlowGraph")
    (\x -> [Draw.title (g $ DG "Sequence Flow Graph") $ Draw.seqFlowGraph Draw.optionsDefault $ SeqAlgo.accumulate x]) 
       (EFA.accessSeqFlowGraph $ Process.accessAnalysis sim)) ++
   
-  (drawAction (drawStateFlowGraph ctrl)  (f $ DG "State Flow Graph")
+  (drawAction (drawStateFlowGraph ctrl)  (f $ DG "StateFlowGraph")
    (\x -> [Draw.title (g $ DG "State Flow Graph") $ Draw.stateFlowGraph Draw.optionsDefault x]) 
       (EFA.accessStateFlowGraph $ Process.accessAnalysis sim))
 

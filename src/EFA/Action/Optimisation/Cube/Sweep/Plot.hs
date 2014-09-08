@@ -351,12 +351,11 @@ plotOptimalOptimalityValuePerState ::
   Frame.T (Graph3D.T a a (Interp.Val b))
 plotOptimalOptimalityValuePerState caller title faccess optPerState = 
   PlotD3.allInOne (PlotD3.labledFrame title) 
---      (\ idx _ -> LineSpec.title $ show $ legend Map.! idx) 
  (\ _ x ->  LineSpec.title $ show $ PlotD3.getId x)
   $ concatMap f stateCubes
   where  
-    f (_,cube) = PlotCube.toPlotData caller (Just "OpimalObjectivePerState") $ 
-                  CubeMap.map (Maybe.maybe (Interp.Invalid ["plotOptimalObjectivePerState"]) faccess) cube
+    f (id,cube) = PlotCube.toPlotData caller (Just id) $ 
+                  CubeMap.map (Maybe.maybe (Interp.Invalid ["plotOptimalOptimalityValuePerState"]) faccess) cube
     stateCubes = ValueState.toList $ SweepAccess.stateCubeToStateCubes optPerState
---    legend = Map.fromList $ zip [0..] $ map fst stateCubes
+
  
