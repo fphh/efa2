@@ -542,9 +542,10 @@ optimalOperation ::
  DV.Find vec,
  DV.FromList vec) =>
  Caller -> 
+ OptSignal.StateForcing ->
  OptimisationPerState node inst demDim srchDim demVec srchVec vec a ->
  OptimalOperation node inst vec a
-optimalOperation caller optimisationPerStateResults =
+optimalOperation caller stateForcing optimisationPerStateResults =
   OptimalOperation optimalStateSignal optimalControlSignals
      optimalStorageSignals balance
   where
@@ -553,7 +554,7 @@ optimalOperation caller optimisationPerStateResults =
     optimalStoragePowersPerState = accessOptimalStoragePowersPerState optimisationPerStateResults
     optimalControlSignalsPerState = accessOptimalControlSignalsPerState optimisationPerStateResults
     
-    optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta newCaller OptSignal.StateForcingOn optimalStateSignals
+    optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta newCaller stateForcing optimalStateSignals
     optimalControlSignals = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
     optimalStorageSignals = OptSignal.generateOptimalStorageSignals optimalStateSignal optimalStoragePowersPerState
     balance = OptSignal.getBalance optimalStorageSignals 
@@ -799,17 +800,19 @@ loop ::
    CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
                                                      FlowOpt.OptimalityMeasure (Interp.Val a))) ->
   (Res node inst demDim srchDim demVec srchVec sigVec a  -> evalParam -> (Interp.Val a,evalParam)) ->
+  OptSignal.StateForcing ->
   [Loop.EtaLoopItem node (Interp.Val a) evalParam 
    (SweepEvaluation node inst demDim srchDim demVec srchVec a) 
    (Res node inst demDim srchDim demVec srchVec sigVec a)]
 
 
-loop caller system systemData testSet optiSet efaParams sweepResults storageList etaParams balParams evalFunction updateEvalParam = 
+loop caller system systemData testSet optiSet efaParams sweepResults storageList etaParams 
+  balParams evalFunction updateEvalParam stateForcing = 
   Loop.etaLoop caller storageList etaParams balParams sweepEvalFunction sysFunction getBalance updateEvalParam
   where
     newCaller = caller |> nc "loop"
     getBalance = Balance.unMaybeBalance newCaller . accessBalance . accOptOperation
-    sysFunction = systemFunction newCaller system systemData testSet optiSet efaParams storageList sweepResults
+    sysFunction = systemFunction newCaller system systemData testSet optiSet efaParams storageList sweepResults stateForcing
     sweepEvalFunction = evaluateSweep newCaller evalFunction sweepResults
     
 systemFunction ::
@@ -974,12 +977,14 @@ systemFunction ::
   EFA.EFAParams node (Interp.Val a) ->
   [node] ->
   SweepResults node inst demDim srchDim demVec srchVec a ->
+  OptSignal.StateForcing ->
   SweepEvaluation node inst demDim srchDim demVec srchVec a -> 
   FlowBal.Forcing node (Interp.Val a) ->
+
   Res node inst demDim srchDim demVec srchVec sigVec a
 
 systemFunction caller system systemData testSet optiSet efaParams 
-  storageList sweepResults sweepEvaluationResults balanceForcingMap = 
+  storageList sweepResults stateForcing sweepEvaluationResults balanceForcingMap = 
       Res
       optimisationPerStateResults
       optOperation 
@@ -993,7 +998,7 @@ systemFunction caller system systemData testSet optiSet efaParams
 
         optimisationPerStateResults = optimisationPerState newCaller testSet optiSet sweepResults sweepEvaluationResults 
                                   storageList balanceForcingMap controlVars
-        optOperation = optimalOperation newCaller optimisationPerStateResults
+        optOperation = optimalOperation newCaller stateForcing optimisationPerStateResults
         
         simEfa = simulateAndAnalyse newCaller system efaParams systemData demandVars optOperation demandCycle
 
