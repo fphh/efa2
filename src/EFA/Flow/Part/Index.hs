@@ -12,7 +12,10 @@ import Prelude hiding (init, flip)
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
-newtype AbsoluteState = AbsoluteState {unAbsoluteState :: Word} deriving (Show, Eq, Ord)
+newtype AbsoluteState = AbsoluteState {unAbsoluteState :: Word} deriving (Eq, Ord)
+
+instance Show AbsoluteState where
+  show (AbsoluteState x) = "AbsoluteState " ++ show x
 
 absoluteState2Int :: 
   AbsoluteState -> 
