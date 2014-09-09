@@ -205,12 +205,12 @@ formatCounter = printf "%02d"
 replaceChars :: String -> String  
 replaceChars xs = concatMap f xs   
   where f ' ' = "-"
-        f ',' = "_"
+        f ',' = "-"
         f '[' = ""
         f ']' = ""
         f '(' = ""
         f ')' = ""
---        f ':' = ""
+        f '"' = ""
         f x = [x]
         
 
