@@ -119,3 +119,10 @@ mapMaybeKeys f =
 
 compose :: (Ord a, Ord b) => Map b c -> Map a b -> Map a c
 compose bc ab = Map.mapMaybe (P.flip Map.lookup bc) ab
+
+
+zipWithTrusted ::  
+  (Ord k) => 
+  (a -> b -> c) -> Map k a -> Map k b -> Map k c
+zipWithTrusted f m m1 = 
+  Map.fromList $ zip (Map.keys m) $ zipWith f (Map.elems m) (Map.elems m1)  

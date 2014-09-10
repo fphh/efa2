@@ -361,14 +361,14 @@ optiSet caller path fileOrder titles ctrl oSet = let
     (\ _ x -> LineSpec.title $ show $ PlotD3.getId x)
     . fst .
     SweepPlot.plotVariation caller ) 
-   (Process.accessVariation oSet)) ++
+   (head $ Process.accessVariations oSet)) 
   
-  (plotAction (variation ctrl) (f $ DG "SearchVariation")
+{-  (plotAction (variation ctrl) (f $ DG "SearchVariation")
    (PlotD3.allInOne (PlotD3.labledFrame (g $ DG "Search Variation")) 
     (\ _ x -> LineSpec.title $ show $ PlotD3.getId x)
     . snd .
     SweepPlot.plotVariation caller ) 
-   (Process.accessVariation oSet))
+   (Process.accessVariation oSet)) -}
 
 data SweepCtrl = SweepDont | 
                  SweepDo {drawFlow :: Draw, 
@@ -445,7 +445,8 @@ data EvalCtrl = EvalDont |
                           plotState :: Plot,  
                           plotLossSys :: Plot
                           }
-                          
+ 
+-- TODO: hack evalSweep ist actually not usable                          
 evalSweep ::
   (Ord a,
    Show node,
@@ -565,22 +566,22 @@ optPerState ::
   Caller ->
   FilePath ->
   FileOrder -> [Title] ->
-  CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
+--  CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
   OptiCtrl ->
   Process.OptimisationPerState t t1 dim srchDim vec srchVec sigVec a ->
   [IO ()]
-optPerState _ _ _ _ _ OptiDont _  = []
-optPerState caller path fileOrder titles srchGrid ctrl opt = 
+optPerState _ _ _ _ OptiDont _  = []
+optPerState caller path fileOrder titles ctrl opt = 
   let newCaller = caller |> nc "optPerState"
       f str = makeFileName path fileOrder $ titles ++ [PR "OptPerState"] ++ [str]
       g str = makeTitle $ titles ++ [PR "OptPerState"]++ [str]
       
-  in (plotAction (plotOptimality ctrl) (f $ DG "EtaBasedOptimalityValue")
+{-  in (plotAction (plotOptimality ctrl) (f $ DG "EtaBasedOptimalityValue")
      (SweepPlot.plotDemandSweepValue newCaller  (g $ DG "EtaBasedOptimalityValue") srchGrid 
       (FlowOpt.getOptEtaVal . snd) CubeGrid.All) 
-     (Process.accessObjectiveFunctionValues opt)) ++
+     (Process.accessObjectiveFunctionValues opt)) ++ -}
 
-     (plotAction (plotOptEtaPerState ctrl) (f $ DG "OptimalEtaBasedObjectiveValuePerState")
+  in (plotAction (plotOptEtaPerState ctrl) (f $ DG "OptimalEtaBasedObjectiveValuePerState")
      (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g $ DG "Optimal Eta-Based Objective Value Per State") 
       (FlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt))  ++  
@@ -900,8 +901,9 @@ etaLoopItemIO ::
 etaLoopItemIO path fileOrder titles evalCtr optCtr opCtr simCtr sys optiS (Loop.EtaLoopItem cnt _etaSys _lifeCycleMap sweepEval balLoop) = do
   let newTitles = titles ++ [EL $ formatCounter $ Loop.unEtaCounter cnt]
   print cnt
+  -- TODO: hack evalSweep ist actually not usable
   concurrentlyMany_ $ evalSweep (nc "balanceLoopItemIO") path fileOrder
-                          newTitles (Process.accessSearchGrid optiS) evalCtr sweepEval
+                          newTitles (head $ Process.accessSearchGrids optiS) evalCtr sweepEval
   mapM_ (balanceLoopItemIO path fileOrder newTitles optCtr opCtr simCtr sys optiS) balLoop   
   
   mapM_ (balanceLoopItemIO (path++"/Eta") fileOrder newTitles optCtr opCtr simCtr sys optiS) [head balLoop,last balLoop]
@@ -1003,7 +1005,7 @@ balanceLoopItemIO path fileOrder titles optCtr opCtr simCtr _sys optiS
        newTitles = titles ++ [BL $ show $ map (fmap formatCounter) $ Map.toList $ Balance.unBalanceCounter cnt]
   print cnt     
   concurrentlyMany_ $ 
-   optPerState  (nc "balanceLoopItemIO") path fileOrder newTitles (Process.accessSearchGrid optiS) optCtr perState  
+   optPerState  (nc "balanceLoopItemIO") path fileOrder newTitles optCtr perState  
     ++ optimalOperation path fileOrder newTitles opCtr optOperation
     ++ simulation path fileOrder newTitles simCtr simEfa
 

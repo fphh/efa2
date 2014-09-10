@@ -80,7 +80,7 @@ import qualified EFA.Action.Optimisation.Cube.Solve as CubeSolve
 
 import qualified Data.Maybe as Maybe
 --import qualified Data.Set as Set
---import Control.Applicative as Applicative
+import Control.Applicative as Applicative
 
 --import qualified EFA.Flow.Topology as FlowTopo
 
@@ -97,15 +97,20 @@ type Variation node inst demDim srchDim demVec srchVec a b =
    (Collection.Collection (DemandAndControl.Var node) (CubeMap.Cube (Sweep.Search inst) 
                                  srchDim (DemandAndControl.Var node) srchVec a b))
 
-type FlowResult node inst demDim srchDim demVec srchVec a b = 
-  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+type FlowCubes node inst demDim srchDim demVec srchVec a b = 
+  [CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
    (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) 
-                                         srchDim srchVec b))))
+                                         srchDim srchVec b)))]
+
+type FlowResult node inst demDim srchDim demVec srchVec a b = 
+  CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+   (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) 
+                                         srchDim srchVec b)))
 
 type Flow node inst demDim srchDim demVec srchVec a b = 
-  (CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
+  CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
    (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) 
-                                         srchDim srchVec b)))
+                                         srchDim srchVec b))
 
 type FlowStatus node inst demDim srchDim demVec srchVec a = 
    CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
@@ -207,6 +212,22 @@ solve::
   FlowResult node inst dim dim1 vec vec1 a (Interp.Val a)
 solve topology etaFunctions varCube = 
   CubeMap.map (CubeSolve.solve topology etaFunctions) varCube
+
+-- TODO - Hack - remove asap
+joinFlowCubes ::
+  (Eq node,
+   Ord node,
+   DV.Storage vec1 (Interp.Val a),
+   DV.Singleton vec1,
+   Eq (vec a),
+   DV.Zipper vec,
+   DV.Storage vec (TopoQty.Section node (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a))))) => 
+  Caller ->
+  FlowCubes node inst dim dim1 vec vec1 a (Interp.Val a) -> 
+  FlowResult node inst dim dim1 vec vec1 a (Interp.Val a)
+joinFlowCubes caller xs = foldl1 (CubeMap.zipWith (caller |> nc "joinFlowCubes") f) xs
+  where f acc x = TopoQty.checkedZipWithSection "joinFlowCubes" (Applicative.liftA2 CubeMap.appendData) acc x
+
 
 getEndNodeFlows ::
   (Node.C node,

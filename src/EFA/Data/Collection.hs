@@ -9,6 +9,7 @@ import qualified Prelude as P
 import Prelude hiding (map,filter)
 
 import qualified EFA.Equation.Result as Result
+import qualified EFA.Utility.Map as UtMap
 
 type family OrdData a
 type family ValData a
@@ -137,3 +138,12 @@ getDetermined collection =
   (\(Result.Determined x) -> x) 
   (\(Result.Determined x) -> x) $ 
   filter (Result.isDetermined) collection
+  
+
+zipWithTrusted::(Ord key)=>
+  (ValData a -> ValData a -> ValData a) ->  
+  Collection key a -> 
+  Collection key a ->
+  Collection key a
+zipWithTrusted f (Collection o m) (Collection _ m1) = 
+  Collection o $ UtMap.zipWithTrusted f m m1   

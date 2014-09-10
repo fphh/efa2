@@ -133,15 +133,17 @@ data TestSet node inst demDim sigVec a =
   {accessDemandCycle ::  OptSignal.DemandCycle node inst demDim sigVec a a,
    accessInitialSoc :: Balance.Balance node a} 
       
+-- TODO: Insert Data-Type to host a multitude of search-Cubes 
+-- for now cubes are concatinated at a certain point in the calculation, making search-cube display impossible  
 data OptiSet node inst demDim srchDim demVec srchVec sigVec a = 
   OptiSet 
   {accessDemandVariation :: [(DemandAndControl.Var node,Type.Dynamic,demVec a)],
-   accessSearchVariation :: [(DemandAndControl.Var node,Type.Dynamic,srchVec a)],  
+   accessSearchVariations :: [[(DemandAndControl.Var node,Type.Dynamic,srchVec a)]],  
    accessDemandVars :: [DemandAndControl.DemandVar node],
-   accessControlVars :: [DemandAndControl.ControlVar node],  
+   accessControlVars :: [[DemandAndControl.ControlVar node]],  
    accessDemandGrid ::  CubeGrid.Grid (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a,
-   accessSearchGrid ::  CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a,
-   accessVariation :: CubeSweep.Variation node inst demDim srchDim demVec srchVec a (Interp.Val a),
+   accessSearchGrids :: [CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a],
+   accessVariations :: [CubeSweep.Variation node inst demDim srchDim demVec srchVec a (Interp.Val a)],
    accessSupportSignal :: OptSignal.SupportSignal node inst demDim sigVec a a,
    accessAllowedStates ::  [Idx.AbsoluteState]
      } 
@@ -263,28 +265,28 @@ buildOptiSet ::
    DV.Find demVec) =>
   Caller ->
   [(DemandAndControl.Var node,Type.Dynamic,demVec a)] ->
-  [(DemandAndControl.Var node,Type.Dynamic,srchVec a)] ->
+  [[(DemandAndControl.Var node,Type.Dynamic,srchVec a)]] ->
   OptSignal.DemandCycle node inst demDim sigVec a a ->
   [Idx.AbsoluteState]->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a
-buildOptiSet caller demandVariation searchVariation demandCycle allowedStates = 
-  OptiSet demandVariation searchVariation demandVars controlVars 
-   demandGrid searchGrid 
-   sweepVariation supportSignal
+buildOptiSet caller demandVariation searchVariations demandCycle allowedStates = 
+  OptiSet demandVariation searchVariations demandVars controlVars 
+   demandGrid searchGrids 
+   sweepVariations supportSignal
    allowedStates
   where
     newCaller = caller |>  nc "buildOptiSet"
     demandGrid = CubeGrid.create newCaller demandVariation
-    searchGrid = CubeGrid.create newCaller searchVariation
-    sweepVariation = CubeSweep.generateVariation newCaller demandGrid searchGrid
+    searchGrids = map (CubeGrid.create newCaller) searchVariations
+    sweepVariations = map (CubeSweep.generateVariation newCaller demandGrid) searchGrids
     supportSignal = OptSignal.getSupportPoints newCaller demandGrid demandCycle 
     demandVars  = map (DemandAndControl.toDemandVar . TupleHT.fst3) demandVariation
-    controlVars = map (DemandAndControl.toControlVar . TupleHT.fst3) searchVariation
+    controlVars = map (map (DemandAndControl.toControlVar . TupleHT.fst3)) searchVariations
 
 
 -- | Only has to be calculated once, unless efficiency curves change
 makeSweep ::
-  (Ord a,
+  (Ord a,Eq (demVec a), DV.Zipper demVec,
    Arith.Constant a,Arith.NaNTestable a,
    Node.C node,
    DV.Zipper srchVec,
@@ -318,7 +320,8 @@ makeSweep caller system systemData optiSet = SweepResults energyFlowResult energ
     newCaller = caller |> nc "makeSweep"
     topology = accessTopology system
     etaFunctions = accessFunctionMap systemData
-    energyFlowResult = CubeSweep.solve topology etaFunctions (accessVariation optiSet)
+    energyFlowCubes = map (CubeSweep.solve topology etaFunctions) (accessVariations optiSet)
+    energyFlowResult = CubeSweep.joinFlowCubes newCaller energyFlowCubes
     energyFlow = CubeMap.map (TopoQty.mapSection $ ActUt.checkDetermined "makeSweep") energyFlowResult
     flowStatus = CubeSweep.getFlowStatus newCaller energyFlow
     endNodePowers = CubeSweep.getEndNodeFlows newCaller energyFlow
@@ -996,8 +999,9 @@ systemFunction caller system systemData testSet optiSet efaParams
         controlVars = accessControlVars optiSet
         
 
+        -- TODO - warning control and sweep vars are not distinguished yet -> controlvar = head sweepVar
         optimisationPerStateResults = optimisationPerState newCaller testSet optiSet sweepResults sweepEvaluationResults 
-                                  storageList balanceForcingMap controlVars
+                                  storageList balanceForcingMap (head controlVars)
         optOperation = optimalOperation newCaller stateForcing optimisationPerStateResults
         
         simEfa = simulateAndAnalyse newCaller system efaParams systemData demandVars optOperation demandCycle

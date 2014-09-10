@@ -813,3 +813,11 @@ zipWith3Data ::
   Data inst dim vec c ->
   Data inst dim vec d
 zipWith3Data f xs xs1 xs2 = zipWithData (\x (x1,x2) -> f x x1 x2) xs $ zipWithData ((,)) xs1 xs2
+
+
+
+-- TODO - Hack - Append is a 1D-Append to enable concatination and solving of several search cubes
+-- type safety concept of dim and inst is violated here
+appendData ::(DV.Storage vec a, DV.Singleton vec)=>
+  Data inst dim vec a -> Data inst dim vec a -> Data inst dim vec a
+appendData (Data x) (Data y) = Data $ DV.append x y 
