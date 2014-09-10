@@ -91,18 +91,6 @@ modul = ModuleName "DoubleSweep"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
--- Generic Types
-{-
-flowCube
-
-type ValueCube inst demDim srchDim label demVec srchVec a b = 
-  CubeMap.Cube (Sweep.Demand inst) demDim label demVec a (CubeMap.Data (Sweep.Search inst) srchDim srchVec b)
-
-type ValueStateCube inst demDim srchDim label demVec srchVec a b = 
-  CubeMap.Cube (Sweep.Demand inst) demDim label demVec a (CubeMap.Data (Sweep.Search inst) srchDim srchVec b)
--}
-
-
 -- Specific Types
 type Variation node inst demDim srchDim demVec srchVec a b = 
   CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
@@ -236,18 +224,6 @@ getEndNodeFlows ::
   EndNodeFlows node inst dim dim1 vec vec1 a b
 getEndNodeFlows caller flowResult = CubeMap.map (FlowTopoOpt.getEndNodeFlows (caller |> nc "getEndNodeFlows")) flowResult 
 
-{-
-getEndNodeFlows ::
-  (Node.C node,
-   DV.Walker vec,
-   DV.Storage vec (TopoQty.Section node 
-                   (CubeMap.Data (Sweep.Search inst) dim1 vec1 b)),
-   DV.Storage vec (FlowOpt.EndNodeEnergies node 
-                   (CubeMap.Data (Sweep.Search inst) dim1 vec1 b))) =>
-  Flow node inst dim dim1 vec vec1 a b ->
-  EndNodeFlows node inst dim dim1 vec vec1 a b
-getEndNodeFlows caller flowResult = CubeMap.map FlowTopoOpt.getEndNodeFlows flowResult 
--}
 getFlowStatus ::
   (Ord b,Arith.NaNTestable b,
   Ord node,
@@ -272,68 +248,7 @@ getFlowStatus caller flowResult =
   CubeMap.map (FlowTopoCheck.getFlowStatus 
                             (caller |> nc "getEndNodeFlows")) flowResult
 
-{-             
-calculateOptimalityMeasure ::
-  (Eq label,
-   Eq (vec a),
-   Ord b,
-   Ord node,
-   Show (vec1 b),
-   Show node,
-   Arith.Constant b,
-   DV.Zipper vec1,
-   DV.Zipper vec,
-   DV.Walker vec1,
-   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
-                    FlowOpt.OptimalityMeasure (Interp.Val b)),
-   DV.Storage vec1 (FlowOpt.OptimalityMeasure (Interp.Val b)),
-   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
-                    (b,
-                     b)),
-   DV.Storage vec1 (FlowOpt.Loss2Optimise (Interp.Val b)),
-   DV.Storage vec1 (FlowOpt.Eta2Optimise (Interp.Val b)),
-   DV.Storage vec1 (Interp.Val b),
-   DV.Storage vec1 (FlowOpt.Eta2Optimise (Interp.Val b),
-                    FlowOpt.Loss2Optimise (Interp.Val b)),
-   DV.Storage vec1 (b,
-                    b),
-   DV.Storage vec1 b,
-   DV.Storage vec1 ActFlowCheck.EdgeFlowStatus,
-   DV.Storage vec1 (FlowOpt.Eta2Optimise b),
-   DV.Storage vec1 (ActFlowCheck.EdgeFlowStatus,
-                    FlowOpt.OptimalityMeasure b),
-   DV.Storage vec1 (FlowOpt.OptimalityMeasure b),
-   DV.Storage vec1 (FlowOpt.TotalBalanceForce b),
-   DV.Storage vec1 (FlowOpt.Loss2Optimise b),
-   DV.Storage vec1 (FlowOpt.Eta2Optimise b,
-                    FlowOpt.Loss2Optimise b),
-   DV.Storage vec (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b))),
-   DV.Storage vec (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus),
-   DV.Storage vec (CubeMap.Data (Sweep.Search inst) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
-                                                                FlowOpt.OptimalityMeasure (Interp.Val b))),
-   DV.Singleton vec1,
-   DV.Length vec1) =>
-  Caller ->
-  evalParam -> 
-  evalParam ->
-  CubeMap.Cube (Sweep.Demand inst) dim label vec a (FlowTopoOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b))) ->
-  CubeMap.Cube (Sweep.Demand inst) dim label vec a (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus) ->
-  CubeMap.Cube (Sweep.Demand inst) dim label vec a (CubeMap.Data (Sweep.Search inst) dim1 vec1 (ActFlowCheck.EdgeFlowStatus,
-                                                                                  FlowOpt.OptimalityMeasure (Interp.Val b)))
   
-   
-calculateOptimalityMeasure caller lifeCycleMap endNodeValues status = 
-  CubeMap.zipWith (caller |> nc "calculateOptimalityMeasure") 
-  (\ x st -> FlowTopoOpt.calculateOptimalityMeasure 
-             (caller |> nc "calculateOptimalityMeasure") 
-             st (f lifeCycleMap) x) 
-  endNodeValues status
-  -- TODO :: ugly unpacking because of Type Conflict a - Interp.Val a between Forcing, etaSys and LifeCycle
-    where  f (FlowOpt.LifeCycleMap m) =  FlowOpt.LifeCycleMap $ Map.map (Map.map g) m 
-           g (FlowOpt.GenerationEfficiency x, FlowOpt.UsageEfficiency y) = 
-             (FlowOpt.GenerationEfficiency $ Interp.unpack x, FlowOpt.UsageEfficiency $ Interp.unpack y)
--}
-   
 objectiveFunctionValues ::
   (
   Eq (vec a),
@@ -715,64 +630,3 @@ getDemandSweepFlow ::
   CubeMap.Cube inst dim label vec a (TopoQty.Section node v1)
 getDemandSweepFlow f result = CubeMap.map (TopoQty.mapSection f) result  
 
-{-  
-getDemandSweepPower:: 
-  (Eq a,Ord node,
-   DV.Storage vec (TopoQty.Section node 
-                   (Result.Result (CubeMap.Data 
-                                   (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
-   DV.Storage vec (Maybe (Result.Result (Interp.Val a))),
-   Arith.Constant a,
-   DV.Storage vec (Interp.Val a), 
-   DV.Walker vec,
-   DV.Storage vec (TopoQty.Section node (Result.Result (Interp.Val a))),
-   DV.Storage vec (Map.Map (TopoIdx.Position node) (Result.Result (Interp.Val a))),
-   DV.Singleton vec)=>
-  (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)) -> 
-   Result.Result (Interp.Val a)) -> 
-  FlowResult node inst dim dim1 vec vec1 a (Interp.Val a) ->
-  TopoIdx.Position node  -> 
-  Maybe (Result.Result (CubeMap.Cube (Sweep.Demand inst) dim 
-                        (TopoIdx.Position node) vec a (Interp.Val a)))
-  
-getDemandSweepPower f (FlowResult result) key = g cube
-  where
-    g cu = case (CubeMap.any (== Nothing) cu, 
-                 CubeMap.any (== Just (Result.Undetermined)) cu) of
-      (True,_) -> Nothing
-      (False,True) -> Just (Result.Undetermined)
-      (False,False) -> Just $ Result.Determined $ 
-                       CubeMap.map (\(Just (Result.Determined x)) -> x) cu          
-    cube = CubeMap.map (Map.lookup key) powerMap      
-    powerMap = CubeMap.map TopoRecord.sectionResultToPowerMap $ getDemandSweepFlow f result                       
-
-getDemandSweepPowers::
-  (Eq a,Ord node,
-   DV.Storage vec (TopoQty.Section node 
-                   (Result.Result (CubeMap.Data 
-                                   (Sweep.Search inst) dim1 vec1 (Interp.Val a)))), 
-        Arith.Constant a,
-   DV.Walker vec, 
-   DV.LookupUnsafe vec (TopoQty.Section node 
-                        (Result.Result (CubeMap.Data 
-                                        (Sweep.Search inst) dim1 vec1 (Interp.Val a)))),
-   DV.Storage
-   vec
-   (Map.Map (TopoIdx.Position node) (Result.Result (Interp.Val a))),
-   DV.Storage
-   vec (TopoQty.Section node (Result.Result (Interp.Val a))),
-   DV.Storage vec (Interp.Val a),
-   DV.Storage vec (Maybe (Result.Result (Interp.Val a))),
-   DV.Singleton vec)=>
-  (Result.Result (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val a)) -> 
-   Result.Result (Interp.Val a)) -> 
-  FlowResult node inst dim dim1 vec vec1 a (Interp.Val a) ->
-  Collection.Collection (TopoIdx.Position node) 
-  (Result.Result (CubeMap.Cube (Sweep.Demand inst) dim 
-                  (TopoIdx.Position node) vec a (Interp.Val a)))
-getDemandSweepPowers f (FlowResult result) = Collection.Collection (Result.Determined (CubeMap.getGrid result)) $ 
-                                Map.mapWithKey (\ key _ -> fmap CubeMap.getData $ Maybe.fromJust $ getDemandSweepPower f (FlowResult result) key) powerMap
-  where
-    powerMap = TopoRecord.sectionResultToPowerMap $ CubeMap.lookupLinUnsafe result (CubeGrid.LinIdx 0)
-
--}
