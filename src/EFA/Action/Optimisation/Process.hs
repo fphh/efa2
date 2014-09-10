@@ -208,7 +208,8 @@ buildTestSet demandCycle initialBalance = TestSet demandCycle initialBalance
 
 
 buildSystemData :: 
-  (Ord a,
+  (Ord a,Ord node, 
+   DV.Zipper etaVec,
    Show a,
    Arith.Constant a,
    DV.Walker etaVec,

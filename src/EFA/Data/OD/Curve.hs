@@ -6,9 +6,6 @@ import qualified EFA.Data.Interpolation as Interpolation
 import qualified EFA.Data.Vector as DV
 
 import qualified EFA.Equation.Arithmetic as Arith
---import qualified Graphics.Gnuplot.Value.Atom as Atom
---import qualified Graphics.Gnuplot.Value.Tuple as Tuple
-
 
 import EFA.Utility(Caller,
                    merror,(|>),
@@ -29,8 +26,8 @@ modul = ModuleName "OD.Curve"
 nc :: FunctionName -> Caller
 nc = genCaller modul
 
--- TODO: generate OrdData -DataType-Wrapper for x which prevents swapping x and y in all interpolation and scaling stuff
-
+-- TODO - Type-Safety: generate OrdData -DataType-Wrapper for x to 
+-- prevent swapping x and y in all interpolation and scaling stuff
 data Curve inst label vec a b = Curve {getAxis :: Strict.Axis inst label vec a, 
                                        getData :: vec b} deriving Show
 
@@ -95,12 +92,13 @@ data ModifyOps a =
   Scale a a |
   Offset a a |
   AddPntsL [(a,a)] |
-  AddPntsR [(a,a)] 
---  AddAtZero b 
+  AddPntsR [(a,a)] |
+  CalcEtaCrvUp |
+  CalcEtaCrvDwn
   deriving (Show) 
 
 modify :: 
-  (Arith.Product a, DV.Walker vec, DV.Storage vec a,
+  (Arith.Product a, DV.Walker vec, DV.Storage vec a,DV.Zipper vec,
    DV.Singleton vec, DV.Reverse vec, DV.FromList vec) =>
   [ModifyOps a] -> 
   Curve inst label vec a a -> Curve inst label vec a a
@@ -108,6 +106,7 @@ modify xs curve = foldl (\crv op  -> modi op crv) curve xs
 
 modi :: 
   (Arith.Sum a,
+   DV.Zipper vec,
    DV.Singleton vec, 
    DV.FromList vec,
    Arith.Product a,
@@ -122,8 +121,8 @@ modi (Scale x y)  curve = scale x y  curve
 modi (Offset x y)  curve = offset x y curve
 modi (AddPntsL xs)  curve = addPntsL xs  curve
 modi (AddPntsR xs)  curve = addPntsR xs  curve
--- modi (ModifLabel f) curve = modifyLabelWith f curve
--- TODO : mod (AddZero x y)  curve = Curve axis vec
+modi CalcEtaCrvUp curve = calcEtaCurveUpStream curve 
+modi CalcEtaCrvDwn curve = calcEtaCurveDownStream curve
 
 flipX :: 
   (Arith.Sum a, DV.Walker vec, DV.Storage vec b, DV.Storage vec a,
@@ -178,15 +177,27 @@ combine ::
 combine caller (Curve axis vec) (Curve axis1 vec1) = 
   Curve (Strict.combine (caller |> nc "combine") axis axis1) (DV.append vec vec1)
 
-
 modifyLabelWith :: 
   (label -> label1) ->  
   Curve inst label vec a b ->
   Curve inst label1 vec a b
 modifyLabelWith f (Curve axis vec) = (Curve (Strict.modifyLabelWith f axis) vec)
 
-
 getValueRange :: 
   (Ord b, DV.Storage vec b, DV.Singleton vec) => 
   Curve inst label vec a b -> Value.Range b
 getValueRange (Curve _ vec) = Value.getValueRange vec
+
+calcEtaCurveDownStream :: 
+  (DV.Zipper vec, DV.Storage vec a, Arith.Product a) =>
+  Curve inst label vec a a -> 
+  Curve inst label vec a a       
+calcEtaCurveDownStream curve@(Curve (Strict.Axis label typ axis) vec) = Curve newAxis vec
+  where newAxis = Strict.Axis  label typ $ DV.zipWith(Arith.~*) axis vec
+
+calcEtaCurveUpStream ::   
+  (DV.Zipper vec, DV.Storage vec a, Arith.Product a) =>
+  Curve inst label vec a a -> 
+  Curve inst label vec a a       
+calcEtaCurveUpStream curve@(Curve (Strict.Axis label typ axis) vec) = Curve newAxis vec
+  where newAxis = Strict.Axis label typ $ DV.zipWith(Arith.~/) axis vec
