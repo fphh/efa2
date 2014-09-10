@@ -17,43 +17,6 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified Data.Map as Map
 import qualified Data.List as List
 
-{-
-data Orientation = Dir | UnDir deriving Show
-
-absoluteStateIndex ::
-  (Node.C node) =>
-  Graph.Graph node Graph.DirEdge nodeLabel1 a1 ->
-  Graph.Graph node Graph.EitherEdge nodeLabel a ->
-  Idx.State
-absoluteStateIndex topo flowTopo =
-  let tlabels = map unEitherEDir $ Map.keys $ Graph.edgeLabels topo
-
-      flabels = Map.fromList $ map unEDir $ Map.keys $ Graph.edgeLabels flowTopo
-
-      unEDir (Graph.EDirEdge (Graph.DirEdge f t)) = ((f, t), Dir)
-      unEDir (Graph.EUnDirEdge (Graph.UnDirEdge f t)) = ((f, t), UnDir)
-
-      unEitherEDir (Graph.DirEdge f t) = (f, t)
-
-      g k@(f, t) =
-        case (Map.lookup k flabels, Map.lookup (t, f) flabels) of
-             (Just Dir, _) -> 0
-             (Just UnDir, _) -> 1
-             (_, Just Dir) -> 2
-             (_, Just UnDir) -> 1
-             _ -> error $ "EFA.Graph.Topology.flowNumber: edge not found "
-                          ++ Format.showRaw (Node.display f :: Format.ASCII)
-                          ++ "->"
-                          ++ Format.showRaw (Node.display t :: Format.ASCII)
-
-      toTernary xs = Idx.State $ sum $ zipWith (*) xs $ map (3^) [0 :: Int ..]
-
-  in toTernary $ map g tlabels
-
-
--- PG: Code from HH calculate flow state from flow direction against topology 
--- Is that the right place for this code ??
--}
 data Orientation = Dir | UnDir deriving Show
 
 getAbsoluteStateIndex ::
@@ -120,7 +83,8 @@ data EdgeConditions node = NoCond | EdgeOrs [EdgeAnds node]
 newtype EdgeAnds node = EdgeAnds [EdgeCon node]
 data EdgeCon node = Demand (Graph.EitherEdge node) | 
                     Avoid (Graph.EitherEdge node) |                          
-                    NoInactive
+                    NoInactive |
+                    NoInactiveExcept [(Graph.EitherEdge node)]
 
 stateAnalysisAbsolute ::
   (Show node, Node.C node)=>
@@ -135,17 +99,27 @@ filterFlowStates :: (Ord node) =>
   [(Idx.AbsoluteState,Topo.FlowTopology node)] ->
   [(Idx.AbsoluteState,Topo.FlowTopology node)]
 filterFlowStates  NoCond flowTopos =  flowTopos
-filterFlowStates (EdgeOrs conds) flowTopos =  List.sortBy (\x y -> compare (fst x) (fst y)) $
+filterFlowStates (EdgeOrs conds) flowTopos =  List.nub $ List.sortBy (\x y -> compare (fst x) (fst y)) $
   concatMap (\x -> filter (edgeCondition x . Graph.edges . snd) flowTopos) conds
 
 edgeCondition :: (Eq node) => EdgeAnds node -> [Graph.EitherEdge node] -> Bool
 edgeCondition (EdgeAnds xs) edges = and $ map f xs
   where
-        f (Demand e) = any (e==) edges 
-        f (Avoid e) = not $ any (e==) edges 
-        f NoInactive = not $ any (==True) $ map isInactive edges 
-                 where isInactive (Graph.EUnDirEdge _ ) = True
-                       isInactive _ = False
+    isInactive (Graph.EUnDirEdge _ ) = True
+    isInactive _ = False
+    flipEdge (Graph.EUnDirEdge (Graph.UnDirEdge x y)) = Graph.EUnDirEdge $ Graph.UnDirEdge y x
+    flipEdge (Graph.EDirEdge _) = error $ "Error in EdgeCondition called by filterFlowStates - " ++ 
+                                              "no directed Edge allowed in the condition NoInactiveExcept"
+    
+    f (Demand e@(Graph.EDirEdge _)) = any (e==) edges
+    -- TODO - bug: inaktive Edges come eventually wrongly directed -- or is ord used to sort them ?
+    f (Demand e@(Graph.EUnDirEdge _)) = any (\x -> e==x ||flipEdge e== x) edges 
+    -- TODO - danger - works also if a given edge is not part of the topology
+    f (Avoid e) = not $ any (e==) edges 
+    f NoInactive = not $ any (==True) $ map isInactive edges 
+    f (NoInactiveExcept xs) = not $ any (==True) $ map isInactive $ filter (g xs) edges               
+          where g exceptEdges e = not ((elem e exceptEdges) || (elem e $ map flipEdge exceptEdges))
+                       
 
 addEdgeCondition ::  
   EdgeConditions node ->
@@ -154,27 +128,3 @@ addEdgeCondition ::
 addEdgeCondition NoCond x = EdgeOrs [x]  
 addEdgeCondition (EdgeOrs xs) x = EdgeOrs $ xs ++ [x]
 
--- type FlowTopology node = Graph node Graph.EitherEdge () ()
-{-
-data
-   EitherEdge node =
-        EDirEdge (DirEdge node)
-      | EUnDirEdge (UnDirEdge node)
-   deriving (Eq, Ord, Show)
-
-data DirEdge node = DirEdge node node
-   deriving (Eq, Ord, Show)
-
-data UnDirEdge node = UnDirEdge node node
-   deriving (Eq, Ord, Show)
-
-
-
--}
-
-{-
-edgeCondition :: FlowTopology node -> Bool                           
-edgeCondition edges 
-
-stateCondition :: [
--}
