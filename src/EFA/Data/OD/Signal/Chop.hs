@@ -59,12 +59,13 @@ chopHRecord ::
    DV.Storage vec (SignalFlow.TimeStep a),
    DV.Len (vec b)) =>
   Caller ->
+  b ->
   SignalFlow.HRecord key inst label vec a b ->
   DataSequ.List (SignalFlow.HRecord key inst label vec a b)
-chopHRecord caller powerRecord = sequRecord
+chopHRecord caller eps powerRecord = sequRecord
   where
     sectioning =  --UtTrace.simTrace  "Sections" $ 
-                  findHSections caller $ 
+                  findHSections caller eps $ 
                   --Trace.trace ("sigLength: " ++ show sigLength) 
                   powerRecord
     sigLength = Map.map (\(SignalFlow.Data vec) -> DV.len vec) $ SignalFlow.getHMap powerRecord
@@ -81,12 +82,13 @@ findHSections ::
    DV.Storage vec (SignalFlow.TimeStep a),
    DV.Len (vec b)) => 
   Caller ->
+  b ->
   SignalFlow.HRecord key inst label vec a b -> Sectioning
-findHSections caller (SignalFlow.HRecord time m) = 
+findHSections caller eps (SignalFlow.HRecord time m) = 
   NonEmpty.toList $ NonEmpty.zipWith (Strict.Range) startIndexList stopIndexList
   where startIndexList = --UtTrace.simTrace  "startIndexList" $ 
                          NonEmptySet.toAscList $ foldl1 NonEmptySet.union $ 
-                         map (SignalFlow.locateSignChanges (caller |> nc "findVSections")) $ Map.elems m
+                         map (SignalFlow.locateSignChanges (caller |> nc "findVSections") eps) $ Map.elems m
         stopIndexList = NonEmpty.snoc (DV.map (\(Strict.Idx idx)->Strict.Idx $ idx-1) $ 
                                        NonEmpty.tail startIndexList) (Strict.Idx $ (Strict.len time - 1))
 

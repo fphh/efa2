@@ -99,7 +99,8 @@ newtype InitStorageSeq node a =
 
 data EFAParams node a = EFAParams 
                  {accessInitStorageState :: InitStorageState node a,
-                  accessInitStorageSeq :: InitStorageSeq node a}
+                  accessInitStorageSeq :: InitStorageSeq node a, 
+                  accessZeroDetectionEps :: a}
   
 
 data EnergyFlowAnalysis node inst sigVec a = EnergyFlowAnalysis {
