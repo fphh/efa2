@@ -11,7 +11,7 @@ import qualified EFA.Data.OD.Curve as Curve
 import qualified EFA.Action.Flow.Balance as Balance
 import qualified EFA.Data.OD.Signal.Chop as DataChop
 
---import qualified EFA.Utility.Trace as UtTrace
+import qualified EFA.Utility.Trace as UtTrace
 
 import qualified EFA.Signal.Data as Data
 
@@ -150,7 +150,8 @@ data OptiSet node inst demDim srchDim demVec srchVec sigVec a =
 
 data SweepResults node inst demDim srchDim demVec srchVec a = 
   SweepResults 
-  {accessSweepFlowResult :: CubeSweep.FlowResult node inst demDim srchDim demVec srchVec a (Interp.Val a),
+  {accessSweepFlowCubes :: [CubeSweep.FlowResult node inst demDim srchDim demVec srchVec a (Interp.Val a)],
+   accessSweepFlowResult :: CubeSweep.FlowResult node inst demDim srchDim demVec srchVec a (Interp.Val a),
    accessSweepFlow :: CubeSweep.Flow node inst demDim srchDim demVec srchVec a (Interp.Val a),
    accessSweepFlowStatus :: CubeSweep.FlowStatus node inst demDim srchDim demVec srchVec a,
    accessSweepEndNodePowers:: CubeSweep.EndNodeFlows node inst demDim srchDim demVec srchVec a (Interp.Val a)
@@ -316,7 +317,7 @@ makeSweep ::
   SystemData inst node etaVec a ->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   SweepResults node inst demDim srchDim demVec srchVec a
-makeSweep caller system systemData optiSet = SweepResults energyFlowResult energyFlow flowStatus endNodePowers 
+makeSweep caller system systemData optiSet = SweepResults energyFlowCubes energyFlowResult energyFlow flowStatus endNodePowers 
   where 
     newCaller = caller |> nc "makeSweep"
     topology = accessTopology system
@@ -620,7 +621,7 @@ simulateAndAnalyse caller system efaParams systemData demandVars optOperation de
     optimalStateSignal = accessOptimalStateChoice optOperation
     optimalControlSignals = accessOptimalControlSignals optOperation
     eps = EFA.accessZeroDetectionEps efaParams
-    given = --UtTrace.simTrace "Given" $ 
+    given = -- UtTrace.simTrace "Given" $ 
             OptSignal.makeGivenRecord (caller |> nc "simulateAndAnalyse") optimalStateSignal
             (OptSignal.convertToDemandCycleMap demandCycle demandVars) optimalControlSignals
     sim = Simulation.simulation caller topology etaFunctions given

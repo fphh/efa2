@@ -14,15 +14,13 @@ import qualified EFA.Signal.Data as Data
 
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.OD.Signal.Flow as SignalFlow
---import qualified EFA.Data.Interpolation as Interp
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.NonEmpty.Set as NonEmptySet
 
 import qualified EFA.Flow.Topology.Index as TopoIdx
 
---import qualified EFA.Flow.SequenceState.Index as Idx
---import qualified EFA.Utility.Trace as UtTrace 
+import qualified EFA.Utility.Trace as UtTrace 
 import qualified Debug.Trace as Trace 
 
 import qualified Data.Map as Map
@@ -32,8 +30,6 @@ import EFA.Utility(Caller,
                   (|>),
                    ModuleName(..),FunctionName, genCaller)
 
-
--- newtype Sectioning = Sectioning (NonEmpty.T [] Strict.Section)
 
 modul :: ModuleName
 modul = ModuleName "Data.OD.Signal.Chop"

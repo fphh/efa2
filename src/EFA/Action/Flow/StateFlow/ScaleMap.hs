@@ -87,10 +87,10 @@ calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) =
     f state (FlowOpt.EndNodeEnergies _ _ stoMapState) = g $ Map.elems $ FlowOpt.unStorageMap stoMapState
       where 
 
-       g [Just (FlowOpt.StorageFlow x)] = -- UtTrace.simTrace "Source,SinkScale" $ 
-                                          Just (FlowOpt.ScaleSource $ sourceFlow Arith.~/ x, 
-                                                FlowOpt.ScaleSink $ sinkFlow Arith.~/ (UtTrace.simTrace "stoPower" x), 
-                                                FlowOpt.ScaleSto $ stoBalance Arith.~/ (UtTrace.simTrace "stoPower" x))
+       g [Just (FlowOpt.StorageFlow x)] = UtTrace.simTrace "Source,SinkScale" $ 
+                                          Just (FlowOpt.ScaleSource $ sourceFlow Arith.~/x, 
+                                                FlowOpt.ScaleSink $ sinkFlow Arith.~/x, 
+                                                FlowOpt.ScaleSto $ stoBalance Arith.~/x)
        g [Nothing] = Nothing             
        g _ = merror caller modul "calculateScaleMap" "This Method works only for one Storage in the system"
        (FlowOpt.StorageFlow stoBalance) = Maybe.fromMaybe err $ FlowOpt.getSingleStorage newCaller stoMapRest

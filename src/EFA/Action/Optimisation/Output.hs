@@ -424,21 +424,31 @@ sweep caller path fileOrder titles keyList searchGrid ctrl swp = let
   f str = makeFileName path fileOrder $ titles ++ [PR "sweep"] ++ [str]
   g str = makeTitle $ titles ++ [PR "sweep"] ++ [str]
   in
+   -- TODO - output: generalise diagramm to show edges instead a fixed index
    (drawAction (drawFlow ctrl)  (f $ DG "FlowDemandEdges")
-    (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Edges") (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
-    (Process.accessSweepFlowResult swp)) ++
+    (concatMap (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Edges") 
+     (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]])))
+    (Process.accessSweepFlowCubes swp)) ++
    
+   -- TODO - output: generalise diagramm to show edges instead a fixed index
+   (drawAction (drawFlow ctrl)  (f $ DG "FlowDemandEdges")
+    (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Edges") 
+     (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
+    (Process.accessSweepFlow swp))  ++
+   
+   -- TODO - output: adjust diagrams to multi-variation
    (plotAction (plotFlowVariables ctrl) (f $ DG "FlowVariables")
     (SweepPlot.plotSweepFlowValues newCaller (g $ DG "Flow Variables") searchGrid 
      TopoQty.lookup 
      CubeGrid.All keyList)
-     (Process.accessSweepFlow swp))
+     (Process.accessSweepFlow swp)) ++
     
-{-   (plotAction (plotFlowVariables ctrl) (f $ DG "FlowVariables Per State")
+   -- TODO - output: adjust diagrams to multi-variation
+   (plotAction (plotFlowVariables ctrl) (f $ DG "FlowVariables Per State")
     (SweepPlot.plotSweepFlowValuesPerState newCaller (g $ DG "FlowVariables Per State") searchGrid 
      TopoQty.lookup CubeGrid.All keyList $ Process.accessSweepFlowStatus swp)
      (Process.accessSweepFlow swp))
--}
+
    
 data EvalCtrl = EvalDont | 
                  EvalDo { plotEta :: Plot,
