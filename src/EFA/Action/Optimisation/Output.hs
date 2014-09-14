@@ -228,21 +228,22 @@ system ::
   [Title] ->
   SysCtrl -> 
   Process.System node -> [IO ()]
-system path fileOrder titles sysAction sys = 
+system _ _ _ SysDont _ = []
+system path fileOrder titles ctrl sys = 
   let 
     f str = makeFileName path fileOrder $ titles ++ [str]
     g str = makeTitle $ titles ++ [str]
   in  
-    (drawOrPrintAction (topo sysAction) (f $ DG "topo")
+    (drawOrPrintAction (topo ctrl) (f $ DG "topo")
      (\x -> [Draw.title (g $ DG "Topology") $ Draw.topology x])  $ Process.accessTopology sys) ++
     
-    (drawOrPrintAction (labTopo sysAction) (f $ DG "labTopo")
+    (drawOrPrintAction (labTopo ctrl) (f $ DG "labTopo")
      (\x -> [Draw.title (g $ DG "Labled Topology") $ Draw.labeledTopology x]) $ Process.accessLabledTopology sys) ++
     
-    (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysis")
+    (drawAction (stateAnalysis ctrl)  (f $ DG "stateAnalysis")
      (\ x -> [Draw.title (g $ DG ("State Analysis - Amount of States: " ++ show num)) $ Draw.flowTopologiesAbsolute x]) sa) ++
      
-    (drawAction (stateAnalysis sysAction)  (f $ DG "stateAnalysisNoInactive")
+    (drawAction (stateAnalysis ctrl)  (f $ DG "stateAnalysisNoInactive")
      (\ x -> [Draw.title (g $ DG ("State Analysis  - no inactive - Amount of States: " ++ show numNI)) $ Draw.flowTopologiesAbsolute x]) saNI)
            where sa = Process.accessStateAnalysis sys
                  num = length sa
@@ -275,17 +276,18 @@ sysData ::
   SysDataCtrl ->
   Process.SystemData inst node vec a ->
   [IO ()]
-sysData path fileOrder titles action sysDat = 
+sysData _ _ _ SysDataDont _ = []
+sysData path fileOrder titles ctrl sysDat = 
   let 
     f str = makeFileName path fileOrder $ titles ++ [PR "System"] ++ [str]
     g str = makeTitle $ titles ++ [PR "System"] ++ [str]
   in  
- (plotOrPrintAction (rawCurves action) (f $ DG "ImportedEtaCurves")
+ (plotOrPrintAction (rawCurves ctrl) (f $ DG "ImportedEtaCurves")
   (PlotD2.allInOne (PlotD2.labledFrame (g $ DG "Imported Eta-Curves")) 
    PlotD2.plotInfo3lineTitles . PlotCurve.toPlotDataMap)
   (Process.accessRawEfficiencyCurves sysDat)) ++ 
  
- (plotAction (etaFunctions action) (f $ DG "EtaFunctions")
+ (plotAction (etaFunctions ctrl) (f $ DG "EtaFunctions")
   (PlotD2.allInOne (PlotD2.labledFrame (g $ DG "Eta-Functions")) 
    PlotD2.plotInfo3lineTitles . PlotCurve.toPlotDataMap) 
   (EtaFunctions.toCurveMap (Process.accessFunctionPlotAxis sysDat) $ Process.accessFunctionMap sysDat))
@@ -315,7 +317,7 @@ test ::
   Process.TestSet  node inst demDim sigVec a ->
   [DemandAndControl.DemandVar node] ->
   [IO ()]
- 
+test _ _ _ TestDont _ _ = []  
 test path fileOrder titles testCtrl testSet demandVars = 
   let 
     f str = makeFileName path fileOrder $ titles ++ [PR "Test"] ++ [str]
@@ -352,6 +354,7 @@ optiSet ::
   OptiSetCtrl ->
   Process.OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
   [IO ()]
+optiSet _ _ _ _ OptiSetDont _ = []
 optiSet caller path fileOrder titles ctrl oSet = let
   f str = makeFileName path fileOrder $ titles  ++ [PR "OptiSet"] ++ [str]
   g str = makeTitle $ titles ++ [PR "OptiSet"] ++ [str]
@@ -435,6 +438,13 @@ sweep caller path fileOrder titles keyList searchGrid ctrl swp = let
     (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Edges") 
      (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
     (Process.accessSweepFlow swp))  ++
+   
+{-   -- TODO - show flow states in sweep stack
+     -- Problem ?? - Data format
+   (plotAction (plotFlowVariables ctrl) (f $ DG "FlowStates")
+    (SweepPlot.plotStates newCaller (g $ DG "FlowStates") searchGrid)
+     (Process.accessSweepFlow swp)) ++
+-}
    
    -- TODO - output: adjust diagrams to multi-variation
    (plotAction (plotFlowVariables ctrl) (f $ DG "FlowVariables")
