@@ -98,9 +98,9 @@ newtype InitStorageSeq node a =
 
 
 data EFAParams node a = EFAParams 
-                 {accessInitStorageState :: InitStorageState node a,
-                  accessInitStorageSeq :: InitStorageSeq node a, 
-                  accessZeroDetectionEps :: a}
+                 {accessInitStorageState :: InitStorageState node (Interp.Val a),
+                  accessInitStorageSeq :: InitStorageSeq node (Interp.Val a), 
+                  accessZeroDetectionEps :: (Interp.Val a)}
   
 
 data EnergyFlowAnalysis node inst sigVec a = EnergyFlowAnalysis {
@@ -123,7 +123,7 @@ energyFlowAnalysisOld ::
    Eq (sigVec (Interp.Val a)),
    Arith.Constant a) =>
   Topo.Topology node ->
-  EFAParams node (Interp.Val a) ->
+  EFAParams node a ->
   Sequ.List (Record.FlowRecord node sigVec (Interp.Val a)) ->
   EnergyFlowAnalysis node inst sigVec a
 energyFlowAnalysisOld topology efaParams sequenceFlowsFilt = 

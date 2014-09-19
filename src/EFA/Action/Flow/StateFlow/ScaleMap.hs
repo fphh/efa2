@@ -74,12 +74,13 @@ calculateScaleMap ::
    Node.C node,
    Show (FlowOpt.ScaleMap (Interp.Val a)))=>
   Caller -> 
+  (Idx.AbsoluteState -> Idx.AbsoluteState) ->
   FlowOpt.GlobalLifeCycleMap node (Interp.Val a) ->
   StateQty.Graph node (Interp.Val a) (Interp.Val a) ->
   FlowOpt.ScaleMap (Interp.Val a) ->
   ((Interp.Val a), FlowOpt.ScaleMap (Interp.Val a))
-calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) = -- UtTrace.simTrace "ScaleMap" $
-  (etaSys, FlowOpt.ScaleMap $ Map.union (Map.mapWithKey f endNodeMap) oldScaleMap)
+calculateScaleMap caller stateCorrection globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) = -- UtTrace.simTrace "ScaleMap" $
+  (etaSys, FlowOpt.ScaleMap $ Map.union (Map.mapWithKey f  $ Map.mapKeys stateCorrection endNodeMap) oldScaleMap)
   where
     newCaller = caller |> nc "calculateScaleMap"
     etaSys = StateFlowOpt.calculateEtaSys newCaller globalLifeCycleMap sfg

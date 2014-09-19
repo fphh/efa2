@@ -249,7 +249,7 @@ getEndNodeFlows ::
 getEndNodeFlows caller flowResult = CubeMap.map (FlowTopoOpt.getEndNodeFlows (caller |> nc "getEndNodeFlows")) flowResult 
 
 getFlowStatus ::
-  (Ord b,Arith.NaNTestable b,
+  (Ord b,Arith.NaNTestable (Interp.Val b),
   Ord node,
   Arith.Constant b,
   DV.Zipper vec1,
@@ -266,11 +266,12 @@ getFlowStatus ::
   DV.Storage vec (CubeMap.Data (Sweep.Search inst) dim1 vec1 ActFlowCheck.EdgeFlowStatus),
   DV.Storage vec (TopoQty.Section node (CubeMap.Data (Sweep.Search inst) dim1 vec1 (Interp.Val b)))) =>
   Caller ->
+  Interp.Val b ->
   Flow node inst dim dim1 vec vec1 a (Interp.Val b) ->
   FlowStatus node inst dim dim1 vec vec1 a
-getFlowStatus caller flowResult = 
+getFlowStatus caller eps flowResult = 
   CubeMap.map (FlowTopoCheck.getFlowStatus 
-                            (caller |> nc "getEndNodeFlows")) flowResult
+                            (caller |> nc "getEndNodeFlows") eps) flowResult
 
   
 objectiveFunctionValues ::

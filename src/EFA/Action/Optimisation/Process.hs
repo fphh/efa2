@@ -289,7 +289,7 @@ buildOptiSet caller demandVariation searchVariations demandCycle allowedStates =
 -- | Only has to be calculated once, unless efficiency curves change
 makeSweep ::
   (Ord a,Eq (demVec a), DV.Zipper demVec,
-   Arith.Constant a,Arith.NaNTestable a,
+   Arith.Constant a,Arith.NaNTestable (Interp.Val a),
    Node.C node,
    DV.Zipper srchVec,
    DV.Walker srchVec,
@@ -316,16 +316,18 @@ makeSweep ::
   System node ->
   SystemData inst node etaVec a ->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
+  EFA.EFAParams node a ->
   SweepResults node inst demDim srchDim demVec srchVec a
-makeSweep caller system systemData optiSet = SweepResults energyFlowCubes energyFlowResult energyFlow flowStatus endNodePowers 
+makeSweep caller system systemData optiSet efaParams = SweepResults energyFlowCubes energyFlowResult energyFlow flowStatus endNodePowers 
   where 
     newCaller = caller |> nc "makeSweep"
     topology = accessTopology system
     etaFunctions = accessFunctionMap systemData
+    eps = EFA.accessZeroDetectionEps efaParams
     energyFlowCubes = map (CubeSweep.solve topology etaFunctions) (accessVariations optiSet)
     energyFlowResult = CubeSweep.joinFlowCubes newCaller energyFlowCubes
     energyFlow = CubeMap.map (TopoQty.mapSection $ ActUt.checkDetermined "makeSweep") energyFlowResult
-    flowStatus = CubeSweep.getFlowStatus newCaller energyFlow
+    flowStatus = CubeSweep.getFlowStatus newCaller eps energyFlow
     endNodePowers = CubeSweep.getEndNodeFlows newCaller energyFlow
 
 evaluateSweep ::
@@ -608,7 +610,7 @@ simulateAndAnalyse ::
    DV.Storage sigVec (sigVec a)) =>
   Caller -> 
   System node ->
-  EFA.EFAParams node (Interp.Val a) ->
+  EFA.EFAParams node a ->
   SystemData inst node etaVec a ->
   [DemandAndControl.DemandVar node] ->
   OptimalOperation node inst sigVec a -> 
@@ -794,7 +796,7 @@ loop ::
   SystemData inst node etaVec a ->
   TestSet node inst demDim sigVec a ->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
-  EFA.EFAParams node (Interp.Val a) ->
+  EFA.EFAParams node a ->
   SweepResults node inst demDim srchDim demVec srchVec a ->
   [node] ->
   Loop.EtaLoopParams node (Interp.Val a) evalParam ->
@@ -980,7 +982,7 @@ systemFunction ::
   SystemData inst node etaVec a ->
   TestSet node inst demDim sigVec a ->
   OptiSet node inst demDim srchDim demVec srchVec sigVec a ->
-  EFA.EFAParams node (Interp.Val a) ->
+  EFA.EFAParams node a ->
   [node] ->
   SweepResults node inst demDim srchDim demVec srchVec a ->
   OptSignal.StateForcing ->

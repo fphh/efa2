@@ -20,7 +20,7 @@ import qualified EFA.Data.Vector as DV
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Flow.Topology as FlowTopo
 
-import qualified EFA.Graph.Topology as Topo
+--import qualified EFA.Graph.Topology as Topo
 --import qualified EFA.Graph as Graph
 
 
@@ -44,18 +44,19 @@ nc = genCaller modul
 
    
 getFlowStatus :: 
-  (Ord node, Ord (edge node), Ord a, Arith.Constant a,Arith.NaNTestable a,
+  (Ord node, Ord (edge node), Ord a, Arith.Constant a,Arith.NaNTestable (Interp.Val a),
    DV.Zipper vec, DV.Walker vec, DV.Storage vec ActFlowCheck.EdgeFlowStatus,
    DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
    DV.Storage vec ActFlowCheck.Validity) =>
   Caller ->
+  Interp.Val a ->
   FlowTopo.Section node edge sectionLabel nodeLabel (Maybe (TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)))) -> 
   CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus
-getFlowStatus caller flowGraph = 
+getFlowStatus caller eps flowGraph = 
   Maybe.fromJust $ snd $ Map.foldl (flip f) (0,Nothing) $ Graph.edgeLabels $ TopoQty.topology flowGraph
   where           
-    f (Just flow) (expo,Just status) = (expo+1,Just $ combineStatusResults expo status (getEdgeFlowStatus flow))
-    f (Just flow) (expo,Nothing) = (expo+1,Just $ getEdgeFlowStatus flow)
+    f (Just flow) (expo,Just status) = (expo+1,Just $ combineStatusResults expo status (getEdgeFlowStatus eps flow))
+    f (Just flow) (expo,Nothing) = (expo+1,Just $ getEdgeFlowStatus eps flow)
     f Nothing (_,_) = merror caller modul "getFlowStatus" "Flow not defined"
 
 
@@ -71,42 +72,47 @@ combineStatusResults expo s s1 =
 
 
 getEdgeFlowStatus :: 
-  (Ord a, Arith.Constant a, DV.Zipper vec, DV.Walker vec,Arith.NaNTestable a,
+  (Ord a, Arith.Constant a, DV.Zipper vec, DV.Walker vec,Arith.NaNTestable (Interp.Val a),
    DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
    DV.Storage vec ActFlowCheck.Validity, DV.Storage vec ActFlowCheck.EdgeFlowStatus) =>
+  Interp.Val a ->
   TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)) -> 
   CubeMap.Data inst dim vec ActFlowCheck.EdgeFlowStatus
-getEdgeFlowStatus fl = f (TopoQty.flowPowerIn fl) (TopoQty.flowPowerOut fl)
+getEdgeFlowStatus eps fl = f (TopoQty.flowPowerIn fl) (TopoQty.flowPowerOut fl)
   where 
      f p  p1 = CubeMap.zipWithData (\x y -> ActFlowCheck.EdgeFlowStatus x y) validity state
-                           where validity = CubeMap.zipWithData (ActFlowCheck.validityCheck edgeFlowCheck) p p1
-                                 state = CubeMap.zipWithData getEdgeState p p1
+                           where validity = CubeMap.zipWithData (ActFlowCheck.validityCheck (edgeFlowCheck eps)) p p1
+                                 state = CubeMap.zipWithData (getEdgeState eps) p p1
 
 getEdgeState :: 
-  (Ord a, Arith.Constant a) => 
+  (Ord a, Arith.Constant a) =>
+  Interp.Val a ->
   Interp.Val a -> 
   Interp.Val a -> 
   Maybe Idx.AbsoluteState
-getEdgeState p p1 = 
-  let g x = Just $ case (Arith.sign x) of 
+getEdgeState eps p p1 = 
+  let g x = Just $ case (Arith.signApprox eps x) of 
           (Arith.Zero)  -> Idx.AbsoluteState 1
           (Arith.Positive) -> Idx.AbsoluteState 0 
           (Arith.Negative) -> Idx.AbsoluteState 2
   in case (p,p1) of
           (Interp.Invalid _,_) -> Nothing 
           (_,Interp.Invalid _) -> Nothing
-          (x,_) -> g $ Interp.unpack x 
+          (x,_) -> g x -- $ Interp.unpack x 
 
 
 -- TODO: ETA-Check prüfen
 edgeFlowCheck ::  
   (Arith.Product a, Ord a, Arith.Constant a, Arith.NaNTestable a) => 
-  a -> a -> ActFlowCheck.EdgeFlowConsistency 
-edgeFlowCheck x y = ActFlowCheck.EFC signCheck etaCheck
+  a -> 
+  a -> 
+  a -> 
+  ActFlowCheck.EdgeFlowConsistency 
+edgeFlowCheck eps x y = ActFlowCheck.EFC signCheck etaCheck
   where
     eta = if x >= Arith.zero then y Arith.~/ x else x Arith.~/ y
     etaCheck = ActFlowCheck.etaCheckFromBool $ eta > Arith.zero && eta <= Arith.one
-    signCheck = ActFlowCheck.signCheckFromBool $ Arith.sign x == Arith.sign y && nanCheck
+    signCheck = ActFlowCheck.signCheckFromBool $ Arith.signApprox eps x == Arith.signApprox eps y && nanCheck
     -- TODO: nanCheck nochmal gesondert einbauen 
     nanCheck = if Arith.checkIsNaN x || Arith.checkIsNaN y then error "NaN detected" else True
 

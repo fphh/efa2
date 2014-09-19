@@ -53,7 +53,7 @@ getEdgeFlowStatus ::
    DV.Storage vec (Maybe Idx.AbsoluteState), DV.Storage vec (Interp.Val a),
    DV.Storage vec Validity, DV.Storage vec EdgeFlowStatus) =>
   (Interp.Val a -> Interp.Val a -> Maybe Idx.AbsoluteState) -> 
-  (a -> a -> EdgeFlowConsistency) ->
+  (Interp.Val a -> Interp.Val a -> EdgeFlowConsistency) ->
   TopoQty.Flow (CubeMap.Data inst dim vec (Interp.Val a)) -> 
   CubeMap.Data inst dim vec EdgeFlowStatus
 getEdgeFlowStatus getEdgeState edgeFlowCheck fl = f (TopoQty.flowPowerIn fl) (TopoQty.flowPowerOut fl)
@@ -65,10 +65,10 @@ getEdgeFlowStatus getEdgeState edgeFlowCheck fl = f (TopoQty.flowPowerIn fl) (To
 
 validityCheck :: 
   (Ord a, Arith.Constant a) => 
-  (a -> a -> EdgeFlowConsistency) ->
+  (Interp.Val a -> Interp.Val a -> EdgeFlowConsistency) ->
   (Interp.Val a) -> (Interp.Val a) -> Validity
 validityCheck edgeFlowCheck p p1 = if (not $ Interp.isInvalid p) && (not $ Interp.isInvalid p1) 
-                     then Valid $ edgeFlowCheck (Interp.unpack p) (Interp.unpack p1)
+                     then Valid $ edgeFlowCheck p p1
                      else Invalid
 
 combineConsistency :: EdgeFlowConsistency -> EdgeFlowConsistency -> EdgeFlowConsistency

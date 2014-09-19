@@ -45,6 +45,11 @@ instance (Eq a, Product a, Constant a) => Arith.ZeroTestable (Val a) where
   coincidingZeros _ (Invalid _) = False
   coincidingZeros x y = Arith.zero == unpack x && Arith.zero == unpack y
 
+instance (Arith.NaNTestable a) => Arith.NaNTestable (Val a) where
+  checkIsNaN (Inter x) = Arith.checkIsNaN x
+  checkIsNaN (Extra x) = Arith.checkIsNaN x
+  checkIsNaN (Invalid x) = False
+
 instance (Constant a) => Constant (Val a) where
    zero = (Inter Arith.zero)
    fromInteger x = Inter $ Arith.fromInteger x
