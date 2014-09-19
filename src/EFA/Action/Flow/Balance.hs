@@ -20,6 +20,8 @@ import qualified Data.Maybe as Maybe
 import Data.Maybe(fromMaybe)
 import Text.Printf (printf, PrintfArg) --,IsChar)
 
+
+import qualified EFA.Utility.List as UtList
 import EFA.Utility(Caller,
                  merror,
                    (|>),
@@ -168,10 +170,11 @@ selectStorageToForce ::(Ord node, Ord a, Show node, Arith.Sum a) =>
   node
 selectStorageToForce caller bal@(Balance b) threshold cnt maxIterationsPerStorage sto = sto --if check then sto else nextSto 
   where
-    check = (checkBalanceSingle (caller |> nc "selectStorageToForce") threshold bal sto) || 
-            checkBalanceCounterOne (caller |> nc "selectStorageToForce") cnt sto maxIterationsPerStorage
+    newCaller =  (caller |> nc "selectStorageToForce")
+    check = (checkBalanceSingle newCaller threshold bal sto) || 
+            checkBalanceCounterOne newCaller cnt sto maxIterationsPerStorage
     nextSto = if not $ null $ nextStos then head nextStos else head $ Map.keys b           
-    nextStos = tail $ snd $ break (==sto) $ Map.keys b  
+    nextStos = UtList.errTail newCaller $ snd $ break (==sto) $ Map.keys b  
       
 
 calculateNextBalanceStep ::

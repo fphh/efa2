@@ -78,7 +78,7 @@ calculateScaleMap ::
   StateQty.Graph node (Interp.Val a) (Interp.Val a) ->
   FlowOpt.ScaleMap (Interp.Val a) ->
   ((Interp.Val a), FlowOpt.ScaleMap (Interp.Val a))
-calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) = UtTrace.simTrace "ScaleMap" $
+calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) = -- UtTrace.simTrace "ScaleMap" $
   (etaSys, FlowOpt.ScaleMap $ Map.union (Map.mapWithKey f endNodeMap) oldScaleMap)
   where
     newCaller = caller |> nc "calculateScaleMap"
@@ -87,7 +87,7 @@ calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) =
     f state (FlowOpt.EndNodeEnergies _ _ stoMapState) = g $ Map.elems $ FlowOpt.unStorageMap stoMapState
       where 
 
-       g [Just (FlowOpt.StorageFlow x)] = UtTrace.simTrace "Source,SinkScale" $ 
+       g [Just (FlowOpt.StorageFlow x)] = --UtTrace.simTrace "Source,SinkScale" $ 
                                           Just (FlowOpt.ScaleSource $ sourceFlow Arith.~/x, 
                                                 FlowOpt.ScaleSink $ sinkFlow Arith.~/x, 
                                                 FlowOpt.ScaleSto $ stoBalance Arith.~/x)
@@ -97,8 +97,10 @@ calculateScaleMap caller globalLifeCycleMap sfg (FlowOpt.ScaleMap oldScaleMap) =
        err = merror caller modul "calculateScaleMap" "No Storage balance found"  
        (FlowOpt.TotalSourceFlow sourceFlow, 
         FlowOpt.TotalSinkFlow sinkFlow, 
-        stoMapRest) = UtTrace.simTrace "srcSinkFlow" $ StateFlowOpt.sumSinkSourceFlowsAllStates 
-                                              $ StateFlowOpt.removeState (UtTrace.simTrace "state" state) endNodeMap
+        stoMapRest) = --UtTrace.simTrace "srcSinkFlow" $ 
+                      StateFlowOpt.sumSinkSourceFlowsAllStates 
+                                              $ StateFlowOpt.removeState (-- UtTrace.simTrace "state" 
+                                                                          state) endNodeMap
             
 
        

@@ -503,16 +503,20 @@ evalSweep ::
    PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val (Interp.Val a)),
    DV.FromList srchVec,
    DV.Storage vec (Maybe Idx.AbsoluteState),
-   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val a)) =>
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val a), 
+--   Num (Interp.Val a),
+   DV.Storage vec Bool,
+   DV.Singleton srchVec) =>
   Caller ->
   FilePath ->
   FileOrder -> [Title] ->
   CubeGrid.Grid (Sweep.Search inst) srchDim label srchVec a ->
   EvalCtrl ->
+  [Idx.AbsoluteState] ->
   Process.SweepEvaluation node inst dim srchDim vec srchVec a ->
   [IO ()]
-evalSweep _ _ _ _ _ EvalDont _ = []  
-evalSweep caller path fileOrder titles srchGrid ctrl swp = let  
+evalSweep _ _ _ _ _ EvalDont _ _ = []  
+evalSweep caller path fileOrder titles srchGrid ctrl states swp = let  
   newCaller = caller |> nc "evalSweep"
   f str = makeFileName path fileOrder $ titles ++ [PR "EvalSweep"] ++ [str]
   g str = makeTitle $ titles ++ [PR "EvalSweep"] ++ [str]
@@ -523,6 +527,10 @@ evalSweep caller path fileOrder titles srchGrid ctrl swp = let
    
    (plotAction (plotState ctrl) (f $ DG "FlowState")
     (SweepPlot.plotStates newCaller (g $ DG "Flow State") srchGrid )
+     (Process.accessSweepOptimality swp)) ++ 
+   
+   (plotAction (plotState ctrl) (f $ DG "FlowStateRange")
+    (SweepPlot.plotStateCubes newCaller (g $ DG "Flow State Range") states)
      (Process.accessSweepOptimality swp)) ++ 
  
    (plotAction (plotLossSys ctrl) (f $ DG "SystemLoss")
@@ -606,6 +614,12 @@ optPerState caller path fileOrder titles ctrl opt =
       (FlowOpt.getOptEtaVal . snd . snd)) 
      (Process.accessOptimalChoicePerState opt))  ++  
     
+     (plotAction (plotOptEtaPerState ctrl) (f $ DG "StateRange")
+      (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g $ DG "Show Valid Range of each State") 
+       (Maybe.maybe (Interp.Invalid ["plotStates"]) Interp.Inter . fmap (Arith.fromInteger . fromIntegral . Idx.unAbsoluteState) . 
+        ActFlowCheck.getState . fst . snd)) 
+     (Process.accessOptimalChoicePerState opt))  ++  
+         
      (plotAction (plotEtaOptPerState ctrl) (f $ DG "OptimalEtaPerState")
       (SweepPlot.plotOptimalOptimalityValuePerState newCaller (g $ DG "Optimal Eta Per State")
        (FlowOpt.getEtaVal . snd . snd)) 
@@ -743,6 +757,8 @@ loopsIO ::
    DV.Walker sigVec,
    DV.Walker srchVec,
    DV.Walker demVec,
+   DV.Storage demVec Bool, 
+   DV.Singleton srchVec,
    DV.Storage sigVec (Maybe (Interp.Val a)),
    DV.Storage sigVec (ValueState.Map (Interp.Val a)),
    DV.Storage sigVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
@@ -899,6 +915,8 @@ etaLoopItemIO ::
    DV.LookupUnsafe srchVec (ActFlowCheck.EdgeFlowStatus,
                             FlowOpt.OptimalityValues (Interp.Val a)),
    DV.Length srchVec,
+   DV.Storage demVec Bool, 
+   DV.Singleton srchVec,
    DV.Length sigVec,
    DV.FromList srchVec,
    DV.FromList sigVec,
@@ -923,7 +941,7 @@ etaLoopItemIO path fileOrder titles evalCtr optCtr opCtr simCtr sys optiS (Loop.
   print cnt
   -- TODO: hack evalSweep ist actually not usable
   concurrentlyMany_ $ evalSweep (nc "balanceLoopItemIO") path fileOrder
-                          newTitles (head $ Process.accessSearchGrids optiS) evalCtr sweepEval
+                          newTitles (head $ Process.accessSearchGrids optiS) evalCtr (Process.accessStates sys) sweepEval
   mapM_ (balanceLoopItemIO path fileOrder newTitles optCtr opCtr simCtr sys optiS) balLoop   
   
   mapM_ (balanceLoopItemIO (path++"/Eta") fileOrder newTitles optCtr opCtr simCtr sys optiS) [head balLoop,last balLoop]

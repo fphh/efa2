@@ -821,3 +821,11 @@ zipWith3Data f xs xs1 xs2 = zipWithData (\x (x1,x2) -> f x x1 x2) xs $ zipWithDa
 appendData ::(DV.Storage vec a, DV.Singleton vec)=>
   Data inst dim vec a -> Data inst dim vec a -> Data inst dim vec a
 appendData (Data x) (Data y) = Data $ DV.append x y 
+
+
+anyData:: (DV.Storage vec a, DV.Singleton vec) =>
+  (a -> Bool) -> 
+  Data inst dim vec a -> 
+  Bool
+anyData f (Data vec) = DV.any f vec
+  

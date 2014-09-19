@@ -68,7 +68,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 
 --import qualified  UniqueLogic.ST.TF.System as ULSystem
 
-import qualified Data.Map as Map
+--import qualified Data.Map as Map
 --import qualified Data.Foldable as Fold
 -- import Data.Map as (Map)
 --import Data.Monoid((<>))
@@ -354,8 +354,74 @@ plotOptimalOptimalityValuePerState caller title faccess optPerState =
  (\ _ x ->  LineSpec.title $ show $ PlotD3.getId x)
   $ concatMap f stateCubes
   where  
+    f (ident,cube) = PlotCube.toPlotData caller (Just ident) $ 
+                  CubeMap.map (Maybe.maybe (Interp.Invalid ["plotOptimalOptimalityValuePerState"]) faccess) cube
+    stateCubes = ValueState.toList $ SweepAccess.stateCubeToStateCubes optPerState
+{-
+plotOptimalOptimalityValuePerStateEach ::
+  (Arith.Sum b, Atom.C a,Ord b, Ord a, Show node, Arith.Constant b,
+   DV.Walker vec,
+   DV.Storage vec b,
+   DV.Storage vec (Interp.Val b),
+   DV.Storage vec (Maybe (CubeGrid.LinIdx,
+                          (ActFlowCheck.EdgeFlowStatus,
+                           FlowOpt.OptimalityValues (Interp.Val b)))),
+   DV.Storage vec (ValueState.Map (CubeGrid.LinIdx,
+                                   (ActFlowCheck.EdgeFlowStatus,
+                                    FlowOpt.OptimalityValues (Interp.Val b)))),
+   DV.Storage vec (CubeGrid.LinIdx,
+                   (ActFlowCheck.EdgeFlowStatus,
+                    FlowOpt.OptimalityValues (Interp.Val b))),
+
+   DV.Storage vec (ValueState.Map (CubeGrid.LinIdx,
+                                   (ActFlowCheck.EdgeFlowStatus,
+                                    FlowOpt.OptimalityValues b))),
+   DV.Storage vec (CubeGrid.LinIdx, (ActFlowCheck.EdgeFlowStatus,
+                                     FlowOpt.OptimalityValues b)),
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val b),
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a b) =>
+  Caller ->
+  String ->
+  ((CubeGrid.LinIdx, 
+    (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val b))) -> Interp.Val b) ->
+  CubeSweep.OptimalChoicePerState node inst dim vec a (Interp.Val b) ->
+  Frame.T (Graph3D.T a a (Interp.Val b))
+plotOptimalOptimalityValuePerStateEach caller title faccess optPerState = 
+  PlotD3.each (PlotD3.labledFrame title) 
+ (\ _ x ->  LineSpec.title $ show $ PlotD3.getId x)
+  $ concatMap f stateCubes
+  where  
     f (id,cube) = PlotCube.toPlotData caller (Just id) $ 
                   CubeMap.map (Maybe.maybe (Interp.Invalid ["plotOptimalOptimalityValuePerState"]) faccess) cube
     stateCubes = ValueState.toList $ SweepAccess.stateCubeToStateCubes optPerState
-
+-} 
+plotStateCubes ::
+  (Ord b,
+   Ord a,
+   Show node,
+   Arith.Constant b,
+   Atom.C a,
+   DV.Walker vec,
+   DV.Storage vec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                     FlowOpt.OptimalityMeasure b)),
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                       FlowOpt.OptimalityMeasure b),
+   DV.Storage vec Bool,
+   DV.Storage vec (Interp.Val b),
+   DV.Singleton srchVec,
+   PlotCube.ToPlotData CubeMap.Cube dim (DemandAndControl.Var node) vec a (Interp.Val b)) =>
+  Caller ->
+  String ->
+  [Idx.AbsoluteState] ->
+  CubeSweep.OptimalityMeasure node inst dim srchDim vec srchVec a b ->
+  Frame.T (Graph3D.T a a (Interp.Val b)) 
+plotStateCubes caller title states evalSweep = 
+  PlotD3.allInOne (PlotD3.labledFrame title) (\ _ x ->  LineSpec.title $ show $ PlotD3.getId x)
+  $ concatMap f stateCubes
+  where stateCubes = CubeSweep.getStateCubes caller evalSweep states
+        f (state,cube) = PlotCube.toPlotData caller (Just state) $ 
+                  CubeMap.map g cube
+                  where
+                    g True = Interp.Inter $ Arith.fromInteger $ fromIntegral $ Idx.unAbsoluteState state            
+                    g False = Interp.Invalid ["plotStateCubes"]
  

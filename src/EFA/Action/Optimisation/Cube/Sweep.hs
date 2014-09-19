@@ -117,7 +117,10 @@ type FlowStatus node inst demDim srchDim demVec srchVec a =
     (CubeMap.Data (Sweep.Search inst) 
                     srchDim srchVec ActFlowCheck.EdgeFlowStatus)
 
-   
+-- Datatype to check in which parts a state exists
+type StateCubes node inst demDim demVec a b = 
+  [(Idx.AbsoluteState, CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a b)]
+
 type EndNodeFlows node inst demDim srchDim demVec srchVec a b =  
   CubeMap.Cube (Sweep.Demand inst) demDim (DemandAndControl.Var node) demVec a 
   (FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) 
@@ -373,6 +376,26 @@ getOptimalFlowPerStateCube caller optimalityCube sweepCube =
                            TopoQty.mapSection (\searchCubeData ->  
                                                 fmap (flip CubeMap.lookupLinUnsafeData linIdx) 
                                                 searchCubeData ) flowSection) stateMap
+
+getStateCubes :: 
+  (DV.Walker demVec,
+   DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
+                       FlowOpt.OptimalityMeasure b),
+   DV.Singleton srchVec,    
+   DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
+                                                                        FlowOpt.OptimalityMeasure b)),
+   DV.Storage demVec Bool)=>
+  Caller ->
+  OptimalityMeasure node inst demDim srchDim demVec srchVec a b  ->
+  [Idx.AbsoluteState] ->
+  StateCubes node inst demDim demVec a Bool
+  
+getStateCubes caller evalCube states = 
+ zip states $ map (\state -> CubeMap.map (CubeMap.anyData (f state . ActFlowCheck.getState . fst)) evalCube) states 
+ where 
+   f st (Just x) = if st==x then True else False
+   f _  Nothing = False
+
 
 --------------------- Helper Functions below
 
