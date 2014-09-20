@@ -1,5 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module EFA.Equation.Arithmetic where
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
@@ -9,7 +11,7 @@ import qualified UniqueLogic.ST.TF.System as Sys
 import Control.Applicative (liftA2)
 import Data.Maybe.HT (toMaybe)
 import Data.Bool.HT (if')
-import Data.Ratio (Ratio)
+import Data.Ratio (Ratio,approxRational)
 
 import qualified Prelude as P
 import Prelude hiding (negate, recip, abs, fromInteger, fromRational)
@@ -222,14 +224,24 @@ In the future we might make this a method of the Sum class.
 clear :: Sum a => a -> a
 clear x = x~-x
 
-one :: Constant a => a
+one,two,three,four :: Constant a => a
 one = fromInteger 1
-
-two :: Constant a => a
 two = fromInteger 2
+three = fromInteger 3
+four = fromInteger 4
 
 square :: Product a => a -> a
 square x = x~*x
+
+class Root a where
+  sqrt :: a -> a
+  
+instance Root Double where  
+  sqrt = P.sqrt
+
+instance Root (Ratio Integer) where  
+  sqrt x = approxRational (10^^(-12::Integer)) (P.sqrt $ P.fromRational x ::Double)
+
 
 (^!) :: Product a => a -> Int -> a
 x^!n =

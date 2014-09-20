@@ -7,7 +7,7 @@ import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Value.State as ValueState
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Action.Flow.Balance as Balance
+--import qualified EFA.Action.Flow.Balance as Balance
 --import EFA.Equation.Arithmetic ((~+), (~/))
 --import EFA.Equation.Result (Result)
 
@@ -28,7 +28,7 @@ import Control.Monad(join)
 --import Data.Foldable (Foldable, foldMap)
 
 --import qualified EFA.Action.DemandAndControl as DemandAndControl
-import qualified EFA.Utility.Map as UtMap
+--import qualified EFA.Utility.Map as UtMap
 
 import EFA.Utility(Caller,
                  merror,
@@ -169,7 +169,7 @@ getOptEtaVal (OptimalityValues (OptimalityMeasure (EtaSys x) _) (TotalBalanceFor
 getOptLossVal :: (Arith.Sum a) => OptimalityValues a -> a             
 getOptLossVal (OptimalityValues (OptimalityMeasure _ (LossSys x)) (TotalBalanceForce y)) = x Arith.~+ y
 
-interpolateOptimalityPerState :: (Ord a, Show a, Arith.Product a,Arith.Constant a)=> 
+interpolateOptimalityPerState :: (Ord a, Show a, Arith.Product a,Arith.Constant a, Arith.Root a)=> 
  Caller ->
  Interp.Method a ->
  String ->

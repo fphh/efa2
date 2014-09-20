@@ -446,7 +446,7 @@ lookupControlVariablePerState  caller flowSectionMap controlVar =
         err = merror caller modul "lookupControlVariables" "ControlVariable not found in flowSection"
 
 interpolateWithSupportPerState :: 
-  (Ord a, Show a, Arith.Constant a,Show label,
+  (Ord a, Show a, Arith.Constant a,Show label,Arith.Root a, 
    DV.Storage vec a,
    DV.Storage vec (ValueState.Map (Interp.Val a)),
    DV.Slice vec,
@@ -481,7 +481,7 @@ interpolateWithSupportPerState caller inmethod cube support coordinates =
         (y1,y2) = (f idx1, f idx2)
 
 interpolateWithSupportPerStateMaybe :: 
-  (Ord a, Show a, Arith.Constant a,Show label,
+  (Ord a, Show a, Arith.Constant a,Show label,Arith.Root a,
    DV.Storage vec a,
    DV.Storage vec (ValueState.Map (Maybe (Interp.Val a))),
    DV.Slice vec,
@@ -520,7 +520,7 @@ interpolateWithSupportPerStateMaybe caller inmethod cube support coordinates =
 
 
 interpolateOptimalityValuesWithSupportPerState :: 
-  (Ord a, Show a, Arith.Constant a,DV.Storage vec a, Show node,
+  (Ord a, Show a, Arith.Constant a,DV.Storage vec a, Show node,Arith.Root a,
    DV.Storage vec (ValueState.Map (CubeGrid.LinIdx, (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a)))),
    DV.Slice vec,
    Show(vec (ValueState.Map (CubeGrid.LinIdx,(ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityValues (Interp.Val a))))),

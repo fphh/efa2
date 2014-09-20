@@ -14,7 +14,7 @@ import qualified EFA.Action.Flow.Optimality as FlowOpt
 import qualified EFA.Data.ND.Cube.Map as CubeMap
 import qualified EFA.Data.Interpolation as Interp
 
-import qualified EFA.Flow.Topology.Quantity as TopoQty
+--import qualified EFA.Flow.Topology.Quantity as TopoQty
 --import qualified EFA.Flow.Topology as FlowTopo
 --import EFA.Utility.Trace(mytrace)
 
@@ -42,7 +42,7 @@ import qualified Data.Map as Map
 
 --import qualified EFA.Report.Format as Format
 
-import qualified Data.Maybe as Maybe
+--import qualified Data.Maybe as Maybe
 --import Control.Applicative (liftA2, liftA)
 --import Control.Monad(join)
 --import Data.Foldable (Foldable, foldMap)
@@ -50,7 +50,7 @@ import qualified Data.Maybe as Maybe
 --import Debug.Trace(trace)
 
 import EFA.Utility(Caller,
-                 merror,
+--                 merror,
                    (|>),
                    ModuleName(..),FunctionName, genCaller)
 

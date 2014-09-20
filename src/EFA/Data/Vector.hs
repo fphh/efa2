@@ -32,6 +32,16 @@ import Text.Show (Show, show)
 
 import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max, fmap, succ)
 
+import EFA.Utility(Caller,
+                   --merror,(|>),
+                   ModuleName(..),FunctionName, genCaller)
+
+modul :: ModuleName
+modul = ModuleName "Data.Vector"
+
+nc :: FunctionName -> Caller
+nc = genCaller modul
+
 
 {- |
 We could replace this by suitable:Suitable.
@@ -723,3 +733,18 @@ argMaximum2 ::
    (Functor f, Fold.Foldable f, Fold.Foldable g, Ord a) =>
    NonEmpty.T f (NonEmpty.T g a) -> ((Int, Int), a)
 argMaximum2 = argMaximumKey2 id
+
+{-
+-- | Evenly fill n equally spaced Points within the existing vector values 
+fillEven:: 
+  Caller -> 
+  vec -> 
+  vec
+fillEven caller vec = 
+  if len vec < 2 then vec else let DV.append deltaMap f vec 
+  where f x x1 = 
+               (x x1 -> let
+                                 dx = x1 Arith.~- x
+                                 dxnVec = replicate (n-1) (dx Arith.~/ Arith.fromInteger $ fromIntegral n)
+                                        [xvec  
+-}

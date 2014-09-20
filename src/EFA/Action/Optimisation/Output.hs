@@ -12,7 +12,7 @@ import qualified EFA.Flow.Part.Index as Idx
 import qualified EFA.Flow.Draw as Draw
 import qualified EFA.Action.Optimisation.Process as Process
 --import EFA.Utility.Async (concurrentlyMany_)
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+--import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Action.Optimisation.Loop as Loop
 
 import qualified EFA.Action.EtaFunctions as EtaFunctions
@@ -428,16 +428,16 @@ sweep caller path fileOrder titles keyList searchGrid ctrl swp = let
   g str = makeTitle $ titles ++ [PR "sweep"] ++ [str]
   in
    -- TODO - output: generalise diagramm to show edges instead a fixed index
-   (drawAction (drawFlow ctrl)  (f $ DG "FlowDemandEdges")
-    (concatMap (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Edges") 
-     (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]])))
+   (drawAction (drawFlow ctrl)  (f $ DG "FlowDemandIndex")
+    (concatMap (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Index 6,6") 
+     (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 6,Strict.Idx 6]])))
     (Process.accessSweepFlowCubes swp)) ++
    
-   -- TODO - output: generalise diagramm to show edges instead a fixed index
+{-   -- TODO - output: generalise diagramm to show edges instead a fixed index
    (drawAction (drawFlow ctrl)  (f $ DG "FlowDemandEdges")
     (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Edges") 
      (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 3,Strict.Idx 7]]))
-    (Process.accessSweepFlow swp))  ++
+    (Process.accessSweepFlow swp))  ++ -}
    
 {-   -- TODO - show flow states in sweep stack
      -- Problem ?? - Data format

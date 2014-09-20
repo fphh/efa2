@@ -15,16 +15,21 @@ import EFA.Utility(Caller,
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
-          (Sum, (~+), (~-), Product, (~*), (~/), Constant)
+          (Sum, (~+), (~-), Product, (~*), (~/), Constant, sqrt, square, constOne, Root)
 
 import EFA.Report.FormatValue as FormatValue
 --import qualified Test.QuickCheck as QC
 --import System.Random (Random)
 import qualified EFA.Value.Type as Type 
 
+import qualified EFA.Utility.Trace as UtTrace
+import Debug.Trace(trace)
+
 import Control.Applicative
 import qualified EFA.Report.Format as Format
 --import EFA.Report.Format (Format)
+
+import Prelude hiding (sqrt)
 
 modul :: ModuleName
 modul = ModuleName "Data.Interpolation"
@@ -48,7 +53,7 @@ instance (Eq a, Product a, Constant a) => Arith.ZeroTestable (Val a) where
 instance (Arith.NaNTestable a) => Arith.NaNTestable (Val a) where
   checkIsNaN (Inter x) = Arith.checkIsNaN x
   checkIsNaN (Extra x) = Arith.checkIsNaN x
-  checkIsNaN (Invalid x) = False
+  checkIsNaN (Invalid _) = False
 
 instance (Constant a) => Constant (Val a) where
    zero = (Inter Arith.zero)
@@ -193,10 +198,12 @@ unpack (Invalid _) = (Arith.zero) ~/ (Arith.zero)
 makeInvalid :: Product a => a -> Val a
 makeInvalid _ = Invalid []
 
-data Method a = Linear | Nearest deriving (Show)
+data Method a = Linear | Nearest | LinEtaUpStream | LinEtaDwnStream deriving (Show)
 
 data ExtrapMethod a =
   ExtrapLinear
+  | ExtrapLinEtaUpStream
+  | ExtrapLinEtaDwnStream
   | ExtrapNone
   | ExtrapVal a
   | ExtrapLast
@@ -211,8 +218,32 @@ nearest :: (Ord a, Sum a,Product a) => (a, a) -> (a, a) -> a  -> a
 nearest (x1, x2) (y1, y2) x =
   if Arith.abs (x1 ~- x) < Arith.abs (x2 ~- x) then y1 else y2
 
+-- | Interpolation to be used to interpolate the reverse-Efficiency-Curve on the Upstream-side, 
+-- when the down stream efficiency curve was defined with linear interpolation
+-- this special interpolation provides also reversable results even when not hitting supporting points
+linearEtaUpStream :: (Sum a, Product a) => (a, a) -> (a, a) -> a  -> a
+linearEtaUpStream (p0, p1) (n0, n1) p = n0 ~/ (one ~- c ~* dP)
+  where
+    one = Arith.constOne p
+    dP = (p ~- p0)
+    c = (n1 ~- n0) ~/ (p1 ~- p0)
+    
+-- | Interpolation to be used to interpolate the reverse-Efficiency-Curve on the Downstream-side, 
+-- when the up stream efficiency curve was defined with linear interpolation
+-- this special interpolation provides also reversable results even when not hitting supporting points
+linearEtaDwnStream :: (Ord a, Root a, Sum a, Product a) => (a, a) -> (a, a) -> a  -> a
+linearEtaDwnStream  (p0, p1) (n0, n1) p = if n1 >= n0 then (n0 ~+ sqrt (square n0 ~+  (four~*dn~*dP)~/dP0))~/two 
+                                          else (n0 ~- sqrt (square n0 ~+ (four~*dn~*dP)~/dP0))~/two
+                                            
+  where
+    two = constOne p ~+ constOne p 
+    four = two ~+ two
+    dP = (p ~- p0)
+    dn = (n1 ~- n0) 
+    dP0 = p1 ~- p0
 
-dim1 :: (Eq a,Ord a, Sum a, Product a, Show a) =>
+
+dim1 :: (Eq a,Ord a, Sum a, Product a, Show a, Root a) =>
               Caller ->
               Method a ->
               ExtrapMethod a ->
@@ -231,10 +262,14 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Extra x) =
                Inside ->
                  case inmethod of
                    Linear -> Extra $ linear (x1,x2) (y1,y2) x
+                   LinEtaUpStream -> Extra $ linearEtaUpStream (x1,x2) (y1,y2) x
+                   LinEtaDwnStream -> Extra $ linearEtaDwnStream (x1,x2) (y1,y2) x
                    Nearest -> Extra $ nearest (x1, x2) (y1, y2) x
                Outside ->
                  case exmethod of
                    ExtrapLinear ->  Extra $ linear (x1,x2) (y1,y2) x
+                   ExtrapLinEtaUpStream -> Extra $ linearEtaUpStream (x1,x2) (y1,y2) x
+                   ExtrapLinEtaDwnStream -> Extra $ linearEtaDwnStream (x1,x2) (y1,y2) x
                    ExtrapLast ->  Extra $ nearest (x1, x2) (y1,y2) x
                    (ExtrapVal val) ->  Extra $ val
                    ExtrapNone ->  Invalid [show label ++ "@" ++ show x]
@@ -247,6 +282,8 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Extra x) =
                Outside ->
                  case exmethod of
                    ExtrapLinear ->  Invalid [show label ++ "@" ++ show x]
+                   ExtrapLinEtaUpStream -> Invalid [show label ++ "@" ++ show x]
+                   ExtrapLinEtaDwnStream -> Invalid [show label ++ "@" ++ show x]
                    ExtrapLast -> Extra $ if x < x1 then y1 else y2
                    (ExtrapVal val) ->  Extra $ val
                    ExtrapNone ->  Invalid [show label ++ "@" ++ show x]
@@ -256,7 +293,7 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Extra x) =
 
                _   -> Extra $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)
 
-    GT -> merror caller modul "interp1Core" "x1 greater than x2"
+    GT -> merror caller modul "interp1Core" $ "x1 greater than x2 - x1: " ++ show x1 ++ " x2: " ++ show x2
     
 dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Inter x) =
   case compare x1 x2 of
@@ -269,9 +306,13 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Inter x) =
                  case inmethod of
                    Linear -> Inter $ linear (x1,x2) (y1,y2) x
                    Nearest -> Inter $ nearest (x1, x2) (y1, y2) x
+                   LinEtaUpStream -> trace "InterInsideLTUp" $ Inter $ linearEtaUpStream (x1,x2) (y1,y2) x
+                   LinEtaDwnStream -> trace "InterInsideLtDwn" $ Inter $ linearEtaDwnStream (x1,x2) (y1,y2) x
                Outside ->
                  case exmethod of
                    ExtrapLinear ->  Extra $ linear (x1,x2) (y1,y2) x
+                   ExtrapLinEtaUpStream -> Extra $ linearEtaUpStream (x1,x2) (y1,y2) x
+                   ExtrapLinEtaDwnStream -> Extra $ linearEtaDwnStream (x1,x2) (y1,y2) x
                    ExtrapLast ->  Extra $ nearest (x1, x2) (y1,y2) x
                    (ExtrapVal val) ->  Extra $ val
                    ExtrapNone ->  Invalid [show label ++ "@" ++ show x]
@@ -284,6 +325,8 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Inter x) =
                Outside ->
                  case exmethod of
                    ExtrapLinear ->  Invalid  [show label ++ "@" ++ show x]
+                   ExtrapLinEtaUpStream -> Invalid [show label ++ "@" ++ show x]
+                   ExtrapLinEtaDwnStream -> Invalid [show label ++ "@" ++ show x]
                    ExtrapLast -> Extra $ if x < x1 then y1 else y2
                    (ExtrapVal val) ->  Extra $ val
                    ExtrapNone ->  Invalid [show label ++ "@" ++ show x]
@@ -293,7 +336,7 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Inter x) =
 
                _   -> Inter $ (y1 ~+ y2) ~/ (Arith.constOne x1 ~+ Arith.constOne x1)
 
-    GT -> merror caller modul "interp1Core" "x1 greater than x2"
+    GT -> merror caller modul "interp1Core" $ "x1 greater than x2 - x1: " ++ show x1 ++ " x2: " ++ show x2
 
 getPos :: (Eq a, Ord a) => (a,a) -> a -> Pos
 getPos (x1,x2) x =
@@ -357,7 +400,7 @@ instance QC.Arbitrary (Val String Double) where
 -- | This is the Version to Interpolate the optimal maps
 -- TODO -- should it be moved to Axis.Strict ?       
 dim1WithSupport ::
-  (Eq a,Ord a, Sum a, Product a, Show a, Constant a) =>
+  (Eq a,Ord a, Sum a, Product a, Show a, Root a, Constant a) =>
   Caller ->
   Method a ->
   String ->
@@ -370,7 +413,7 @@ dim1WithSupport caller inmethod label (Strict.PairOfPoints (x0,y0) (x1,y1)) x = 
   where y = dim1 (caller |> nc "dim1WithSupport") inmethod ExtrapError label (x0,x1) (unpack y0, unpack y1) (Inter x)
   
 dim1PerState ::
-  (Eq a,Ord a, Sum a, Product a, Show a, Constant a) =>
+  (Eq a,Ord a, Sum a, Product a, Show a, Constant a, Root a) =>
   Caller ->
   Method a ->
   String ->
@@ -384,7 +427,7 @@ dim1PerState caller inmethod label (x0,x1) (y0,y1) x = ValueState.zipWith3 combi
             (unpack ya, unpack yb) (Inter x)
   
 dim1PerStateWithMaybe ::
-  (Eq a,Ord a, Sum a, Product a, Show a, Constant a) =>
+  (Eq a,Ord a, Sum a, Product a, Show a, Constant a, Root a) =>
   Caller ->
   Method a ->
   String ->

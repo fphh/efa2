@@ -30,6 +30,11 @@ merror ::  Caller -> ModuleName -> FunctionName -> String -> t
 merror caller m f msg = 
   error $ "Error in "++ show m ++ " - Function " ++ f 
   ++ " called by " ++ show caller ++ " - Message: " ++ msg
+  
+nerror ::  ModuleName -> FunctionName -> String -> t 
+nerror  m f msg =
+  error $ "Error in "++ show m ++ " - Function " ++ f 
+  ++ " - Message: " ++ msg
 
 checkJust :: String -> Maybe a -> a
 checkJust _ (Just x) = x

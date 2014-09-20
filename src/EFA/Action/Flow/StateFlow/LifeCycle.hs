@@ -16,7 +16,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 --import qualified EFA.Flow.State as StateFlow
 import qualified EFA.Flow.State.Quantity as StateQty
 import qualified EFA.Action.Flow.Optimality as FlowOpt
-import qualified EFA.Action.Utility as ActUt
+--import qualified EFA.Action.Utility as ActUt
 import qualified EFA.Action.Flow.Topology.State as TopoState
 
 import qualified EFA.Flow.Topology.Quantity as TopoQty
@@ -30,7 +30,7 @@ import qualified Data.Foldable as Fold
 
 import qualified Debug.Trace as Trace
 
-import qualified EFA.Utility.Trace as UtTrace 
+--import qualified EFA.Utility.Trace as UtTrace 
 
 import EFA.Utility(Caller,
                  merror,

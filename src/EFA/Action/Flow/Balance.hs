@@ -156,10 +156,10 @@ checkBalanceCounterOne caller (BalanceCounter m) sto (MaxIterationsPerStorage ma
         f Nothing = merror caller modul  "checkBalanceCounterOne" $ "Storage not found: " ++ show sto 
 
 checkBalanceCounter :: (Ord node) => BalanceCounter node -> MaxIterations -> Bool 
-checkBalanceCounter (BalanceCounter m) (MaxIterations ma) = Map.foldl (+) 0 m > ma
+checkBalanceCounter (BalanceCounter m) (MaxIterations ma) = Map.foldl (+) 1 m >= ma
 
 
--- TODO!! check storage selection
+-- TODO!! reactivate and check storage selection
 selectStorageToForce ::(Ord node, Ord a, Show node, Arith.Sum a) =>
   Caller ->
   Balance node a ->

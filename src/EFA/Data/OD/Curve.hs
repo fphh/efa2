@@ -1,6 +1,10 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module EFA.Data.OD.Curve where
 
 import qualified EFA.Value as Value
+import qualified EFA.Value.Type as Type
+
 import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.Interpolation as Interpolation
 import qualified EFA.Data.Vector as DV
@@ -12,7 +16,7 @@ import EFA.Utility(Caller,
                    ModuleName(..),FunctionName, genCaller)
 
 import qualified EFA.IO.TableParserTypes as ParseTable
-import qualified EFA.Value.Type as Type
+--import qualified EFA.Value.Type as Type
 
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -59,7 +63,7 @@ lookupUnsafe curve (Strict.Idx idx) = DV.lookupUnsafe (getData curve) idx
 
 
 interpolate :: 
-  (Eq a, Show a, Arith.Product a, Arith.Constant a,Show label,
+  (Eq a, Show a, Arith.Product a, Arith.Constant a, Arith.Root a, Show label,
    Ord a,
    DV.Storage vec a,
    DV.LookupUnsafe vec a,
@@ -98,14 +102,15 @@ data ModifyOps a =
   deriving (Show) 
 
 modify :: 
-  (Arith.Product a, DV.Walker vec, DV.Storage vec a,DV.Zipper vec,
+  (Arith.Product a, Arith.Root a, DV.Walker vec, DV.Storage vec a,DV.Zipper vec,
    DV.Singleton vec, DV.Reverse vec, DV.FromList vec) =>
   [ModifyOps a] -> 
   Curve inst label vec a a -> Curve inst label vec a a
 modify xs curve = foldl (\crv op  -> modi op crv) curve xs 
 
 modi :: 
-  (Arith.Sum a,
+  (Arith.Sum a, 
+   Arith.Root a,
    DV.Zipper vec,
    DV.Singleton vec, 
    DV.FromList vec,
@@ -188,16 +193,56 @@ getValueRange ::
   Curve inst label vec a b -> Value.Range b
 getValueRange (Curve _ vec) = Value.getValueRange vec
 
+-- TODO: should be obsolete
 calcEtaCurveDownStream :: 
-  (DV.Zipper vec, DV.Storage vec a, Arith.Product a) =>
+  (DV.Zipper vec, DV.Storage vec a, Arith.Product a, Arith.Root a) =>
   Curve inst label vec a a -> 
   Curve inst label vec a a       
-calcEtaCurveDownStream curve@(Curve (Strict.Axis label typ axis) vec) = Curve newAxis vec
+calcEtaCurveDownStream (Curve (Strict.Axis label typ axis) vec) = Curve newAxis vec
   where newAxis = Strict.Axis  label typ $ DV.zipWith(Arith.~*) axis vec
 
+-- TODO: should be obsolete
 calcEtaCurveUpStream ::   
   (DV.Zipper vec, DV.Storage vec a, Arith.Product a) =>
   Curve inst label vec a a -> 
   Curve inst label vec a a       
-calcEtaCurveUpStream curve@(Curve (Strict.Axis label typ axis) vec) = Curve newAxis vec
+calcEtaCurveUpStream (Curve (Strict.Axis label typ axis) vec) = Curve newAxis vec
   where newAxis = Strict.Axis label typ $ DV.zipWith(Arith.~/) axis vec
+
+zipDataWithAxis ::
+  (DV.Zipper vec,
+   DV.Storage vec c,
+   DV.Storage vec b,
+   DV.Storage vec a) =>
+  (a -> b -> c) ->
+  Curve inst label vec a b -> 
+  Curve inst label vec a c 
+zipDataWithAxis f (Curve axis vec) = Curve axis $ DV.zipWith f (Strict.getVec axis) vec
+
+zipAxisWithData ::
+  (DV.Zipper vec,
+   DV.Storage vec c,
+   DV.Storage vec b,
+   DV.Storage vec a) =>
+  (a -> b -> c) ->
+  Curve inst label vec a b -> 
+  Curve inst label vec c b 
+zipAxisWithData f (Curve (Strict.Axis label typ axis) vec) = 
+  Curve (Strict.Axis label typ $ DV.zipWith f axis vec) vec
+  
+  
+reverseCurve ::
+  (Ord b,
+   DV.Zipper vec,
+   DV.Storage vec b,
+   DV.Storage vec Bool,
+   DV.Singleton vec) => 
+  Caller ->
+  label ->
+  Type.Dynamic ->
+  Curve inst label vec a b -> 
+  Curve inst label vec b a 
+reverseCurve caller label typ (Curve (Strict.Axis _ _ axis) vec) = 
+  Curve (Strict.fromVec newCaller label typ vec) axis
+         where
+           newCaller = caller |> nc "reverseCurve"

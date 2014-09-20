@@ -210,7 +210,7 @@ buildTestSet demandCycle initialBalance = TestSet demandCycle initialBalance
 
 
 buildSystemData :: 
-  (Ord a,Ord node, 
+  (Ord a,Ord node, Arith.Root a,
    DV.Zipper etaVec,
    Show a,
    Arith.Constant a,
@@ -259,6 +259,8 @@ buildOptiSet ::
    DV.Storage demVec (ND.Data demDim a),
    DV.FromList demVec,
    DV.FromList srchVec, 
+   Show (sigVec (ND.Data demDim (Strict.SupportingPoints (Strict.Idx,a)))),
+   Show (sigVec (SignalFlow.TimeStep a)),
    DV.Walker sigVec,
    DV.Storage
    sigVec (ND.Data demDim (Strict.SupportingPoints (Strict.Idx, a))),
@@ -282,7 +284,8 @@ buildOptiSet caller demandVariation searchVariations demandCycle allowedStates =
     demandGrid = CubeGrid.create newCaller demandVariation
     searchGrids = map (CubeGrid.create newCaller) searchVariations
     sweepVariations = map (CubeSweep.generateVariation newCaller demandGrid) searchGrids
-    supportSignal = OptSignal.getSupportPoints newCaller demandGrid demandCycle 
+    supportSignal =  UtTrace.nTrace True modul "buildOptiSet" "supportSignal" $
+                     OptSignal.getSupportPoints newCaller demandGrid demandCycle 
     demandVars  = map (DemandAndControl.toDemandVar . TupleHT.fst3) demandVariation
     controlVars = map (map (DemandAndControl.toControlVar . TupleHT.fst3)) searchVariations
 
@@ -384,7 +387,7 @@ evaluateSweep caller evalFunction sweepResults evalParam =
         status = accessSweepFlowStatus sweepResults
  
 optimisationPerState ::
-  (Eq (demVec a),
+  (Eq (demVec a),Arith.Root a,
    Ord a,
    Show (demVec (ValueState.Map (Interp.Val a))),
    Show (demVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
@@ -483,6 +486,8 @@ optimisationPerState ::
    DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
                                                                         FlowOpt.OptimalityMeasure (Interp.Val a))),
    DV.Length demVec,
+   Show (sigVec (SignalFlow.TimeStep a)),
+   Show (sigVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
    DV.Length sigVec,
    DV.Length srchVec) =>
   Caller ->
@@ -515,10 +520,11 @@ optimisationPerState caller testSet optiSet sweepResults sweepEvaluationResults 
     optimisationResultPerState = CubeSweep.findMaximumEtaPerState  newCaller states objectiveFunctionValues                          
     optimalFlowCube = CubeSweep.unresultOptimalFlowPerStateCube newCaller $ 
                         CubeSweep.getOptimalFlowPerStateCube newCaller optimisationResultPerState flowResult
-    optimalStateSignals = OptSignal.optimalStateSignals newCaller optimisationResultPerState supportSignal demandCycle
-    optimalStoragePowersPerState = OptSignal.interpolateStoragePowersPerState newCaller Interp.Linear 
+    optimalStateSignals = UtTrace.nTrace False modul "optimisationPerState" "optimalStateSignals" $ 
+                          OptSignal.optimalStateSignals newCaller optimisationResultPerState supportSignal demandCycle
+    optimalStoragePowersPerState = OptSignal.interpolateStoragePowersPerState newCaller Interp.Linear
                               optimalFlowCube supportSignal demandCycle storageList                                   
-    optimalControlSignalsPerState = OptSignal.interpolateControlSignalsPerState newCaller Interp.Linear 
+    optimalControlSignalsPerState = OptSignal.interpolateControlSignalsPerState newCaller Interp.Linear
                                        optimalFlowCube supportSignal demandCycle controlVars
 optimalOperation ::
   (Ord a,Show a,
@@ -537,6 +543,7 @@ optimalOperation ::
  DV.Storage vec (Interp.Val a),
  Show (vec (Interp.Val a)),
  Show (vec (SignalFlow.TimeStep a)),
+ Show (vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
  DV.Storage vec (Maybe (Interp.Val a)),
  DV.Storage vec (ValueState.Map (Interp.Val a)),
  DV.Storage vec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
@@ -555,7 +562,7 @@ optimalOperation ::
  OptimisationPerState node inst demDim srchDim demVec srchVec vec a ->
  OptimalOperation node inst vec a
 optimalOperation caller stateForcing optimisationPerStateResults =
-  OptimalOperation optimalStateSignal optimalControlSignals
+  OptimalOperation optimalStateChoice optimalControlSignals
      optimalStorageSignals balance
   where
     newCaller = caller |> nc "optimalOperation"
@@ -563,11 +570,11 @@ optimalOperation caller stateForcing optimisationPerStateResults =
     optimalStoragePowersPerState = accessOptimalStoragePowersPerState optimisationPerStateResults
     optimalControlSignalsPerState = accessOptimalControlSignalsPerState optimisationPerStateResults
     
-    optimalStateSignal = UtTrace.nTrace True modul "optimalOperation" "optimalStateSignal" $
+    optimalStateChoice = UtTrace.nTrace False modul "optimalOperation" "optimalStateChoice" $
       OptSignal.findOptimalStatesUsingMaxEta newCaller stateForcing optimalStateSignals
       
-    optimalControlSignals = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
-    optimalStorageSignals = OptSignal.generateOptimalStorageSignals optimalStateSignal optimalStoragePowersPerState
+    optimalControlSignals = OptSignal.generateOptimalControl optimalStateChoice optimalControlSignalsPerState                       
+    optimalStorageSignals = OptSignal.generateOptimalStorageSignals optimalStateChoice optimalStoragePowersPerState
     balance = OptSignal.getBalance optimalStorageSignals 
   
   
@@ -640,7 +647,7 @@ simulateAndAnalyse caller system efaParams systemData demandVars optOperation de
   
 
 loop ::
-  (Eq (demVec a),
+  (Eq (demVec a),Arith.Root a,
    Eq (sigVec (Interp.Val a)),
    Eq (sigVec a),
    Ord a,
@@ -793,6 +800,7 @@ loop ::
    Show (sigVec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a))),
    DV.Storage sigVec (sigVec a),
    Show (sigVec (ValueState.Map (Interp.Val a))),
+   Show (sigVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
    DV.LookupUnsafe sigVec (SignalFlow.TimeStep a),Show (sigVec [SignalFlow.TimeStep a]),
    DV.Find sigVec,
    Show (TopoQty.Flow (Result.Result (Data.Data Data.Nil (Interp.Val a))))) =>
@@ -829,7 +837,7 @@ loop caller system systemData testSet optiSet efaParams sweepResults storageList
     sweepEvalFunction = evaluateSweep newCaller evalFunction sweepResults
     
 systemFunction ::
-  (Eq (sigVec a),
+  (Eq (sigVec a),Arith.Root a,
    Eq (sigVec (Interp.Val a)),
    Eq (demVec a),
    Ord a,
@@ -979,6 +987,7 @@ systemFunction ::
    DV.FromList sigVec, Show (sigVec Int),
    DV.LookupUnsafe sigVec (SignalFlow.TimeStep a),
    DV.Find sigVec,
+   Show (sigVec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
    Show (sigVec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a))),
    DV.Storage sigVec (sigVec a),
    DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),

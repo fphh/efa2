@@ -92,7 +92,7 @@ getSupportPoints caller demandGrid demandCycle =
 
 optimalStateSignals ::
   (Ord b,Show node,
-   DV.Storage sigVec b,
+   DV.Storage sigVec b,Arith.Root b,
    DV.Slice sigVec,
    DV.LookupMaybe sigVec (ValueState.Map (CubeGrid.LinIdx,
                                        (ActFlowCheck.EdgeFlowStatus,
@@ -198,7 +198,7 @@ interpolateControlSignalsPerState ::
    Show (vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
    Show a,
    Show node,
-   Arith.Constant a,
+   Arith.Constant a,Arith.Root a,
    DV.Zipper sigVec,
    DV.Walker vec,
    DV.Storage sigVec (ValueState.Map (Interp.Val a)),
@@ -228,7 +228,7 @@ interpolateControlSignalsPerState caller inmethod flowCube
             varCube = CubeMap.map (\ x -> CubeSweep.lookupControlVariablePerState caller x var) flowCube
 
 interpolateStoragePowersPerState ::
-  (Ord a,
+  (Ord a,Arith.Root a,
    Show (vec (ValueState.Map (Maybe (Interp.Val a)))),
    Show (vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a)))),
    Show a,
