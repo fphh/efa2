@@ -100,6 +100,7 @@ newtype InitStorageSeq node a =
 data EFAParams node a = EFAParams 
                  {accessInitStorageState :: InitStorageState node (Interp.Val a),
                   accessInitStorageSeq :: InitStorageSeq node (Interp.Val a), 
+                  -- TODO: effect of zeroDetectionEps not clear, use zero in the moment 
                   accessZeroDetectionEps :: (Interp.Val a)}
   
 

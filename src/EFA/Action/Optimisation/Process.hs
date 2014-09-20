@@ -82,7 +82,7 @@ import qualified Data.Map as Map
 
 --import Data.Monoid((<>))
 
---import qualified EFA.Flow.Topology.Index as TopoIdx
+import qualified EFA.Flow.Topology.Index as TopoIdx
 --import qualified EFA.Equation.Result as Result
 import qualified EFA.Data.Collection as Collection
 import qualified EFA.Data.ND.Cube.Map as CubeMap
@@ -180,7 +180,8 @@ data OptimalOperation node inst vec a = OptimalOperation {
 
 data SimulationAndAnalysis node inst sigVec a = 
   SimulationAndAnalysis
-  {accessSimulation :: Simulation.Simulation node inst sigVec a,
+  {accessGiven :: SignalFlow.HRecord (TopoIdx.Position node) inst [Char] sigVec a (Interp.Val a),
+   accessSimulation :: Simulation.Simulation node inst sigVec a,
    accessAnalysis :: EFA.EnergyFlowAnalysis node inst sigVec a}   
 
 data OutputSet = OutputSet {
@@ -543,8 +544,9 @@ optimalOperation ::
  DV.Singleton vec,
  Show (vec (ValueState.Map (Interp.Val a))),
  DV.Storage vec (SignalFlow.TimeStep a),
- DV.Storage vec [SignalFlow.TimeStep a],
+ DV.Storage vec [SignalFlow.TimeStep a],Show (vec [SignalFlow.TimeStep a]),
  DV.Storage vec Int,
+ Show (vec ([Maybe Idx.AbsoluteState],Maybe (Interp.Val a))),
  DV.LookupUnsafe vec (SignalFlow.TimeStep a),
  DV.Find vec,
  DV.FromList vec) =>
@@ -561,7 +563,9 @@ optimalOperation caller stateForcing optimisationPerStateResults =
     optimalStoragePowersPerState = accessOptimalStoragePowersPerState optimisationPerStateResults
     optimalControlSignalsPerState = accessOptimalControlSignalsPerState optimisationPerStateResults
     
-    optimalStateSignal = OptSignal.findOptimalStatesUsingMaxEta newCaller stateForcing optimalStateSignals
+    optimalStateSignal = UtTrace.nTrace True modul "optimalOperation" "optimalStateSignal" $
+      OptSignal.findOptimalStatesUsingMaxEta newCaller stateForcing optimalStateSignals
+      
     optimalControlSignals = OptSignal.generateOptimalControl optimalStateSignal optimalControlSignalsPerState                       
     optimalStorageSignals = OptSignal.generateOptimalStorageSignals optimalStateSignal optimalStoragePowersPerState
     balance = OptSignal.getBalance optimalStorageSignals 
@@ -616,7 +620,7 @@ simulateAndAnalyse ::
   OptimalOperation node inst sigVec a -> 
   OptSignal.DemandCycle node inst dim sigVec a a ->
   SimulationAndAnalysis  node inst sigVec a
-simulateAndAnalyse caller system efaParams systemData demandVars optOperation demandCycle = SimulationAndAnalysis sim efa
+simulateAndAnalyse caller system efaParams systemData demandVars optOperation demandCycle = SimulationAndAnalysis given sim efa
   where 
     topology = accessTopology system
     etaFunctions = accessFunctionMap systemData
@@ -786,9 +790,10 @@ loop ::
    Show (sigVec (Interp.Val a)),
    DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Storage sigVec Int,
+   Show (sigVec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a))),
    DV.Storage sigVec (sigVec a),
    Show (sigVec (ValueState.Map (Interp.Val a))),
-   DV.LookupUnsafe sigVec (SignalFlow.TimeStep a),
+   DV.LookupUnsafe sigVec (SignalFlow.TimeStep a),Show (sigVec [SignalFlow.TimeStep a]),
    DV.Find sigVec,
    Show (TopoQty.Flow (Result.Result (Data.Data Data.Nil (Interp.Val a))))) =>
   Caller ->
@@ -967,13 +972,14 @@ systemFunction ::
    DV.Len (sigVec (Interp.Val a)),
    DV.Storage sigVec [SignalFlow.TimeStep a],
    DV.Storage sigVec (SignalFlow.TimeStep a), 
-   Show (sigVec (Interp.Val a)),
+   Show (sigVec (Interp.Val a)),Show (sigVec [SignalFlow.TimeStep a]),
    Show (sigVec (SignalFlow.TimeStep a)),
    Show (sigVec (ValueState.Map (Interp.Val a))),
    DV.Storage sigVec (SignalFlow.TimeStep a, Maybe (Interp.Val a)),
    DV.FromList sigVec, Show (sigVec Int),
    DV.LookupUnsafe sigVec (SignalFlow.TimeStep a),
    DV.Find sigVec,
+   Show (sigVec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a))),
    DV.Storage sigVec (sigVec a),
    DV.Storage demVec (ValueState.Map (Map.Map node (Maybe (FlowOpt.StorageFlow (Interp.Val a))))),
    DV.Storage sigVec Int) =>

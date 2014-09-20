@@ -681,7 +681,8 @@ optimalOperation path fileOrder titles ctrl opt = let
 data SimCtrl = 
   SimDont |   
   SimDo 
-  {drawSimulationFlowGraph :: Draw,
+  {plotGivenPowers :: Plot,
+   drawSimulationFlowGraph :: Draw,
    plotSimulationPowers :: Plot, 
    drawSequenceFlowGraph :: Draw,               
    drawStateFlowGraph :: Draw}    
@@ -719,6 +720,13 @@ simulation path fileOrder titles ctrl sim =
     f str = makeFileName path fileOrder $ titles ++ [PR "Simulation"] ++ [str]
     g str = makeTitle $ titles ++ [PR "Simulation"] ++ [str]
   in 
+   
+  (plotAction (plotGivenPowers ctrl) (f $ DG "GivenSignals")
+   (PlotD2.allInOne (PlotD2.labledFrame  (g $ DG "Given Signals"))
+    (\ _ x -> LineSpec.title $ show $ PlotD2.getId x)
+    .  PlotFSignal.plotHRecord) 
+      (Process.accessGiven sim)) ++
+    
   
   (drawAction (drawSimulationFlowGraph ctrl) (f $ DG "FlowResult")
    (\x -> [Draw.title (g $ DG "Flow Result") $ Draw.flowSection Draw.optionsDefault x]) 

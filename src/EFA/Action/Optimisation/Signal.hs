@@ -282,8 +282,8 @@ generateOptimalControl ::
    DV.Storage vec (SignalFlow.TimeStep a),
    DV.Storage vec [a],
    DV.Storage vec (Interp.Val b),
-   DV.Storage vec [Interp.Val b],
-   DV.Storage vec a,
+   DV.Storage vec [Interp.Val b],Show (vec [SignalFlow.TimeStep a]),
+   DV.Storage vec a,Show (vec (SignalFlow.TimeStep a)),
    DV.Singleton vec,
    DV.FromList vec) =>
   OptimalStateChoice node inst vec a (Interp.Val b) ->
@@ -303,7 +303,7 @@ generateOptimalStorageSignals ::
    DV.Storage vec [a],
    DV.Storage vec [SignalFlow.TimeStep a],
    DV.Storage vec (SignalFlow.TimeStep a),
-   DV.Storage vec a,
+   DV.Storage vec a,Show (vec (SignalFlow.TimeStep a)),Show (vec [SignalFlow.TimeStep a]),
    DV.Storage vec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a)),
    DV.Singleton vec,
    DV.FromList vec) =>  
@@ -329,11 +329,11 @@ getBalance ::
 getBalance storageSignals = Balance.Balance $ Map.map f storageSignals
   where f storageSignal = SignalFlow.foldlWithTime g Nothing storageSignal
         g _ (_,Nothing) = Nothing
-        g Nothing (t,Just x) = --Just x 
+        g Nothing (t,Just x) = -- Just x 
            Just ((Interp.Inter $ SignalFlow.getTimeStep t) Arith.~* x)
-        g (Just acc) (t, Just x) = 
+        g (Just acc) (t, Just x) = -- Just $ x Arith.~+ acc 
           Just $ ((Interp.Inter $ SignalFlow.getTimeStep t) Arith.~* x)  Arith.~+ acc
-                                    -- Just $ x Arith.~+ acc 
+                                    
         
 -- TODO: make sure this is not applied to Energy Signals (Time Splitting than would require to alter signal values)
 generateOptimalSignal ::
@@ -345,9 +345,9 @@ generateOptimalSignal ::
    DV.Storage vec (SignalFlow.TimeStep a),
    DV.Storage vec [SignalFlow.TimeStep a],
    DV.Storage vec a,
-   DV.Storage vec [b],
+   DV.Storage vec [b],Show (vec [SignalFlow.TimeStep a]),
    DV.Storage vec b,
-   DV.Storage vec [a],
+   DV.Storage vec [a],Show (vec (SignalFlow.TimeStep a)),
    DV.Singleton vec,
    DV.FromList vec) =>
   SignalFlow.Signal inst label vec a ([Maybe Idx.AbsoluteState],c) ->

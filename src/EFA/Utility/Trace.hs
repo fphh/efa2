@@ -1,6 +1,6 @@
 module EFA.Utility.Trace where
 
-import EFA.Utility (myShowList)
+import qualified EFA.Utility as Ut
 
 import Debug.Trace (trace)
 
@@ -18,6 +18,11 @@ debugLevel = 1
 simTrace :: Show a => String -> a -> a
 simTrace msg var = trace ("simTrace: " ++ show msg ++ " : " ++ show var) var
   
+nTrace :: Show a => Bool -> Ut.ModuleName -> Ut.FunctionName -> String -> a -> a
+nTrace isActive modu funct varName val = 
+  if isActive 
+  then trace ("nTrace - " ++ show modu ++ " - Funct: " ++ show funct ++ "- Var: " ++ show varName ++ "- Value: " ++ show val) val
+  else val     
 
 -- mytrace for single values
 mytrace ::
@@ -34,5 +39,5 @@ mytraceList ::
    Integer -> b -> c -> [a] -> [a]
 mytraceList dbgLevel function varName var =
    if dbgLevel >= debugLevel
-     then trace ("myTraceList: " ++ show function ++ "-" ++ show varName ++ " : " ++ myShowList var) var
+     then trace ("myTraceList: " ++ show function ++ "-" ++ show varName ++ " : " ++ Ut.myShowList var) var
      else var

@@ -30,7 +30,6 @@ import EFA.Utility(Caller,
                   (|>),
                    ModuleName(..),FunctionName, genCaller)
 
-
 modul :: ModuleName
 modul = ModuleName "Data.OD.Signal.Chop"
 
@@ -99,34 +98,38 @@ sliceHRecord (SignalFlow.HRecord time m) sectioning = DataSequ.fromRangeList $ m
     f range= (range,SignalFlow.HRecord (Strict.getSlice range time) 
                      (Map.map (SignalFlow.getDataSlice range) m))
 
-
+-- The Old format expects absolute Time and pre-Integrated Energy Flow Signals  
+-- TODO: check if old format requires absolute Time    
 convertHRecord2Old :: 
-  (DV.Walker sigVec,DV.Storage sigVec (SignalFlow.TimeStep a),
+  (DV.Walker sigVec,DV.Storage sigVec (SignalFlow.TimeStep a),(DV.Zipper sigVec),Show (sigVec (Interp.Val a)),
    DV.Storage sigVec (Interp.Val a),DV.Singleton sigVec,Arith.Sum a,Arith.Product a,Arith.Constant a,
    DV.Storage sigVec a) =>
   SignalFlow.HRecord (TopoIdx.Position node) inst label sigVec a (Interp.Val a) ->   
   Record.FlowRecord node sigVec (Interp.Val a)
 convertHRecord2Old (SignalFlow.HRecord (Strict.Axis _ _ time) m) = 
   Record.Record (S.TC $ Data.Data absTime) (Map.map f m)
-  where f (SignalFlow.Data vec) = S.TC (Data.Data vec)
+  where f (SignalFlow.Data vec) = S.TC (Data.Data $ DV.zipWith (Arith.~*) deltaTime vec)
         
-        absTime = DV.map Interp.Inter $  DV.append (DV.singleton firstVal) absTimeTail
+        deltaTime = DV.map (Interp.Inter . SignalFlow.getTimeStep) time
         
+        absTime = UtTrace.nTrace False modul "convertHRecord2Old" "absTime" $ 
+                  DV.map Interp.Inter $  DV.append (DV.singleton firstVal) absTimeTail
+                  
         firstVal = (\x -> SignalFlow.getMidTime x Arith.~- 
-                          ((SignalFlow.getTimeStep x) Arith.~/ (Arith.one Arith.~+ Arith.one))) $ DV.head time 
+                          ((SignalFlow.getTimeStep x) Arith.~/ Arith.two)) $ DV.head time
 
         absTimeTail = DV.map (\x -> SignalFlow.getMidTime x Arith.~+
-                                ((SignalFlow.getTimeStep x) Arith.~/ 
-                                (Arith.one Arith.~+ Arith.one))) time
+                                     (SignalFlow.getTimeStep x) Arith.~/ Arith.two) time
 
 
 -- TODO:: Are Signal Indices in Sequence OK ? - are they used in further analysis 
 convertToOld :: 
-  (DV.Walker sigVec,Arith.Constant a, DV.Singleton sigVec,
+  (DV.Walker sigVec,Arith.Constant a, DV.Singleton sigVec,Show node, Show (sigVec (Interp.Val a)),DV.Zipper sigVec,
    DV.Storage sigVec a,DV.Storage sigVec (SignalFlow.TimeStep a),
    DV.Storage sigVec (Interp.Val a)) =>
   DataSequ.List (SignalFlow.HRecord (TopoIdx.Position node) inst label sigVec a (Interp.Val a)) ->
   Sequ.List (Record.FlowRecord node sigVec (Interp.Val a))
-convertToOld sequ = DataSequ.toOldSequence convertHRecord2Old sequ
+convertToOld sequ = -- UtTrace.simTrace "OldRecord" $ 
+                    DataSequ.toOldSequence convertHRecord2Old sequ
 
 

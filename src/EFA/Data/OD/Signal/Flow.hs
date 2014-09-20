@@ -11,7 +11,7 @@ module EFA.Data.OD.Signal.Flow where
 --import qualified EFA.Data.OrdData as OrdData
 --import qualified EFA.Data.ND as ND
 --import qualified EFA.Data.Axis.Mono as Mono
-import qualified EFA.Data.Interpolation as Interp
+--import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.Vector as DV
 --import qualified EFA.Data.Vector.NonEmpty as EV
 
@@ -44,6 +44,9 @@ import qualified Data.NonEmpty.Set as NonEmptySet
 
 import qualified Data.NonEmpty as NonEmpty
 --import qualified Data.NonEmpty.Class as NonEmptyClass
+
+import qualified EFA.Utility.Trace as UtTrace
+
 
 import Prelude hiding (map,zipWith,foldl, length, sum) 
 import qualified Prelude as P
@@ -365,24 +368,31 @@ getDataSlice  (Strict.Range (Strict.Idx startIdx) (Strict.Idx endIdx)) (Data vec
     Data $ DV.slice startIdx (endIdx-startIdx+1) vec
  
 
+-- Make sure, its only used with power signals
+-- Only the time-Steps are adjusted, the power values remain unchanged
 concatEvenEvenTimeShare :: 
   (DV.Zipper vec, 
    Constant a, 
    DV.Storage vec [a], DV.Storage vec b, 
-   DV.Singleton vec,
-   DV.FromList vec,
+   DV.Singleton vec,Show (vec (TimeStep a)),
+   DV.FromList vec,Show (vec [TimeStep a]),
    DV.Walker vec, 
    DV.Storage vec [b],DV.Storage vec [TimeStep a],DV.Storage vec (TimeStep a),
    DV.Storage vec a) => 
   Signal inst label vec a [b] -> Signal inst1 label vec a b
 concatEvenEvenTimeShare (Signal (Strict.Axis label typ timeVec) (Data vec)) = 
   Signal (Strict.Axis label typ  $ concatAlt newTime) (Data $ concatAlt2 vec)
-  where newTime = DV.zipWith f timeVec vec
+  where newTime = UtTrace.nTrace False modul "concatEvenEvenTimeShare" "newTime" $ 
+                  DV.zipWith f (UtTrace.nTrace False modul "concatEvenEvenTimeShare" "timeVec" timeVec) vec
         f (TimeStep t dt) xs = let 
           n = P.length xs
-          dtVec = replicate n (dt Arith.~/ (Arith.fromInteger $ fromIntegral n))
-          in P.zipWith TimeStep (P.foldl (\acc x -> acc ++ [last acc Arith.~+ x]) [t] dtVec) dtVec
-          -- TODO berechnung der Zeitmittenwerte prüfen      
+          dtn = dt Arith.~/ (Arith.fromInteger $ fromIntegral n)
+          dtVec = replicate n dtn
+          in P.zipWith TimeStep (P.foldl (\acc x -> acc ++ [last acc Arith.~+ x]) 
+                                 [t Arith.~- (dt Arith.~/Arith.two) 
+                                  Arith.~+ (dtn Arith.~/Arith.two)] dtVec) dtVec
+
+          -- TODO Berechnung der Zeitmittenwerte prüfen      
         concatAlt = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
         concatAlt2 = DV.foldl (\ acc x -> DV.append acc (DV.fromList x)) (DV.fromList []) 
 

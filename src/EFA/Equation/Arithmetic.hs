@@ -225,6 +225,8 @@ clear x = x~-x
 one :: Constant a => a
 one = fromInteger 1
 
+two :: Constant a => a
+two = fromInteger 2
 
 square :: Product a => a -> a
 square x = x~*x
