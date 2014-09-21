@@ -129,13 +129,14 @@ energyFlowAnalysisOld ::
   EnergyFlowAnalysis node inst sigVec a
 energyFlowAnalysisOld topology efaParams sequenceFlowsFilt = 
     let 
+      eps = accessZeroDetectionEps efaParams
       (InitStorageSeq initStorageSeq) = accessInitStorageSeq efaParams 
       initStorageState = accessInitStorageState efaParams
       sequenceFlowGraph =
         SeqAbs.solveOpts
           (SeqAbs.independentInOutSums SeqAbs.optionsDefault)
           (SeqRec.flowGraphFromSequence $
-            fmap (TopoRecord.flowTopologyFromRecord topology) $
+            fmap (TopoRecord.flowTopologyFromRecord eps topology) $
             sequenceFlowsFilt)
           (Map.foldWithKey
             (\st val -> ((SeqIdx.storage Idx.initial st SeqAbs..= Data val) <>))

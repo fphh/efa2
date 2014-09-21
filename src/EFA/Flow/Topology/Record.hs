@@ -55,10 +55,11 @@ flowTopologyFromRecord ::
    (Ord node, Show node,
     Ord a, Constant a,
     SV.Walker v, SV.Storage v a) =>
+   a ->
    Topology node ->
    FlowRecord node v a ->
    Section node v a
-flowTopologyFromRecord topo (Record time fs) =
+flowTopologyFromRecord eps topo (Record time fs) =
    FlowTopoPlain.Section time $
    Graph.fromMap (Graph.nodeLabels topo) $
    Map.unionsWith (error "flowTopologyFromRecord: duplicate edges") $
@@ -68,7 +69,7 @@ flowTopologyFromRecord topo (Record time fs) =
          let look = MapU.checkedLookup "Flow.flowTopologyFromRecord" fs
              normal   = look $ Topo.outPosFromDirEdge e
              opposite = look $ Topo.inPosFromDirEdge e
-         in  case fromScalar $ Signal.sign $ Signal.sum normal of
+         in  case fromScalar $ Signal.signApprox eps $ Signal.sum normal of
                 Positive ->
                    Map.singleton
                       (Graph.EDirEdge $ DirEdge idx1 idx2)
