@@ -34,9 +34,9 @@ curve = Curve.Curve axis $ DV.fromList [0.11,1]
 dwnCurve = EtaFunctions.reverseCurve EtaFunctions.DownStream curve 
 upCurve = EtaFunctions.reverseCurve EtaFunctions.UpStream curve 
 
-curveWithMethods,curveWithMethods2 :: ((Interp.Method Double,Interp.ExtrapMethod Double),Curve.Curve Base String [] Double Double)
+curveWithMethods:: ((Interp.Method Double,Interp.ExtrapMethod Double),Curve.Curve Base String [] Double Double)
 curveWithMethods = ((Interp.Linear,Interp.ExtrapLinear), curve)
-curveWithMethods2 = ((Interp.Linear,Interp.ExtrapNone), curve)
+-- curveWithMethods2 = ((Interp.Linear,Interp.ExtrapNone), curve)
 
 caller =  (nc "etaFunct") 
 
@@ -45,11 +45,11 @@ etaFunct = EtaFunctions.etaFunctionWithOneCurve (nc "etaFunct") curveWithMethods
 etaFunctDwn = EtaFunctions.etaFunctionWithOneCurve (nc "etaFunct") (EtaFunctions.rev EtaFunctions.DownStream curveWithMethods)     
 etaFunctUp = EtaFunctions.etaFunctionWithOneCurve (nc "etaFunct") (EtaFunctions.rev EtaFunctions.UpStream curveWithMethods)     
 
-etaFunctIn = EtaFunctions.etaFunctionPowerBasedWithOneCurve (nc "in") EtaFunctions.DownStream curveWithMethods2
-etaFunctInOpp = EtaFunctions.etaFunctionPowerBasedWithOneCurveOpposite (nc "inOp") EtaFunctions.DownStream "Reverse" curveWithMethods2
+etaFunctIn = EtaFunctions.etaFunctionPowerBasedWithOneCurve (nc "in") EtaFunctions.DownStream curveWithMethods
+etaFunctInOpp = EtaFunctions.etaFunctionPowerBasedWithOneCurveOpposite (nc "inOp") EtaFunctions.DownStream "Reverse" curveWithMethods
 
-etaFunctOut = EtaFunctions.etaFunctionPowerBasedWithOneCurve (nc "out") EtaFunctions.UpStream curveWithMethods2
-etaFunctOutOpp = EtaFunctions.etaFunctionPowerBasedWithOneCurveOpposite (nc "outOp") EtaFunctions.UpStream "Reverse" curveWithMethods2
+etaFunctOut = EtaFunctions.etaFunctionPowerBasedWithOneCurve (nc "out") EtaFunctions.UpStream curveWithMethods
+etaFunctOutOpp = EtaFunctions.etaFunctionPowerBasedWithOneCurveOpposite (nc "outOp") EtaFunctions.UpStream "Reverse" curveWithMethods
 
 prop_ReversableDwn :: Interp.Val Double -> Bool
 prop_ReversableDwn pin = trace str $ Arith.abs (pinRev Arith.~- pin) < Interp.Inter (Arith.fromRational (10^^(-6::Integer)))
@@ -101,10 +101,10 @@ main = do
   print dwnCurve
   
   print "DOWN ############"
---  mapM_ (\x -> print $ prop_ReversableDwn $ Interp.Inter x) [0.001,0.01 ..1.1]
+  mapM_ (\x -> print $ prop_ReversableDwn $ Interp.Inter x) [0.1,0.2 ..1]
   mapM_ (\x -> print $ prop_ReversableDwn2 $ Interp.Inter x) [0.1,0.2 .. 1]   --[0.001,0.01 ..1.1]
   
   print upCurve 
   print "Up ############"
---  mapM_ (\x -> print $ prop_ReversableUp $ Interp.Inter x) [0.001,0.01 ..1.1]
+  mapM_ (\x -> print $ prop_ReversableUp $ Interp.Inter x) [0.1,0.2 ..1]
   mapM_ (\x -> print $ prop_ReversableUp2 $ Interp.Inter x) [0.1,0.2 .. 1] -- [0.001,0.01 ..1.1]

@@ -15,7 +15,7 @@ import EFA.Utility(Caller,
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
-          (Sum, (~+), (~-), Product, (~*), (~/), Constant, sqrt, square, constOne, Root)
+          (Sum, (~+), (~-), Product, (~*), (~/), Constant, sqrt, square, constOne, Root,negate, Sign(Positive,Negative,Zero))
 
 import EFA.Report.FormatValue as FormatValue
 --import qualified Test.QuickCheck as QC
@@ -29,7 +29,7 @@ import Control.Applicative
 import qualified EFA.Report.Format as Format
 --import EFA.Report.Format (Format)
 
-import Prelude hiding (sqrt)
+import Prelude hiding (sqrt,negate)
 
 modul :: ModuleName
 modul = ModuleName "Data.Interpolation"
@@ -222,28 +222,31 @@ nearest (x1, x2) (y1, y2) x =
 -- when the down stream efficiency curve was defined with linear interpolation
 -- this special interpolation provides also reversable results even when not hitting supporting points
 linearEtaUpStream :: (Sum a, Product a) => (a, a) -> (a, a) -> a  -> a
-linearEtaUpStream (p0, p1) (n0, n1) p = n0 ~/ (one ~- c ~* dP)
+linearEtaUpStream (p0, p1) (n0, n1) p = n0 ~* (one ~- slope ~* p0) ~/ (one ~- slope ~* p)
   where
     one = Arith.constOne p
-    dP = (p ~- p0)
-    c = (n1 ~- n0) ~/ (p1 ~- p0)
+    slope = (n1 ~- n0) ~/ (p1~*n1 ~- p0~*n0)
     
 -- | Interpolation to be used to interpolate the reverse-Efficiency-Curve on the Downstream-side, 
 -- when the up stream efficiency curve was defined with linear interpolation
 -- this special interpolation provides also reversable results even when not hitting supporting points
-linearEtaDwnStream :: (Ord a, Root a, Sum a, Product a) => (a, a) -> (a, a) -> a  -> a
-linearEtaDwnStream  (p0, p1) (n0, n1) p = if n1 >= n0 then (n0 ~+ sqrt (square n0 ~+  (four~*dn~*dP)~/dP0))~/two 
-                                          else (n0 ~- sqrt (square n0 ~+ (four~*dn~*dP)~/dP0))~/two
-                                            
+linearEtaDwnStream :: (Ord a, Root a, Sum a, Product a, Constant a) => (a, a) -> (a, a) -> a  -> a
+linearEtaDwnStream  (p0, p1) (n0, n1) p =
+   (negate (fp ~/ two)) ~- (s fp) ~* sqrt ( square (fp ~/ two) ~- fq )
   where
     two = constOne p ~+ constOne p 
     four = two ~+ two
-    dP = (p ~- p0)
-    dn = (n1 ~- n0) 
-    dP0 = p1 ~- p0
+    slope = (n1 ~- n0) ~/ (p1~/n1 ~- p0~/n0)
+    -- a = one
+    fp = slope ~* p0 ~/n0 ~- n0
+    fq = negate $ slope ~* p
+    s x = case Arith.sign x of 
+        Positive -> constOne p
+        Negative -> Arith.negate $ constOne p
+        Zero  -> constOne p ~- constOne p
 
 
-dim1 :: (Eq a,Ord a, Sum a, Product a, Show a, Root a) =>
+dim1 :: (Eq a,Ord a, Sum a, Product a, Show a, Root a,Constant a) =>
               Caller ->
               Method a ->
               ExtrapMethod a ->
@@ -306,8 +309,8 @@ dim1 caller inmethod exmethod label (x1, x2) (y1, y2) (Inter x) =
                  case inmethod of
                    Linear -> Inter $ linear (x1,x2) (y1,y2) x
                    Nearest -> Inter $ nearest (x1, x2) (y1, y2) x
-                   LinEtaUpStream -> trace "InterInsideLTUp" $ Inter $ linearEtaUpStream (x1,x2) (y1,y2) x
-                   LinEtaDwnStream -> trace "InterInsideLtDwn" $ Inter $ linearEtaDwnStream (x1,x2) (y1,y2) x
+                   LinEtaUpStream -> Inter $ linearEtaUpStream (x1,x2) (y1,y2) x
+                   LinEtaDwnStream -> Inter $ linearEtaDwnStream (x1,x2) (y1,y2) x
                Outside ->
                  case exmethod of
                    ExtrapLinear ->  Extra $ linear (x1,x2) (y1,y2) x
