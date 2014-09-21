@@ -45,11 +45,11 @@ etaFunct = EtaFunctions.etaFunctionWithOneCurve (nc "etaFunct") curveWithMethods
 etaFunctDwn = EtaFunctions.etaFunctionWithOneCurve (nc "etaFunct") (EtaFunctions.rev EtaFunctions.DownStream curveWithMethods)     
 etaFunctUp = EtaFunctions.etaFunctionWithOneCurve (nc "etaFunct") (EtaFunctions.rev EtaFunctions.UpStream curveWithMethods)     
 
-etaFunctIn = EtaFunctions.etaFunctionWithOneCurveAlt (nc "in") EtaFunctions.PowerIn curveWithMethods2
-etaFunctInOpp = EtaFunctions.etaFunctionWithOneCurveAltOpp (nc "inOp") EtaFunctions.PowerIn "Reverse" curveWithMethods2
+etaFunctIn = EtaFunctions.etaFunctionPowerBasedWithOneCurve (nc "in") EtaFunctions.DownStream curveWithMethods2
+etaFunctInOpp = EtaFunctions.etaFunctionPowerBasedWithOneCurveOpposite (nc "inOp") EtaFunctions.DownStream "Reverse" curveWithMethods2
 
-etaFunctOut = EtaFunctions.etaFunctionWithOneCurveAlt (nc "out") EtaFunctions.PowerOut curveWithMethods2
-etaFunctOutOpp = EtaFunctions.etaFunctionWithOneCurveAltOpp (nc "outOp") EtaFunctions.PowerOut "Reverse" curveWithMethods2
+etaFunctOut = EtaFunctions.etaFunctionPowerBasedWithOneCurve (nc "out") EtaFunctions.UpStream curveWithMethods2
+etaFunctOutOpp = EtaFunctions.etaFunctionPowerBasedWithOneCurveOpposite (nc "outOp") EtaFunctions.UpStream "Reverse" curveWithMethods2
 
 prop_ReversableDwn :: Interp.Val Double -> Bool
 prop_ReversableDwn pin = trace str $ Arith.abs (pinRev Arith.~- pin) < Interp.Inter (Arith.fromRational (10^^(-6::Integer)))

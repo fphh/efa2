@@ -38,7 +38,10 @@ data CalculationDirection = DownStream | UpStream
 lookupEtaFunction :: (Ord node) => FunctionMap node a -> TopoIdx.Position node -> Maybe (a -> a)
 lookupEtaFunction (FunctionMap m) pos = Map.lookup pos m
 
-makeEtaFunctions :: 
+-- Based on Interpolating the given efficiency curve linear and the opposite efficiency curve with a tricky function
+-- the square root function however messes up the numeric accuracy
+-- using this method, its better to provide the efficiency curve on the output side
+makeEtaFunctionsEtaBased :: 
   (Arith.Product a, 
    Arith.Root a, 
    DV.Zipper vec,
@@ -59,7 +62,7 @@ makeEtaFunctions ::
   EtaAssignMap node a -> 
   Curve.Map String inst String vec a a ->  
   FunctionMap node (Interp.Val a)
-makeEtaFunctions caller (EtaAssignMap assignMap) etaCurves = FunctionMap $ Map.fromList $ concat $ map f $ Map.toList assignMap    
+makeEtaFunctionsEtaBased caller (EtaAssignMap assignMap) etaCurves = FunctionMap $ Map.fromList $ concat $ map f $ Map.toList assignMap    
   where f (pos@(TopoIdx.Position n n1),assign) = 
           let
             oppositePos = TopoIdx.Position n1 n
@@ -124,62 +127,7 @@ etaFunctionWithOneCurve ::
 etaFunctionWithOneCurve caller ((inmethod,exmethod),curve) x = 
   Curve.interpolate (caller |> nc "etaFunctionWithOneCurve") inmethod exmethod curve x
 
-data Location = PowerIn | PowerOut
 
-etaFunctionWithOneCurveAlt ::
-  (Ord a,
-   Show a,Arith.Root a,
-   Show label,
-   Arith.Constant a,
-   DV.Storage vec a,
-   DV.LookupUnsafe vec a,
-   DV.Zipper vec,
-   DV.Length vec,DV.Walker vec,DV.Reverse vec,
-   DV.Find vec) =>
-  Caller -> 
-  Location ->
-  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) ->   
-  Interp.Val a ->
-  Interp.Val a         
-etaFunctionWithOneCurveAlt caller loc ((inmethod,exmethod),curve) x = case loc of 
-  PowerIn -> y Arith.~/ x
-  PowerOut -> x Arith.~/ y
-  where
-    y = Curve.interpolate newCaller inmethod exmethod pCurve x
-    newCaller = caller |> nc "etaFunctionWithOneCurveAlt"
-    pCurve = case loc of 
-      PowerIn -> Curve.zipDataWithAxis (Arith.~*) curve
-      PowerOut -> Curve.zipDataWithAxis (Arith.~/) curve
-      
-etaFunctionWithOneCurveAltOpp ::
-  (Ord a,
-   Show a,Arith.Root a,
-   DV.Zipper vec,
-   DV.Storage vec Bool,
-   DV.Singleton vec,
-   Show label,
-   Arith.Constant a,
-   DV.Storage vec a,
-   DV.LookupUnsafe vec a,
-   DV.Length vec,DV.Walker vec,DV.Reverse vec,
-   DV.Find vec) =>
-  Caller -> 
-  Location ->
-  label ->
-  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) ->   
-  Interp.Val a ->
-  Interp.Val a         
-etaFunctionWithOneCurveAltOpp caller loc label ((inmethod,exmethod),curve) x = case loc of 
-  PowerIn -> x Arith.~/ y
-  PowerOut -> y Arith.~/ x 
-  where
-    y = Curve.interpolate newCaller inmethod exmethod pCurve x
-    newCaller = caller |> nc "etaFunctionWithOneCurveAltOpp"
-    pCurve = case loc of 
-      PowerIn -> Curve.reverseCurve newCaller label Type.P $ Curve.zipDataWithAxis (Arith.~*) curve
-      PowerOut -> Curve.reverseCurve newCaller label Type.P $ Curve.zipDataWithAxis (Arith.~/) curve
-      
-    
 toCurveMap :: 
   (DV.Walker vec, DV.Storage vec (Interp.Val a),DV.Storage vec a) => 
   Strict.Axis inst label vec a -> FunctionMap node (Interp.Val a) -> Curve.Map (TopoIdx.Position node) inst label vec a (Interp.Val a)
@@ -236,3 +184,197 @@ rev ::
   ((Interp.Method a,Interp.ExtrapMethod a), Curve.Curve inst label vec a a) -> 
   ((Interp.Method a,Interp.ExtrapMethod a), Curve.Curve inst label vec a a)
 rev dir ((x,y),curve) = ((reverseInMethod dir x,reverseExMethod dir y), reverseCurve dir curve )
+
+-- New Power based approach:
+-- Reversing the efficiency curve is much easier, 
+-- if the efficiency is interpolated linearly on a function Pin -> Pout or Pout -> Pin
+
+etaFunctionPowerBasedWithOneCurve ::
+  (Ord a,
+   Show a,Arith.Root a,
+   Show label,
+   Arith.Constant a,
+   DV.Storage vec a,
+   DV.LookupUnsafe vec a,
+   DV.Zipper vec,
+   DV.Length vec,DV.Walker vec,DV.Reverse vec,
+   DV.Find vec) =>
+  Caller -> 
+  CalculationDirection ->
+  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) ->   
+  Interp.Val a ->
+  Interp.Val a         
+etaFunctionPowerBasedWithOneCurve caller dir ((inmethod,exmethod),curve) x = case dir of 
+  DownStream -> y Arith.~/ x
+  UpStream -> x Arith.~/ y
+  where
+    y = Curve.interpolate newCaller inmethod exmethod pCurve x
+    newCaller = caller |> nc "etaFunctionWithOneCurveAlt"
+    pCurve = case dir of 
+      DownStream -> Curve.zipDataWithAxis (Arith.~*) curve
+      UpStream -> Curve.zipDataWithAxis (Arith.~/) curve
+      
+etaFunctionPowerBasedWithOneCurveOpposite ::
+  (Ord a,
+   Show a,Arith.Root a,
+   DV.Zipper vec,
+   DV.Storage vec Bool,
+   DV.Singleton vec,
+   Show label,
+   Arith.Constant a,
+   DV.Storage vec a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,DV.Walker vec,DV.Reverse vec,
+   DV.Find vec) =>
+  Caller -> 
+  CalculationDirection ->
+  label ->
+  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) ->   
+  Interp.Val a ->
+  Interp.Val a         
+etaFunctionPowerBasedWithOneCurveOpposite caller dir label ((inmethod,exmethod),curve) x = case dir of 
+  DownStream -> x Arith.~/ y
+  UpStream -> y Arith.~/ x 
+  where
+    y = Curve.interpolate newCaller inmethod exmethod pCurve x
+    newCaller = caller |> nc "etaFunctionWithOneCurveAltOpp"
+    pCurve = case dir of 
+      DownStream -> Curve.reverseCurve newCaller label Type.P $ Curve.zipDataWithAxis (Arith.~*) curve
+      UpStream -> Curve.reverseCurve newCaller label Type.P $ Curve.zipDataWithAxis (Arith.~/) curve
+      
+
+etaFunctionPowerBasedWithTwoCurves ::  
+  (Ord a,Arith.Root a,
+   Show label,DV.Zipper vec,
+   Show a,
+   Arith.Constant a,
+   DV.Storage vec a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,
+   DV.Find vec, 
+   Arith.Constant (Interp.Val a)) =>
+  Caller -> 
+  CalculationDirection ->
+  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) -> 
+  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) -> 
+  Interp.Val a ->
+  Interp.Val a     
+etaFunctionPowerBasedWithTwoCurves caller dir ((inmethodNeg,exmethodNeg),curveNeg) ((inmethodPos,exmethodPos),curvePos) x = case dir of 
+  DownStream -> y Arith.~/ x
+  UpStream -> x Arith.~/ y
+  where
+    y = case x>= Arith.zero of 
+      True -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodPos exmethodPos (f curvePos) x
+      False -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodNeg exmethodNeg (f curveNeg) x
+    f curve = case dir of 
+      DownStream -> Curve.zipDataWithAxis (Arith.~*) curve
+      UpStream -> Curve.zipDataWithAxis (Arith.~/) curve
+ 
+etaFunctionPowerBasedWithTwoCurvesOpposite ::  
+  (Ord a,Arith.Root a,
+   DV.Zipper vec,
+   DV.Storage vec Bool,
+   DV.Singleton vec,
+   Show label,
+   Show a,
+   Arith.Constant a,
+   DV.Storage vec a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,
+   DV.Find vec, 
+   Arith.Constant (Interp.Val a)) =>
+  Caller -> 
+  CalculationDirection ->
+  label ->
+  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) -> 
+  ((Interp.Method a, Interp.ExtrapMethod a), Curve.Curve inst label vec a a) -> 
+  Interp.Val a ->
+  Interp.Val a     
+etaFunctionPowerBasedWithTwoCurvesOpposite caller dir label ((inmethodNeg,exmethodNeg),curveNeg) ((inmethodPos,exmethodPos),curvePos) x = case dir of 
+  DownStream -> x Arith.~/ y
+  UpStream -> y Arith.~/ x
+  where
+    newCaller = nc "etaFunctionPowerBasedWithTwoCurvesOpposite"
+    y = case x>= Arith.zero of 
+      True -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodPos exmethodPos (f curvePos) x
+      False -> Curve.interpolate (caller |> nc "etaFunctionWithTwoCurves") inmethodNeg exmethodNeg (f curveNeg) x
+    f curve = case dir of 
+      DownStream -> Curve.reverseCurve newCaller label Type.P $ Curve.zipDataWithAxis (Arith.~*) curve
+      UpStream -> Curve.reverseCurve newCaller label Type.P $ Curve.zipDataWithAxis (Arith.~/) curve
+ 
+
+makeEtaFunctionsPowerBased :: 
+  (Arith.Product a, 
+   Arith.Root a, 
+   DV.Zipper vec,
+   Ord node,
+   DV.Walker vec,
+   DV.Storage vec a,
+   DV.Singleton vec,
+   DV.Reverse vec,
+   DV.FromList vec, 
+   Ord a,DV.Storage vec Bool,
+   Show a,
+   Arith.Constant (Interp.Val a),
+   Arith.Constant a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,
+   DV.Find vec) =>
+  Caller ->
+  EtaAssignMap node a -> 
+  Curve.Map String inst String vec a a ->  
+  FunctionMap node (Interp.Val a)
+makeEtaFunctionsPowerBased caller (EtaAssignMap assignMap) etaCurves = FunctionMap $ Map.fromList $ concat $ map f $ Map.toList assignMap    
+  where f (pos@(TopoIdx.Position n n1),assign) = 
+          let
+            newCaller = (caller |> nc "makeEtaFunctionsPowerBased")
+            oppositePos = TopoIdx.Position n1 n
+            g (ops,name) =  (Curve.modify ops $ Maybe.fromMaybe (err name) $ Map.lookup name etaCurves)
+            err x = merror caller modul "makeEtaFunctionsPowerBased" ("Curve not found in Map: " ++ show x)
+            
+          in case assign of 
+          (dir, Pair (m,x) (m1,y)) ->
+            [(pos, etaFunctionPowerBasedWithTwoCurves newCaller dir (m,g x) (m1,g y)),
+             (oppositePos, etaFunctionPowerBasedWithTwoCurvesOpposite newCaller dir "reversed" (m,g x) (m1,g y))]
+          
+          (dir, Single (m,x)) -> 
+            [(pos,etaFunctionPowerBasedWithOneCurve newCaller dir (m,g x)),
+             (oppositePos,etaFunctionPowerBasedWithOneCurveOpposite newCaller dir "reversed" (m,g x))]
+
+          (dir, Duplicate (m,x)) -> 
+            [(pos,etaFunctionPowerBasedWithTwoCurves newCaller dir (m,Curve.recipY $ Curve.flipX $ g x) (m,g x)), 
+              (oppositePos,etaFunctionPowerBasedWithTwoCurvesOpposite newCaller dir "reversed"
+                           (m,Curve.recipY $ Curve.flipX $ g x) (m,g x))]
+            
+          (dir, DuplicateCombine (m,x)) -> 
+            [(pos,etaFunctionPowerBasedWithOneCurve newCaller dir
+                  (m ,Curve.combine newCaller (Curve.recipY $ Curve.flipX $ g x) (g x))),
+             (oppositePos,etaFunctionPowerBasedWithOneCurveOpposite newCaller dir "reversed"
+                          (m ,Curve.combine newCaller (Curve.recipY $ Curve.flipX $ g x) (g x)))]
+     
+        
+
+
+-- Dummy function two switch between both calculation methods
+makeEtaFunctions :: 
+  (Arith.Product a, 
+   Arith.Root a, 
+   DV.Zipper vec,
+   Ord node,
+   DV.Walker vec,
+   DV.Storage vec a,
+   DV.Singleton vec,
+   DV.Reverse vec,
+   DV.FromList vec, 
+   Ord a,DV.Storage vec Bool,
+   Show a,
+   Arith.Constant (Interp.Val a),
+   Arith.Constant a,
+   DV.LookupUnsafe vec a,
+   DV.Length vec,
+   DV.Find vec) =>
+  Caller ->
+  EtaAssignMap node a -> 
+  Curve.Map String inst String vec a a ->  
+  FunctionMap node (Interp.Val a)
+makeEtaFunctions = if False then makeEtaFunctionsPowerBased else makeEtaFunctionsEtaBased
