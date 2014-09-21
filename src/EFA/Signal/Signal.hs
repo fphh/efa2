@@ -905,6 +905,13 @@ sign ::
    TC s typ (Data c d) -> TC s typ (Data c Sign)
 sign x = map Arith.sign x
 
+signApprox ::
+   (Ord d, Constant d, D.Map c, D.Storage c d, D.Storage c Sign) =>
+   d ->
+   TC s typ (Data c d) -> TC s typ (Data c Sign)
+signApprox eps x = map (Arith.signApprox eps) x
+
+
 -- | Convert between List and different Vector formats
 convert ::
    (D.Convert c1 c2, D.Storage c1 d, D.Storage c2 d) =>

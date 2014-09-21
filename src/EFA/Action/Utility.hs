@@ -17,25 +17,25 @@ import qualified EFA.Graph as Graph
 import qualified EFA.Flow.State as State
 
 
-import qualified EFA.Equation.Arithmetic as Arith
+--import qualified EFA.Equation.Arithmetic as Arith
 --import qualified EFA.Application.Type as Type
-import qualified EFA.Flow.Topology.Quantity as TopoQty
+--import qualified EFA.Flow.Topology.Quantity as TopoQty
 
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Flow.SequenceState.Index as Idx
-import qualified EFA.Flow.Storage as Storage
-import qualified EFA.Flow.Storage.Index as StorageIdx
-import qualified EFA.Flow.State.Quantity as StateQty
-import qualified EFA.Flow.Part.Index as PartIdx
+--import qualified EFA.Flow.Storage as Storage
+--import qualified EFA.Flow.Storage.Index as StorageIdx
+--import qualified EFA.Flow.State.Quantity as StateQty
+--import qualified EFA.Flow.Part.Index as PartIdx
 --import qualified EFA.Signal.Vector as Vec
 --import qualified EFA.Signal.Signal as Sig
 --import EFA.Signal.Data (Data, Nil, (:>))
 --import EFA.Signal.Typ (Typ)
 import Control.Monad ((>=>))
-import EFA.Graph (Graph)
+--import EFA.Graph (Graph)
 --import qualified Data.Bimap as Bimap
 
-import qualified EFA.Report.Format as Format
+--import qualified EFA.Report.Format as Format
 
 
 import EFA.Equation.Unknown (Unknown)
@@ -53,7 +53,7 @@ import Data.Map (Map)
 import Data.Foldable (foldMap)
 
 import EFA.Utility(Caller,
-                 merror,
+--                 merror,
 --                   (|>),
                    ModuleName(..),FunctionName, genCaller)
 
