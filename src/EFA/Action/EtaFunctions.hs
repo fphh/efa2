@@ -356,6 +356,7 @@ makeEtaFunctionsPowerBased caller (EtaAssignMap assignMap) etaCurves = FunctionM
 
 
 -- Dummy function two switch between both calculation methods
+-- TODO: Power based Eta-Functions are not yet properly tested yet 
 makeEtaFunctions :: 
   (Arith.Product a, 
    Arith.Root a, 

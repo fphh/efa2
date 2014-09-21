@@ -34,3 +34,5 @@ main = do
    Cumulated.runTests
    Mix.runTests
    Tree.runTests
+   -- TODO: - integrate test of EtaFunctions
+   
