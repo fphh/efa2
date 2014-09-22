@@ -1,0 +1,70 @@
+
+# Plotten
+
+* Zyklus in Surface-Diagramme einzeichnen
+* plotEach in plotAction einbauen
+* 
+
+# Checks
+* Flowstatus-Test für eta korrigieren
+
+# Tests
+* Interpolation-Tests auf letzten Code-Stand anpassen
+* Curven und Reverse-Curven testen
+* 
+
+
+# Code-Pflege
+
+* Cabal wieder aktivieren
+* Leerzeichen löschen
+* Warnungen entfernen
+* head / tail durch trustedHead oder errHead ersetzen
+* foldl1 absichern
+* nTrace consistent einführen, dass manuelles ein / ausschalten unterstützt
+
+# Restriktionen
+* Null Batterie-Leistung
+* Null Demand-Leistung
+
+
+# Conzeptuelle Probleme, Fragestellungen
+* Division durch Null
+* signApprox bei der Erstellung der Null-Kanten läuft aktuell auf Energie-Basis
+
+
+# Aktuelle Probleme
+* Zeit-Skala nach EFA nicht mehr korrekt - OK
+* Ladezustand des Diagramms entspricht nicht dem des Signals !! (Rechnet das Diagramm mit Eins ?)  -- OK
+* Solarenergie nicht korrekt - OK
+* Zustand 540 statt 297 tritt auf
+* Zustand 54 tritt auf 
+
+
+# Alte Energieflussanalyse
+* Range Arbeitet auf neuem Delta-Index, absolute Zeit auf altem -- wozu ist die absolute Zeit nötig ? 
+
+
+# Kleine 
+
+* Die max-Iterations-Anzahl für den Balance-Loop stimmt nicht (1 -> 0,1,2) -- Fixed for one Storage, check for Multiple
+
+
+# Interpolation
+* Nearest funktioniert nicht im Demand-Grid !?
+* Leistungs-Basierte Interpolation testen und überarbeiten
+* Fehlerhafter Wirkungsgrad beim Rechnen mit sehr kleinen Werten über eine positive Eins-Kennlinie (eta-Basiert)
+
+# Tests
+* EtaFunctions Test einpflegen
+* Test für CurveModification schreiben
+
+
+# Vorzeichenrichtung: 
+
+* Standard-Vorzeichenrichtung muss sichtbar und klar definiert sein !!
+* UpStream und DownStream muss klar sein
+
+
+# Plotten
+ * IGH-Farbscala wieder reaktivieren !!! 

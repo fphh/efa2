@@ -41,7 +41,7 @@ import qualified EFA.Data.Plot.D3.Cube as PlotCube
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Value.State as ValueState
 
-import qualified EFA.Data.Axis.Strict as Strict
+--import qualified EFA.Data.Axis.Strict as Strict
 import qualified Data.GraphViz.Types.Canonical as Canonical
 
 import qualified Data.Text.Lazy as LazyText
@@ -373,11 +373,14 @@ optiSet caller path fileOrder titles ctrl oSet = let
     SweepPlot.plotVariation caller ) 
    (Process.accessVariation oSet)) -}
 
-data SweepCtrl = SweepDont | 
+data SweepCtrl node dim idx = SweepDont | 
                  SweepDo {drawFlow :: Draw, 
+                          demandExtractInfo ::   CubeGrid.ExtractInfo dim,
 --                          plotState :: Plot,
---                          plotStatus :: Plot, 
-                          plotFlowVariables :: Plot}
+--                          plotStatus :: Plot,
+                          accVariableList ::  [idx node], 
+                          plotFlowVariables :: Plot, 
+                          plotFlowVariablesPerState:: Plot}
                           
 sweep ::
   (Show a,DV.Storage demVec a, DV.Length demVec,
@@ -416,21 +419,24 @@ sweep ::
   Caller ->
   FilePath ->
   FileOrder -> [Title] ->
-  [idx node] ->
+--  [idx node] ->
    CubeGrid.Grid (Sweep.Search inst) srchDim (DemandAndControl.Var node) srchVec a ->
-  SweepCtrl ->
+  SweepCtrl node dim idx ->
+
   Process.SweepResults node inst dim srchDim demVec srchVec a ->
   [IO ()]
-sweep _ _ _ _ _ _ SweepDont _ = []
-sweep caller path fileOrder titles keyList searchGrid ctrl swp = let
+sweep _ _ _ _  _ SweepDont _ = []
+sweep caller path fileOrder titles searchGrid ctrl swp = let
   newCaller = caller |> nc "sweep"
   f str = makeFileName path fileOrder $ titles ++ [PR "sweep"] ++ [str]
   g str = makeTitle $ titles ++ [PR "sweep"] ++ [str]
+  extractInfo = demandExtractInfo ctrl
+  variableList = accVariableList ctrl
   in
    -- TODO - output: generalise diagramm to show edges instead a fixed index
-   (drawAction (drawFlow ctrl)  (f $ DG "FlowDemandIndex")
-    (concatMap (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Index 6,6") 
-     (CubeGrid.Dim [ND.fromList newCaller [Strict.Idx 6,Strict.Idx 6]])))
+   (drawAction (drawFlow ctrl)  (f $ DG "FlowDemandSelection")
+    (concatMap (SweepDraw.drawDemandSelection newCaller (g $ DG "Flow Demand Selection") 
+     extractInfo))
     (Process.accessSweepFlowCubes swp)) ++
    
 {-   -- TODO - output: generalise diagramm to show edges instead a fixed index
@@ -450,21 +456,20 @@ sweep caller path fileOrder titles keyList searchGrid ctrl swp = let
    (plotAction (plotFlowVariables ctrl) (f $ DG "FlowVariables")
     (SweepPlot.plotSweepFlowValues newCaller (g $ DG "Flow Variables") searchGrid 
      TopoQty.lookup 
-     CubeGrid.All keyList)
+     CubeGrid.All variableList)
      (Process.accessSweepFlow swp)) ++
     
    -- TODO - output: adjust diagrams to multi-variation
-   (plotAction (plotFlowVariables ctrl) (f $ DG "FlowVariables Per State")
+   (plotAction (plotFlowVariablesPerState ctrl) (f $ DG "FlowVariables Per State")
     (SweepPlot.plotSweepFlowValuesPerState newCaller (g $ DG "FlowVariables Per State") searchGrid 
-     TopoQty.lookup CubeGrid.All keyList $ Process.accessSweepFlowStatus swp)
+     TopoQty.lookup CubeGrid.All variableList $ Process.accessSweepFlowStatus swp)
      (Process.accessSweepFlow swp))
 
    
 data EvalCtrl = EvalDont | 
                  EvalDo { plotEta :: Plot,
                           plotState :: Plot,  
-                          plotLossSys :: Plot
-                          }
+                          plotLossSys :: Plot }
  
 -- TODO: hack evalSweep ist actually not usable                          
 evalSweep ::

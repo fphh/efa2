@@ -16,6 +16,7 @@ import qualified Data.GraphViz.Types.Canonical as Canonical
 
 import EFA.Utility(Caller,
                    --merror,
+                   --nerror,
                    (|>),
                    ModuleName(..),FunctionName, genCaller)
 
@@ -41,3 +42,30 @@ drawDemandSelection caller title extractInfo sweep = map f $ SweepAccess.extract
   where 
     f (dimIdx, sweepFlow) = Draw.title (title ++ " DimIdx: " ++ show dimIdx)  $ Draw.flowSection  Draw.optionsDefault sweepFlow
 
+{-
+TODO -- plot Variante bauen, die ausgewählte suchIndices anzeigt
+
+drawDemandSearchSelection ::
+  (Node.C node,
+   FormatValue.FormatValue v,
+   DV.Storage vec a,
+   DV.LookupUnsafe vec (TopoQty.Section node v),
+   DV.Length vec,
+   ND.Dimensions dim) =>
+  Caller ->
+  String ->
+  CubeGrid.ExtractInfo dim ->
+  CubeGrid.ExtractInfo dim ->
+  CubeMap.Cube inst dim label vec a (TopoQty.Section node (CubeMap.Data inst srchDim srchVec b)) ->
+  [Canonical.DotGraph LazyText.Text]
+
+drawDemandSearchSelection caller title demandExtractInfo searchExtractInfo@(CubeGrid.Linear _) sweep = 
+  map f $ SweepAccess.extractDemandData newCaller sweep demandExtractInfo
+  where 
+    newCaller = (caller |> nc "drawDemandSelection")
+    f (dimIdx, sweepFlow) = Draw.title (title ++ " DimIdx: " ++ show dimIdx)  $ Draw.flowSection  Draw.optionsDefault $ g sweepFlow
+    g flow = TopoQty.mapSection (flip (SweepAccess.extractDemandData newCaller) searchExtractInfo) flow
+      
+drawDemandSearchSelection _ _ _ _ _ = nerror modul "drawDemandSearchSelection" 
+                                           "Not fully implemented multi search cube solution only allows linear index access"
+-}
