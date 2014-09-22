@@ -68,3 +68,26 @@
 
 # Plotten
  * IGH-Farbscala wieder reaktivieren !!! 
+
+
+# Systemwirkungsgrad
+
+* Vorzeichenproblem in Scalemap - OK
+* Keine Wirkungsgrade auf ungültigen Zuständen berechnen !!
+
+
+# Konzept ungültige Bereiche / Zustände
+    - Zustand kann nicht bestimmt werden, weil invalid-Werte dies verhindern -> Zustand Nothing
+    - Energiefluss inkonsistent / Wirkunggradbedingung verletzt
+    - Quelle / Senke-Bedingung verletzt
+    - Getroffene Zustands-Auswahl
+
+Idealerweise machen all diese Kriterien den Wirkungsgrad -- Invalid
+
+   - Bisher wird der Wirkungsgrad nur durch die Interpolation Invalid
+
+
+# Checks:
+
+* Eta-Check in Topologie korrigieren - OK
+* 

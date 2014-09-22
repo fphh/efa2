@@ -50,7 +50,7 @@ import qualified Data.Maybe as Maybe
 import Control.Monad as Monad
 --import Data.Foldable (Foldable, foldMap)
 
---import Debug.Trace(trace)
+import Debug.Trace(trace)
 
 import EFA.Utility(Caller,
                  merror,
@@ -65,7 +65,7 @@ nc = genCaller modul
 
 
 calcEtaLossSys ::
-  (Ord a, Arith.Sum a,Arith.Constant a,
+  (Ord a, Arith.Sum a,Arith.Constant a, Show a,
    DV.Storage vec ActFlowCheck.EdgeFlowStatus,
    DV.Storage vec (Interp.Val a, Interp.Val a),
    DV.Storage vec (ActFlowCheck.EdgeFlowStatus, FlowOpt.OptimalityMeasure (Interp.Val a)),
@@ -97,7 +97,7 @@ calcEtaLossSys caller globalLifeCycleMap scaleMap topoEndNodeEnergies flowStatus
         where scales = FlowOpt.lookupScales newCaller scaleMap (ActFlowCheck.getState status) 
    
 
-calcEtaLossWithScales :: (Ord a,Arith.Constant a) =>
+calcEtaLossWithScales :: (Ord a,Arith.Constant a, Show a) =>
   Caller ->
   FlowOpt.GlobalLifeCycleMap node a ->
   (FlowOpt.ScaleSource a, FlowOpt.ScaleSink a, FlowOpt.ScaleSto a) ->                                       
@@ -107,22 +107,33 @@ calcEtaLossWithScales :: (Ord a,Arith.Constant a) =>
 calcEtaLossWithScales caller globalLifeCycleMap 
   (FlowOpt.ScaleSource srcScale, FlowOpt.ScaleSink snkScale, FlowOpt.ScaleSto stoScale) 
   (FlowOpt.TotalSourceFlow srcFl, FlowOpt.TotalSinkFlow snkFl, FlowOpt.TotalStorageFlow stoFl) = 
-    FlowOpt.OptimalityMeasure (FlowOpt.EtaSys $ snkTerm Arith.~/ srcTerm) (FlowOpt.LossSys $ srcTerm Arith.~- snkTerm)
+    FlowOpt.OptimalityMeasure (FlowOpt.EtaSys $ f etaSys) (FlowOpt.LossSys $ srcTerm Arith.~- snkTerm)
 
-         where srcTerm = srcFl Arith.~+ stoFl Arith.~* srcScale Arith.~+ stoTermDisCharge stoFl
-               snkTerm = snkFl Arith.~+ stoFl Arith.~* snkScale Arith.~+ stoTermCharge stoFl
+         where etaSys = snkTerm Arith.~/ srcTerm
+               
+               -- use absolute Storage flow when applying the scales
+               -- absolute storage flow was used in the calculation of the scalemap as well
+               absStoFl = Arith.abs stoFl
+               srcTerm = srcFl Arith.~+ absStoFl Arith.~* srcScale Arith.~+ stoTermDisCharge
+               snkTerm = snkFl Arith.~+ absStoFl Arith.~* snkScale Arith.~+ stoTermCharge
                
 
                -- | when storage is charged, positive power, apply usage efficiency for latter use
-               stoTermCharge x = 
-                 (\y -> if y>=Arith.zero then y else Arith.zero) $ stoScale Arith.~* x Arith.~* etaUse
+               stoTermCharge = Arith.nullifyNegative $ stoScale Arith.~* absStoFl Arith.~* etaUse
                
                -- | when storage is discharged, negative power, apply generation efficiency 
-               stoTermDisCharge  x = 
-                 (\y -> if y<Arith.zero then Arith.negate y else Arith.zero) $ stoScale Arith.~* x Arith.~/ etaGen
+               stoTermDisCharge = Arith.nullifyPositive $ stoScale Arith.~* absStoFl Arith.~/ etaGen
                
                (FlowOpt.GenerationEfficiency etaGen, FlowOpt.UsageEfficiency etaUse) = 
                  FlowOpt.getSingleLifeCycleEtas (caller |> nc "calcEtaLossWithScales") globalLifeCycleMap
                                                   
-               
+               -- manual Switch on / off trace
+               f x = if True 
+                     then (if x < Arith.zero || x > Arith.one then trace msg x else x)
+                     else x                                                              
+                                                             
+               msg = "etaSys inkorrekt: " ++ show etaSys ++ " | src: " ++ show srcTerm ++ 
+                     " | snk: " ++ show snkTerm ++ " | stoC: " ++ show stoTermCharge ++ " | stoD: " ++ show stoTermDisCharge   
+                 
+
 

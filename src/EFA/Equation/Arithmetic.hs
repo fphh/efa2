@@ -230,6 +230,14 @@ two = fromInteger 2
 three = fromInteger 3
 four = fromInteger 4
 
+constZero, constTwo, constThree, constFour :: 
+  (Product a, Sum a) => 
+  a -> a
+constZero x = constOne x ~- constOne x
+constTwo x = constOne x ~+ constOne x
+constThree x = constOne x ~+ constTwo x
+constFour x = constTwo x ~+ constTwo x
+
 square :: Product a => a -> a
 square x = x~*x
 
@@ -277,5 +285,15 @@ signApprox eps x =
    Zero
 
 
-mean :: (Sum a, Product a, Constant a ) => a -> a -> a
-mean x y = (x ~+ y) ~/ (one ~+ one)
+mean :: (Sum a, Product a) => a -> a -> a
+mean x y = (x ~+ y) ~/ (constTwo x)
+
+
+-- TODO: convert to a class, when needed to mask vectors, signals, cubes, etc
+
+nullifyNegative :: (Ord a, Constant a) => a -> a
+nullifyNegative x = if x<zero then zero else x  
+  
+nullifyPositive :: (Ord a, Constant a) => a -> a
+nullifyPositive x = if x>=zero then zero else x  
+  

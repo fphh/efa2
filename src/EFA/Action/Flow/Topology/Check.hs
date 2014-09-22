@@ -111,7 +111,13 @@ edgeFlowCheck ::
 edgeFlowCheck eps x y = ActFlowCheck.EFC signCheck etaCheck
   where
     eta = if x >= Arith.zero then y Arith.~/ x else x Arith.~/ y
-    etaCheck = ActFlowCheck.etaCheckFromBool $ eta > Arith.zero && eta <= Arith.one
+    
+    -- Optimisation run on physical sign convention (positive, negative power flow allowed)
+    -- efficiencies are greater zero in case of negative energy flow
+    etaCheck = ActFlowCheck.etaCheckFromBool $ if x >= Arith.zero 
+               then eta > Arith.zero && eta <= Arith.one
+               else eta > Arith.one     
+                 
     signCheck = ActFlowCheck.signCheckFromBool $ Arith.signApprox eps x == Arith.signApprox eps y && nanCheck
     -- TODO: nanCheck nochmal gesondert einbauen 
     nanCheck = if Arith.checkIsNaN x || Arith.checkIsNaN y then error "NaN detected" else True
