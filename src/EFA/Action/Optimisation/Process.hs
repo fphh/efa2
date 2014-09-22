@@ -284,7 +284,7 @@ buildOptiSet caller demandVariation searchVariations demandCycle allowedStates =
     demandGrid = CubeGrid.create newCaller demandVariation
     searchGrids = map (CubeGrid.create newCaller) searchVariations
     sweepVariations = map (CubeSweep.generateVariation newCaller demandGrid) searchGrids
-    supportSignal =  UtTrace.nTrace True modul "buildOptiSet" "supportSignal" $
+    supportSignal =  UtTrace.nTrace False modul "buildOptiSet" "supportSignal" $
                      OptSignal.getSupportPoints newCaller demandGrid demandCycle 
     demandVars  = map (DemandAndControl.toDemandVar . TupleHT.fst3) demandVariation
     controlVars = map (map (DemandAndControl.toControlVar . TupleHT.fst3)) searchVariations

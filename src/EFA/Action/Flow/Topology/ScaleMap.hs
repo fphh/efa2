@@ -74,13 +74,14 @@ calcEtaLossSys ::
    DV.Zipper vec,
    DV.Walker vec,
    DV.Storage vec (Interp.Val a)) =>
-  Caller -> 
+  [Idx.AbsoluteState] ->
   FlowOpt.GlobalLifeCycleMap node (Interp.Val a) ->
+  Caller ->   
   FlowOpt.ScaleMap (Interp.Val a) ->
   FlowOpt.EndNodeEnergies node (CubeMap.Data (Sweep.Search inst) dim vec (Interp.Val a)) ->
   CubeMap.Data (Sweep.Search inst) dim vec ActFlowCheck.EdgeFlowStatus ->  
   CubeMap.Data (Sweep.Search inst) dim vec (ActFlowCheck.EdgeFlowStatus,FlowOpt.OptimalityMeasure (Interp.Val a))
-calcEtaLossSys caller globalLifeCycleMap scaleMap topoEndNodeEnergies flowStatus = 
+calcEtaLossSys states globalLifeCycleMap caller scaleMap topoEndNodeEnergies flowStatus = 
   CubeMap.zipWithData f flowStatus  (CubeMap.zipWith3Data ((,,)) sourceFlow sinkFlow (FlowOpt.unStorageFlow $ Maybe.fromMaybe err $ 
                                                                                       FlowOpt.getSingleStorage newCaller stoMap))
     where
@@ -89,12 +90,18 @@ calcEtaLossSys caller globalLifeCycleMap scaleMap topoEndNodeEnergies flowStatus
       (FlowOpt.TotalSourceFlow sourceFlow, FlowOpt.TotalSinkFlow sinkFlow,stoMap) = 
                     FlowTopoOpt.sumSinkSourceFlows topoEndNodeEnergies
    
-      f status (src,snk,sto) = (status, calcEtaLossWithScales newCaller globalLifeCycleMap scales 
+      f status (src,snk,sto) = (status, g (check status) $ calcEtaLossWithScales newCaller globalLifeCycleMap scales 
                                        (FlowOpt.TotalSourceFlow src,
                                         FlowOpt.TotalSinkFlow snk,
                                         FlowOpt.TotalStorageFlow sto))
                                
-        where scales = FlowOpt.lookupScales newCaller scaleMap (ActFlowCheck.getState status) 
+        where scales = FlowOpt.lookupScales newCaller scaleMap (ActFlowCheck.getState status)
+              g True x = x
+              g False x = FlowOpt.OptimalityMeasure (FlowOpt.EtaSys (Interp.Invalid ["calcEtaLossSys"])) 
+                          (FlowOpt.LossSys(Interp.Invalid ["calcEtaLossSys"])) 
+              -- TODO: include full checking on status, in the moment only works with a state whitelist
+              check (ActFlowCheck.EdgeFlowStatus _ Nothing) = False
+              check (ActFlowCheck.EdgeFlowStatus validity (Just state)) = elem state states 
    
 
 calcEtaLossWithScales :: (Ord a,Arith.Constant a, Show a) =>

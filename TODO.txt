@@ -90,4 +90,25 @@ Idealerweise machen all diese Kriterien den Wirkungsgrad -- Invalid
 # Checks:
 
 * Eta-Check in Topologie korrigieren - OK
-* 
+* NaN-Check einbauen
+* Sink-Source check einbauen
+* Total Time Check
+* Total Energy Check
+
+
+# Frage
+* Wie konnten ungültige Zustände in das Optimierungsergebnis gelangen ? 
+
+
+# Plots
+* Unordung in Sequenzflussgraph, Zustandsflussgraph => Kanten nicht umdrehen, nur Anzeigerichtung
+*  
+
+
+# Funktionelle Erweiterungen
+
+* Balance-Loop abbrechen bei minimaler Differenz, besseres Ergebnis holen
+* auf einen ausgewählten Wirkungsgrad optimieren
+* Cube auch für eine Dimension plotten
+* Erweiterung auf n Speicher
+

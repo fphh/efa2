@@ -208,7 +208,7 @@ lookupScales _ _ Nothing =  (ScaleSource $ Interp.Invalid ["lookupScales"],
                    ScaleSink $ Interp.Invalid ["lookupScales"], 
                    ScaleSto $ Interp.Invalid ["lookupScales"]) 
   
-lookupScales caller (ScaleMap m) (Just state) = Maybe.fromMaybe (ScaleSource $ Interp.Invalid ["lookupScales"], 
+lookupScales _ (ScaleMap m) (Just state) = Maybe.fromMaybe (ScaleSource $ Interp.Invalid ["lookupScales"], 
                                        ScaleSink $ Interp.Invalid ["lookupScales"], 
                                        ScaleSto $ Interp.Invalid ["lookupScales"]) $ 
                                    join $ Map.lookup state m
