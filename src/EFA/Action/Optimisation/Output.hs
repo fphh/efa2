@@ -643,14 +643,24 @@ optPerState caller path fileOrder titles ctrl opt =
 
 
 data OpCtrl = OpDont | OpDo 
-                       {plotOptimalControlSignals :: Plot, 
+                       {plotOptimalStateChoice :: Plot,
+                        plotOptimalControlSignals :: Plot, 
                         plotOptimalStoragePowers :: Plot}  
 
 optimalOperation ::
   (Ord a,
+   Show (vec [SignalFlow.TimeStep a]),
+   Show (vec (SignalFlow.TimeStep a)),
+   DV.Zipper vec,
+   DV.Storage vec [SignalFlow.TimeStep a],
+   DV.Storage vec (ValueState.Map (Interp.Val a)),
+   DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val a))),
+   DV.Storage vec [a],
+   DV.Storage vec [Interp.Val a],
+   DV.Storage vec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a)),
    Show id,
    Arith.Constant a,
-   Tuple.C a,
+   Tuple.C a,Show (vec (Interp.Val a)),
    Atom.C a,
    Type.ToDisplayUnit a,
    Type.GetDynamicType a,
@@ -673,6 +683,10 @@ optimalOperation path fileOrder titles ctrl opt = let
   g str = makeTitle $ titles ++ [PR "optimalOperation"] ++ [str]
 
   in
+   (plotAction (plotOptimalStateChoice ctrl) (f $ DG "StateChoice")
+   (OptSignalPlot.plotOptimalStateChoice (g $ DG "State Choice") FlowOpt.getOptEtaVal)
+    (Process.accessOptimalStateChoice opt,Process.accessOptimalStateSignals opt,Process.accessConditionedStateSignals opt)) ++ 
+   
    (plotAction (plotOptimalControlSignals ctrl) (f $ DG "ControlSignals")
    (OptSignalPlot.plotOptimalSignals (g $ DG "Control Signals"))
     (Process.accessOptimalControlSignals opt)) ++ 
@@ -831,6 +845,15 @@ loopsIO ::
    DV.FromList sigVec,
    DV.FromList srchVec,
    ND.Dimensions srchDim,
+--   DV.Walker (SignalFlow.Signal inst String sigVec a),
+--   DV.Storage (SignalFlow.Signal inst String sigVec a) (Interp.Val a),
+   Show (sigVec (SignalFlow.TimeStep a)),
+   Show (sigVec [SignalFlow.TimeStep a]),
+   DV.Zipper sigVec,
+   DV.Storage sigVec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a)),
+   DV.Storage sigVec [Interp.Val a],Show (sigVec (Interp.Val a)),
+   DV.Storage sigVec [a],
+   DV.Storage sigVec [SignalFlow.TimeStep a],
    PlotCube.ToPlotData CubeMap.Cube demDim (DemandAndControl.Var node) demVec a a,
    PlotCube.ToPlotData CubeMap.Cube demDim (DemandAndControl.Var node) demVec a (Interp.Val a),
    PlotCube.ToPlotData CubeMap.Cube demDim (DemandAndControl.Var node) demVec a (Interp.Val (Interp.Val a)), 
@@ -873,6 +896,13 @@ etaLoopItemIO ::
    DV.Walker demVec,
    DV.Walker srchVec,
    DV.Walker sigVec,
+   Show (sigVec [SignalFlow.TimeStep a]),
+   Show (sigVec (SignalFlow.TimeStep a)),
+   DV.Zipper sigVec,
+   DV.Storage sigVec [SignalFlow.TimeStep a],
+   DV.Storage sigVec [a],
+   DV.Storage sigVec [Interp.Val a],
+   DV.Storage sigVec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a)),
    DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (Maybe Idx.AbsoluteState)),
    DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus),
    DV.Storage srchVec ActFlowCheck.EdgeFlowStatus,
@@ -929,7 +959,7 @@ etaLoopItemIO ::
                             FlowOpt.OptimalityValues (Interp.Val a)),
    DV.Length srchVec,
    DV.Storage demVec Bool, 
-   DV.Singleton srchVec,
+   DV.Singleton srchVec,Show (sigVec (Interp.Val a)),
    DV.Length sigVec,
    DV.FromList srchVec,
    DV.FromList sigVec,
@@ -975,6 +1005,13 @@ balanceLoopItemIO ::
    Type.GetDynamicType a,
    FormatValue.FormatValue (sigVec (Interp.Val a)),
    FormatValue.FormatValue a,
+   Show (sigVec (SignalFlow.TimeStep a)),
+   Show (sigVec [SignalFlow.TimeStep a]),
+   DV.Zipper sigVec,
+   DV.Storage sigVec ([Maybe Idx.AbsoluteState], Maybe (Interp.Val a)),
+   DV.Storage sigVec [Interp.Val a],
+   DV.Storage sigVec [a],
+   DV.Storage sigVec [SignalFlow.TimeStep a],
    DV.Zipper demVec,
    DV.Walker sigVec,
    DV.Walker srchVec,
@@ -1034,7 +1071,7 @@ balanceLoopItemIO ::
    DV.LookupUnsafe srchVec (ActFlowCheck.EdgeFlowStatus,
                             FlowOpt.OptimalityMeasure (Interp.Val a)),
    DV.Length sigVec,
-   DV.Length srchVec,
+   DV.Length srchVec,Show (sigVec (Interp.Val a)),
    DV.FromList sigVec,
    DV.FromList srchVec,
    ND.Dimensions srchDim,

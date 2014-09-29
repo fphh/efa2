@@ -53,14 +53,14 @@ labledFrame title xs =
     RangeInfo ax ax1 = combineRangeList (head rs) (tail rs)
     rs = map f xs
     f (PlotData _ rangeInfo _) = rangeInfo
-    plotIds = collectPlotIds xs
+--    plotIds = collectPlotIds xs
 
 combineRangeList :: (Ord b, Ord a) => RangeInfo label a b -> [RangeInfo label a b] -> RangeInfo label a b
 combineRangeList x xs = foldl combineRange x xs
 
 defaultFrameAttr :: (Atom.C a, Atom.C b) => Opts.T (Graph2D.T a b)
 defaultFrameAttr =
-   Opts.add (Opt.custom "hidden3d" "") ["back offset 1 trianglepattern 3 undefined 1 altdiagonal bentover"] $
+   Opts.add (Opt.custom "datafile" "") ["missing " ++ show "NaN"] $   
    Opts.grid True $
    Opts.deflt
 
@@ -96,3 +96,17 @@ allInOne ::
 allInOne makeFrameStyle setGraphStyle xs = 
   Frame.cons  (makeFrameStyle xs) $ (Foldable.fold $ map g $ zip [0..] xs)
   where g (idx,plotData@(PlotData _ _ plot)) = fmap (Graph2D.lineSpec $ setGraphStyle idx plotData  $ LineSpec.deflt) plot
+        
+alterIdAndInfo :: 
+  (id -> id1) ->
+  (info -> info1) ->  
+  PlotData id info label a b ->     
+  PlotData id1 info1 label a b
+alterIdAndInfo f g (PlotData (DataPlot.PlotInfo ident info) range plot) = 
+  PlotData (DataPlot.PlotInfo (fmap f ident) (fmap g info)) range plot
+
+
+idAndInfo2String:: (Show id, Show info) =>
+  PlotData id info label a b -> 
+  PlotData String String label a b 
+idAndInfo2String = alterIdAndInfo show show

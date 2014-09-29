@@ -172,7 +172,9 @@ data OptimisationPerState node inst demDim srchDim demVec srchVec sigVec a = Opt
 
 
 data OptimalOperation node inst vec a = OptimalOperation {
+  accessOptimalStateSignals:: OptSignal.OptimalityPerStateSignal node inst vec a (Interp.Val a),
   accessOptimalStateChoice :: OptSignal.OptimalStateChoice node inst vec a (Interp.Val a),
+  accessConditionedStateSignals :: Maybe (SignalFlow.Signal inst String vec a (ValueState.Map (Interp.Val a))),
   accessOptimalControlSignals :: OptSignal.OptimalControlSignals node inst vec a (Interp.Val a),
   accessOptimalStoragePowers :: OptSignal.OptimalStoragePowers node inst vec a (Interp.Val a),
   accessBalance :: Balance.Balance node (Maybe (Interp.Val a))}
@@ -461,7 +463,7 @@ optimisationPerState ::
    DV.Storage srchVec (ActFlowCheck.EdgeFlowStatus,
                         (Interp.Val a,
                          Interp.Val a)),
-   DV.Slice demVec,
+   DV.Slice demVec,Show (demVec a),
    DV.Slice sigVec,
    DV.Singleton srchVec,
    DV.LookupUnsafe srchVec (Interp.Val a),   
@@ -517,7 +519,8 @@ optimisationPerState caller testSet optiSet sweepResults sweepEvaluationResults 
     optimalityMeasure = accessSweepOptimality sweepEvaluationResults
     states = accessAllowedStates optiSet
     objectiveFunctionValues = CubeSweep.objectiveFunctionValues newCaller balanceForcingMap endNodePowers optimalityMeasure
-    optimisationResultPerState = CubeSweep.findMaximumEtaPerState  newCaller states objectiveFunctionValues                          
+    optimisationResultPerState = UtTrace.nTrace False modul "optimisationPerState" "optimisationResultPerState" $
+                                 CubeSweep.findMaximumEtaPerState  newCaller states objectiveFunctionValues                          
     optimalFlowCube = CubeSweep.unresultOptimalFlowPerStateCube newCaller $ 
                         CubeSweep.getOptimalFlowPerStateCube newCaller optimisationResultPerState flowResult
     optimalStateSignals = UtTrace.nTrace False modul "optimisationPerState" "optimalStateSignals" $ 
@@ -562,7 +565,7 @@ optimalOperation ::
  OptimisationPerState node inst demDim srchDim demVec srchVec vec a ->
  OptimalOperation node inst vec a
 optimalOperation caller stateForcing optimisationPerStateResults =
-  OptimalOperation optimalStateChoice optimalControlSignals
+  OptimalOperation optimalStateSignals optimalStateChoice conditionedStateSignals optimalControlSignals
      optimalStorageSignals balance
   where
     newCaller = caller |> nc "optimalOperation"
@@ -570,7 +573,7 @@ optimalOperation caller stateForcing optimisationPerStateResults =
     optimalStoragePowersPerState = accessOptimalStoragePowersPerState optimisationPerStateResults
     optimalControlSignalsPerState = accessOptimalControlSignalsPerState optimisationPerStateResults
     
-    optimalStateChoice = UtTrace.nTrace False modul "optimalOperation" "optimalStateChoice" $
+    (optimalStateChoice, conditionedStateSignals) = UtTrace.nTrace False modul "optimalOperation" "optimalStateChoice" $
       OptSignal.findOptimalStatesUsingMaxEta newCaller stateForcing optimalStateSignals
       
     optimalControlSignals = OptSignal.generateOptimalControl optimalStateChoice optimalControlSignalsPerState                       
@@ -772,7 +775,7 @@ loop ::
                       Interp.Val a),
    DV.Slice demVec,
    DV.Slice sigVec,
-   DV.Singleton srchVec,
+   DV.Singleton srchVec,Show (demVec a),
    DV.Singleton sigVec,
    DV.LookupUnsafe srchVec (Interp.Val a),
    DV.LookupMaybe demVec (ValueState.Map (Interp.Val a)),
@@ -960,7 +963,7 @@ systemFunction ::
    DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec ActFlowCheck.EdgeFlowStatus),
    DV.Storage demVec (CubeMap.Data (Sweep.Search inst) srchDim srchVec (ActFlowCheck.EdgeFlowStatus,
                                                                         FlowOpt.OptimalityMeasure (Interp.Val a))),
-   DV.Slice sigVec,
+   DV.Slice sigVec,Show (demVec a),
    DV.Slice demVec,
    DV.Singleton sigVec,
    DV.Singleton srchVec,

@@ -25,10 +25,10 @@ import qualified EFA.Action.Optimisation.Cube.Sweep as CubeSweep
 import qualified EFA.Data.OD.Signal.Flow as SignalFlow
 import qualified EFA.Data.Interpolation as Interp
 import qualified EFA.Data.ND.Cube.Map as CubeMap
-import qualified EFA.Action.Utility as ActUt
+--import qualified EFA.Action.Utility as ActUt
 
 import qualified Data.Map as Map
-import qualified Control.Monad as Monad
+--import qualified Control.Monad as Monad
 import qualified Data.Maybe as Maybe
 
 import EFA.Utility(Caller,
@@ -154,26 +154,34 @@ findOptimalStatesUsingMaxEta ::
  Caller -> 
  StateForcing ->
  OptimalityPerStateSignal inst label vec a (Interp.Val b) ->
- OptimalStateChoice inst label vec a (Interp.Val b)
+ (OptimalStateChoice inst label vec a (Interp.Val b), 
+  Maybe (SignalFlow.Signal label String vec a (ValueState.Map (Interp.Val b))))
 findOptimalStatesUsingMaxEta _ StateForcingOff optimalitySignalPerState = 
-  SignalFlow.map (ValueState.getBest Interp.compareMaxWithInvalid . 
-                                       ValueState.map FlowOpt.getOptEtaVal) optimalitySignalPerState
+  (SignalFlow.map (ValueState.getBest Interp.compareMaxWithInvalid . 
+                                       ValueState.map FlowOpt.getOptEtaVal) optimalitySignalPerState, Nothing)
 
--- | in Case of Stateforcing each State has to occur at least one
+-- | in Case of Stateforcing each State has to occur at least once
 -- get total maximum
 -- get minimal difference from maximum per state and correct the signals with that value before maxing
-findOptimalStatesUsingMaxEta caller StateForcingOn optimalitySignalPerState = if checkFailed then err3 else
-  SignalFlow.map (ValueState.getBest Interp.compareMaxWithInvalid) conditionedSignal
+findOptimalStatesUsingMaxEta caller StateForcingOn optimalitySignalPerState = (stateChoice, Just conditionedSignal)
   where 
-    etaOptSignal = SignalFlow.map (ValueState.map FlowOpt.getOptEtaVal) optimalitySignalPerState
-    etaOptSignalMax = --UtTrace.simTrace "etaOptSignalMax" $ 
-                      SignalFlow.map (Maybe.fromMaybe err2 . snd) maxSig 
-    maxSig = findOptimalStatesUsingMaxEta (caller |> nc "findOptimalStatesUsingMaxEta") 
+    
+    stateChoice =  if checkFailed then err3 else SignalFlow.map (ValueState.getBest Interp.compareMaxWithInvalid) conditionedSignal
+    
+    etaOptSignal = UtTrace.nTrace False modul "findOptimalStatesUsingMaxEta""etaOptSignal" $
+                   SignalFlow.map (ValueState.map FlowOpt.getOptEtaVal) optimalitySignalPerState
+
+    maxSig = fst $ findOptimalStatesUsingMaxEta (caller |> nc "findOptimalStatesUsingMaxEta") 
                       StateForcingOff optimalitySignalPerState 
-    diffSignal = --UtTrace.simTrace "etaOptSignalMax" $ 
-                 SignalFlow.zipWith (\opt optMax -> ValueState.map (\x -> optMax Arith.~- x) opt) etaOptSignal etaOptSignalMax
-    minDifferencePerState = --UtTrace.simTrace "etaOptSignalMax" $
-                            Maybe.fromMaybe err $ SignalFlow.foldl f (Nothing) diffSignal
+    
+    etaOptSignalMax =  UtTrace.nTrace False modul "findOptimalStatesUsingMaxEta""etaOptSignalMax" $
+                       SignalFlow.map (Maybe.fromMaybe err2 . snd) maxSig              
+    
+    diffSignal = UtTrace.nTrace False modul "findOptimalStatesUsingMaxEta""diffSignal" $
+      SignalFlow.zipWith (\opt optMax -> ValueState.map (\x -> optMax Arith.~- x) opt) etaOptSignal etaOptSignalMax
+    
+    minDifferencePerState = UtTrace.nTrace False modul "findOptimalStatesUsingMaxEta""minDifferencePerState" $
+      Maybe.fromMaybe err $ SignalFlow.foldl f (Nothing) diffSignal
     f (Nothing) y = Just y
     f (Just x) y = Just $ ValueState.minWith (Interp.compareMinWithInvalid) x y
     err = merror caller modul "findOptimalStatesUsingMaxEta" "empty Signal"
@@ -183,13 +191,17 @@ findOptimalStatesUsingMaxEta caller StateForcingOn optimalitySignalPerState = if
 
     err3 = merror caller modul "findOptimalStatesUsingMaxEta" $ 
            "following time Steps don't contain valid states: " ++ show failTimes    
+           
     failTimes =SignalFlow.findInSignal (not . ValueState.isValid) optimalitySignalPerState          
     
-    conditionedSignal = --UtTrace.simTrace "conditionedSignal" $
-      SignalFlow.map (\ m -> ValueState.zipWith (Arith.~+) m minDifferencePerState) etaOptSignal 
+    conditionedSignal = SignalFlow.map (\ m -> ValueState.zipWith (Arith.~+) m minDifferencePerState) etaOptSignal 
 
-
-
+{-
+shift2UpperEnvelope ::  
+  OptimalityPerStateSignal inst label vec a (Interp.Val b) ->
+shift2UpperEnvelope optimalitySignalPerState = 
+  where
+-}    
 
 interpolateControlSignalsPerState ::
   (Ord a,

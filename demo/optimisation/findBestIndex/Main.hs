@@ -62,14 +62,21 @@ searchCube8 =
   CubeMap.Data $ zip (map (Just . Idx.AbsoluteState) $ concat $ repeat [0..2]) 
   $ map (fmap Arith.fromInteger ) $ ([Interp.Invalid [],Interp.Extra 0, Interp.Invalid [], 
                                                               Interp.Inter 2, Interp.Invalid [], Interp.Inter 1])
+  
+searchCube9 :: CubeMap.Data Base ND.Dim1 [] (Maybe Idx.AbsoluteState, Interp.Val Double)
+searchCube9 = 
+  CubeMap.Data $ zip (map (Just . Idx.AbsoluteState) $ concat $ repeat [0..2]) 
+  $ map (fmap Arith.fromInteger ) $ ([Interp.Invalid [],Interp.Invalid [],Interp.Invalid []])
+
+states =  map (Idx.AbsoluteState) [0..2]
 
 main = do
-  print $ CubeMap.findBestWithIndexByPerState getState fselectMax searchCube -- delivers maximum element - OK
-  print $ CubeMap.findBestWithIndexByPerState getState fselectMax searchCube2 -- neglects Invalid - OK
-  print $ CubeMap.findBestWithIndexByPerState getState fselectMax searchCube3 -- neglects Invalid - OK
-  print $ CubeMap.findBestWithIndexByPerState getState fselectMax searchCube4 -- delivers Index zero - OK 
-  print $ CubeMap.findBestWithIndexByPerState getState fselectMax searchCube5 -- delivers Element with lowest Index -- is OK
-  print $ CubeMap.findBestWithIndexByPerState getState fselectMax searchCube6 -- delivers korrekt result in ascending, descending List
-  print $ CubeMap.findBestWithIndexByPerState getState fselectMax searchCube7 -- delivers korrekt result in mixed List - OK
-  print $ CubeMap.findBestWithIndexByPerState getState fselectMax searchCube8 -- delivers korrekt result in mixed List with several states - OK
-  
+  print $ CubeMap.findBestWithIndexByPerState getState fselectMax states searchCube -- delivers maximum element - OK
+  print $ CubeMap.findBestWithIndexByPerState getState fselectMax states searchCube2 -- neglects Invalid - OK
+  print $ CubeMap.findBestWithIndexByPerState getState fselectMax states searchCube3 -- neglects Invalid - OK
+  print $ CubeMap.findBestWithIndexByPerState getState fselectMax states searchCube4 -- delivers Index zero - OK 
+  print $ CubeMap.findBestWithIndexByPerState getState fselectMax states searchCube5 -- delivers Element with lowest Index -- is OK
+  print $ CubeMap.findBestWithIndexByPerState getState fselectMax states searchCube6 -- delivers korrekt result in ascending, descending List
+  print $ CubeMap.findBestWithIndexByPerState getState fselectMax states searchCube7 -- delivers korrekt result in mixed List - OK
+  print $ CubeMap.findBestWithIndexByPerState getState fselectMax states searchCube8 -- delivers korrekt result in mixed List with several states - OK
+  print $ CubeMap.findBestWithIndexByPerState getState fselectMax states searchCube9 -- delivers korrekt result in mixed List with several 

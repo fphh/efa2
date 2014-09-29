@@ -15,7 +15,7 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified EFA.Data.Plot.D2.FlowSignal as PlotFSignal
 import qualified Graphics.Gnuplot.Frame as Frame
 --import qualified EFA.Action.Optimisation.Sweep as Sweep
---import qualified EFA.Flow.SequenceState.Index as Idx
+import qualified EFA.Flow.SequenceState.Index as Idx
 --import qualified EFA.Data.Axis.Strict as Strict
 import qualified EFA.Data.ND as ND
 import qualified EFA.Equation.Arithmetic as Arith
@@ -38,10 +38,13 @@ import qualified EFA.Value.Type as Type
 
 import qualified EFA.Data.Plot.D2.FlowSignal as SignalFlowPlot
 import qualified EFA.Data.Plot.D2 as PlotD2
+import qualified EFA.Utility.Trace as UtTrace
 
 import qualified Data.Map as Map
 --import qualified Control.Monad as Monad
---import qualified Data.Maybe as Maybe
+import qualified Data.Maybe as Maybe
+
+
 
 import EFA.Utility(Caller,
               --     merror,(|>),
@@ -103,13 +106,56 @@ plotDemandCycleMap ::
 plotDemandCycleMap title cyc = 
   PlotD2.allInOne (PlotD2.labledFrame title)  (\ _ x -> LineSpec.title $ show $ PlotD2.getId x) $ 
   concat $ Map.elems $ Map.mapWithKey (\ident sig ->  SignalFlowPlot.toPlotData (Just ident) sig) cyc
-  
-  
-  
+
+plotOptimalStateChoice :: 
+  (Ord b, Ord a, Atom.C a,
+   Arith.Constant a,
+   Tuple.C a,
+   Tuple.C b,
+   Type.ToDisplayUnit b,
+   Type.GetDynamicType b,
+   Type.GetDynamicType a,
+   DV.Walker vec,
+   DV.Storage vec (SignalFlow.TimeStep a),
+   DV.Storage vec (Interp.Val b),
+   DV.Storage vec a,
+   DV.Singleton vec,
+   DV.Length vec,
+   DV.FromList vec, 
+   Show (vec (SignalFlow.TimeStep a)),
+   Show (vec [SignalFlow.TimeStep a]),
+   Arith.Constant b,
+   DV.Zipper vec,Show (vec (Interp.Val b)),
+   DV.Storage
+   vec
+   ([Maybe Idx.AbsoluteState], Maybe (Interp.Val b)),
+   DV.Storage vec [Interp.Val b],
+   DV.Storage vec [a],
+   DV.Storage vec (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val b))),
+   DV.Storage vec (ValueState.Map (Interp.Val b)),
+   DV.Storage vec [SignalFlow.TimeStep a]) =>
+  String ->
+  (FlowOpt.OptimalityValues (Interp.Val b) -> Interp.Val b) ->
+  (OptSignal.OptimalStateChoice node inst vec a (Interp.Val b),
+ SignalFlow.Signal inst String vec a (ValueState.Map (FlowOpt.OptimalityValues (Interp.Val b))), 
+ Maybe (SignalFlow.Signal inst String vec a (ValueState.Map (Interp.Val b)))) ->
+  Frame.T (Graph2D.T a (Interp.Val b))
+plotOptimalStateChoice title faccess (stateChoice,optimalStateSignals,conditionedSignals) = 
+   PlotD2.allInOne (PlotD2.labledFrame title)  (\ _ x -> LineSpec.title $ show $ PlotD2.getId x) $ 
+  ((SignalFlowPlot.toPlotData (Just "AbsoluteState * 0.001") stateSig) ++ 
+    (map (PlotD2.alterIdAndInfo show id) plot2)) -- ++ plot3
+  where  
+   plot2 = PlotFSignal.plotSignalMap $ 
+           UtTrace.nTrace False modul "plotOptimalStateChoice" "optimalStateSignalsMap" $ 
+           OptSignalAccess.optimalityPerStateSignalToSignalMap faccess optimalStateSignals 
+   stateSig = SignalFlow.scaleSig (OptSignalAccess.stateChoiceToSignal stateChoice) (Arith.fromRational 0.001)
+   plot3 =  Maybe.maybe []  (map (PlotD2.alterIdAndInfo (\x -> "Conditioned " ++ show x) id). 
+                             PlotFSignal.plotSignalMap. OptSignalAccess.perStateSignalToSignalMap) conditionedSignals
+   
+   
 plotOptimalSignals ::
-  (Ord b,
+  (Ord b, Show id,
    Ord a,
-   Show id,
    Show label,
    Arith.Constant b,
    Arith.Constant a,

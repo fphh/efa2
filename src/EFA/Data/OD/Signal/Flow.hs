@@ -48,7 +48,7 @@ import qualified Data.NonEmpty as NonEmpty
 import qualified EFA.Utility.Trace as UtTrace
 
 
-import Prelude hiding (map,zipWith,foldl, length, sum) 
+import Prelude hiding (map,zipWith,foldl, length, sum, maximum) 
 import qualified Prelude as P
 
 modul :: ModuleName
@@ -451,3 +451,33 @@ appendRight ::
   Signal inst label vec a b
 appendRight (Signal axis vec) (step,val) = Signal (Strict.appendRight axis step) (DV.append vec (DV.singleton val)) 
 -}  
+
+maximum :: 
+  (Ord b, DV.Storage vec b, DV.Singleton vec) => 
+  Signal inst label vec a b -> b
+maximum (Signal _ (Data vec)) = DV.maximum vec 
+
+normalize2One ::
+  (Product b,Ord b, DV.Storage vec b, DV.Singleton vec,DV.Walker vec) =>
+  Signal inst label vec a b -> 
+  Signal inst label vec a b
+normalize2One sig = scaleSig sig (Arith.recip mx)
+  where mx = maximum sig
+  
+  
+scaleSig ::  
+  (DV.Walker vec, DV.Storage vec b, Product b) =>
+  Signal inst label vec a b -> 
+  b ->
+  Signal inst label vec a b        
+scaleSig sig scal = map (Arith.~* scal) sig
+
+
+offset ::  
+  (DV.Walker vec, DV.Storage vec b, Sum b) =>
+  Signal inst label vec a b  -> 
+  b ->
+  Signal inst label vec a b       
+offset sig offs = map (Arith.~+ offs) sig
+
+
