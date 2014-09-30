@@ -70,6 +70,9 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 --import qualified EFA.Action.Flow.Optimality as ActFlowOpt
 import qualified EFA.Flow.Sequence.Algorithm as SeqAlgo
 
+import qualified EFA.Data.ND.Signal.Flow as NDSignalFlow
+import qualified EFA.Data.Plot.D3.Signal as PlotD3Signal
+
 import qualified EFA.Flow.Topology.Quantity as TopoQty
 import qualified EFA.Equation.Result as Result
 

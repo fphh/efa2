@@ -1,114 +1,102 @@
-
-# Plotten
-
-* Zyklus in Surface-Diagramme einzeichnen
-* plotEach in plotAction einbauen
-* 
-
-# Checks
-* Flowstatus-Test für eta korrigieren
-
-# Tests
-* Interpolation-Tests auf letzten Code-Stand anpassen
-* Curven und Reverse-Curven testen
-* 
-
-
 # Code-Pflege
-
-* Cabal wieder aktivieren
+* Cabal reaktivieren
 * Leerzeichen löschen
 * Warnungen entfernen
-* head / tail durch trustedHead oder errHead ersetzen
+* head / tail durch trustedHead oder errHead ersetzen // Concept
 * foldl1 absichern
 * nTrace consistent einführen, dass manuelles ein / ausschalten unterstützt
-
-# Restriktionen
-* Null Batterie-Leistung
-* Null Demand-Leistung
-
-
-# Conzeptuelle Probleme, Fragestellungen
-* Division durch Null
-* signApprox bei der Erstellung der Null-Kanten läuft aktuell auf Energie-Basis
+* Code-Richtlinien, Grep-Tools
+* Import-Namen eindeutg und einheitlich
+* Liste aller Laufzeitfehler mit Grep-Script
+* Script um Modulnamen zu prüfen
+* Script um Constraints Alphabetisch zu sortieren
+* Fehlermeldungen bauen, die rauskompiliert werden können
 
 
-# Aktuelle Probleme
-* Zeit-Skala nach EFA nicht mehr korrekt - OK
-* Ladezustand des Diagramms entspricht nicht dem des Signals !! (Rechnet das Diagramm mit Eins ?)  -- OK
-* Solarenergie nicht korrekt - OK
-* Zustand 540 statt 297 tritt auf
-* Zustand 54 tritt auf 
+# Installation / Cabal / Arbeitsprozess
+*  Bibliotheken von HH und HT sicher stellen, Modifikationen
+* Cabal Test Modus einsetzen, erweitern
+* Bewusst Todo-Flag in den Code -> vor ort am besten, unterdifferenzieren ? 
+* checkin - Flag, compilierbar, nicht ? 
+* git bisect script, dass z.B. unkompilierbares ingnoriert
 
 
-# Alte Energieflussanalyse
-* Range Arbeitet auf neuem Delta-Index, absolute Zeit auf altem -- wozu ist die absolute Zeit nötig ? 
+# Arbeitsumgebung
+* Dev32 erstellen
+* dev == maschine für kompilierung ?
+* arbeitserver pro projekt
 
-
-# Kleine 
-
-* Die max-Iterations-Anzahl für den Balance-Loop stimmt nicht (1 -> 0,1,2) -- Fixed for one Storage, check for Multiple
-
-
-# Interpolation
-* Nearest funktioniert nicht im Demand-Grid !?
-* Leistungs-Basierte Interpolation testen und überarbeiten
-* Fehlerhafter Wirkungsgrad beim Rechnen mit sehr kleinen Werten über eine positive Eins-Kennlinie (eta-Basiert)
-
-# Tests
+# Tests und Checks
+* CheckListe erstellen
+* Flowstatus-Test für eta korrigieren - OK
+* Interpolation-Tests auf letzten Code-Stand anpassen
+* Curven und Reverse-Curven testen
 * EtaFunctions Test einpflegen
 * Test für CurveModification schreiben
+* Testabdeckung messen
 
-
-# Vorzeichenrichtung: 
-
-* Standard-Vorzeichenrichtung muss sichtbar und klar definiert sein !!
-* UpStream und DownStream muss klar sein
-
+# Referenz
+* Alle Zwischenergebnisse abspeichern
+* Referenz-Datensätze mit attic oder bup ablegen
+* Referenz-Klassen für alle wichtigen Datentypen erstellen
 
 # Plotten
- * IGH-Farbscala wieder reaktivieren !!! 
-
-
-# Systemwirkungsgrad
-
-* Vorzeichenproblem in Scalemap - OK
-* Keine Wirkungsgrade auf ungültigen Zuständen berechnen !!
-
-
-# Konzept ungültige Bereiche / Zustände
-    - Zustand kann nicht bestimmt werden, weil invalid-Werte dies verhindern -> Zustand Nothing
-    - Energiefluss inkonsistent / Wirkunggradbedingung verletzt
-    - Quelle / Senke-Bedingung verletzt
-    - Getroffene Zustands-Auswahl
-
-Idealerweise machen all diese Kriterien den Wirkungsgrad -- Invalid
-
-   - Bisher wird der Wirkungsgrad nur durch die Interpolation Invalid
+* Zyklus in Surface-Diagramme einzeichnen
+* plotEach in plotAction einbauen
 
 
 # Checks:
-
 * Eta-Check in Topologie korrigieren - OK
 * NaN-Check einbauen
 * Sink-Source check einbauen
 * Total Time Check
 * Total Energy Check
 
+# Software - Konzeptuelle Probleme, Fragestellungen
 
-# Frage
-* Wie konnten ungültige Zustände in das Optimierungsergebnis gelangen ? 
+* Division durch Null
+* Interp.Val -> Value -> alles in Value einpacken ?
+* signApprox bei der Erstellung der Null-Kanten läuft aktuell auf Energie-Basis -> Umstellung auf Leistungsbasis
+* Standard-Vorzeichenrichtung muss sichtbar und klar definiert sein !!
+* UpStream und DownStream bei EtaFunctions / Assignmap muss klar sein
+* Umgang mit ungültigen Zuständen
+* Verschiedene Container-Formen, Sweep
 
+# Restrukturierung
+* Umstellung des Zustandsflussgraphen auf absoluten Zustandsindex
+* Zustandsflussgraph und Sequenzfluss-Graph -> Topologiekanten in Diagramm
+* Constraints loswerden (Constrain-Salat)
+* Schnittstellen-Modell
+* Generischer Data-Vector für Solver
+* Signal a b -> dynamisch, statisch typen
+* Record -> Signal -> ND-Signal
+* Cube, Sweep
+* Wirklich flexible Plots
 
-# Plots
-* Unordung in Sequenzflussgraph, Zustandsflussgraph => Kanten nicht umdrehen, nur Anzeigerichtung
-*  
+# Lästige Restriktionen
+* Null Batterie-Leistung
+* Null Demand-Leistung
+* 1D-Problem - Cube plot 1d
 
-
-# Funktionelle Erweiterungen
-
+# Features
 * Balance-Loop abbrechen bei minimaler Differenz, besseres Ergebnis holen
 * auf einen ausgewählten Wirkungsgrad optimieren
-* Cube auch für eine Dimension plotten
+ * IGH-Farbscala wieder reaktivieren !!! 
+
+# Funktionalität
+* ND-Erproben
 * Erweiterung auf n Speicher
+* Zeit-Optimierung
+
+# Alte Energieflussanalyse
+* Range Arbeitet auf neuem Delta-Index, absolute Zeit auf altem -- wozu ist die absolute Zeit nötig ? 
+
+
+# Bugs, Prüfen
+* Die max-Iterations-Anzahl für den Balance-Loop stimmt nicht (1 -> 0,1,2) -- Fixed for one Storage, check for Multiple
+* Nearest funktioniert nicht im Demand-Grid !?
+* Leistungs-Basierte Interpolation testen und überarbeiten
+* Fehlerhafter Wirkungsgrad beim Rechnen mit sehr kleinen Werten über eine positive Eins-Kennlinie (eta-Basiert)
+
+
 
