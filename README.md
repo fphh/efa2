@@ -1,4 +1,5 @@
 # efa2
 
-This software was created by Ingenieurbüro Guttenberg & Hördegen
+This software was created by Ingenieurbüro Guttenberg & Hördegen.
+
 
